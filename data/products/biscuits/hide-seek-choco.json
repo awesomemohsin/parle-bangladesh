@@ -1,0 +1,20 @@
+{
+  "id": "prod-003",
+  "name": "Hide & Seek Choco",
+  "slug": "hide-seek-choco",
+  "category": "biscuits",
+  "description": "Delightful chocolate chip biscuits",
+  "price": 55,
+  "originalPrice": 60,
+  "image": "/images/products/hide-seek-choco.jpg",
+  "images": [
+    "/images/products/hide-seek-choco.jpg"
+  ],
+  "rating": 4.7,
+  "reviews": 256,
+  "stock": 120,
+  "sku": "HSC-001",
+  "weight": "150g",
+  "createdAt": "2026-03-28T16:29:39.711Z",
+  "updatedAt": "2026-03-28T16:29:39.711Z"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "prod-001",
+  "name": "Parle-G Gold Biscuits",
+  "slug": "parle-g-gold",
+  "category": "biscuits",
+  "description": "Golden, crispy biscuits with a perfect taste",
+  "price": 35,
+  "originalPrice": 40,
+  "image": "/images/products/parle-g-gold.jpg",
+  "images": [
+    "/images/products/parle-g-gold.jpg"
+  ],
+  "rating": 4.5,
+  "reviews": 128,
+  "stock": 100,
+  "sku": "PG-001",
+  "weight": "200g",
+  "createdAt": "2026-03-28T16:29:39.711Z",
+  "updatedAt": "2026-03-28T16:29:39.711Z"
+}

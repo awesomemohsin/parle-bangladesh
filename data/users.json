@@ -1,0 +1,32 @@
+[
+  {
+    "id": "user-001",
+    "email": "superadmin@parle.com",
+    "password": "e34f92a20532a873cb3184398070b4b82a8fa29cf48572c203dc5f0fa6158231",
+    "name": "Super Admin",
+    "role": "super_admin",
+    "status": "active",
+    "createdAt": "2026-03-28T16:29:39.715Z",
+    "updatedAt": "2026-03-28T16:29:39.715Z"
+  },
+  {
+    "id": "user-002",
+    "email": "admin@parle.com",
+    "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "name": "Admin User",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2026-03-28T16:29:39.715Z",
+    "updatedAt": "2026-03-28T16:29:39.715Z"
+  },
+  {
+    "id": "user-003",
+    "email": "moderator@parle.com",
+    "password": "4c8425b174053ea6935b29c2b0e0aa4e2eab1a01b784e6ac91b8bdce9c26235a",
+    "name": "Moderator",
+    "role": "moderator",
+    "status": "active",
+    "createdAt": "2026-03-28T16:29:39.716Z",
+    "updatedAt": "2026-03-28T16:29:39.716Z"
+  }
+]

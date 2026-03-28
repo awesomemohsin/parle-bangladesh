@@ -1,0 +1,20 @@
+{
+  "id": "prod-007",
+  "name": "Parle Magix Biscuits",
+  "slug": "parle-magix",
+  "category": "biscuits",
+  "description": "Magic taste in every bite",
+  "price": 65,
+  "originalPrice": 75,
+  "image": "/images/products/magix.jpg",
+  "images": [
+    "/images/products/magix.jpg"
+  ],
+  "rating": 4.5,
+  "reviews": 167,
+  "stock": 85,
+  "sku": "MAG-001",
+  "weight": "200g",
+  "createdAt": "2026-03-28T16:29:39.711Z",
+  "updatedAt": "2026-03-28T16:29:39.711Z"
+}

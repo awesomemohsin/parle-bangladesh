@@ -1,0 +1,20 @@
+{
+  "id": "prod-006",
+  "name": "Monaco Biscuits",
+  "slug": "monaco-biscuits",
+  "category": "snacks",
+  "description": "Crunchy savory biscuits with unique taste",
+  "price": 50,
+  "originalPrice": 55,
+  "image": "/images/products/monaco.jpg",
+  "images": [
+    "/images/products/monaco.jpg"
+  ],
+  "rating": 4.6,
+  "reviews": 189,
+  "stock": 110,
+  "sku": "MON-001",
+  "weight": "120g",
+  "createdAt": "2026-03-28T16:29:39.711Z",
+  "updatedAt": "2026-03-28T16:29:39.711Z"
+}
