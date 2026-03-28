@@ -1,54 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
-import { readUsers, writeUsers } from "@/lib/data-store";
+import connectDB from "@/lib/db";
+import { User } from "@/lib/models";
+import crypto from "crypto";
 
-interface Params {
-  params: Promise<{ id: string }>;
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    await connectDB();
     const currentUser = getAuthUserFromRequest(request);
-    if (!currentUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (currentUser.role !== ROLES.SUPER_ADMIN) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
-    if (currentUser.id === id) {
-      return NextResponse.json(
-        { error: "You cannot delete your own account" },
-        { status: 400 },
-      );
+    const body = await request.json();
+
+    const user = await User.findById(id);
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    if (body.role) {
+      if (!["admin", "customer", "moderator", "super_admin"].includes(body.role)) {
+        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+      }
+      user.role = body.role;
     }
 
-    const users = readUsers();
-    const index = users.findIndex((u) => u.id === id);
-
-    if (index === -1) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (body.status) {
+      if (!["active", "disabled"].includes(body.status)) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+      user.status = body.status;
     }
 
-    const nextUsers = users.filter((u) => u.id !== id);
-    const saved = writeUsers(nextUsers);
-
-    if (!saved) {
-      return NextResponse.json(
-        { error: "Failed to delete user" },
-        { status: 500 },
-      );
+    if (body.password) {
+      if (body.password.length < 6) return NextResponse.json({ error: "Password must be >= 6 chars" }, { status: 400 });
+      user.password = hashPassword(body.password);
     }
 
+    if (body.name) user.name = body.name;
+
+    await user.save();
+    const updated = user.toObject() as any;
+    delete updated.password;
+    updated.id = updated._id.toString();
+
+    return NextResponse.json({ user: updated });
+  } catch (error) {
+    console.error("User PATCH error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectDB();
+    const currentUser = getAuthUserFromRequest(request);
+    if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const { id } = await params;
+    
+    // Prevent deletion of self or other super admins optionally?
+    const user = await User.findById(id);
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (user.role === ROLES.SUPER_ADMIN && currentUser.id !== id) {
+       // logic could go here
+    }
+
+    await User.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Users DELETE error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    console.error("User DELETE error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

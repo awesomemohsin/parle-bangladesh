@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
-import {
-  readCategories,
-  readOrders,
-  readProducts,
-  readUsers,
-} from "@/lib/data-store";
+import connectDB from "@/lib/db";
+import { Category, Order, Product, User } from "@/lib/models";
 
 export async function GET(request: NextRequest) {
   try {
+    await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,22 +16,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const products = readProducts();
-    const orders = readOrders();
-    const users = readUsers();
-    const categories = readCategories();
-
-    const recentOrders = [...orders]
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 5);
+    const [totalProducts, totalOrders, totalUsers, totalCategories, recentOrders] = await Promise.all([
+      Product.countDocuments(),
+      Order.countDocuments(),
+      User.countDocuments(),
+      Category.countDocuments(),
+      Order.find().sort({ createdAt: -1 }).limit(5).lean()
+    ]);
 
     return NextResponse.json({
-      totalProducts: products.length,
-      totalOrders: orders.length,
-      totalUsers: users.length,
-      totalCategories: categories.length,
+      totalProducts,
+      totalOrders,
+      totalUsers,
+      totalCategories,
       recentOrders: recentOrders.map((order) => ({
-        id: order.id,
+        id: order._id.toString(),
         customerName: order.customerName,
         total: order.total,
         status: order.status,

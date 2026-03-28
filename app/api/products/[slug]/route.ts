@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProductSchema } from "@/lib/schemas";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
-import {
-  deleteProductBySlug,
-  readProductBySlug,
-  upsertProduct,
-} from "@/lib/data-store";
+import connectDB from "@/lib/db";
+import { Product } from "@/lib/models";
+
+function mapDoc(doc: any) {
+  const obj = doc.toObject ? doc.toObject() : doc;
+  obj.id = obj._id.toString();
+  delete obj._id;
+  delete obj.__v;
+  return obj;
+}
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -14,36 +19,30 @@ interface Params {
 
 export async function GET(_: NextRequest, { params }: Params) {
   try {
+    await connectDB();
     const { slug } = await params;
-    const found = readProductBySlug(slug);
+    const productDoc = await Product.findOne({ slug });
 
-    if (!found) {
+    if (!productDoc) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ product: found.product });
+    return NextResponse.json({ product: mapDoc(productDoc) });
   } catch (error) {
     console.error("Product GET by slug error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    await connectDB();
     const user = getAuthUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { slug } = await params;
-    const existing = readProductBySlug(slug);
+    const existing = await Product.findOne({ slug });
     if (!existing) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
@@ -63,34 +62,25 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
 
-    const product = upsertProduct({
-      ...parsed.data,
-      id: existing.product.id,
-      slug,
-    });
-    return NextResponse.json({ product });
+    Object.assign(existing, parsed.data);
+    await existing.save();
+
+    return NextResponse.json({ product: mapDoc(existing) });
   } catch (error) {
     console.error("Product PUT error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
+    await connectDB();
     const user = getAuthUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { slug } = await params;
-    const deleted = deleteProductBySlug(slug);
+    const deleted = await Product.findOneAndDelete({ slug });
     if (!deleted) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
@@ -98,9 +88,6 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Product DELETE error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

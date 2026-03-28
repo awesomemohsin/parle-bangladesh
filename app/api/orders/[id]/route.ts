@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
-import { readOrders, writeOrders } from "@/lib/data-store";
+import connectDB from "@/lib/db";
+import { Order } from "@/lib/models";
+
+function mapDoc(doc: any) {
+  const obj = doc.toObject ? doc.toObject() : doc;
+  obj.id = obj._id.toString();
+  delete obj._id;
+  delete obj.__v;
+  return obj;
+}
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -9,6 +18,7 @@ interface Params {
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
+    await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,14 +29,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    const orders = readOrders();
-    const order = orders.find((o) => o.id === id);
+    const order = await Order.findById(id);
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ order });
+    return NextResponse.json({ order: mapDoc(order) });
   } catch (error) {
     console.error("Order GET by id error:", error);
     return NextResponse.json(
@@ -38,6 +47,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -58,30 +68,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    const orders = readOrders();
-    const index = orders.findIndex((o) => o.id === id);
+    const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
 
-    if (index === -1) {
+    if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    const updatedOrder = {
-      ...orders[index],
-      status,
-      updatedAt: new Date().toISOString(),
-    };
-
-    orders[index] = updatedOrder;
-    const saved = writeOrders(orders);
-
-    if (!saved) {
-      return NextResponse.json(
-        { error: "Failed to update order" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ order: updatedOrder });
+    return NextResponse.json({ order: mapDoc(order) });
   } catch (error) {
     console.error("Order PUT error:", error);
     return NextResponse.json(

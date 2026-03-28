@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { LoginSchema } from "@/lib/schemas";
 import { generateToken, setAuthCookie } from "@/lib/auth";
-import { hashPassword, readUsers } from "@/lib/data-store";
+import connectDB from "@/lib/db";
+import { User } from "@/lib/models";
+// Keep hashPassword imported if someone wants to use old data-store, but we can do it locally:
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
     const body = await request.json();
     const parsed = LoginSchema.safeParse(body);
 
@@ -17,9 +25,8 @@ export async function POST(request: NextRequest) {
 
     const email = parsed.data.email.toLowerCase();
     const passwordHash = hashPassword(parsed.data.password);
-    const users = readUsers();
-
-    const user = users.find((u) => u.email.toLowerCase() === email);
+    
+    const user = await User.findOne({ email });
     if (!user || user.password !== passwordHash || user.status === "disabled") {
       return NextResponse.json(
         { error: "Invalid email or password" },
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = generateToken({
-      id: user.id,
+      id: user._id.toString(),
       email: user.email,
       role: user.role,
     });
@@ -36,7 +43,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       token,
       user: {
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,

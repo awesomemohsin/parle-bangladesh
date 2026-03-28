@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RegisterSchema } from "@/lib/schemas";
 import { generateToken, setAuthCookie } from "@/lib/auth";
-import { hashPassword, readUsers, writeUsers } from "@/lib/data-store";
+import connectDB from "@/lib/db";
+import { User } from "@/lib/models";
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
     const body = await request.json();
     const parsed = RegisterSchema.safeParse(body);
 
@@ -15,10 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const users = readUsers();
     const email = parsed.data.email.toLowerCase();
 
-    const exists = users.some((u) => u.email.toLowerCase() === email);
+    const exists = await User.findOne({ email });
     if (exists) {
       return NextResponse.json(
         { error: "Email already in use" },
@@ -26,36 +32,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const now = new Date().toISOString();
-    const user = {
-      id: `user-${Date.now()}`,
+    const user = new User({
       email,
       password: hashPassword(parsed.data.password),
       name: parsed.data.name,
-      role: "customer" as const,
-      status: "active" as const,
-      createdAt: now,
-      updatedAt: now,
-    };
+      role: "customer",
+      status: "active",
+    });
 
-    const saved = writeUsers([...users, user]);
-    if (!saved) {
-      return NextResponse.json(
-        { error: "Failed to create user" },
-        { status: 500 },
-      );
-    }
+    await user.save();
 
     const token = generateToken({
-      id: user.id,
+      id: user._id.toString(),
       email: user.email,
-      role: user.role,
+      role: user.role as any,
     });
 
     const response = NextResponse.json({
       token,
       user: {
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
