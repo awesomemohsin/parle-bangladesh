@@ -64,30 +64,90 @@ function itemMatchesKey(item: CartItem, key: string): boolean {
   return item.productSlug === key || item.productId === key;
 }
 
+let globalListeners: Array<(c: Cart) => void> = [];
+function notifyGlobalListeners(cart: Cart) {
+  globalListeners.forEach((listener) => listener(cart));
+}
+
 export function useCart() {
   const [cart, setCart] = useState<Cart>({ items: [], total: 0, itemCount: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-    if (savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart);
-        const rawItems = Array.isArray(parsed?.items) ? parsed.items : [];
-        const items = rawItems
+    const initCart = async () => {
+      let dbItems: CartItem[] | null = null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      
+      if (token) {
+        try {
+          const res = await fetch("/api/cart", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+              dbItems = data.items;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to parse DB cart:", error);
+        }
+      }
+
+      // If DB has items, prefer them. Otherwise fallback to local storage
+      if (dbItems) {
+        const items = dbItems
           .map((item: any) => normalizeItem(item))
           .filter((item: CartItem | null): item is CartItem => item !== null);
         setCart(calculateTotals(items));
-      } catch (error) {
-        console.error("Failed to parse cart:", error);
+      } else {
+        const savedCart = typeof window !== "undefined" ? localStorage.getItem(CART_STORAGE_KEY) : null;
+        if (savedCart) {
+          try {
+            const parsed = JSON.parse(savedCart);
+            const rawItems = Array.isArray(parsed?.items) ? parsed.items : [];
+            const items = rawItems
+              .map((item: any) => normalizeItem(item))
+              .filter((item: CartItem | null): item is CartItem => item !== null);
+            setCart(calculateTotals(items));
+          } catch (error) {
+            console.error("Failed to parse cart:", error);
+          }
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initCart();
+
+    const listener = (c: Cart) => setCart(c);
+    globalListeners.push(listener);
+    return () => {
+      globalListeners = globalListeners.filter((l) => l !== listener);
+    };
   }, []);
 
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+      const newStr = JSON.stringify(cart);
+      const prevStr = localStorage.getItem(CART_STORAGE_KEY);
+      
+      if (prevStr === newStr) return; // prevent loop
+      
+      localStorage.setItem(CART_STORAGE_KEY, newStr);
+      notifyGlobalListeners(cart);
+      
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (token) {
+        fetch("/api/cart", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ items: cart.items })
+        }).catch(err => console.error("Failed syncing cart to DB:", err));
+      }
     }
   }, [cart, isLoading]);
 
