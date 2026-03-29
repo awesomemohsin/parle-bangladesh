@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,27 @@ export default function CheckoutPage() {
     postalCode: '',
     paymentMethod: 'cash_on_delivery',
   });
+  const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
+
+  useEffect(() => {
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setFormData(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          email: user.email || prev.email,
+          phone: user.mobile || prev.phone,
+        }));
+        setPrefilled({
+          name: !!user.name,
+          email: !!user.email,
+          phone: !!user.mobile
+        });
+      } catch (e) {}
+    }
+  }, []);
 
   if (items.length === 0 && orderState.status !== 'success') {
     return (
@@ -68,9 +89,13 @@ export default function CheckoutPage() {
       }));
 
       // Create order
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           items: orderItems,
           shippingAddress: {
@@ -226,7 +251,8 @@ export default function CheckoutPage() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700"
+                      readOnly={prefilled.name}
+                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700 ${prefilled.name ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                       placeholder="John Doe"
                     />
                   </div>
@@ -241,7 +267,8 @@ export default function CheckoutPage() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700"
+                      readOnly={prefilled.email}
+                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700 ${prefilled.email ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                       placeholder="john@example.com"
                     />
                   </div>
@@ -256,7 +283,8 @@ export default function CheckoutPage() {
                       value={formData.phone}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700"
+                      readOnly={prefilled.phone}
+                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700 ${prefilled.phone ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                       placeholder="+880 1234 567890"
                     />
                   </div>

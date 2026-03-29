@@ -18,12 +18,18 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let query: any = {};
     if (!hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      query = { 
+        $or: [
+          { userId: user.id },
+          { customerEmail: user.email }
+        ]
+      };
     }
 
     // sort newest first
-    const orders = await Order.find().sort({ createdAt: -1 }).lean();
+    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ orders: orders.map(o => { o.id = o._id.toString(); return o; }) });
   } catch (error) {
     console.error("Orders GET error:", error);
@@ -82,8 +88,16 @@ export async function POST(request: NextRequest) {
     const city = body.city || shippingAddress.city;
     const postalCode = body.postalCode || shippingAddress.postalCode;
 
-    if (!customerName || !customerEmail || !customerPhone || !address || !city || !postalCode) {
-      return NextResponse.json({ error: "Missing customer or shipping information" }, { status: 400 });
+    const missing = [];
+    if (!customerName) missing.push("Name");
+    if (!customerEmail) missing.push("Email");
+    if (!customerPhone) missing.push("Phone");
+    if (!address) missing.push("Address");
+    if (!city) missing.push("City");
+    if (!postalCode) missing.push("Postal Code");
+
+    if (missing.length > 0) {
+      return NextResponse.json({ error: `Missing shipping information: ${missing.join(", ")}` }, { status: 400 });
     }
 
     const settings = FileStorage.read<{ shippingCost?: number; taxRate?: number }>("settings.json") || {};
@@ -94,7 +108,10 @@ export async function POST(request: NextRequest) {
     const tax = (subtotal + shippingCost) * taxRate;
     const total = subtotal + shippingCost + tax;
 
+    const user = getAuthUserFromRequest(request);
+
     const order = new Order({
+      userId: user ? user.id : undefined,
       customerName,
       customerEmail,
       customerPhone,
