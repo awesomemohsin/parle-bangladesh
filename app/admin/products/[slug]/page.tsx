@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 
+interface Variation {
+  weight?: string
+  flavor?: string
+  price: number
+  stock?: number
+}
+
 interface Product {
   id: string
   name: string
@@ -16,6 +23,9 @@ interface Product {
   description: string
   image: string
   rating: number
+  weight?: string
+  flavor?: string
+  variations?: Variation[]
 }
 
 interface Category {
@@ -63,6 +73,9 @@ export default function AdminProductFormPage() {
             description: '',
             image: '',
             rating: 0,
+            weight: '',
+            flavor: '',
+            variations: [],
           })
         }
       } catch (error) {
@@ -81,6 +94,12 @@ export default function AdminProductFormPage() {
 
     setIsSaving(true)
 
+    const updatedProduct = { ...product };
+    if (updatedProduct.variations && updatedProduct.variations.length > 0) {
+      updatedProduct.price = updatedProduct.variations[0].price;
+      updatedProduct.stock = updatedProduct.variations.reduce((sum, v) => sum + (v.stock || 0), 0);
+    }
+
     try {
       const method = isNew ? 'POST' : 'PUT'
       const url = isNew ? '/api/products' : `/api/products/${slug}`
@@ -91,7 +110,7 @@ export default function AdminProductFormPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(product),
+        body: JSON.stringify(updatedProduct),
       })
 
       if (response.ok) {
@@ -167,34 +186,130 @@ export default function AdminProductFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (৳) *
+                Default Weight
               </label>
               <Input
-                type="number"
-                step="0.01"
-                value={product.price}
+                type="text"
+                value={product.weight || ''}
                 onChange={(e) =>
-                  setProduct({ ...product, price: parseFloat(e.target.value) })
+                  setProduct({ ...product, weight: e.target.value })
                 }
-                placeholder="0.00"
-                required
+                placeholder="e.g., 200g"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock *
+                Default Flavor
               </label>
               <Input
-                type="number"
-                value={product.stock}
+                type="text"
+                value={product.flavor || ''}
                 onChange={(e) =>
-                  setProduct({ ...product, stock: parseInt(e.target.value) })
+                  setProduct({ ...product, flavor: e.target.value })
                 }
-                placeholder="0"
-                required
+                placeholder="e.g., Chocolate"
               />
             </div>
+          </div>
+
+          <div className="space-y-4 border-t pt-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">Product Variations</h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const variations = [...(product.variations || [])];
+                  variations.push({ weight: '', flavor: '', price: 0, stock: 0 });
+                  setProduct({ ...product, variations });
+                }}
+              >
+                Add Variation
+              </Button>
+            </div>
+
+            {product.variations && product.variations.length > 0 && (
+              <div className="space-y-4">
+                {product.variations.map((variation, index) => (
+                  <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Weight</label>
+                        <Input
+                          type="text"
+                          value={variation.weight || ''}
+                          onChange={(e) => {
+                            const variations = [...product.variations!];
+                            variations[index].weight = e.target.value;
+                            setProduct({ ...product, variations });
+                          }}
+                          className="h-9 text-sm"
+                          placeholder="200g"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Flavor</label>
+                        <Input
+                          type="text"
+                          value={variation.flavor || ''}
+                          onChange={(e) => {
+                            const variations = [...product.variations!];
+                            variations[index].flavor = e.target.value;
+                            setProduct({ ...product, variations });
+                          }}
+                          className="h-9 text-sm"
+                          placeholder="Orange"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Price</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={variation.price}
+                          onChange={(e) => {
+                            const variations = [...product.variations!];
+                            variations[index].price = parseFloat(e.target.value);
+                            setProduct({ ...product, variations });
+                          }}
+                          className="h-9 text-sm"
+                          required
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
+                          <Input
+                            type="number"
+                            value={variation.stock || 0}
+                            onChange={(e) => {
+                              const variations = [...product.variations!];
+                              variations[index].stock = parseInt(e.target.value);
+                              setProduct({ ...product, variations });
+                            }}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const variations = product.variations!.filter((_, i) => i !== index);
+                            setProduct({ ...product, variations });
+                          }}
+                          className="text-red-600 border-red-200 hover:bg-red-50 h-9"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

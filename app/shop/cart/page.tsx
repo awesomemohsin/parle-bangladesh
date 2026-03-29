@@ -4,15 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/hooks/useCart';
+import { useCart, getItemKey } from '@/hooks/useCart';
 
 export default function CartPage() {
   const { items, total, removeItem, updateQuantity, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const shippingCost = items.length > 0 ? 50 : 0;
-  const tax = (total + shippingCost) * 0.05;
-  const grandTotal = total + shippingCost + tax;
+  const shippingCost = items.length > 0 ? 80 : 0;
+  const grandTotal = total + shippingCost;
 
   const handleCheckout = () => {
     setIsCheckingOut(true);
@@ -52,13 +51,21 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2">
               <div className="space-y-4">
-                {items.map(item => (
+                {items.map(item => {
+                  const itemKey = getItemKey(item);
+                  return (
                   <div
-                    key={item.productSlug}
+                    key={itemKey}
                     className="bg-white border border-gray-200 rounded-lg p-4 flex gap-4"
                   >
-                    <div className="w-24 h-24 bg-gradient-to-br from-amber-100 to-orange-100 rounded flex items-center justify-center text-4xl flex-shrink-0">
-                      📦
+                    <div className="w-24 h-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      {item.image ? (
+                        <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-4xl">
+                          📦
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1">
@@ -68,13 +75,23 @@ export default function CartPage() {
                       >
                         {item.productName}
                       </Link>
-                      <p className="text-2xl font-bold text-amber-700 mb-4">
-                        ₳ {item.price.toFixed(2)}
-                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {(item.weight || (item as any).variationWeight) && (
+                          <span className="bg-gray-100 px-2 py-0.5 rounded text-xs text-gray-600 font-medium border border-gray-200">
+                            Weight: {item.weight || (item as any).variationWeight}
+                          </span>
+                        )}
+                        {(item.flavor || (item as any).variationFlavor) && (
+                          <span className="bg-gray-100 px-2 py-0.5 rounded text-xs text-gray-600 font-medium border border-gray-200">
+                            Flavor: {item.flavor || (item as any).variationFlavor}
+                          </span>
+                        )}
+                        <span className="bg-amber-50 px-2 py-0.5 rounded text-xs text-amber-700 font-bold border border-amber-100">Unit Price: ৳{item.price.toFixed(2)}</span>
+                      </div>
 
                       <div className="flex items-center border border-gray-300 rounded-lg w-fit">
                         <button
-                          onClick={() => updateQuantity(item.productSlug, item.quantity - 1)}
+                          onClick={() => updateQuantity(itemKey, item.quantity - 1)}
                           className="px-3 py-1 hover:bg-gray-100"
                         >
                           <Minus className="w-4 h-4" />
@@ -83,12 +100,12 @@ export default function CartPage() {
                           type="number"
                           value={item.quantity}
                           onChange={(e) =>
-                            updateQuantity(item.productSlug, parseInt(e.target.value) || 1)
+                            updateQuantity(itemKey, parseInt(e.target.value) || 1)
                           }
                           className="w-12 text-center border-0 focus:outline-none"
                         />
                         <button
-                          onClick={() => updateQuantity(item.productSlug, item.quantity + 1)}
+                          onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                           className="px-3 py-1 hover:bg-gray-100"
                         >
                           <Plus className="w-4 h-4" />
@@ -100,11 +117,11 @@ export default function CartPage() {
                       <div>
                         <p className="text-sm text-gray-600 mb-2">Subtotal</p>
                         <p className="text-xl font-bold text-gray-900">
-                          ₳ {(item.price * item.quantity).toFixed(2)}
+                          ৳ {(item.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
                       <button
-                        onClick={() => removeItem(item.productSlug)}
+                        onClick={() => removeItem(itemKey)}
                         className="text-red-600 hover:text-red-800 flex items-center justify-center gap-2 mt-auto"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -112,7 +129,7 @@ export default function CartPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
 
               <div className="mt-8">
@@ -133,22 +150,18 @@ export default function CartPage() {
                 <div className="space-y-4 mb-6 border-b pb-6">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-gray-900">₳ {total.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">৳ {total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Shipping</span>
-                    <span className="font-semibold text-gray-900">₳ {shippingCost.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tax (5%)</span>
-                    <span className="font-semibold text-gray-900">₳ {tax.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">৳ {shippingCost.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between mb-6">
                   <span className="text-lg font-bold text-gray-900">Total</span>
                   <span className="text-2xl font-bold text-amber-700">
-                    ₳ {grandTotal.toFixed(2)}
+                    ৳ {grandTotal.toFixed(2)}
                   </span>
                 </div>
 
@@ -168,7 +181,7 @@ export default function CartPage() {
 
                 <div className="mt-6 text-sm text-gray-600 bg-blue-50 p-3 rounded border border-blue-200">
                   <p className="font-semibold text-blue-900 mb-1">Shipping Information</p>
-                  <p>Free shipping on orders over ₳500. Standard delivery: 2-3 business days.</p>
+                  <p>Fixed shipping charge of ৳80 all over Bangladesh. Standard delivery: 2-3 business days.</p>
                 </div>
               </div>
             </div>

@@ -58,9 +58,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json();
-    const status = String(body.status || "").toLowerCase();
+    const newStatus = String(body.status || "").toLowerCase();
+    const cancelReason = body.cancelReason;
 
-    if (!Object.values(ORDER_STATUS).includes(status as never)) {
+    if (!Object.values(ORDER_STATUS).includes(newStatus as never)) {
       return NextResponse.json(
         { error: "Invalid order status" },
         { status: 400 },
@@ -68,11 +69,30 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const { id } = await params;
-    const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    const order = await Order.findById(id);
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+
+    const oldStatus = order.status;
+    
+    // Update order
+    order.status = newStatus;
+    if (newStatus === ORDER_STATUS.CANCELLED && cancelReason) {
+      order.cancelReason = cancelReason;
+    }
+
+    // Add log
+    if (!order.orderLogs) order.orderLogs = [];
+    order.orderLogs.push({
+      fromStatus: oldStatus,
+      toStatus: newStatus,
+      changedBy: `${user.name || 'Admin'} (${user.email})`,
+      changedAt: new Date(),
+    });
+
+    await order.save();
 
     return NextResponse.json({ order: mapDoc(order) });
   } catch (error) {

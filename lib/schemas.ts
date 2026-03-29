@@ -11,14 +11,25 @@ export const RegisterSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
 })
 
+export const VariationSchema = z.object({
+  weight: z.string().optional(),
+  flavor: z.string().optional(),
+  price: z.number().positive(),
+  stock: z.number().nonnegative().optional(),
+})
+
 export const ProductSchema = z.object({
   name: z.string().min(1, 'Product name required'),
+  slug: z.string().optional(),
   description: z.string().optional(),
   price: z.number().positive('Price must be positive'),
   category: z.string().min(1, 'Category required'),
   image: z.string().optional(),
   stock: z.number().nonnegative('Stock must be non-negative'),
   rating: z.number().min(0).max(5).optional(),
+  weight: z.string().optional(),
+  flavor: z.string().optional(),
+  variations: z.array(VariationSchema).optional(),
 })
 
 export const CategorySchema = z.object({

@@ -16,6 +16,8 @@ type Product = {
   image: string;
   rating: number;
   stock: number;
+  weight?: string;
+  flavor?: string;
   description?: string;
 };
 
@@ -136,6 +138,8 @@ export default function ShopPage() {
                     price: product.price,
                     image: product.image,
                     quantity: 1,
+                    weight: product.weight,
+                    flavor: product.flavor,
                   })
                 }
               />

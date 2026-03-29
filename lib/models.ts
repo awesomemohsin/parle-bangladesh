@@ -28,9 +28,9 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-export const User = mongoose.models?.User || mongoose.model<IUser>("User", UserSchema, "customers");
-export const Customer = mongoose.models?.Customer || mongoose.model<IUser>("Customer", UserSchema, "customers");
-export const Admin = mongoose.models?.Admin || mongoose.model<IUser>("Admin", UserSchema, "admins");
+export const User = mongoose.models?.User || mongoose.model<IUser>("User", UserSchema, "users");
+export const Customer = mongoose.models?.Customer || mongoose.model<IUser>("Customer", UserSchema, "users");
+export const Admin = mongoose.models?.Admin || mongoose.model<IUser>("Admin", UserSchema, "users");
 
 // --- CART MODEL ---
 export interface ICartItem {
@@ -40,6 +40,8 @@ export interface ICartItem {
   quantity: number;
   image?: string;
   productSlug?: string;
+  weight?: string;
+  flavor?: string;
 }
 
 export interface ICart extends Document {
@@ -54,6 +56,8 @@ const CartItemSchema = new Schema<ICartItem>({
   quantity: { type: Number, required: true, default: 1 },
   image: { type: String },
   productSlug: { type: String },
+  weight: { type: String },
+  flavor: { type: String },
 });
 
 const CartSchema = new Schema<ICart>(
@@ -91,12 +95,22 @@ export const Category = mongoose.models?.Category || mongoose.model<ICategory>("
 
 
 // --- PRODUCT MODEL ---
+export interface IVariation {
+  weight?: string;
+  flavor?: string;
+  price: number;
+  stock?: number;
+}
+
 export interface IProduct extends Document {
   name: string;
   slug: string;
   category: string; // Sticking with slug reference based on original logic
   description?: string;
   price: number;
+  weight?: string;
+  flavor?: string;
+  variations?: IVariation[];
   image?: string;
   images?: string[];
   rating?: number;
@@ -106,6 +120,13 @@ export interface IProduct extends Document {
   updatedAt: Date;
 }
 
+const VariationSchema = new Schema<IVariation>({
+  weight: { type: String },
+  flavor: { type: String },
+  price: { type: Number, required: true },
+  stock: { type: Number },
+});
+
 const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true },
@@ -113,6 +134,9 @@ const ProductSchema = new Schema<IProduct>(
     category: { type: String, required: true },
     description: { type: String },
     price: { type: Number, required: true },
+    weight: { type: String },
+    flavor: { type: String },
+    variations: [VariationSchema],
     image: { type: String },
     images: [{ type: String }],
     rating: { type: Number, default: 0 },
@@ -132,6 +156,16 @@ export interface IOrderItem {
   name: string;
   quantity: number;
   price: number;
+  weight?: string;
+  flavor?: string;
+  image?: string;
+}
+
+export interface IOrderLog {
+  fromStatus: string;
+  toStatus: string;
+  changedBy: string; // Admin ID or Name
+  changedAt: Date;
 }
 
 export interface IOrder extends Document {
@@ -148,7 +182,9 @@ export interface IOrder extends Document {
   shippingCost: number;
   tax: number;
   total: number;
-  status: string; // 'pending', 'processing', 'completed', 'cancelled'
+  status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
+  cancelReason?: string;
+  orderLogs?: IOrderLog[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -159,6 +195,16 @@ const OrderItemSchema = new Schema<IOrderItem>({
   name: { type: String, required: true },
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
+  weight: { type: String },
+  flavor: { type: String },
+  image: { type: String },
+});
+
+const OrderLogSchema = new Schema<IOrderLog>({
+  fromStatus: { type: String, required: true },
+  toStatus: { type: String, required: true },
+  changedBy: { type: String, required: true },
+  changedAt: { type: Date, default: Date.now },
 });
 
 const OrderSchema = new Schema<IOrder>(
@@ -177,6 +223,8 @@ const OrderSchema = new Schema<IOrder>(
     tax: { type: Number, required: true },
     total: { type: Number, required: true },
     status: { type: String, default: "pending" },
+    cancelReason: { type: String },
+    orderLogs: [OrderLogSchema],
   },
   { timestamps: true }
 );

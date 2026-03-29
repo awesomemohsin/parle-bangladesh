@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/hooks/useCart';
+import { useCart, getItemKey } from '@/hooks/useCart';
 
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
@@ -68,9 +68,8 @@ export default function CheckoutPage() {
     );
   }
 
-  const shippingCost = 50;
-  const tax = (total + shippingCost) * 0.05;
-  const grandTotal = total + shippingCost + tax;
+  const shippingCost = 80;
+  const grandTotal = total + shippingCost;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -86,6 +85,11 @@ export default function CheckoutPage() {
       const orderItems = items.map(item => ({
         productSlug: item.productSlug,
         quantity: item.quantity,
+        weight: item.weight,
+        flavor: item.flavor,
+        image: item.image,
+        price: item.price,
+        name: item.productName,
       }));
 
       // Create order
@@ -148,19 +152,15 @@ export default function CheckoutPage() {
               <div className="space-y-3 text-left mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">₳ {total.toFixed(2)}</span>
+                  <span className="font-semibold">৳ {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold">₳ {shippingCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="font-semibold">₳ {tax.toFixed(2)}</span>
+                  <span className="font-semibold">৳ {shippingCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-3">
                   <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-amber-700 text-lg">₳ {grandTotal.toFixed(2)}</span>
+                  <span className="font-bold text-amber-700 text-lg">৳ {grandTotal.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -377,35 +377,41 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
 
               <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
-                {items.map(item => (
-                  <div key={item.productSlug} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{item.productName} x {item.quantity}</span>
-                    <span className="font-semibold text-gray-900">
-                      ₳ {(item.price * item.quantity).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                {items.map(item => {
+                  const itemKey = getItemKey(item);
+                  return (
+                    <div key={itemKey} className="flex justify-between text-sm gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-gray-900 font-medium">{item.productName} x {item.quantity}</span>
+                        {(item.weight || item.flavor) && (
+                          <span className="text-xs text-gray-500">
+                            {[item.weight, item.flavor].filter(Boolean).join(" | ")}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-semibold text-gray-900">
+                        ৳ {(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="space-y-3 border-b pb-6 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold text-gray-900">₳ {total.toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">৳ {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold text-gray-900">₳ {shippingCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (5%)</span>
-                  <span className="font-semibold text-gray-900">₳ {tax.toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">৳ {shippingCost.toFixed(2)}</span>
                 </div>
               </div>
 
               <div className="flex justify-between">
                 <span className="font-bold text-gray-900">Total</span>
                 <span className="text-2xl font-bold text-amber-700">
-                  ₳ {grandTotal.toFixed(2)}
+                  ৳ {grandTotal.toFixed(2)}
                 </span>
               </div>
             </div>

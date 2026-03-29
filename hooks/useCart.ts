@@ -9,24 +9,20 @@ export interface CartItem {
   price: number;
   quantity: number;
   image?: string;
-}
-
-export interface AddCartItemInput {
-  productId?: string;
-  id?: string;
-  productSlug?: string;
-  slug?: string;
-  productName?: string;
-  name?: string;
-  price: number;
-  image?: string;
-  quantity?: number;
+  weight?: string;
+  flavor?: string;
 }
 
 export interface Cart {
   items: CartItem[];
   total: number;
   itemCount: number;
+}
+
+export type AddCartItemInput = Partial<CartItem> & { 
+  price: number; 
+  productSlug?: string;
+  productId?: string;
 }
 
 const CART_STORAGE_KEY = "parle-cart";
@@ -57,11 +53,23 @@ function normalizeItem(item: any): CartItem | null {
     price,
     quantity,
     image: item.image,
+    weight: item.weight,
+    flavor: item.flavor,
   };
 }
 
+export function getItemKey(item: { productId: string; weight?: string; flavor?: string; price?: number } | string | any): string {
+  if (typeof item === "string") return item;
+  const id = item.productId || item.id || item.productSlug;
+  const weight = item.weight || "";
+  const flavor = item.flavor || "";
+  // Include price in key if labels are missing to distinguish different price variations
+  const priceSuffix = (!weight && !flavor && item.price) ? `-${item.price}` : "";
+  return `${id}-${weight}-${flavor}${priceSuffix}`;
+}
+
 function itemMatchesKey(item: CartItem, key: string): boolean {
-  return item.productSlug === key || item.productId === key;
+  return getItemKey(item) === key;
 }
 
 let globalListeners: Array<(c: Cart) => void> = [];
@@ -170,14 +178,15 @@ export function useCart() {
 
         if (!normalized) return prevCart;
 
+        const itemKey = getItemKey(normalized);
         const existingItem = prevCart.items.find((i) =>
-          itemMatchesKey(i, normalized.productSlug),
+          itemMatchesKey(i, itemKey),
         );
         let newItems: CartItem[];
-
+ 
         if (existingItem) {
           newItems = prevCart.items.map((i) =>
-            itemMatchesKey(i, normalized.productSlug)
+            itemMatchesKey(i, itemKey)
               ? { ...i, quantity: i.quantity + normalized.quantity }
               : i,
           );

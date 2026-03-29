@@ -10,6 +10,7 @@ interface ProductCardProps {
   image: string;
   rating: number;
   stock: number;
+  weight?: string;
   onAddToCart?: () => void;
 }
 
@@ -20,6 +21,7 @@ export default function ProductCard({
   image,
   rating,
   stock,
+  weight,
   onAddToCart,
 }: ProductCardProps) {
   return (
@@ -45,6 +47,9 @@ export default function ProductCard({
             {name}
           </h3>
         </Link>
+        {weight && (
+          <p className="text-sm text-gray-500 mb-2">{weight}</p>
+        )}
 
         {/* Rating */}
         <div className="flex items-center mb-2">

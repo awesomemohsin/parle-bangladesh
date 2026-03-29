@@ -17,6 +17,7 @@ type Product = {
   image: string;
   rating: number;
   stock: number;
+  weight?: string;
 };
 
 type Category = {

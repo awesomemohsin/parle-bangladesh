@@ -3,7 +3,6 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product } from "@/lib/models";
-import { FileStorage } from "@/lib/file-storage";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -60,6 +59,9 @@ export async function POST(request: NextRequest) {
             name: product.name,
             quantity,
             price: item.price !== undefined ? Number(item.price) : product.price,
+            weight: item.weight,
+            flavor: item.flavor,
+            image: item.image || product.image,
           };
         }
       }
@@ -70,6 +72,9 @@ export async function POST(request: NextRequest) {
             name: item.name,
             quantity,
             price: Number(item.price),
+            weight: item.weight,
+            flavor: item.flavor,
+            image: item.image,
           };
       }
       
@@ -100,13 +105,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Missing shipping information: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    const settings = FileStorage.read<{ shippingCost?: number; taxRate?: number }>("settings.json") || {};
-    const shippingCost = Number(settings.shippingCost ?? 50);
-    const taxRate = Number(settings.taxRate ?? 0.05);
+    const shippingCost = 80;
+    const taxRate = 0;
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const tax = (subtotal + shippingCost) * taxRate;
-    const total = subtotal + shippingCost + tax;
+    const tax = 0;
+    const total = subtotal + shippingCost;
 
     const user = getAuthUserFromRequest(request);
 

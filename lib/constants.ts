@@ -7,10 +7,10 @@ export const ROLES = {
 
 export const ORDER_STATUS = {
   PENDING: 'pending',
-  CONFIRMED: 'confirmed',
+  CANCELLED: 'cancelled',
+  PROCESSING: 'processing',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
-  CANCELLED: 'cancelled',
 } as const
 
 export const PRODUCT_CATEGORIES = [

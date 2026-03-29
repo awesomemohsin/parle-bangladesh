@@ -10,6 +10,8 @@ interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  weight?: string;
+  flavor?: string;
 }
 
 interface Order {
@@ -99,9 +101,26 @@ export default function MyOrdersPage() {
                 <ul className="divide-y divide-gray-50">
                   {order.items.map((item, idx) => (
                     <li key={idx} className="py-2 flex justify-between text-sm">
-                      <span className="text-gray-600">
-                        {item.quantity}x {item.name}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-gray-900 font-medium">
+                          {item.quantity}x {item.name}
+                        </span>
+                        <div className="flex gap-2 mt-1">
+                          {item.weight && (
+                            <span className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100">
+                              W: {item.weight}
+                            </span>
+                          )}
+                          {item.flavor && (
+                            <span className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100">
+                              F: {item.flavor}
+                            </span>
+                          )}
+                          <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 font-semibold">
+                            Unit Price: {formatCurrency(item.price)}
+                          </span>
+                        </div>
+                      </div>
                       <span className="text-gray-800 font-medium">
                         {formatCurrency(item.price * item.quantity)}
                       </span>

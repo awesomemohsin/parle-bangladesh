@@ -24,6 +24,7 @@ interface Product {
   rating: number
   stock: number
   category: string
+  weight?: string
 }
 
 export default function HomePage() {
@@ -129,10 +130,11 @@ export default function HomePage() {
                   {...product}
                   onAddToCart={() => {
                     addItem({
-                      id: product.id,
-                      name: product.name,
-                      slug: product.slug,
+                      productId: product.id,
+                      productName: product.name,
+                      productSlug: product.slug,
                       price: product.price,
+                      image: product.image,
                       quantity: 1,
                     })
                   }}

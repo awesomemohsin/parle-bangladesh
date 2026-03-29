@@ -5,6 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'parle-ecommerce-secret-key-change-
 export interface JWTPayload {
   id: string
   email: string
+  name?: string
   role: 'customer' | 'admin' | 'moderator' | 'super_admin'
   iat?: number
   exp?: number
