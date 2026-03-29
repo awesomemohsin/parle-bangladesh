@@ -33,12 +33,17 @@ export default function AdminLoginPage() {
         return
       }
 
+      if (data.user?.role === 'customer') {
+        setError('Access denied. Admin privileges required.')
+        return
+      }
+
       // Store token
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
 
       // Redirect to admin dashboard
-      router.push('/admin/dashboard')
+      window.location.href = '/admin/dashboard'
     } catch (err) {
       setError('An error occurred. Please try again.')
       console.error(err)
@@ -98,11 +103,7 @@ export default function AdminLoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-gray-700">
-            <p className="font-semibold mb-2">Demo Credentials:</p>
-            <p>Super Admin: superadmin@parle.com</p>
-            <p>Password: superadmin123</p>
-          </div>
+
 
           <div className="mt-4 text-center">
             <Link href="/" className="text-blue-600 hover:text-blue-700 text-sm">

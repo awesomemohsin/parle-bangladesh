@@ -4,11 +4,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { useCart } from '@/hooks/useCart'
 
 export default function Navbar() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const { itemCount } = useCart()
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -23,7 +25,7 @@ export default function Navbar() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setIsLoggedIn(false)
-    router.push('/')
+    window.location.href = '/'
   }
 
   return (
@@ -41,8 +43,20 @@ export default function Navbar() {
             <Link href="/shop" className="text-gray-700 hover:text-blue-600 font-medium">
               Shop
             </Link>
-            <Link href="/shop/cart" className="text-gray-700 hover:text-blue-600 font-medium">
+            
+            {isLoggedIn && user?.role === 'customer' && (
+              <Link href="/orders" className="text-gray-700 hover:text-blue-600 font-medium">
+                Orders
+              </Link>
+            )}
+
+            <Link href="/shop/cart" className="text-gray-700 hover:text-blue-600 font-medium relative">
               Cart
+              {itemCount > 0 && (
+                <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full z-10">
+                  {itemCount}
+                </span>
+              )}
             </Link>
 
             {isLoggedIn && user?.role?.includes('admin') && (

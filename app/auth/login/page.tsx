@@ -40,11 +40,11 @@ export default function LoginPage() {
         data.user?.role === "super_admin" ||
         data.user?.role === "moderator"
       ) {
-        router.push("/admin/dashboard");
+        window.location.href = "/admin/dashboard";
         return;
       }
 
-      router.push("/");
+      window.location.href = "/";
     } catch (err) {
       console.error("Login error:", err);
       setError("An unexpected error occurred. Please try again.");
@@ -67,12 +67,12 @@ export default function LoginPage() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-700 mb-1">Email</label>
+            <label className="block text-sm text-gray-700 mb-1">Email or Mobile Number</label>
             <Input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="you@example.com or 01XXXXXXXXX"
               required
             />
           </div>
@@ -93,14 +93,27 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-4 text-sm text-gray-600">
-          <span>Admin user? </span>
-          <Link
-            href="/admin/login"
-            className="text-blue-600 hover:text-blue-700"
-          >
-            Use admin login
-          </Link>
+        <div className="mt-4 text-sm text-gray-600 space-y-2">
+          <div>
+            <Link href="/auth/forgot-password" className="text-blue-600 hover:underline">
+              Forgot your password?
+            </Link>
+          </div>
+          <div>
+            Don't have an account?{" "}
+            <Link href="/auth/signup" className="text-blue-600 hover:underline">
+              Sign up
+            </Link>
+          </div>
+          <div>
+            <span>Admin user? </span>
+            <Link
+              href="/admin/login"
+              className="text-blue-600 hover:underline"
+            >
+              Use admin login
+            </Link>
+          </div>
         </div>
       </Card>
     </div>
