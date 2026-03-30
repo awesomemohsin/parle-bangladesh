@@ -50,7 +50,7 @@ export default function HomePage() {
 
         if (productsRes.ok) {
           const data = await productsRes.json()
-          setBestSellers(data.products || [])
+          setBestSellers((data.products || []).slice(0, 8))
         }
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -306,10 +306,10 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="lg:w-1/2 text-white">
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight uppercase italic leading-none mb-6">
-                The Parle Story
+                Joy in Every Bite
               </h2>
               <p className="text-red-100 text-base mb-8 leading-relaxed font-bold uppercase tracking-tight">
-                For over 90 years, Parle has been known for quality and great taste. We are proud to bring these iconic snacks to families across Bangladesh.
+                Parle has been at the heart of snack time for generations. From iconic biscuits to premium cookies, we believe every bite should bring a moment of joy. We are proud to share these world-class flavors with every home in Bangladesh.
               </p>
               <div className="grid grid-cols-2 gap-6 mb-8 max-w-md mx-auto md:mx-0">
                 <div>

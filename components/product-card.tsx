@@ -46,6 +46,10 @@ export default function ProductCard({
 
   const hasDiscount = !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
   const currentPrice = (hasDiscount ? defaultVariation.discountPrice : defaultVariation.price) || 0;
+  
+  const discountPercentage = hasDiscount 
+    ? Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100) 
+    : 0;
 
   const handleAddToCart = () => {
     if (onAddToCart && defaultVariation.stock > 0) {
@@ -61,7 +65,7 @@ export default function ProductCard({
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
       {hasDiscount && (
         <div className="absolute top-4 left-4 z-10">
-          <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">Sale Active</span>
+          <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">Sale: {discountPercentage}% off</span>
         </div>
       )}
       {/* Image Container */}
@@ -102,14 +106,17 @@ export default function ProductCard({
         </div>
 
         <div className="flex flex-col gap-0.5 mb-4">
-          <div className="flex items-baseline gap-1">
-            <span className="text-sm font-bold text-red-600">৳</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-lg font-bold text-red-600">৳</span>
             <span className="text-2xl font-black text-red-600 tracking-tighter">
               {Math.round(currentPrice)}
             </span>
           </div>
           {hasDiscount && (
-            <span className="text-[10px] text-gray-300 line-through font-bold">৳ {Math.round(defaultVariation.price)}</span>
+            <div className="flex items-center gap-1 opacity-40">
+               <span className="text-[10px] font-bold text-gray-500">৳</span>
+               <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(defaultVariation.price)}</span>
+            </div>
           )}
         </div>
 

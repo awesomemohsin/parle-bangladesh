@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ProductSchema } from "@/lib/schemas";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Product, Category } from "@/lib/models";
+import { Product } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
@@ -20,9 +19,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const categoryQuery = searchParams.get("category")?.toLowerCase();
     const searchQuery = searchParams.get("q")?.toLowerCase();
+    const sortParam = searchParams.get("sort");
+    const limitParam = parseInt(searchParams.get("limit") || "0");
 
     let query: any = {};
-    if (categoryQuery) query.category = new RegExp(`^${categoryQuery}$`, "i");
+    if (categoryQuery && categoryQuery !== "all") {
+      query.category = categoryQuery;
+    }
+    
     if (searchQuery) {
       query.$or = [
         { name: new RegExp(searchQuery, "i") },
@@ -30,8 +34,26 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const products = await Product.find(query).lean();
-    return NextResponse.json({ products: products.map((p: any) => { p.id = p._id.toString(); return p; }) });
+    let sort: any = { createdAt: -1 };
+    if (sortParam === "orders") {
+      sort = { ordersCount: -1 };
+    }
+
+    let databaseQuery = Product.find(query, { images: 0 }).sort(sort);
+    
+    if (limitParam > 0) {
+      databaseQuery = databaseQuery.limit(limitParam);
+    }
+
+    const products = await databaseQuery.lean();
+    
+    const response = NextResponse.json({ 
+      products: products.map((p: any) => ({ ...p, id: p._id.toString(), _id: undefined })) 
+    });
+
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
+    
+    return response;
   } catch (error) {
     console.error("Products GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -74,7 +96,6 @@ export async function POST(request: NextRequest) {
       await product.save();
     }
 
-    // Log administrative activity
     await logAdminActivity({
       adminEmail: user.email,
       action,
