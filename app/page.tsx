@@ -121,8 +121,7 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden"
           >
-            <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-red-600 rounded-xl flex items-center justify-center relative overflow-hidden group">
-               <div className="absolute inset-0 bg-red-700/50 skew-x-[-15deg] group-hover:translate-x-5 transition-transform" />
+            <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-white rounded-xl flex items-center justify-center relative overflow-hidden group border border-slate-50 shadow-inner">
                <img 
                  src="/images/offers/free-delivery.png" 
                  alt="Free Delivery" 
