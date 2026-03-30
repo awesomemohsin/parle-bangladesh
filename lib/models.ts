@@ -29,8 +29,8 @@ const UserSchema = new Schema<IUser>(
 );
 
 export const User = mongoose.models?.User || mongoose.model<IUser>("User", UserSchema, "users");
-export const Customer = mongoose.models?.Customer || mongoose.model<IUser>("Customer", UserSchema, "users");
-export const Admin = mongoose.models?.Admin || mongoose.model<IUser>("Admin", UserSchema, "users");
+export const Customer = mongoose.models?.Customer || mongoose.model<IUser>("Customer", UserSchema, "customers");
+export const Admin = mongoose.models?.Admin || mongoose.model<IUser>("Admin", UserSchema, "admins");
 
 // --- CART MODEL ---
 export interface ICartItem {
@@ -99,23 +99,19 @@ export interface IVariation {
   weight?: string;
   flavor?: string;
   price: number;
-  stock?: number;
+  discountPrice?: number;
+  stock: number;
+  isDefault?: boolean;
 }
 
 export interface IProduct extends Document {
   name: string;
   slug: string;
-  category: string; // Sticking with slug reference based on original logic
+  category: string; // Slug reference
   description?: string;
-  price: number;
-  weight?: string;
-  flavor?: string;
-  variations?: IVariation[];
-  image?: string;
-  images?: string[];
-  rating?: number;
-  reviews?: number;
-  stock?: number;
+  variations: IVariation[];
+  image: string; // Main image
+  images: string[]; // Additional images
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,7 +120,9 @@ const VariationSchema = new Schema<IVariation>({
   weight: { type: String },
   flavor: { type: String },
   price: { type: Number, required: true },
-  stock: { type: Number },
+  discountPrice: { type: Number },
+  stock: { type: Number, required: true, default: 0 },
+  isDefault: { type: Boolean, default: false },
 });
 
 const ProductSchema = new Schema<IProduct>(
@@ -133,20 +131,14 @@ const ProductSchema = new Schema<IProduct>(
     slug: { type: String, required: true, unique: true, lowercase: true },
     category: { type: String, required: true },
     description: { type: String },
-    price: { type: Number, required: true },
-    weight: { type: String },
-    flavor: { type: String },
-    variations: [VariationSchema],
-    image: { type: String },
+    variations: { type: [VariationSchema], default: [] },
+    image: { type: String, required: true },
     images: [{ type: String }],
-    rating: { type: Number, default: 0 },
-    reviews: { type: Number, default: 0 },
-    stock: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-export const Product = mongoose.models?.Product || mongoose.model<IProduct>("Product", ProductSchema);
+export const Product = mongoose.models?.Product || mongoose.model<IProduct>("Product", ProductSchema, "products");
 
 
 // --- ORDER MODEL ---

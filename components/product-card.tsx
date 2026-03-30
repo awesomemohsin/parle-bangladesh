@@ -1,81 +1,149 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface Variation {
+  weight?: string;
+  flavor?: string;
+  price: number;
+  discountPrice?: number;
+  stock: number;
+  isDefault?: boolean;
+}
 
 interface ProductCardProps {
   id: string;
   name: string;
   slug: string;
-  price: number;
+  category: string;
+  variations: Variation[];
   image: string;
-  rating: number;
-  stock: number;
-  weight?: string;
-  onAddToCart?: () => void;
+  onAddToCart?: (variation: Variation) => void;
 }
 
 export default function ProductCard({
   name,
   slug,
-  price,
+  category,
+  variations = [],
   image,
-  rating,
-  stock,
-  weight,
   onAddToCart,
 }: ProductCardProps) {
+  const [isFlying, setIsFlying] = useState(false);
+
+  // Find default variation or use the first one
+  const defaultVariation = variations.find(v => v.isDefault) || variations[0] || {
+    price: 0,
+    discountPrice: 0,
+    stock: 0,
+    weight: "",
+    flavor: ""
+  };
+
+  const hasDiscount = !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
+  const currentPrice = (hasDiscount ? defaultVariation.discountPrice : defaultVariation.price) || 0;
+
+  const handleAddToCart = () => {
+    if (onAddToCart && defaultVariation.stock > 0) {
+      onAddToCart(defaultVariation);
+      setIsFlying(true);
+      setTimeout(() => setIsFlying(false), 800);
+    }
+  };
+
+  const isOutOfStock = defaultVariation.stock === 0;
+
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
+      {hasDiscount && (
+        <div className="absolute top-4 left-4 z-10">
+          <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">Sale Active</span>
+        </div>
+      )}
       {/* Image Container */}
       <Link href={`/shop/products/${slug}`}>
-        <div className="relative w-full h-48 bg-gray-100 overflow-hidden group">
-          <div className="w-full h-full bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400">
-            <span className="text-sm">Product Image</span>
-          </div>
-          {stock === 0 && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <span className="text-white font-semibold">Out of Stock</span>
+        <div className="relative w-full h-56 bg-gray-50 overflow-hidden flex items-center justify-center p-4">
+          <Image
+            src={image}
+            alt={name}
+            fill
+            className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20 backdrop-blur-[1px]">
+              <span className="bg-white text-gray-900 border-2 border-red-600 px-4 py-1 font-black text-sm uppercase tracking-tighter">Out of Stock</span>
             </div>
           )}
         </div>
       </Link>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 border-t">
         <Link href={`/shop/products/${slug}`}>
-          <h3 className="font-semibold text-gray-900 hover:text-blue-600 line-clamp-2 mb-2">
+          <h3 className="font-bold text-gray-900 leading-tight hover:text-red-600 line-clamp-2 min-h-[2.5rem] mb-1 transition-colors">
             {name}
           </h3>
         </Link>
-        {weight && (
-          <p className="text-sm text-gray-500 mb-2">{weight}</p>
-        )}
-
-        {/* Rating */}
-        <div className="flex items-center mb-2">
-          <div className="text-yellow-400 text-sm">
-            {"★".repeat(Math.round(rating))}
-            {"☆".repeat(5 - Math.round(rating))}
-          </div>
-          <span className="text-gray-600 text-xs ml-2">({rating}/5)</span>
+        
+        <div className="flex items-center justify-between mb-3 min-h-[1.5rem]">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+            {defaultVariation.weight || defaultVariation.flavor || "Standard"}
+          </span>
+          {!isOutOfStock && (
+            <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-bold uppercase">
+              In Stock
+            </span>
+          )}
         </div>
 
-        {/* Price */}
-        <div className="mb-4">
-          <p className="text-2xl font-bold text-gray-900">
-            ৳{price.toFixed(2)}
-          </p>
+        <div className="flex flex-col gap-0.5 mb-4">
+          <div className="flex items-baseline gap-1">
+            <span className="text-sm font-bold text-red-600">৳</span>
+            <span className="text-2xl font-black text-red-600 tracking-tighter">
+              {Math.round(currentPrice)}
+            </span>
+          </div>
+          {hasDiscount && (
+            <span className="text-[10px] text-gray-300 line-through font-bold">৳ {Math.round(defaultVariation.price)}</span>
+          )}
         </div>
 
         {/* Button */}
-        <Button
-          onClick={onAddToCart}
-          disabled={stock === 0}
-          className="w-full"
-          variant={stock > 0 ? "default" : "outline"}
-        >
-          {stock > 0 ? "Add to Cart" : "Out of Stock"}
-        </Button>
+        <div className="relative">
+          <Button
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className={`w-full py-6 font-black uppercase tracking-wider text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
+          >
+            {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+          </Button>
+
+          {/* Flying Dot Animation */}
+          <AnimatePresence>
+            {isFlying && (
+              <motion.div
+                initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+                animate={{ 
+                  x: 0, 
+                  y: -800, 
+                  scale: 0.2, 
+                  opacity: 0,
+                  rotate: 720 
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1, ease: "circOut" }}
+                className="absolute left-1/2 top-1/2 -ml-4 -mt-4 w-10 h-10 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-black z-50 pointer-events-none shadow-2xl"
+              >
+                +1
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
