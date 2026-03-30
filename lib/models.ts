@@ -47,6 +47,8 @@ export interface ICartItem {
 export interface ICart extends Document {
   userId: string;
   items: ICartItem[];
+  promoCode?: string;
+  discountAmount?: number;
 }
 
 const CartItemSchema = new Schema<ICartItem>({
@@ -64,6 +66,8 @@ const CartSchema = new Schema<ICart>(
   {
     userId: { type: String, required: true, unique: true },
     items: [CartItemSchema],
+    promoCode: { type: String },
+    discountAmount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -112,6 +116,7 @@ export interface IProduct extends Document {
   variations: IVariation[];
   image: string; // Main image
   images: string[]; // Additional images
+  ordersCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -134,9 +139,14 @@ const ProductSchema = new Schema<IProduct>(
     variations: { type: [VariationSchema], default: [] },
     image: { type: String, required: true },
     images: [{ type: String }],
+    ordersCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
+
+// Indexes for faster loading
+ProductSchema.index({ category: 1 });
+ProductSchema.index({ name: "text", description: "text" }); // For search prioritization
 
 export const Product = mongoose.models?.Product || mongoose.model<IProduct>("Product", ProductSchema, "products");
 
@@ -174,6 +184,8 @@ export interface IOrder extends Document {
   shippingCost: number;
   tax: number;
   total: number;
+  promoCode?: string;
+  discountAmount?: number;
   status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
   cancelReason?: string;
   orderLogs?: IOrderLog[];
@@ -214,12 +226,20 @@ const OrderSchema = new Schema<IOrder>(
     shippingCost: { type: Number, required: true },
     tax: { type: Number, required: true },
     total: { type: Number, required: true },
+    promoCode: { type: String },
+    discountAmount: { type: Number, default: 0 },
     status: { type: String, default: "pending" },
     cancelReason: { type: String },
     orderLogs: [OrderLogSchema],
   },
   { timestamps: true }
 );
+
+// Indexes for administrative lookups and history
+OrderSchema.index({ customerEmail: 1 });
+OrderSchema.index({ status: 1 });
+OrderSchema.index({ userId: 1 });
+OrderSchema.index({ createdAt: -1 });
 
 export const Order = mongoose.models?.Order || mongoose.model<IOrder>("Order", OrderSchema);
  
@@ -244,5 +264,10 @@ const AdminActivitySchema = new Schema<IAdminActivity>(
   },
   { timestamps: true }
 );
+
+// Indexes for audit trail performance
+AdminActivitySchema.index({ adminEmail: 1 });
+AdminActivitySchema.index({ action: 1 });
+AdminActivitySchema.index({ createdAt: -1 });
  
 export const AdminActivity = mongoose.models?.AdminActivity || mongoose.model<IAdminActivity>("AdminActivity", AdminActivitySchema, "admin_activities");

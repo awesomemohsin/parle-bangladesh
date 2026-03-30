@@ -17,6 +17,8 @@ export interface Cart {
   items: CartItem[];
   total: number;
   itemCount: number;
+  promoCode?: string;
+  discountAmount?: number;
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -63,7 +65,6 @@ export function getItemKey(item: { productId: string; weight?: string; flavor?: 
   const id = item.productId || item.id || item.productSlug;
   const weight = item.weight || "";
   const flavor = item.flavor || "";
-  // Include price in key if labels are missing to distinguish different price variations
   const priceSuffix = (!weight && !flavor && item.price) ? `-${item.price}` : "";
   return `${id}-${weight}-${flavor}${priceSuffix}`;
 }
@@ -84,6 +85,9 @@ export function useCart() {
   useEffect(() => {
     const initCart = async () => {
       let dbItems: CartItem[] | null = null;
+      let dbPromo: string | undefined;
+      let dbDiscount: number | undefined;
+
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       
       if (token) {
@@ -95,6 +99,8 @@ export function useCart() {
             const data = await res.json();
             if (data.items && data.items.length > 0) {
               dbItems = data.items;
+              dbPromo = data.promoCode;
+              dbDiscount = data.discountAmount;
             }
           }
         } catch (error) {
@@ -102,12 +108,11 @@ export function useCart() {
         }
       }
 
-      // If DB has items, prefer them. Otherwise fallback to local storage
       if (dbItems) {
         const items = dbItems
           .map((item: any) => normalizeItem(item))
           .filter((item: CartItem | null): item is CartItem => item !== null);
-        setCart(calculateTotals(items));
+        setCart({ ...calculateTotals(items), promoCode: dbPromo, discountAmount: dbDiscount });
       } else {
         const savedCart = typeof window !== "undefined" ? localStorage.getItem(CART_STORAGE_KEY) : null;
         if (savedCart) {
@@ -117,7 +122,7 @@ export function useCart() {
             const items = rawItems
               .map((item: any) => normalizeItem(item))
               .filter((item: CartItem | null): item is CartItem => item !== null);
-            setCart(calculateTotals(items));
+            setCart({ ...calculateTotals(items), promoCode: parsed.promoCode, discountAmount: parsed.discountAmount });
           } catch (error) {
             console.error("Failed to parse cart:", error);
           }
@@ -140,7 +145,7 @@ export function useCart() {
       const newStr = JSON.stringify(cart);
       const prevStr = localStorage.getItem(CART_STORAGE_KEY);
       
-      if (prevStr === newStr) return; // prevent loop
+      if (prevStr === newStr) return; 
       
       localStorage.setItem(CART_STORAGE_KEY, newStr);
       notifyGlobalListeners(cart);
@@ -153,7 +158,11 @@ export function useCart() {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
           },
-          body: JSON.stringify({ items: cart.items })
+          body: JSON.stringify({ 
+            items: cart.items,
+            promoCode: cart.promoCode,
+            discountAmount: cart.discountAmount
+          })
         }).catch(err => console.error("Failed syncing cart to DB:", err));
       }
     }
@@ -194,42 +203,50 @@ export function useCart() {
           newItems = [...prevCart.items, normalized];
         }
 
-        return calculateTotals(newItems);
+        return { ...prevCart, ...calculateTotals(newItems) };
       });
     },
     [calculateTotals],
   );
 
   const removeItem = useCallback(
-    (productId: string) => {
+    (key: string) => {
       setCart((prevCart) => {
         const newItems = prevCart.items.filter(
-          (i) => !itemMatchesKey(i, productId),
+          (i) => !itemMatchesKey(i, key),
         );
-        return calculateTotals(newItems);
+        return { ...prevCart, ...calculateTotals(newItems) };
       });
     },
     [calculateTotals],
   );
 
   const updateQuantity = useCallback(
-    (productId: string, quantity: number) => {
+    (key: string, quantity: number) => {
       setCart((prevCart) => {
         if (quantity <= 0) {
           const newItems = prevCart.items.filter(
-            (i) => !itemMatchesKey(i, productId),
+            (i) => !itemMatchesKey(i, key),
           );
-          return calculateTotals(newItems);
+          return { ...prevCart, ...calculateTotals(newItems) };
         }
 
         const newItems = prevCart.items.map((i) =>
-          itemMatchesKey(i, productId) ? { ...i, quantity } : i,
+          itemMatchesKey(i, key) ? { ...i, quantity } : i,
         );
-        return calculateTotals(newItems);
+        return { ...prevCart, ...calculateTotals(newItems) };
       });
     },
     [calculateTotals],
   );
+
+  const applyPromo = useCallback((promoCode: string, discountAmount: number) => {
+    setCart(prev => ({ ...prev, promoCode, discountAmount }));
+  }, []);
+
+  const removePromo = useCallback(() => {
+    setCart(prev => ({ ...prev, promoCode: undefined, discountAmount: undefined }));
+  }, []);
 
   const clearCart = useCallback(() => {
     setCart({ items: [], total: 0, itemCount: 0 });
@@ -240,10 +257,14 @@ export function useCart() {
     items: cart.items,
     total: cart.total,
     itemCount: cart.itemCount,
+    promoCode: cart.promoCode,
+    discountAmount: cart.discountAmount,
     isLoading,
     addItem,
     removeItem,
     updateQuantity,
+    applyPromo,
+    removePromo,
     clearCart,
   };
 }

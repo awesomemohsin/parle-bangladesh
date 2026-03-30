@@ -105,12 +105,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Missing shipping information: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    const shippingCost = 80;
-    const taxRate = 0;
-
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const shippingCost = subtotal >= 1000 ? 0 : 80;
     const tax = 0;
-    const total = subtotal + shippingCost;
+    const discountAmount = Number(body.discountAmount || 0);
+    const total = subtotal + shippingCost - discountAmount;
+    const taxRate = 0;
 
     const user = getAuthUserFromRequest(request);
 
@@ -145,11 +145,24 @@ export async function POST(request: NextRequest) {
       subtotal,
       shippingCost,
       tax,
+      discountAmount,
+      promoCode: body.promoCode,
       total,
       status: ORDER_STATUS.PENDING,
     });
 
     await order.save();
+
+    // Increment ordersCount for each product
+    for (const item of items) {
+      if (item.productSlug) {
+        await Product.findOneAndUpdate(
+          { slug: item.productSlug },
+          { $inc: { ordersCount: item.quantity } }
+        );
+      }
+    }
+
     return NextResponse.json(mapDoc(order), { status: 201 });
   } catch (error) {
     console.error("Orders POST error:", error);

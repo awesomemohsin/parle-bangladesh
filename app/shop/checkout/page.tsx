@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
 
@@ -14,7 +14,7 @@ interface OrderState {
 }
 
 export default function CheckoutPage() {
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, promoCode, discountAmount } = useCart();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [formData, setFormData] = useState({
     name: '',
@@ -70,8 +70,9 @@ export default function CheckoutPage() {
     );
   }
 
-  const shippingCost = 80;
-  const grandTotal = total + shippingCost;
+  const isFreeDelivery = total >= 1000;
+  const shippingCost = isFreeDelivery ? 0 : 80;
+  const grandTotal = total + shippingCost - (discountAmount || 0);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -114,6 +115,8 @@ export default function CheckoutPage() {
             postalCode: formData.postalCode,
           },
           paymentMethod: formData.paymentMethod,
+          promoCode,
+          discountAmount,
         }),
       });
 
@@ -141,7 +144,9 @@ export default function CheckoutPage() {
   // Success State
   if (orderState.status === 'success') {
     const displaySubtotal = orderState.finalSubtotal || 0;
-    const displayTotal = displaySubtotal + shippingCost;
+    const isFree = displaySubtotal >= 1000;
+    const displayShipping = isFree ? 0 : 80;
+    const displayTotal = displaySubtotal + displayShipping;
 
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -162,7 +167,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="w-full">
-                  <h2 className="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Logistics Summary</h2>
+                  <h2 className="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Order Summary</h2>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-600">Subtotal</span>
@@ -170,13 +175,20 @@ export default function CheckoutPage() {
                       <span className="font-bold text-gray-900">৳ {Math.round(displaySubtotal)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Delivery Service</span>
+                      <span className="text-gray-600 uppercase font-bold tracking-tight">Delivery Charge</span>
                       <span className="font-semibold text-gray-300 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
-                      <span className="font-bold text-gray-900">৳ {Math.round(shippingCost)}</span>
+                      <span className="font-bold text-gray-900">{displayShipping === 0 ? "FREE" : `৳ ${Math.round(displayShipping)}`}</span>
                     </div>
+                    {discountAmount && discountAmount > 0 && (
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span className="font-bold uppercase tracking-tight flex items-center gap-1"><Tag className="w-3 h-3" /> Promo Discount</span>
+                        <span className="font-semibold text-gray-100 border-b border-dotted border-gray-100 flex-grow mx-4"></span>
+                        <span className="font-bold">- ৳ {Math.round(discountAmount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t pt-4 mt-2">
-                      <span className="font-bold text-gray-900">Final Settlement</span>
-                      <span className="font-bold text-red-600 text-2xl">৳ {Math.round(displayTotal)}</span>
+                      <span className="font-bold text-gray-900">Total</span>
+                      <span className="font-bold text-red-610 text-2xl tracking-tighter">৳ {Math.round(displayTotal)}</span>
                     </div>
                   </div>
                 </div>
@@ -198,7 +210,7 @@ export default function CheckoutPage() {
 
                 {/* Verification Steps */}
                 <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm">
-                  <h3 className="text-green-900 font-bold text-base mb-4">Verification Workflow</h3>
+                  <h3 className="text-green-900 font-bold text-base mb-4">What's Next?</h3>
                   <ul className="space-y-3">
                     <li className="flex items-center gap-3 text-gray-700 text-sm">
                       <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -431,6 +443,12 @@ export default function CheckoutPage() {
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-semibold text-gray-900">৳ {Math.round(shippingCost)}</span>
                 </div>
+                {discountAmount && discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Promo ({promoCode})</span>
+                    <span className="font-semibold">- ৳ {Math.round(discountAmount)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between">
