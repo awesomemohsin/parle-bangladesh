@@ -9,6 +9,7 @@ import { useCart, getItemKey } from '@/hooks/useCart';
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
   orderId?: string;
+  finalSubtotal?: number;
   error?: string;
 }
 
@@ -79,6 +80,7 @@ export default function CheckoutPage() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    const currentSubtotal = total; // Capture subtotal before clearing
     setOrderState({ status: 'confirming' });
 
     try {
@@ -125,6 +127,7 @@ export default function CheckoutPage() {
       setOrderState({
         status: 'success',
         orderId: order.id,
+        finalSubtotal: currentSubtotal
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
@@ -137,57 +140,88 @@ export default function CheckoutPage() {
 
   // Success State
   if (orderState.status === 'success') {
+    const displaySubtotal = orderState.finalSubtotal || 0;
+    const displayTotal = displaySubtotal + shippingCost;
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-12 h-12 text-green-600" />
-            </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Order Confirmed!</h1>
-            <p className="text-xl text-gray-600 mb-2">Thank you for your order</p>
-            <p className="text-2xl font-bold text-red-600 mb-8">Order ID: {orderState.orderId}</p>
-
-            <div className="bg-white rounded-lg p-8 mb-8 border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Order Details</h2>
-              <div className="space-y-3 text-left mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">৳ {total.toFixed(2)}</span>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-4xl w-full bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Left Column: Confirmation & Logistics */}
+            <div className="p-8 lg:p-12 border-b md:border-b-0 md:border-r border-gray-100 bg-white">
+              <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                <div className="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                  <Check className="w-8 h-8 text-green-600" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold">৳ {shippingCost.toFixed(2)}</span>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Received!</h1>
+                <p className="text-gray-500 mb-8">Your order has been placed successfully.</p>
+                
+                <div className="bg-gray-50 px-4 py-2 rounded-lg mb-10 w-full flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Order ID:</span>
+                  <span className="text-base font-bold text-red-600">{orderState.orderId}</span>
                 </div>
-                <div className="flex justify-between border-t pt-3">
-                  <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-red-600 text-lg">৳ {grandTotal.toFixed(2)}</span>
+
+                <div className="w-full">
+                  <h2 className="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Logistics Summary</h2>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="font-semibold text-gray-900 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
+                      <span className="font-bold text-gray-900">৳ {Math.round(displaySubtotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Delivery Service</span>
+                      <span className="font-semibold text-gray-300 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
+                      <span className="font-bold text-gray-900">৳ {Math.round(shippingCost)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-4 mt-2">
+                      <span className="font-bold text-gray-900">Final Settlement</span>
+                      <span className="font-bold text-red-600 text-2xl">৳ {Math.round(displayTotal)}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div className="bg-red-50 p-4 rounded border border-red-200 mb-6">
-                <p className="text-red-900 font-semibold mb-2">Payment Method: Cash on Delivery</p>
-                <p className="text-red-800 text-sm">
-                  Please pay when you receive your order.
-                </p>
-              </div>
-
-              <div className="bg-green-50 p-4 rounded border border-green-200">
-                <p className="text-green-900 font-semibold mb-2">Next Steps</p>
-                <ul className="text-green-800 text-sm space-y-1">
-                  <li>✓ Your order has been confirmed</li>
-                  <li>✓ You will receive a confirmation email shortly</li>
-                  <li>✓ We will contact you with delivery details</li>
-                  <li>✓ Estimated delivery: 2-3 business days</li>
-                </ul>
               </div>
             </div>
 
-            <Link href="/shop">
-              <Button className="px-8 py-3 font-bold uppercase tracking-wide">
-                Continue Shopping
-              </Button>
-            </Link>
+            {/* Right Column: Payment & Next Steps */}
+            <div className="p-8 lg:p-12 bg-gray-50 flex flex-col justify-between">
+              <div className="space-y-6">
+                {/* Payment Card */}
+                <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                  <h3 className="text-red-900 font-bold text-base mb-2 flex items-center gap-2">
+                    Payment: Cash on Delivery
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    Please keep exact change ready. Payment is due strictly upon physical receipt of order.
+                  </p>
+                </div>
+
+                {/* Verification Steps */}
+                <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm">
+                  <h3 className="text-green-900 font-bold text-base mb-4">Verification Workflow</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-center gap-3 text-gray-700 text-sm">
+                      <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>We have received your order</span>
+                    </li>
+                    <li className="flex items-center gap-3 text-gray-700 text-sm">
+                      <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>We will contact you for confirmation</span>
+                    </li>
+                    <li className="flex items-center gap-3 text-gray-700 text-sm">
+                      <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span>Estimated delivery: 3-5 business days</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <Link href="/shop" className="w-full mt-8">
+                <Button className="w-full py-6 font-bold bg-amber-700 hover:bg-amber-800 text-white h-14 rounded-2xl shadow-lg transition-all active:scale-95">
+                  Back to Shop
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -381,28 +415,28 @@ export default function CheckoutPage() {
                         )}
                       </div>
                       <span className="font-semibold text-gray-900">
-                        ৳ {(item.price * item.quantity).toFixed(2)}
+                        ৳ {Math.round(item.price * item.quantity)}
                       </span>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="space-y-3 border-b pb-6 mb-6">
+              <div className="space-y-3 text-left mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold text-gray-900">৳ {total.toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">৳ {Math.round(total)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold text-gray-900">৳ {shippingCost.toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">৳ {Math.round(shippingCost)}</span>
                 </div>
               </div>
 
               <div className="flex justify-between">
                 <span className="font-bold text-gray-900">Total</span>
                 <span className="text-2xl font-bold text-red-600">
-                  ৳ {grandTotal.toFixed(2)}
+                  ৳ {Math.round(grandTotal)}
                 </span>
               </div>
             </div>
