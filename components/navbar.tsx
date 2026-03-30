@@ -32,11 +32,18 @@ export default function Navbar() {
   return (
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-            <div className="text-2xl font-bold text-red-600">Parle</div>
-            <span className="text-sm text-gray-600">Bangladesh</span>
+          <Link href="/" className="flex items-center gap-4 flex-shrink-0 group">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-18 w-auto object-contain brightness-100 transition-transform group-hover:scale-105 duration-300" 
+            />
+            <div className="flex flex-col -space-y-1">
+              <span className="text-2xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
+              <span className="text-[11px] font-bold text-gray-900 uppercase tracking-[0.25em] leading-none">Bangladesh</span>
+            </div>
           </Link>
 
           {/* Navigation Links - Centered */}
