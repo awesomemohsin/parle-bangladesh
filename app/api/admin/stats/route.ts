@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Category, Order, Product, User } from "@/lib/models";
+import { Category, Order, Product, User, Customer } from "@/lib/models";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,10 +16,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const [totalProducts, totalOrders, totalUsers, totalCategories, recentOrders] = await Promise.all([
+    const [totalProducts, totalOrders, regUsers, guestUsers, totalCategories, recentOrders] = await Promise.all([
       Product.countDocuments(),
       Order.countDocuments(),
       User.countDocuments(),
+      Customer.countDocuments(),
       Category.countDocuments(),
       Order.find().sort({ createdAt: -1 }).limit(5).lean()
     ]);
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       totalProducts,
       totalOrders,
-      totalUsers,
+      totalUsers: regUsers + guestUsers,
       totalCategories,
       recentOrders: recentOrders.map((order) => ({
         id: order._id.toString(),

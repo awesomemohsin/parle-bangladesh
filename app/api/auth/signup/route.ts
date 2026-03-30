@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
-import { Customer, Admin } from "@/lib/models";
+import { User, Admin } from "@/lib/models";
 import { generateToken, setAuthCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -20,24 +20,26 @@ export async function POST(request: NextRequest) {
     }
 
     const emailLower = email.toLowerCase();
-    const existingCustomer = await Customer.findOne({ 
+    
+    // Check both User and Admin collections to prevent duplicates across roles
+    const existingUser = await User.findOne({ 
       $or: [{ email: emailLower }, { mobile }]
     });
     const existingAdmin = await Admin.findOne({ 
       $or: [{ email: emailLower }, { mobile }]
     });
     
-    if (existingCustomer || existingAdmin) {
+    if (existingUser || existingAdmin) {
       return NextResponse.json({ error: "Email or Mobile already in use" }, { status: 400 });
     }
 
     const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
-    const user = await Customer.create({
+    const user = await User.create({
       name,
       email: emailLower,
       mobile,
       password: passwordHash,
-      role: "customer",
+      role: "customer", // Registered users are standard customers
     });
 
     const token = generateToken({

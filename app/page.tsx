@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Navbar from '@/components/navbar'
-import Footer from '@/components/footer'
 import ProductCard from '@/components/product-card'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
@@ -34,6 +32,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    document.title = 'Home | Parle Bangladesh'
     const loadData = async () => {
       try {
         const [categoriesRes, productsRes] = await Promise.all([
@@ -62,19 +61,18 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Navbar />
+    <div className="min-h-screen bg-white">
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
+      <section className="bg-gradient-to-r from-red-600 to-red-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl font-bold mb-4">Welcome to Parle Bangladesh</h1>
-            <p className="text-xl text-blue-100 mb-8">
+            <p className="text-xl text-red-100 mb-8">
               Discover our delicious range of biscuits and snacks
             </p>
             <Link href="/shop">
-              <Button size="lg" variant="secondary" className="text-base">
+              <Button size="lg" variant="secondary" className="text-base font-bold">
                 Start Shopping
               </Button>
             </Link>
@@ -97,7 +95,7 @@ export default function HomePage() {
                   href={`/shop/categories/${category.slug}`}
                   className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow text-center"
                 >
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-3xl">🛍️</span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -164,7 +162,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-4">
                 <span className="text-3xl">✅</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Quality Assured</h3>
@@ -174,7 +172,7 @@ export default function HomePage() {
             </div>
 
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-4">
                 <span className="text-3xl">🚚</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Fast Delivery</h3>
@@ -196,7 +194,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Footer />
     </div>
   )
 }

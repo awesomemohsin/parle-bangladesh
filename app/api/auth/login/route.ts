@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { LoginSchema } from "@/lib/schemas";
 import { generateToken, setAuthCookie } from "@/lib/auth";
 import connectDB from "@/lib/db";
-import { User } from "@/lib/models";
+import { User, Admin } from "@/lib/models";
 // Keep hashPassword imported if someone wants to use old data-store, but we can do it locally:
 import crypto from "crypto";
 
@@ -23,10 +23,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const email = parsed.data.email.toLowerCase();
+    const identifier = parsed.data.email.trim().toLowerCase();
     const passwordHash = hashPassword(parsed.data.password);
     
-    const user = await User.findOne({ email });
+    // Check in User collection first (registered customers)
+    let user = await User.findOne({ 
+      $or: [{ email: identifier }, { mobile: identifier }]
+    });
+    
+    // If not found, check in Admin collection
+    if (!user) {
+      user = await Admin.findOne({ 
+        $or: [{ email: identifier }, { mobile: identifier }]
+      });
+    }
+    
+    // If user exists, but password mismatch or disabled
     if (!user || user.password !== passwordHash || user.status === "disabled") {
       return NextResponse.json(
         { error: "Invalid email or password" },

@@ -67,14 +67,14 @@ export default function MyOrdersPage() {
       ) : orders.length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-gray-600 mb-4">You have not placed any orders yet.</p>
-          <Link href="/shop" className="text-blue-600 font-medium hover:underline">
+          <Link href="/shop" className="text-red-600 font-medium hover:underline">
             Start Shopping
           </Link>
         </Card>
       ) : (
         <div className="space-y-6">
           {orders.map((order) => (
-            <Card key={order.id} className="p-6">
+            <Card key={order.id} className="p-6 transition-all hover:shadow-md">
               <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-4 border-b border-gray-100">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">
@@ -87,12 +87,12 @@ export default function MyOrdersPage() {
                 <div className="mt-4 md:mt-0 flex gap-4 items-center">
                   <span className={`px-3 py-1 text-xs font-semibold rounded-full capitalize 
                     ${order.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                      order.status === 'processing' ? 'bg-blue-100 text-blue-800' : 
-                      order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                      'bg-orange-100 text-orange-800'}`}>
+                      order.status === 'processing' ? 'bg-red-100 text-red-800' : 
+                      order.status === 'cancelled' ? 'bg-gray-100 text-gray-800' : 
+                      'bg-red-50 text-red-700 font-bold border border-red-100'}`}>
                     {order.status}
                   </span>
-                  <span className="text-lg font-bold">{formatCurrency(order.total)}</span>
+                  <span className="text-lg font-bold text-red-600">{formatCurrency(order.total)}</span>
                 </div>
               </div>
               
@@ -116,7 +116,7 @@ export default function MyOrdersPage() {
                               F: {item.flavor}
                             </span>
                           )}
-                          <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 font-semibold">
+                          <span className="text-[10px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100 font-semibold">
                             Unit Price: {formatCurrency(item.price)}
                           </span>
                         </div>

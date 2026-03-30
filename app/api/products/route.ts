@@ -45,29 +45,28 @@ export async function POST(request: NextRequest) {
     if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
-    const parsed = ProductSchema.safeParse({
-      ...body,
-      price: Number(body.price),
-      stock: Number(body.stock),
-      rating: body.rating !== undefined ? Number(body.rating) : undefined,
-    });
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Invalid product payload" },
-        { status: 400 },
-      );
-    }
-
-    // Upsert behavior based on slug or created if new
-    const slug = parsed.data.slug || String(Date.now());
+    
+    const slug = body.slug || String(Date.now());
     
     let product = await Product.findOne({ slug });
     if (product) {
-      Object.assign(product, parsed.data);
+      if (body.name) product.name = body.name;
+      if (body.category) product.category = body.category;
+      if (body.description) product.description = body.description;
+      if (body.variations) product.variations = body.variations;
+      if (body.image) product.image = body.image;
+      if (body.images) product.images = body.images;
       await product.save();
     } else {
-      product = new Product({ ...parsed.data, slug });
+      product = new Product({
+        name: body.name,
+        slug: slug,
+        category: body.category,
+        description: body.description,
+        variations: body.variations || [],
+        image: body.image || "/images/placeholder.webp",
+        images: body.images || [],
+      });
       await product.save();
     }
 

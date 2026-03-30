@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json({ categories: categories.map(c => { c.id = c._id.toString(); return c; }) });
   } catch (error) {
     console.error("Categories GET error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
 

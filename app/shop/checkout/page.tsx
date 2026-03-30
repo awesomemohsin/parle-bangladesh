@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
 
   useEffect(() => {
+    document.title = 'Checkout | Parle Bangladesh';
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
     if (userStr) {
       try {
@@ -145,7 +146,7 @@ export default function CheckoutPage() {
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Order Confirmed!</h1>
             <p className="text-xl text-gray-600 mb-2">Thank you for your order</p>
-            <p className="text-2xl font-bold text-amber-700 mb-8">Order ID: {orderState.orderId}</p>
+            <p className="text-2xl font-bold text-red-600 mb-8">Order ID: {orderState.orderId}</p>
 
             <div className="bg-white rounded-lg p-8 mb-8 border border-gray-200">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Order Details</h2>
@@ -160,13 +161,13 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between border-t pt-3">
                   <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-amber-700 text-lg">৳ {grandTotal.toFixed(2)}</span>
+                  <span className="font-bold text-red-600 text-lg">৳ {grandTotal.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded border border-blue-200 mb-6">
-                <p className="text-blue-900 font-semibold mb-2">Payment Method: Cash on Delivery</p>
-                <p className="text-blue-800 text-sm">
+              <div className="bg-red-50 p-4 rounded border border-red-200 mb-6">
+                <p className="text-red-900 font-semibold mb-2">Payment Method: Cash on Delivery</p>
+                <p className="text-red-800 text-sm">
                   Please pay when you receive your order.
                 </p>
               </div>
@@ -183,7 +184,7 @@ export default function CheckoutPage() {
             </div>
 
             <Link href="/shop">
-              <Button className="bg-amber-700 hover:bg-amber-800 text-white px-8 py-3">
+              <Button className="px-8 py-3 font-bold uppercase tracking-wide">
                 Continue Shopping
               </Button>
             </Link>
@@ -239,97 +240,87 @@ export default function CheckoutPage() {
             <form onSubmit={handleSubmitOrder} className="space-y-6">
               {/* Shipping Information */}
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Shipping Information</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b">Shipping Information</h2>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      readOnly={prefilled.name}
-                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700 ${prefilled.name ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-                      placeholder="John Doe"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={prefilled.name}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.name ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address *</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={prefilled.email}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.email ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        placeholder="john@example.com"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                      readOnly={prefilled.email}
-                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700 ${prefilled.email ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-                      placeholder="john@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      required
-                      readOnly={prefilled.phone}
-                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700 ${prefilled.phone ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-                      placeholder="+880 1234 567890"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Street Address *
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700"
-                      placeholder="123 Main Street"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={prefilled.phone}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.phone ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        placeholder="01XXXXXXXXX"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                        placeholder="House #, Road #"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        City *
-                      </label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City *</label>
                       <input
                         type="text"
                         name="city"
                         value={formData.city}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
                         placeholder="Dhaka"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Postal Code *
-                      </label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
                       <input
                         type="text"
                         name="postalCode"
                         value={formData.postalCode}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-700"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
                         placeholder="1000"
                       />
                     </div>
@@ -339,20 +330,20 @@ export default function CheckoutPage() {
 
               {/* Payment Method */}
               <div className="border-t pt-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Method</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b">Payment Method</h2>
                 <div>
-                  <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <label className="flex items-center p-4 border-2 border-red-50 bg-red-50/20 rounded-lg cursor-pointer hover:bg-red-50/50 transition-colors">
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="cash_on_delivery"
                       checked={formData.paymentMethod === 'cash_on_delivery'}
                       onChange={handleInputChange}
-                      className="mr-3"
+                      className="w-5 h-5 text-red-600 accent-red-600"
                     />
-                    <div>
-                      <p className="font-semibold text-gray-900">Cash on Delivery</p>
-                      <p className="text-sm text-gray-600">Pay when you receive your order</p>
+                    <div className="ml-4">
+                      <span className="block font-bold text-gray-900">Cash on Delivery</span>
+                      <span className="text-sm text-gray-500">Pay with cash when your product arrives.</span>
                     </div>
                   </label>
                 </div>
@@ -363,7 +354,7 @@ export default function CheckoutPage() {
                 <Button
                   type="submit"
                   disabled={orderState.status === 'confirming'}
-                  className="w-full bg-amber-700 hover:bg-amber-800 text-white py-3 font-bold text-lg"
+                  className="w-full py-4 font-bold text-lg uppercase tracking-wide shadow-lg"
                 >
                   {orderState.status === 'confirming' ? 'Placing Order...' : 'Place Order'}
                 </Button>
@@ -410,7 +401,7 @@ export default function CheckoutPage() {
 
               <div className="flex justify-between">
                 <span className="font-bold text-gray-900">Total</span>
-                <span className="text-2xl font-bold text-amber-700">
+                <span className="text-2xl font-bold text-red-600">
                   ৳ {grandTotal.toFixed(2)}
                 </span>
               </div>

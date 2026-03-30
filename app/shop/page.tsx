@@ -2,22 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/hooks/useCart";
+
+type Variation = {
+  weight?: string;
+  flavor?: string;
+  price: number;
+  stock: number;
+  isDefault?: boolean;
+};
 
 type Product = {
   id: string;
   name: string;
   slug: string;
   category: string;
-  price: number;
+  variations: Variation[];
   image: string;
-  rating: number;
-  stock: number;
-  weight?: string;
-  flavor?: string;
   description?: string;
 };
 
@@ -36,6 +38,7 @@ export default function ShopPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    document.title = 'Shop | Parle Bangladesh'
     const loadData = async () => {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
@@ -79,67 +82,79 @@ export default function ShopPage() {
   }, [products, selectedCategory, search]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Navbar />
+    <div className="min-h-screen bg-white">
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Shop Products</h1>
-          <p className="text-gray-600 mt-2">
-            Find your favorite Parle products
+          <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Shop Products</h1>
+          <p className="text-gray-500 font-medium">
+            Explore our range of premium Parle products
           </p>
         </div>
 
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products..."
-            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-12 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Search</label>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="What are you looking for?"
+              className="px-5 py-3 rounded-xl border-2 border-gray-100 focus:border-red-600 focus:outline-none transition-all placeholder:text-gray-300 font-medium"
+            />
+          </div>
 
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.slug}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-2">Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-5 py-3 rounded-xl border-2 border-gray-100 focus:border-red-600 focus:outline-none transition-all bg-white font-medium"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <Link
-            href="/shop/cart"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
-          >
-            Go to Cart
-          </Link>
+          <div className="flex items-end">
+            <Link
+              href="/shop/cart"
+              className="w-full flex items-center justify-center h-14 rounded-xl bg-red-600 text-white font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-red-100"
+            >
+              View Shopping Cart
+            </Link>
+          </div>
         </div>
 
         {isLoading ? (
-          <p className="text-gray-600">Loading products...</p>
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Loading Inventory...</p>
+          </div>
         ) : filteredProducts.length === 0 ? (
-          <p className="text-gray-600">No products found for this filter.</p>
+          <div className="text-center py-24">
+            <p className="text-gray-400 font-bold uppercase tracking-widest">No products found.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 {...product}
-                onAddToCart={() =>
+                onAddToCart={(variation: Variation) =>
                   addItem({
                     productId: product.id,
                     productSlug: product.slug,
                     productName: product.name,
-                    price: product.price,
+                    price: variation.price,
                     image: product.image,
                     quantity: 1,
-                    weight: product.weight,
-                    flavor: product.flavor,
+                    weight: variation.weight,
+                    flavor: variation.flavor,
                   })
                 }
               />
@@ -147,8 +162,6 @@ export default function ShopPage() {
           </div>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

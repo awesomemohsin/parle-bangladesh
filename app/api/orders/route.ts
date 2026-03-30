@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product } from "@/lib/models";
+import { Order, Product, Customer } from "@/lib/models";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     const shippingAddress = body.shippingAddress || {};
     const customerName = body.customerName || shippingAddress.name;
-    const customerEmail = body.customerEmail || body.email || shippingAddress.email;
+    const customerEmail = (body.customerEmail || body.email || shippingAddress.email || "").toLowerCase().trim();
     const customerPhone = body.customerPhone || body.phone || shippingAddress.phone;
     const address = body.address || shippingAddress.address;
     const city = body.city || shippingAddress.city;
@@ -113,6 +113,24 @@ export async function POST(request: NextRequest) {
     const total = subtotal + shippingCost;
 
     const user = getAuthUserFromRequest(request);
+
+    // If guest (no user.id), upsert into Customer collection
+    if (!user) {
+      try {
+        await Customer.findOneAndUpdate(
+          { email: customerEmail },
+          { 
+            name: customerName, 
+            mobile: customerPhone,
+            email: customerEmail,
+            role: "customer" 
+          },
+          { upsert: true, new: true }
+        );
+      } catch (upsertErr) {
+        console.error("Guest customer upsert error:", upsertErr);
+      }
+    }
 
     const order = new Order({
       userId: user ? user.id : undefined,

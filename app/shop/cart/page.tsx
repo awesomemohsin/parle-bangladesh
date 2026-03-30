@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
 
 export default function CartPage() {
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      document.title = 'Cart | Parle Bangladesh';
+    }
+  });
   const { items, total, removeItem, updateQuantity, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -25,7 +30,7 @@ export default function CartPage() {
       {/* Header */}
       <div className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <Link href="/shop" className="flex items-center gap-2 text-amber-700 hover:text-amber-800 mb-4">
+          <Link href="/shop" className="flex items-center gap-2 text-red-700 hover:text-red-800 mb-4">
             <ArrowLeft className="w-4 h-4" />
             Continue Shopping
           </Link>
@@ -41,7 +46,7 @@ export default function CartPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
             <p className="text-gray-600 mb-8">Add some products to get started!</p>
             <Link href="/shop">
-              <Button className="bg-amber-700 hover:bg-amber-800 text-white">
+              <Button className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3">
                 Start Shopping
               </Button>
             </Link>
@@ -62,7 +67,7 @@ export default function CartPage() {
                       {item.image ? (
                         <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-4xl">
+                        <div className="w-full h-full bg-gradient-to-br from-red-50 to-gray-50 flex items-center justify-center text-4xl">
                           📦
                         </div>
                       )}
@@ -71,7 +76,7 @@ export default function CartPage() {
                     <div className="flex-1">
                       <Link
                         href={`/shop/products/${item.productSlug}`}
-                        className="text-lg font-bold text-gray-900 hover:text-amber-700 block mb-2"
+                        className="text-lg font-bold text-gray-900 hover:text-red-600 block mb-2"
                       >
                         {item.productName}
                       </Link>
@@ -86,7 +91,7 @@ export default function CartPage() {
                             Flavor: {item.flavor || (item as any).variationFlavor}
                           </span>
                         )}
-                        <span className="bg-amber-50 px-2 py-0.5 rounded text-xs text-amber-700 font-bold border border-amber-100">Unit Price: ৳{item.price.toFixed(2)}</span>
+                        <span className="bg-red-50 px-2 py-0.5 rounded text-xs text-red-700 font-bold border border-red-100">Unit Price: ৳{item.price.toFixed(2)}</span>
                       </div>
 
                       <div className="flex items-center border border-gray-300 rounded-lg w-fit">
@@ -122,7 +127,7 @@ export default function CartPage() {
                       </div>
                       <button
                         onClick={() => removeItem(itemKey)}
-                        className="text-red-600 hover:text-red-800 flex items-center justify-center gap-2 mt-auto"
+                        className="text-red-600 hover:text-red-800 flex items-center justify-center gap-2 mt-auto font-medium"
                       >
                         <Trash2 className="w-4 h-4" />
                         Remove
@@ -160,7 +165,7 @@ export default function CartPage() {
 
                 <div className="flex justify-between mb-6">
                   <span className="text-lg font-bold text-gray-900">Total</span>
-                  <span className="text-2xl font-bold text-amber-700">
+                  <span className="text-2xl font-bold text-red-600">
                     ৳ {grandTotal.toFixed(2)}
                   </span>
                 </div>
@@ -168,19 +173,19 @@ export default function CartPage() {
                 <Button
                   onClick={handleCheckout}
                   disabled={isCheckingOut}
-                  className="w-full bg-amber-700 hover:bg-amber-800 text-white py-3 font-bold mb-3"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 font-bold mb-3"
                 >
                   {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
                 </Button>
 
                 <Link href="/shop" className="block">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full hover:bg-red-50 hover:text-red-600 border-red-600 text-red-600 font-bold">
                     Continue Shopping
                   </Button>
                 </Link>
 
-                <div className="mt-6 text-sm text-gray-600 bg-blue-50 p-3 rounded border border-blue-200">
-                  <p className="font-semibold text-blue-900 mb-1">Shipping Information</p>
+                <div className="mt-6 text-sm text-gray-600 bg-red-50 p-3 rounded border border-red-100">
+                  <p className="font-bold text-red-800 mb-1 font-bold">Shipping Information</p>
                   <p>Fixed shipping charge of ৳80 all over Bangladesh. Standard delivery: 2-3 business days.</p>
                 </div>
               </div>

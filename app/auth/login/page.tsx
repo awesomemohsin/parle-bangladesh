@@ -8,6 +8,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      document.title = 'Login | Parle Bangladesh';
+    }
+  });
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -95,13 +100,13 @@ export default function LoginPage() {
 
         <div className="mt-4 text-sm text-gray-600 space-y-2">
           <div>
-            <Link href="/auth/forgot-password" className="text-blue-600 hover:underline">
+            <Link href="/auth/forgot-password" className="text-red-600 hover:underline">
               Forgot your password?
             </Link>
           </div>
           <div>
             Don't have an account?{" "}
-            <Link href="/auth/signup" className="text-blue-600 hover:underline">
+            <Link href="/auth/signup" className="text-red-600 hover:underline">
               Sign up
             </Link>
           </div>
@@ -109,7 +114,7 @@ export default function LoginPage() {
             <span>Admin user? </span>
             <Link
               href="/admin/login"
-              className="text-blue-600 hover:underline"
+              className="text-red-600 hover:underline"
             >
               Use admin login
             </Link>

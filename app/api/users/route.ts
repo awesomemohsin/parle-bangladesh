@@ -3,7 +3,7 @@ import { validateEmail } from "@/lib/api-helpers";
 import { getAuthUserFromRequest } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { User } from "@/lib/models";
+import { Admin } from "@/lib/models";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const users = await User.find({}, { password: 0 }).lean();
+    const users = await Admin.find({}, { password: 0 }).lean();
     return NextResponse.json({ users: users.map(u => ({ ...u, id: u._id.toString() })) });
   } catch (error) {
     console.error("Users GET error:", error);
@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
     if (!validateEmail(email)) return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     if (password.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
 
-    const exists = await User.findOne({ email });
+    const exists = await Admin.findOne({ email });
     if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
-    const user = new User({ email, password: hashPassword(password), name, role, status: "active" });
+    const user = new Admin({ email, password: hashPassword(password), name, role, status: "active", mobile: body.mobile || "01000000000" });
     await user.save();
 
     const result = user.toObject() as any;
