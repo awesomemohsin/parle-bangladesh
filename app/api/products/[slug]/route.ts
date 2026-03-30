@@ -4,6 +4,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Product } from "@/lib/models";
+import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -105,6 +106,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     await existing.save();
 
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: user.email,
+      action: "update_product",
+      targetId: existing._id.toString(),
+      targetName: existing.name,
+      details: `Updated product: ${existing.name} (${existing.slug})`
+    });
+
     return NextResponse.json({ product: mapDoc(existing) });
   } catch (error) {
     console.error("Product PUT error:", error);
@@ -124,6 +134,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     if (!deleted) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
+
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: user.email,
+      action: "delete_product",
+      targetId: deleted._id.toString(),
+      targetName: deleted.name,
+      details: `Deleted product: ${deleted.name} (${deleted.slug})`
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

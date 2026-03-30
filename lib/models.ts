@@ -222,3 +222,27 @@ const OrderSchema = new Schema<IOrder>(
 );
 
 export const Order = mongoose.models?.Order || mongoose.model<IOrder>("Order", OrderSchema);
+ 
+// --- ADMIN ACTIVITY MODEL ---
+export interface IAdminActivity extends Document {
+  adminEmail: string;
+  action: string; // 'create_product', 'update_order', etc.
+  targetId?: string;
+  targetName?: string;
+  details?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+ 
+const AdminActivitySchema = new Schema<IAdminActivity>(
+  {
+    adminEmail: { type: String, required: true },
+    action: { type: String, required: true },
+    targetId: { type: String },
+    targetName: { type: String },
+    details: { type: String },
+  },
+  { timestamps: true }
+);
+ 
+export const AdminActivity = mongoose.models?.AdminActivity || mongoose.model<IAdminActivity>("AdminActivity", AdminActivitySchema, "admin_activities");

@@ -94,14 +94,25 @@ export default function AdminSidebar() {
         )}
 
         {isSuperAdmin && (
-          <Link href="/admin/users">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-            >
-              Users
-            </Button>
-          </Link>
+          <>
+            <Link href="/admin/users">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+              >
+                Users
+              </Button>
+            </Link>
+
+            <Link href="/admin/activities">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+              >
+                Activity Logs
+              </Button>
+            </Link>
+          </>
         )}
       </nav>
 

@@ -5,6 +5,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Category } from "@/lib/models";
+import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -18,7 +19,7 @@ export async function GET() {
   try {
     await connectDB();
     const categories = await Category.find().lean();
-    return NextResponse.json({ categories: categories.map(c => { c.id = c._id.toString(); return c; }) });
+    return NextResponse.json({ categories: categories.map((c: any) => { c.id = c._id.toString(); return c; }) });
   } catch (error) {
     console.error("Categories GET error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
@@ -47,6 +48,15 @@ export async function POST(request: NextRequest) {
 
     const category = new Category({ ...parsed.data, slug });
     await category.save();
+
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: user.email,
+      action: "create_category",
+      targetId: category._id.toString(),
+      targetName: category.name,
+      details: `Created category: ${category.name} (${category.slug})`
+    });
 
     return NextResponse.json({ category: mapDoc(category) }, { status: 201 });
   } catch (error) {

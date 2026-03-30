@@ -3,6 +3,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order } from "@/lib/models";
+import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -83,7 +84,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       order.cancelReason = cancelReason;
     }
 
-    // Add log
+    // Add log to order document
     if (!order.orderLogs) order.orderLogs = [];
     order.orderLogs.push({
       fromStatus: oldStatus,
@@ -93,6 +94,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
     });
 
     await order.save();
+
+    // Log administrative activity globally
+    await logAdminActivity({
+      adminEmail: user.email,
+      action: "update_order_status",
+      targetId: order._id.toString(),
+      targetName: `Order #${order._id.toString().slice(-6)}`,
+      details: `Updated order ${order._id} status from ${oldStatus} to ${newStatus}`
+    });
 
     return NextResponse.json({ order: mapDoc(order) });
   } catch (error) {

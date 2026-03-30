@@ -4,6 +4,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Product, Category } from "@/lib/models";
+import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     const products = await Product.find(query).lean();
-    return NextResponse.json({ products: products.map(p => { p.id = p._id.toString(); return p; }) });
+    return NextResponse.json({ products: products.map((p: any) => { p.id = p._id.toString(); return p; }) });
   } catch (error) {
     console.error("Products GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -49,7 +50,10 @@ export async function POST(request: NextRequest) {
     const slug = body.slug || String(Date.now());
     
     let product = await Product.findOne({ slug });
+    let action = "create_product";
+    
     if (product) {
+      action = "update_product";
       if (body.name) product.name = body.name;
       if (body.category) product.category = body.category;
       if (body.description) product.description = body.description;
@@ -69,6 +73,15 @@ export async function POST(request: NextRequest) {
       });
       await product.save();
     }
+
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: user.email,
+      action,
+      targetId: product._id.toString(),
+      targetName: product.name,
+      details: `${action === 'create_product' ? 'Created' : 'Updated'} product: ${product.name} (${product.slug})`
+    });
 
     return NextResponse.json({ product: mapDoc(product) }, { status: 201 });
   } catch (error) {

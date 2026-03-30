@@ -4,6 +4,7 @@ import { getAuthUserFromRequest } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Admin } from "@/lib/models";
+import { logAdminActivity } from "@/lib/activity";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const users = await Admin.find({}, { password: 0 }).lean();
-    return NextResponse.json({ users: users.map(u => ({ ...u, id: u._id.toString() })) });
+    return NextResponse.json({ users: users.map((u: any) => ({ ...u, id: u._id.toString() })) });
   } catch (error) {
     console.error("Users GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -46,6 +47,15 @@ export async function POST(request: NextRequest) {
 
     const user = new Admin({ email, password: hashPassword(password), name, role, status: "active", mobile: body.mobile || "01000000000" });
     await user.save();
+
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: currentUser.email,
+      action: "create_admin",
+      targetId: user._id.toString(),
+      targetName: user.name,
+      details: `Created new ${user.role}: ${user.name} (${user.email})`
+    });
 
     const result = user.toObject() as any;
     delete result.password;

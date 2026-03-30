@@ -4,6 +4,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Category } from "@/lib/models";
+import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -60,6 +61,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
     Object.assign(existing, parsed.data);
     await existing.save();
 
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: user.email,
+      action: "update_category",
+      targetId: existing._id.toString(),
+      targetName: existing.name,
+      details: `Updated category: ${existing.name} (${existing.slug})`
+    });
+
     return NextResponse.json({ category: mapDoc(existing) });
   } catch (error) {
     console.error("Category PUT error:", error);
@@ -79,6 +89,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     if (!deleted) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
+
+    // Log administrative activity
+    await logAdminActivity({
+      adminEmail: user.email,
+      action: "delete_category",
+      targetId: deleted._id.toString(),
+      targetName: deleted.name,
+      details: `Deleted category: ${deleted.name} (${deleted.slug})`
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
