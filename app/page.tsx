@@ -112,36 +112,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Promotional Offers Section */}
+      {/* Promotional Offer Section */}
       <section className="bg-slate-50 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="max-w-6xl mx-auto px-4 py-6">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex flex-col md:flex-row items-center gap-8 bg-white p-2 rounded-3xl border border-gray-100 shadow-xl shadow-slate-200/50 overflow-hidden"
+            className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden"
           >
-            <div className="md:w-1/4 bg-red-600 aspect-[4/3] md:aspect-square rounded-2xl flex items-center justify-center relative overflow-hidden group">
+            <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-red-600 rounded-xl flex items-center justify-center relative overflow-hidden group">
                <div className="absolute inset-0 bg-red-700/50 skew-x-[-15deg] group-hover:translate-x-5 transition-transform" />
-               <Zap className="w-12 h-12 text-white relative z-10 animate-pulse" />
+               <img 
+                 src="/images/offers/free-delivery.png" 
+                 alt="Free Delivery" 
+                 className="w-full h-full object-contain relative z-10 scale-90 group-hover:scale-100 transition-transform duration-700"
+               />
             </div>
             
-            <div className="flex-1 md:pl-4 py-8 md:py-0 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+            <div className="flex-1 md:pl-2 py-6 md:py-0 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                  <span className="w-6 h-0.5 bg-red-600 rounded-full"></span>
-                 <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Special Offer</span>
+                 <span className="text-[9px] font-bold text-red-600 uppercase tracking-widest">Special Offer</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight leading-none uppercase mb-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight leading-none uppercase mb-1.5">
                 Free Delivery Today
               </h2>
-              <p className="text-sm text-gray-400 font-bold tracking-tight uppercase mb-0">
-                Shop for <span className="text-gray-900 font-black text-base">৳ 1000 or more</span> and get <span className="text-red-600 font-black text-base italic">Free delivery</span> everywhere in Bangladesh. 
+              <p className="text-xs text-gray-400 font-bold tracking-tight uppercase mb-0 max-w-lg">
+                Shop for <span className="text-gray-900 font-black">৳ 1000+</span> and get <span className="text-red-600 font-black italic">Free delivery</span> everywhere in Bangladesh. 
               </p>
             </div>
 
-            <div className="md:w-1/4 p-6 w-full">
+            <div className="md:w-[20%] p-4 w-full">
                <Link href="/shop" className="w-full">
-                 <Button className="w-full h-16 rounded-xl bg-black hover:bg-red-600 text-white font-bold uppercase tracking-widest transition-all shadow-lg active:scale-95 text-xs">
+                 <Button className="w-full h-14 rounded-lg bg-black hover:bg-red-600 text-white font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 text-[10px]">
                     Shop Now
                  </Button>
                </Link>
