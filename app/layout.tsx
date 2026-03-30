@@ -1,10 +1,9 @@
+import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
@@ -28,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased min-h-screen flex flex-col">
+      <body className={`${inter.className} antialiased min-h-screen flex flex-col`}>
         <Navbar />
         <main className="flex-grow">
           {children}
