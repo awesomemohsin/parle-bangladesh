@@ -10,7 +10,9 @@ interface Variation {
   weight?: string
   flavor?: string
   price: number
-  stock?: number
+  discountPrice?: number
+  stock: number
+  isDefault?: boolean
 }
 
 interface Product {
@@ -18,14 +20,9 @@ interface Product {
   name: string
   slug: string
   category: string
-  price: number
-  stock: number
   description: string
   image: string
-  rating: number
-  weight?: string
-  flavor?: string
-  variations?: Variation[]
+  variations: Variation[]
 }
 
 interface Category {
@@ -44,23 +41,31 @@ export default function AdminProductFormPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(!isNew)
   const [isSaving, setIsSaving] = useState(false)
+  const [activeDiscounts, setActiveDiscounts] = useState<Record<number, boolean>>({})
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load categories
         const catResponse = await fetch('/api/categories')
         if (catResponse.ok) {
           const data = await catResponse.json()
           setCategories(data.categories || [])
         }
 
-        // Load product if editing
         if (!isNew) {
           const prodResponse = await fetch(`/api/products/${slug}`)
           if (prodResponse.ok) {
             const data = await prodResponse.json()
             setProduct(data.product)
+            
+            // Initialize discount toggles
+            const discounts: Record<number, boolean> = {}
+            data.product.variations.forEach((v: Variation, i: number) => {
+              if (v.discountPrice && v.discountPrice > 0) {
+                discounts[i] = true
+              }
+            })
+            setActiveDiscounts(discounts)
           }
         } else {
           setProduct({
@@ -68,14 +73,9 @@ export default function AdminProductFormPage() {
             name: '',
             slug: '',
             category: '',
-            price: 0,
-            stock: 0,
             description: '',
             image: '',
-            rating: 0,
-            weight: '',
-            flavor: '',
-            variations: [],
+            variations: [{ weight: '', flavor: '', price: 0, stock: 0, isDefault: true }],
           })
         }
       } catch (error) {
@@ -92,13 +92,12 @@ export default function AdminProductFormPage() {
     e.preventDefault()
     if (!product) return
 
-    setIsSaving(true)
-
-    const updatedProduct = { ...product };
-    if (updatedProduct.variations && updatedProduct.variations.length > 0) {
-      updatedProduct.price = updatedProduct.variations[0].price;
-      updatedProduct.stock = updatedProduct.variations.reduce((sum, v) => sum + (v.stock || 0), 0);
+    if (product.variations.length === 0) {
+      alert('Please add at least one variation')
+      return
     }
+
+    setIsSaving(true)
 
     try {
       const method = isNew ? 'POST' : 'PUT'
@@ -108,9 +107,8 @@ export default function AdminProductFormPage() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(updatedProduct),
+        body: JSON.stringify(product),
       })
 
       if (response.ok) {
@@ -129,218 +127,265 @@ export default function AdminProductFormPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-gray-600">Loading...</div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Loading Inventory...</div>
       </div>
     )
   }
 
   if (!product) {
-    return <div>Error loading product</div>
+    return (
+      <div className="p-8 text-center bg-red-50 rounded-xl border-2 border-red-100">
+        <p className="text-red-600 font-black uppercase tracking-widest text-xs">Error Loading Product</p>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        {isNew ? 'Add New Product' : 'Edit Product'}
-      </h1>
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">
+          {isNew ? 'New Product' : 'Modify Product'}
+        </h1>
+        <p className="text-gray-400 text-[9px] font-bold uppercase tracking-[0.3em] leading-none">Database Synchronization Engine</p>
+      </div>
 
-      <Card className="p-6 max-w-2xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Name *
-            </label>
-            <Input
-              type="text"
-              value={product.name}
-              onChange={(e) =>
-                setProduct({ ...product, name: e.target.value })
-              }
-              placeholder="e.g., Parle-G Gold"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category *
-            </label>
-            <select
-              value={product.category}
-              onChange={(e) =>
-                setProduct({ ...product, category: e.target.value })
-              }
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.name}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Default Weight
-              </label>
-              <Input
-                type="text"
-                value={product.weight || ''}
-                onChange={(e) =>
-                  setProduct({ ...product, weight: e.target.value })
-                }
-                placeholder="e.g., 200g"
-              />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 items-start">
+          
+          {/* Main Info - Top horizontal strip */}
+          <Card className="p-6 border-2 border-gray-100 shadow-sm rounded-xl">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Title</label>
+                <Input
+                  type="text"
+                  value={product.name}
+                  onChange={(e) => setProduct({ ...product, name: e.target.value })}
+                  className="h-10 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Slug</label>
+                <Input
+                  type="text"
+                  value={product.slug}
+                  onChange={(e) => setProduct({ ...product, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                  className="h-10 text-[10px] font-mono border-2 border-gray-50 rounded-lg focus:border-red-600"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Category</label>
+                <select
+                  value={product.category}
+                  onChange={(e) => setProduct({ ...product, category: e.target.value })}
+                  required
+                  className="w-full h-10 px-3 text-[10px] font-black uppercase text-gray-600 border-2 border-gray-50 rounded-lg bg-white focus:border-red-600 outline-none"
+                >
+                  <option value="">Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Image URL</label>
+                <Input
+                  type="text"
+                  value={product.image}
+                  onChange={(e) => setProduct({ ...product, image: e.target.value })}
+                  className="h-10 text-[10px] border-2 border-gray-50 rounded-lg focus:border-red-600"
+                />
+              </div>
             </div>
+          </Card>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Default Flavor
-              </label>
-              <Input
-                type="text"
-                value={product.flavor || ''}
-                onChange={(e) =>
-                  setProduct({ ...product, flavor: e.target.value })
-                }
-                placeholder="e.g., Chocolate"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4 border-t pt-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Product Variations</h2>
+          {/* Variations Section */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center px-1">
+              <h2 className="text-xs font-black text-gray-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-red-600"></span> Variation Inventory
+              </h2>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={() => {
                   const variations = [...(product.variations || [])];
-                  variations.push({ weight: '', flavor: '', price: 0, stock: 0 });
+                  variations.push({ weight: '', flavor: '', price: 0, stock: 0, isDefault: variations.length === 0 });
                   setProduct({ ...product, variations });
                 }}
+                className="h-8 px-4 bg-red-600 text-white hover:bg-black text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
               >
-                Add Variation
+                + Add Variant
               </Button>
             </div>
 
-            {product.variations && product.variations.length > 0 && (
-              <div className="space-y-4">
-                {product.variations.map((variation, index) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-4">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Weight</label>
-                        <Input
-                          type="text"
-                          value={variation.weight || ''}
+            <div className="grid grid-cols-1 gap-4">
+              {product.variations.map((variation, index) => (
+                <Card key={index} className={`p-6 border-2 transition-all relative overflow-hidden ${variation.isDefault ? 'border-red-600 bg-red-50/10' : 'border-gray-50 bg-white hover:border-gray-100'}`}>
+                  {variation.isDefault && (
+                    <div className="absolute top-0 right-0 p-2">
+                      <span className="text-[7px] font-black uppercase bg-red-600 text-white px-2 py-0.5 rounded-bl-lg">Primary SKU</span>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-6 items-end">
+                    
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Weight</label>
+                      <Input
+                        type="text"
+                        value={variation.weight}
+                        onChange={(e) => {
+                          const vars = [...product.variations];
+                          vars[index].weight = e.target.value;
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg focus:border-red-600"
+                        placeholder="e.g. 200g"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Flavor</label>
+                      <Input
+                        type="text"
+                        value={variation.flavor}
+                        onChange={(e) => {
+                          const vars = [...product.variations];
+                          vars[index].flavor = e.target.value;
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg focus:border-red-600"
+                        placeholder="Original"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Normal Price</label>
+                      <Input
+                        type="number"
+                        value={variation.price}
+                        onChange={(e) => {
+                          const vars = [...product.variations];
+                          vars[index].price = parseFloat(e.target.value);
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className="h-9 px-3 text-[10px] font-black text-red-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 mb-1 justify-between pr-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em]">Promotion</label>
+                        <input 
+                          type="checkbox" 
+                          checked={activeDiscounts[index] || (!!variation.discountPrice && variation.discountPrice > 0)}
                           onChange={(e) => {
-                            const variations = [...product.variations!];
-                            variations[index].weight = e.target.value;
-                            setProduct({ ...product, variations });
+                            const isChecked = e.target.checked
+                            setActiveDiscounts({ ...activeDiscounts, [index]: isChecked })
+                            if (!isChecked) {
+                              const vars = [...product.variations];
+                              vars[index].discountPrice = 0;
+                              setProduct({ ...product, variations: vars });
+                            }
                           }}
-                          className="h-9 text-sm"
-                          placeholder="200g"
+                          className="w-3 h-3 accent-red-600 cursor-pointer"
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Flavor</label>
-                        <Input
-                          type="text"
-                          value={variation.flavor || ''}
-                          onChange={(e) => {
-                            const variations = [...product.variations!];
-                            variations[index].flavor = e.target.value;
-                            setProduct({ ...product, variations });
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="Orange"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Price</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={variation.price}
-                          onChange={(e) => {
-                            const variations = [...product.variations!];
-                            variations[index].price = parseFloat(e.target.value);
-                            setProduct({ ...product, variations });
-                          }}
-                          className="h-9 text-sm"
-                          required
-                        />
-                      </div>
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
-                          <Input
-                            type="number"
-                            value={variation.stock || 0}
-                            onChange={(e) => {
-                              const variations = [...product.variations!];
-                              variations[index].stock = parseInt(e.target.value);
-                              setProduct({ ...product, variations });
-                            }}
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const variations = product.variations!.filter((_, i) => i !== index);
-                            setProduct({ ...product, variations });
-                          }}
-                          className="text-red-600 border-red-200 hover:bg-red-50 h-9"
-                        >
-                          ×
-                        </Button>
-                      </div>
+                      <Input
+                        type="number"
+                        value={variation.discountPrice || ''}
+                        disabled={!activeDiscounts[index] && (!variation.discountPrice || variation.discountPrice === 0)}
+                        onChange={(e) => {
+                          const vars = [...product.variations];
+                          vars[index].discountPrice = e.target.value ? parseFloat(e.target.value) : 0;
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg disabled:bg-gray-50 disabled:opacity-30 focus:border-red-600"
+                        placeholder="Sale price"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Stock</label>
+                      <Input
+                        type="number"
+                        value={variation.stock}
+                        onChange={(e) => {
+                          const vars = [...product.variations];
+                          vars[index].stock = parseInt(e.target.value);
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg focus:border-red-600"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pb-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          const vars = product.variations.map((v, i) => ({ ...v, isDefault: i === index }));
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className={`h-9 px-4 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${variation.isDefault ? 'bg-black text-white' : 'text-gray-300 hover:text-red-600'}`}
+                      >
+                        Main SKU
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          if (product.variations.length === 1) return;
+                          const vars = product.variations.filter((_, i) => i !== index);
+                          if (variation.isDefault) vars[0].isDefault = true;
+                          setProduct({ ...product, variations: vars });
+                        }}
+                        className="h-9 px-2 text-gray-200 hover:text-red-600 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </Button>
                     </div>
                   </div>
+                </Card>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
+          {/* Metadata - Bottom Section */}
+          <Card className="p-6 border-2 border-gray-100 shadow-sm rounded-xl space-y-2">
+            <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Product Description</label>
             <textarea
               value={product.description}
-              onChange={(e) =>
-                setProduct({ ...product, description: e.target.value })
-              }
-              placeholder="Product description..."
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => setProduct({ ...product, description: e.target.value })}
+              placeholder="Full description..."
+              className="w-full p-4 h-24 text-[11px] font-medium text-gray-500 border-2 border-gray-50 rounded-xl focus:border-red-600 transition-all resize-none leading-relaxed outline-none"
             />
-          </div>
+          </Card>
 
-          <div className="flex gap-3">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Product'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Card>
+        </div>
+
+        <div className="flex gap-4 pt-6 border-t border-gray-50">
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="flex-1 bg-red-600 hover:bg-black text-white font-black uppercase tracking-[0.3em] h-14 rounded-xl shadow-lg shadow-red-100 transition-all active:scale-95"
+          >
+            {isSaving ? 'Syncing...' : 'Update Database'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            className="px-10 border-2 border-black text-black font-black uppercase tracking-widest h-14 rounded-xl transition-all hover:bg-black hover:text-white"
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

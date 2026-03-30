@@ -5,13 +5,21 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 
+interface Variation {
+  weight?: string;
+  flavor?: string;
+  price: number;
+  discountPrice?: number;
+  stock: number;
+  isDefault?: boolean;
+}
+
 interface Product {
   id: string
   name: string
   slug: string
   category: string
-  price: number
-  stock: number
+  variations: Variation[]
   description: string
 }
 
@@ -25,11 +33,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
+      const response = await fetch('/api/products')
 
       if (response.ok) {
         const data = await response.json()
@@ -48,9 +52,6 @@ export default function AdminProductsPage() {
     try {
       const response = await fetch(`/api/products/${slug}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
       })
 
       if (response.ok) {
@@ -63,85 +64,110 @@ export default function AdminProductsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-gray-600">Loading products...</div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-gray-400 font-bold uppercase tracking-widest text-xs">Loading Inventory...</div>
       </div>
     )
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Inventory</h1>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Stock & Variation Control</p>
+        </div>
         <Link href="/admin/products/new">
-          <Button>Add New Product</Button>
+          <Button className="bg-red-600 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] px-6 py-4 h-10 rounded-lg shadow-lg shadow-red-100 transition-all active:scale-95">
+            + New Product
+          </Button>
         </Link>
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-2 border-gray-100 shadow-sm rounded-xl">
         {products.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 border-b-2 border-gray-100">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Product Name
+                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
+                    Product
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    Price
+                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
+                    Price (৳)
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
                     Stock
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                  <th className="px-6 py-3 text-right font-black text-gray-400 uppercase tracking-widest text-[9px]">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.slug} className="border-b hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-xs text-gray-500">{product.slug}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{product.category}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">
-                      ৳{product.price.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          product.stock > 0
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 space-x-2">
-                      <Link href={`/admin/products/${product.slug}`}>
-                        <Button variant="outline" size="sm">
-                          Edit
+              <tbody className="divide-y divide-gray-50">
+                {products.map((product) => {
+                  const defaultVar = product.variations?.find(v => v.isDefault) || product.variations?.[0] || { price: 0, stock: 0 };
+                  const totalStock = product.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0;
+
+                  return (
+                    <tr key={product.slug} className="group hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-3">
+                        <div className="flex flex-col">
+                          <p className="font-black text-gray-900 text-sm tracking-tighter leading-none">{product.name}</p>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">/{product.slug}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider">
+                          {product.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <p className="font-black text-red-600 text-sm tracking-tighter">
+                          {defaultVar.discountPrice ? (
+                            <span className="flex items-center gap-2">
+                              ৳{Math.round(defaultVar.discountPrice)}
+                              <span className="text-[9px] text-gray-300 line-through">৳{Math.round(defaultVar.price)}</span>
+                            </span>
+                          ) : (
+                            `৳${Math.round(defaultVar.price)}`
+                          )}
+                        </p>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${
+                            totalStock > 20
+                              ? 'text-green-600 bg-green-50'
+                              : totalStock > 0
+                              ? 'text-orange-600 bg-orange-50'
+                              : 'text-red-600 bg-red-50'
+                          }`}
+                        >
+                          {totalStock} Left
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-right space-x-2">
+                        <Link href={`/admin/products/${product.slug}`}>
+                          <Button variant="ghost" className="h-7 px-3 font-black text-[9px] uppercase tracking-widest hover:text-red-600 transition-all">
+                            Manage
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleDelete(product.slug)}
+                          className="h-7 px-2 font-black text-[9px] uppercase tracking-widest text-gray-200 hover:text-red-600 transition-all"
+                        >
+                          ×
                         </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(product.slug)}
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
