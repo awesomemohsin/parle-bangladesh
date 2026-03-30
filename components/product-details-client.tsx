@@ -160,7 +160,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                   }}
                   className={`px-6 py-3 text-xs font-bold uppercase tracking-widest border-2 transition-all active:scale-95 rounded-xl flex items-center gap-2 ${
                     selectedVarIndex === i 
-                      ? "bg-black border-black text-white shadow-lg shadow-gray-200" 
+                      ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-100" 
                       : "bg-white border-gray-50 text-gray-400 hover:border-red-200 hover:text-red-500"
                   }`}
                 >
@@ -227,7 +227,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
               <button
                 onClick={handleAddToCart}
                 disabled={displayStock === 0}
-                className="w-full h-14 bg-white border-2 border-black text-black hover:bg-black hover:text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest flex items-center justify-center gap-3 text-xs group"
+                className="w-full h-14 bg-white border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest flex items-center justify-center gap-3 text-xs group"
               >
                 <ShoppingCart className="w-4 h-4 group-hover:scale-110 transition-transform" />
                 Add To Cart

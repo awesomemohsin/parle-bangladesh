@@ -132,7 +132,7 @@ export default function CartPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-3 uppercase tracking-tight">Your cart is empty</h2>
             <p className="text-gray-400 mb-8 font-bold uppercase text-[9px] tracking-widest">Add some snacks to your cart</p>
             <Link href="/shop">
-              <Button className="h-12 px-10 rounded-xl bg-black hover:bg-red-600 text-white font-bold uppercase tracking-widest transition-all active:scale-95">
+              <Button className="h-12 px-10 rounded-xl bg-red-600 hover:bg-black text-white font-bold uppercase tracking-widest transition-all active:scale-95">
                 Start Shopping
               </Button>
             </Link>
@@ -230,7 +230,7 @@ export default function CartPage() {
                             </Link>
                             <div className="flex flex-wrap gap-1.5">
                               {(item.weight || (item as any).variationWeight) && (
-                                <span className="bg-slate-900 text-white px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                <span className="bg-red-600 text-white px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">
                                   {item.weight || (item as any).variationWeight}
                                 </span>
                               )}
@@ -385,7 +385,7 @@ export default function CartPage() {
                 <Button
                   onClick={handleCheckout}
                   disabled={isCheckingOut}
-                  className="w-full h-14 rounded-xl bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 text-[10px] group"
+                  className="w-full h-14 rounded-xl bg-red-600 hover:bg-black text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-red-100 active:scale-95 text-[10px] group border-red-500"
                 >
                   <span className="group-hover:tracking-[0.15em] transition-all">Checkout</span>
                 </Button>

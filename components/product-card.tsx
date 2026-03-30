@@ -125,7 +125,7 @@ export default function ProductCard({
           <Button
             onClick={handleAddToCart}
             disabled={isOutOfStock}
-            className={`w-full py-6 font-black uppercase tracking-wider text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
+            className={`w-full py-6 font-black uppercase tracking-wider text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg'}`}
           >
             {isOutOfStock ? "Out of Stock" : "Add to Cart"}
           </Button>

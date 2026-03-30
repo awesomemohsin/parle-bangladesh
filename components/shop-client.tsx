@@ -97,7 +97,7 @@ export default function ShopClient({
         <div className="flex items-end">
           <Link
             href="/shop/cart"
-            className="w-full flex items-center justify-center gap-3 h-[52px] rounded-xl bg-black text-white font-bold uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg active:scale-95 text-xs group"
+            className="w-full flex items-center justify-center gap-3 h-[52px] rounded-xl bg-red-600 text-white font-bold uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 text-xs group"
           >
             <ShoppingCart className="w-4 h-4 group-hover:rotate-12 transition-transform" />
             View Cart
