@@ -17,6 +17,11 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    const searchQuery = searchParams.get("q");
+    const statusQuery = searchParams.get("status");
+
     let query: any = {};
     if (!hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
       query = { 
@@ -25,6 +30,35 @@ export async function GET(request: NextRequest) {
           { customerEmail: user.email }
         ]
       };
+    }
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, "i");
+      if (query.$or) {
+         // Combine with existing $or if any (for customers)
+         // Actually, for customers we should filter WITHIN their own orders
+         const existingOr = query.$or;
+         query = {
+           $and: [
+             { $or: existingOr },
+             { $or: [
+               { customerName: searchRegex },
+               { customerEmail: searchRegex },
+               { customerPhone: searchRegex }
+             ]}
+           ]
+         };
+      } else {
+        query.$or = [
+          { customerName: searchRegex },
+          { customerEmail: searchRegex },
+          { customerPhone: searchRegex },
+        ];
+      }
+    }
+
+    if (statusQuery && statusQuery !== "all") {
+      query.status = statusQuery;
     }
 
     // sort newest first
