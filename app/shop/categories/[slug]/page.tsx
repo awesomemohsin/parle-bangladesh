@@ -32,7 +32,7 @@ export default async function CategoryProductsPage({ params }: { params: Promise
   const { slug } = await params;
   const [category, products] = await Promise.all([
     getCategoryBySlug(slug),
-    getProducts({ category: slug })
+    getProducts({ query: { category: slug } })
   ]);
 
   if (!category) {
@@ -49,26 +49,34 @@ export default async function CategoryProductsPage({ params }: { params: Promise
     <div className="min-h-screen bg-white font-sans selection:bg-red-100">
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16">
         <Link
-          href="/shop"
+          href="/#categories"
           className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-red-600 transition-all mb-10 group"
         >
           <div className="w-7 h-7 rounded-full border-2 border-gray-100 flex items-center justify-center group-hover:border-red-600 group-hover:bg-red-600 group-hover:text-white transition-all text-xs">
             ←
           </div>
-          Back to Shop
+          Check Other Categories
         </Link>
 
-        <div className="mb-12">
-          <div className="flex items-center gap-2 mb-3">
-             <span className="w-8 h-1 bg-red-600 rounded-full"></span>
-             <span className="text-xs font-bold text-red-600 uppercase tracking-widest">{category.name}</span>
+        <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+               <span className="w-8 h-1 bg-red-600 rounded-full"></span>
+               <span className="text-xs font-bold text-red-600 uppercase tracking-widest">{category.name}</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl text-gray-900 font-bold tracking-tight uppercase mb-4 leading-none">
+              {category.name}
+            </h1>
+            <p className="text-lg text-gray-500 font-medium max-w-xl leading-relaxed">
+              {category.description || "Fresh and delicious Parle products."}
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl text-gray-900 font-bold tracking-tight uppercase mb-4 leading-none">
-            {category.name}
-          </h1>
-          <p className="text-lg text-gray-500 font-medium max-w-xl leading-relaxed">
-            {category.description || "Fresh and delicious Parle products."}
-          </p>
+          
+          <Link href="/shop">
+            <button className="h-14 px-8 rounded-xl bg-white border-2 border-slate-100 text-gray-400 hover:border-red-600 hover:text-red-600 font-bold uppercase tracking-widest text-[10px] transition-all active:scale-95 shadow-sm">
+               Browse All Products
+            </button>
+          </Link>
         </div>
 
         {serializedProducts.length === 0 ? (

@@ -96,7 +96,7 @@ export default function CartPage() {
                  </button>
                  <button 
                    onClick={deleteId ? confirmDelete : confirmClear}
-                   className="h-12 rounded-xl bg-black text-white font-bold uppercase text-[10px] tracking-widest hover:bg-red-600 transition-all shadow-lg active:scale-95"
+                   className="h-12 rounded-xl bg-white text-black font-bold uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95 border border-slate-200"
                  >
                    {deleteId ? "Remove" : "Clear All"}
                  </button>
@@ -341,7 +341,7 @@ export default function CartPage() {
                        />
                        <button 
                          onClick={handleApplyPromo}
-                         className="bg-black text-white px-4 rounded-lg text-[9px] font-black uppercase hover:bg-red-600 transition-colors active:scale-95"
+                         className="bg-white text-black border border-slate-200 px-4 rounded-lg text-[9px] font-black uppercase hover:bg-red-600 hover:text-white transition-colors active:scale-95"
                        >
                          Apply
                        </button>

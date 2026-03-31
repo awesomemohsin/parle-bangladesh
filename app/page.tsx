@@ -78,7 +78,7 @@ export default function HomePage() {
             >
               <div className="mb-6">
                 <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/20 backdrop-blur-sm border border-white/20 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-full drop-shadow-sm">
-                  Official Parle Shop
+                  Official Parle Bangladesh Shop
                 </span>
               </div>
               
@@ -95,14 +95,14 @@ export default function HomePage() {
               
               <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                 <Link href="/shop" className="w-full sm:w-auto">
-                  <Button size="lg" className="h-14 w-full sm:w-auto px-10 rounded-xl bg-black hover:bg-white hover:text-[#E41E26] text-sm font-bold uppercase tracking-widest transition-all shadow-xl active:scale-95 group">
+                  <Button size="lg" className="h-14 w-full sm:w-auto px-10 rounded-xl bg-white text-black hover:bg-red-600 hover:text-white text-sm font-bold uppercase tracking-widest transition-all shadow-xl active:scale-95 group">
                     Start Shopping
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Link href="/shop/categories/biscuits" className="w-full sm:w-auto">
                   <Button size="lg" variant="outline" className="h-14 w-full sm:w-auto px-10 rounded-xl border-white/40 bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-black hover:border-white text-sm font-bold uppercase tracking-widest transition-all active:scale-95">
-                    Our Products
+                    Buy Biscuits
                   </Button>
                 </Link>
               </div>
@@ -179,7 +179,7 @@ export default function HomePage() {
 
             <div className="md:w-[20%] p-4 w-full">
                <Link href="/shop" className="w-full">
-                 <Button className="w-full h-14 rounded-lg bg-black hover:bg-red-600 text-white font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 text-[10px]">
+                 <Button className="w-full h-14 rounded-lg bg-white text-black hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 text-[10px]">
                     Shop Now
                  </Button>
                </Link>
@@ -213,7 +213,7 @@ export default function HomePage() {
       </div>
 
       {/* Categories Grid */}
-      <section className="py-16 bg-slate-50/30">
+      <section id="categories" className="py-16 bg-slate-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div>
@@ -421,7 +421,7 @@ export default function HomePage() {
 
           <div className="mt-16 text-center">
             <Link href="/shop">
-              <Button size="lg" className="h-14 px-10 rounded-xl bg-black hover:bg-red-600 text-white font-bold uppercase tracking-widest transition-all active:scale-95 text-xs">
+              <Button size="lg" className="h-14 px-10 rounded-xl bg-white text-black hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition-all shadow-xl active:scale-95 text-xs">
                 See All Products
               </Button>
             </Link>
@@ -458,11 +458,11 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="lg:w-1/2 relative hidden lg:block">
-               <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 group">
+               <div className="relative w-full group">
                   <img 
                     src="/images/parle-website.webp" 
                     alt="History" 
-                    className="w-full h-auto object-contain group-hover:scale-105 transition-transform duration-1000"
+                    className="w-full h-auto drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none transition-transform duration-1000 transform lg:scale-110 group-hover:scale-115"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1579306194872-64d3b7bac4c2?q=80&w=1200&auto=format&fit=crop';
                     }}
