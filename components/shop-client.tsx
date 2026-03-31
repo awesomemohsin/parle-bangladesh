@@ -12,6 +12,7 @@ interface Variation {
   flavor?: string;
   price: number;
   stock: number;
+  image?: string;
   isDefault?: boolean;
 }
 
@@ -21,7 +22,6 @@ interface Product {
   slug: string;
   category: string;
   variations: Variation[];
-  image: string;
   description?: string;
 }
 

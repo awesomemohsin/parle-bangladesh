@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ShoppingCart, ArrowLeft, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ interface Variation {
   price: number;
   discountPrice?: number;
   stock: number;
+  image?: string;
   isDefault?: boolean;
 }
 
@@ -23,7 +24,6 @@ interface Product {
   slug: string;
   category: string;
   variations: Variation[];
-  image: string;
   description?: string;
 }
 
@@ -47,6 +47,28 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const hasDiscount = !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
   const discountPercentage = hasDiscount ? Math.round(((originalPrice - (selectedVariation?.discountPrice || 0)) / originalPrice) * 100) : 0;
 
+  // Sync image with variation selection
+  useEffect(() => {
+    if (selectedVariation?.image) {
+      const idx = images.indexOf(selectedVariation.image);
+      if (idx !== -1) {
+        setCurrentImageIndex(idx);
+      }
+    }
+  }, [selectedVarIndex, images]);
+
+  // Sync variation with image selection
+  const handleImageSelect = (idx: number) => {
+    setCurrentImageIndex(idx);
+    const selectedImage = images[idx];
+    
+    // Check if this image belongs to a specific variation
+    const matchingVarIdx = product.variations.findIndex((v: any) => v.image === selectedImage);
+    if (matchingVarIdx !== -1) {
+      setSelectedVarIndex(matchingVarIdx);
+    }
+  };
+
   const handleAddToCart = () => {
     if (!product || !selectedVariation) return;
     addItem({
@@ -54,10 +76,10 @@ export default function ProductDetailsClient({ product, images }: { product: any
       productSlug: product.slug,
       productName: product.name,
       price: displayPrice,
-      image: images.length > 0 ? images[currentImageIndex] : product.image || "/images/placeholder.webp",
+      image: selectedVariation?.image || images[currentImageIndex] || "/images/placeholder.webp",
       quantity: quantity,
-      weight: selectedVariation.weight || "",
-      flavor: selectedVariation.flavor || "",
+      weight: selectedVariation?.weight || "",
+      flavor: selectedVariation?.flavor || "",
     });
     setIsFlying(true);
     setTimeout(() => setIsFlying(false), 800);
@@ -70,7 +92,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
     }
   };
 
-  const mainImageUrl = images.length > 0 ? images[currentImageIndex] : product.image || "/images/placeholder.webp";
+  const mainImageUrl = images[currentImageIndex] || "/images/placeholder.webp";
 
   return (
     <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-12 gap-0 border border-gray-100">
@@ -97,7 +119,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
             {images.map((img, idx) => (
               <button
                 key={idx}
-                onClick={() => setCurrentImageIndex(idx)}
+                onClick={() => handleImageSelect(idx)}
                 className={`flex-shrink-0 w-24 h-24 rounded-2xl border-4 transition-all relative overflow-hidden bg-white shadow-xl ${
                   currentImageIndex === idx 
                     ? "border-red-600 scale-110 translate-y-[-4px]" 

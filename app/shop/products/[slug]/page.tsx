@@ -16,13 +16,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
+  const defaultVariation = product.variations?.find((v: any) => v.isDefault) || product.variations?.[0];
+  const mainImage = defaultVariation?.image || (product.images?.[0]) || "";
+
   return {
     title: `${product.name} | Parle Bangladesh`,
     description: product.description || `Premium Parle product: ${product.name}`,
     openGraph: {
       title: `${product.name} | Parle Bangladesh`,
       description: product.description,
-      images: [product.image || ""],
+      images: [mainImage],
     }
   };
 }
@@ -51,7 +54,8 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
     id: product._id?.toString() || ""
   };
 
-  const images = [product.image, ...(product.images || [])].filter(Boolean);
+  const variationImages = product.variations?.map((v: any) => v.image).filter(Boolean) || [];
+  const images = Array.from(new Set([...variationImages, ...(product.images || [])])).filter(Boolean);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans">

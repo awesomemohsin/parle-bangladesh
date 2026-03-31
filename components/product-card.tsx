@@ -12,6 +12,7 @@ interface Variation {
   price: number;
   discountPrice?: number;
   stock: number;
+  image?: string;
   isDefault?: boolean;
 }
 
@@ -21,7 +22,6 @@ interface ProductCardProps {
   slug: string;
   category: string;
   variations: Variation[];
-  image: string;
   onAddToCart?: (variation: Variation) => void;
 }
 
@@ -30,7 +30,6 @@ export default function ProductCard({
   slug,
   category,
   variations = [],
-  image,
   onAddToCart,
 }: ProductCardProps) {
   const [isFlying, setIsFlying] = useState(false);
@@ -41,8 +40,11 @@ export default function ProductCard({
     discountPrice: 0,
     stock: 0,
     weight: "",
-    flavor: ""
+    flavor: "",
+    image: ""
   };
+
+  const productImg = defaultVariation.image || "/images/placeholder.webp";
 
   const hasDiscount = !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
   const currentPrice = (hasDiscount ? defaultVariation.discountPrice : defaultVariation.price) || 0;
@@ -72,7 +74,7 @@ export default function ProductCard({
       <Link href={`/shop/products/${slug}`}>
         <div className="relative w-full h-56 bg-gray-50 overflow-hidden flex items-center justify-center p-4">
           <Image
-            src={image}
+            src={productImg}
             alt={name}
             fill
             className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
