@@ -14,6 +14,7 @@ interface Variation {
   stock: number;
   image?: string;
   isDefault?: boolean;
+  isBulk?: boolean;
 }
 
 interface Product {
@@ -23,6 +24,7 @@ interface Product {
   category: string;
   variations: Variation[];
   description?: string;
+  isBulk?: boolean;
 }
 
 interface Category {
@@ -67,8 +69,12 @@ export default function ShopClient({
 
   const filteredProducts = useMemo(() => {
     return initialProducts.filter((product) => {
+      const isBulkMatch = selectedCategory === "bulk" && product.isBulk;
       const byCategory =
-        selectedCategory === "all" || product.category === selectedCategory;
+        selectedCategory === "all" || 
+        product.category === selectedCategory ||
+        isBulkMatch;
+      
       const query = search.trim().toLowerCase();
       const bySearch =
         !query ||
@@ -110,6 +116,7 @@ export default function ShopClient({
             className="w-full px-5 py-3 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
           >
             <option value="all">All Categories</option>
+            <option value="bulk" className="text-red-600 font-black">🎁 BULK / FAMILY PACKS</option>
             {categories.map((category) => (
               <option key={category.id} value={category.slug}>
                 {category.name.toUpperCase()}

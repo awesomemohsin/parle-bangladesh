@@ -16,6 +16,7 @@ interface Variation {
   stock: number;
   image?: string;
   isDefault?: boolean;
+  isBulk?: boolean;
 }
 
 interface Product {
@@ -25,6 +26,7 @@ interface Product {
   category: string;
   variations: Variation[];
   description?: string;
+  isBulk?: boolean;
 }
 
 export default function ProductDetailsClient({ product, images }: { product: any, images: string[] }) {
