@@ -105,6 +105,7 @@ export interface IVariation {
   price: number;
   discountPrice?: number;
   stock: number;
+  image?: string; // Image specific to this variation
   isDefault?: boolean;
 }
 
@@ -114,8 +115,7 @@ export interface IProduct extends Document {
   category: string; // Slug reference
   description?: string;
   variations: IVariation[];
-  image: string; // Main image
-  images: string[]; // Additional images
+  images: string[]; // Additional gallery images
   ordersCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -127,6 +127,7 @@ const VariationSchema = new Schema<IVariation>({
   price: { type: Number, required: true },
   discountPrice: { type: Number },
   stock: { type: Number, required: true, default: 0 },
+  image: { type: String },
   isDefault: { type: Boolean, default: false },
 });
 
@@ -137,7 +138,6 @@ const ProductSchema = new Schema<IProduct>(
     category: { type: String, required: true },
     description: { type: String },
     variations: { type: [VariationSchema], default: [] },
-    image: { type: String, required: true },
     images: [{ type: String }],
     ordersCount: { type: Number, default: 0 },
   },

@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
       if (body.category) product.category = body.category;
       if (body.description) product.description = body.description;
       if (body.variations) product.variations = body.variations;
-      if (body.image) product.image = body.image;
       if (body.images) product.images = body.images;
       await product.save();
     } else {
@@ -90,7 +89,6 @@ export async function POST(request: NextRequest) {
         category: body.category,
         description: body.description,
         variations: body.variations || [],
-        image: body.image || "/images/placeholder.webp",
         images: body.images || [],
       });
       await product.save();

@@ -35,20 +35,16 @@ const ProductSchema = new mongoose.Schema({
   slug: { type: String, required: true, unique: true, lowercase: true },
   category: { type: String, required: true },
   description: { type: String },
-  price: { type: Number, required: true },
-  weight: { type: String },
-  flavor: { type: String },
   variations: [new mongoose.Schema({
     weight: { type: String },
     flavor: { type: String },
     price: { type: Number, required: true },
     stock: { type: Number },
+    image: { type: String },
+    isDefault: { type: Boolean },
   })],
-  image: { type: String },
   images: [{ type: String }],
-  rating: { type: Number, default: 0 },
-  reviews: { type: Number, default: 0 },
-  stock: { type: Number, default: 0 },
+  ordersCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
 const UserSchema = new mongoose.Schema({
@@ -79,11 +75,10 @@ const products = [
     category: "biscuits", 
     description: "Golden, crispy biscuits with a perfect taste", 
     variations: [
-      { weight: "200g", flavor: "Original", price: 35, stock: 100, isDefault: true },
-      { weight: "400g", flavor: "Original", price: 65, stock: 50 },
-      { weight: "800g", flavor: "Original", price: 120, stock: 30 }
+      { weight: "200g", flavor: "Original", price: 35, stock: 100, image: "/images/biscuits/parle-g-gold/1.webp", isDefault: true },
+      { weight: "400g", flavor: "Original", price: 65, stock: 50, image: "/images/biscuits/parle-g-gold/1.webp" },
+      { weight: "800g", flavor: "Original", price: 120, stock: 30, image: "/images/biscuits/parle-g-gold/1.webp" }
     ],
-    image: "/images/biscuits/parle-g-gold/1.webp", 
     images: ["/images/biscuits/parle-g-gold/1.webp", "/images/biscuits/parle-g-gold/2.webp"], 
   },
   { 
@@ -92,10 +87,9 @@ const products = [
     category: "biscuits", 
     description: "Glucose biscuits with nutritious goodness", 
     variations: [
-      { weight: "250g", flavor: "Glucose", price: 45, stock: 80, isDefault: true },
-      { weight: "500g", flavor: "Glucose", price: 85, stock: 40 }
+      { weight: "250g", flavor: "Glucose", price: 45, stock: 80, image: "/images/biscuits/parle-gluco/1.webp", isDefault: true },
+      { weight: "500g", flavor: "Glucose", price: 85, stock: 40, image: "/images/biscuits/parle-gluco/1.webp" }
     ],
-    image: "/images/biscuits/parle-gluco/1.webp", 
     images: ["/images/biscuits/parle-gluco/1.webp"], 
   },
   { 
@@ -104,11 +98,10 @@ const products = [
     category: "biscuits", 
     description: "Delightful chocolate chip biscuits", 
     variations: [
-      { weight: "100g", flavor: "Chocolate", price: 55, stock: 120, isDefault: true },
-      { weight: "200g", flavor: "Chocolate", price: 100, stock: 60 },
-      { weight: "400g", flavor: "Chocolate", price: 190, stock: 20 }
+      { weight: "100g", flavor: "Chocolate", price: 55, stock: 120, image: "/images/biscuits/hide-seek-choco/1.webp", isDefault: true },
+      { weight: "200g", flavor: "Chocolate", price: 100, stock: 60, image: "/images/biscuits/hide-seek-choco/1.webp" },
+      { weight: "400g", flavor: "Chocolate", price: 190, stock: 20, image: "/images/biscuits/hide-seek-choco/1.webp" }
     ],
-    image: "/images/biscuits/hide-seek-choco/1.webp", 
     images: ["/images/biscuits/hide-seek-choco/1.webp"], 
   },
   { 
@@ -117,10 +110,9 @@ const products = [
     category: "wafers", 
     description: "Crispy wafers with cream and onion flavor", 
     variations: [
-      { weight: "75g", flavor: "Cream & Onion", price: 40, stock: 90, isDefault: true },
-      { weight: "150g", flavor: "Cream & Onion", price: 75, stock: 45 }
+      { weight: "75g", flavor: "Cream & Onion", price: 40, stock: 90, image: "/images/wafers/parle-wafers-cream-onion/1.webp", isDefault: true },
+      { weight: "150g", flavor: "Cream & Onion", price: 75, stock: 45, image: "/images/wafers/parle-wafers-cream-onion/1.webp" }
     ],
-    image: "/images/wafers/parle-wafers-cream-onion/1.webp", 
     images: ["/images/wafers/parle-wafers-cream-onion/1.webp"], 
   },
   { 
@@ -129,10 +121,9 @@ const products = [
     category: "wafers", 
     description: "Crispy wafers with salt and pepper seasoning", 
     variations: [
-      { weight: "75g", flavor: "Salt & Pepper", price: 40, stock: 75, isDefault: true },
-      { weight: "150g", flavor: "Salt & Pepper", price: 75, stock: 40 }
+      { weight: "75g", flavor: "Salt & Pepper", price: 40, stock: 75, image: "/images/wafers/parle-wafers-salt-pepper/1.webp", isDefault: true },
+      { weight: "150g", flavor: "Salt & Pepper", price: 75, stock: 40, image: "/images/wafers/parle-wafers-salt-pepper/1.webp" }
     ],
-    image: "/images/wafers/parle-wafers-salt-pepper/1.webp", 
     images: ["/images/wafers/parle-wafers-salt-pepper/1.webp"], 
   },
   { 
@@ -141,9 +132,8 @@ const products = [
     category: "snacks", 
     description: "Crunchy savory biscuits with unique taste", 
     variations: [
-      { weight: "150g", flavor: "Classic Salted", price: 50, stock: 110, isDefault: true }
+      { weight: "150g", flavor: "Classic Salted", price: 50, stock: 110, image: "/images/snacks/monaco-biscuits/1.webp", isDefault: true }
     ],
-    image: "/images/snacks/monaco-biscuits/1.webp", 
     images: ["/images/snacks/monaco-biscuits/1.webp"], 
   },
   { 
@@ -152,10 +142,9 @@ const products = [
     category: "biscuits", 
     description: "Magic taste in every bite", 
     variations: [
-      { weight: "150g", flavor: "Orange", price: 65, stock: 30, isDefault: true },
-      { weight: "150g", flavor: "Chocolate", price: 65, stock: 30 }
+      { weight: "150g", flavor: "Orange", price: 65, stock: 30, image: "/images/biscuits/parle-magix/1.webp", isDefault: true },
+      { weight: "150g", flavor: "Chocolate", price: 65, stock: 30, image: "/images/biscuits/parle-magix/1.webp" }
     ],
-    image: "/images/biscuits/parle-magix/1.webp", 
     images: ["/images/biscuits/parle-magix/1.webp"], 
   },
   { 
@@ -164,10 +153,9 @@ const products = [
     category: "cookies", 
     description: "Premium cookies with cashew pieces", 
     variations: [
-      { weight: "100g", flavor: "Cashew", price: 80, stock: 60, isDefault: true },
-      { weight: "200g", flavor: "Cashew", price: 150, stock: 30 }
+      { weight: "100g", flavor: "Cashew", price: 80, stock: 60, image: "/images/cookies/parle-cashew-cookies/1.webp", isDefault: true },
+      { weight: "200g", flavor: "Cashew", price: 150, stock: 30, image: "/images/cookies/parle-cashew-cookies/1.webp" }
     ],
-    image: "/images/cookies/parle-cashew-cookies/1.webp", 
     images: ["/images/cookies/parle-cashew-cookies/1.webp"], 
   },
 ];

@@ -101,7 +101,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (body.name) existing.name = body.name;
     if (body.category) existing.category = body.category;
     if (body.description) existing.description = body.description;
-    if (body.image) existing.image = body.image;
     if (body.images) existing.images = body.images;
 
     await existing.save();
