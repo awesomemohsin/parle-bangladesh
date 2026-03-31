@@ -3,14 +3,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product, Customer } from "@/lib/models";
-
-function mapDoc(doc: any) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  delete obj._id;
-  delete obj.__v;
-  return obj;
-}
+import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,12 +12,13 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const searchQuery = searchParams.get("q");
-    const statusQuery = searchParams.get("status");
+    const searchQuery = searchParams.get("q") || "";
+    const statusQuery = searchParams.get("status") || "all";
 
-    let query: any = {};
+    // 1. Initial Match (Security + Status)
+    let matchStage: any = {};
     if (!hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
-      query = { 
+      matchStage = { 
         $or: [
           { userId: user.id },
           { customerEmail: user.email }
@@ -32,38 +26,49 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    if (statusQuery !== "all") {
+      matchStage.status = statusQuery;
+    }
+
+    // Pipeline
+    const pipeline: any[] = [
+      { $match: matchStage },
+      // Create string version of _id to allow partial regex search
+      {
+        $addFields: {
+          idString: { $toString: "$_id" }
+        }
+      }
+    ];
+
+    // 2. Search Stage
     if (searchQuery) {
       const searchRegex = new RegExp(searchQuery, "i");
-      if (query.$or) {
-         // Combine with existing $or if any (for customers)
-         // Actually, for customers we should filter WITHIN their own orders
-         const existingOr = query.$or;
-         query = {
-           $and: [
-             { $or: existingOr },
-             { $or: [
-               { customerName: searchRegex },
-               { customerEmail: searchRegex },
-               { customerPhone: searchRegex }
-             ]}
-           ]
-         };
-      } else {
-        query.$or = [
-          { customerName: searchRegex },
-          { customerEmail: searchRegex },
-          { customerPhone: searchRegex },
-        ];
-      }
+      pipeline.push({
+        $match: {
+          $or: [
+            { idString: searchRegex },
+            { customerName: searchRegex },
+            { customerEmail: searchRegex },
+            { customerPhone: searchRegex },
+            { "items.name": searchRegex }
+          ]
+        }
+      });
     }
 
-    if (statusQuery && statusQuery !== "all") {
-      query.status = statusQuery;
-    }
+    // 3. Sort Stage
+    pipeline.push({ $sort: { createdAt: -1 } });
 
-    // sort newest first
-    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ orders: orders.map(o => { o.id = o._id.toString(); return o; }) });
+    const orders = await Order.aggregate(pipeline);
+    
+    return NextResponse.json({ 
+      orders: orders.map(o => { 
+        o.id = o._id.toString(); 
+        delete o.idString; 
+        return o; 
+      }) 
+    });
   } catch (error) {
     console.error("Orders GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -197,7 +202,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(mapDoc(order), { status: 201 });
+    const mappedOrder = order.toObject();
+    mappedOrder.id = mappedOrder._id.toString();
+    delete mappedOrder._id;
+    delete mappedOrder.__v;
+    
+    return NextResponse.json(mappedOrder, { status: 201 });
   } catch (error) {
     console.error("Orders POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
