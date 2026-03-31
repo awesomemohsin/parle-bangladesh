@@ -12,6 +12,7 @@ interface Variation {
   price: number
   discountPrice?: number
   stock: number
+  image?: string
   isDefault?: boolean
 }
 
@@ -21,7 +22,6 @@ interface Product {
   slug: string
   category: string
   description: string
-  image: string
   variations: Variation[]
 }
 
@@ -74,8 +74,7 @@ export default function AdminProductFormPage() {
             slug: '',
             category: '',
             description: '',
-            image: '',
-            variations: [{ weight: '', flavor: '', price: 0, stock: 0, isDefault: true }],
+            variations: [{ weight: '', flavor: '', price: 0, stock: 0, image: '', isDefault: true }],
           })
         }
       } catch (error) {
@@ -163,7 +162,7 @@ export default function AdminProductFormPage() {
                   type="text"
                   value={product.name}
                   onChange={(e) => setProduct({ ...product, name: e.target.value })}
-                  className="h-10 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                  className="h-10 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600 col-span-2"
                   required
                 />
               </div>
@@ -177,7 +176,7 @@ export default function AdminProductFormPage() {
                   required
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 md:col-span-2">
                 <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Category</label>
                 <select
                   value={product.category}
@@ -190,15 +189,6 @@ export default function AdminProductFormPage() {
                     <option key={cat.id} value={cat.slug}>{cat.name}</option>
                   ))}
                 </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Image URL</label>
-                <Input
-                  type="text"
-                  value={product.image}
-                  onChange={(e) => setProduct({ ...product, image: e.target.value })}
-                  className="h-10 text-[10px] border-2 border-gray-50 rounded-lg focus:border-red-600"
-                />
               </div>
             </div>
           </Card>
@@ -213,7 +203,7 @@ export default function AdminProductFormPage() {
                 type="button"
                 onClick={() => {
                   const variations = [...(product.variations || [])];
-                  variations.push({ weight: '', flavor: '', price: 0, stock: 0, isDefault: variations.length === 0 });
+                  variations.push({ weight: '', flavor: '', price: 0, stock: 0, image: '', isDefault: variations.length === 0 });
                   setProduct({ ...product, variations });
                 }}
                 className="h-8 px-4 bg-red-600 text-white hover:bg-black text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
@@ -231,123 +221,143 @@ export default function AdminProductFormPage() {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-6 gap-6 items-end">
-                    
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Weight</label>
-                      <Input
-                        type="text"
-                        value={variation.weight}
-                        onChange={(e) => {
-                          const vars = [...product.variations];
-                          vars[index].weight = e.target.value;
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg focus:border-red-600"
-                        placeholder="e.g. 200g"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Flavor</label>
-                      <Input
-                        type="text"
-                        value={variation.flavor}
-                        onChange={(e) => {
-                          const vars = [...product.variations];
-                          vars[index].flavor = e.target.value;
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg focus:border-red-600"
-                        placeholder="Original"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Normal Price</label>
-                      <Input
-                        type="number"
-                        value={variation.price}
-                        onChange={(e) => {
-                          const vars = [...product.variations];
-                          vars[index].price = parseFloat(e.target.value);
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className="h-9 px-3 text-[10px] font-black text-red-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 mb-1 justify-between pr-1">
-                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em]">Promotion</label>
-                        <input 
-                          type="checkbox" 
-                          checked={activeDiscounts[index] || (!!variation.discountPrice && variation.discountPrice > 0)}
+                  <div className="flex flex-col gap-6">
+                    {/* Row 1: Measurements & Prices */}
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                      <div className="space-y-1 md:col-span-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Weight</label>
+                        <Input
+                          type="text"
+                          value={variation.weight}
                           onChange={(e) => {
-                            const isChecked = e.target.checked
-                            setActiveDiscounts({ ...activeDiscounts, [index]: isChecked })
-                            if (!isChecked) {
-                              const vars = [...product.variations];
-                              vars[index].discountPrice = 0;
-                              setProduct({ ...product, variations: vars });
-                            }
+                            const vars = [...product.variations];
+                            vars[index].weight = e.target.value;
+                            setProduct({ ...product, variations: vars });
                           }}
-                          className="w-3 h-3 accent-red-600 cursor-pointer"
+                          className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          placeholder="e.g. 200g"
                         />
                       </div>
-                      <Input
-                        type="number"
-                        value={variation.discountPrice || ''}
-                        disabled={!activeDiscounts[index] && (!variation.discountPrice || variation.discountPrice === 0)}
-                        onChange={(e) => {
-                          const vars = [...product.variations];
-                          vars[index].discountPrice = e.target.value ? parseFloat(e.target.value) : 0;
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg disabled:bg-gray-50 disabled:opacity-30 focus:border-red-600"
-                        placeholder="Sale price"
-                      />
+
+                      <div className="space-y-1 md:col-span-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Flavor</label>
+                        <Input
+                          type="text"
+                          value={variation.flavor}
+                          onChange={(e) => {
+                            const vars = [...product.variations];
+                            vars[index].flavor = e.target.value;
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          placeholder="Original"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Normal Price</label>
+                        <Input
+                          type="number"
+                          value={variation.price}
+                          onChange={(e) => {
+                            const vars = [...product.variations];
+                            vars[index].price = parseFloat(e.target.value);
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-xs font-bold text-red-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 mb-1 justify-between pr-1">
+                          <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em]">Promotion</label>
+                          <input 
+                            type="checkbox" 
+                            checked={activeDiscounts[index] || (!!variation.discountPrice && variation.discountPrice > 0)}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked
+                              setActiveDiscounts({ ...activeDiscounts, [index]: isChecked })
+                              if (!isChecked) {
+                                const vars = [...product.variations];
+                                vars[index].discountPrice = 0;
+                                setProduct({ ...product, variations: vars });
+                              }
+                            }}
+                            className="w-3 h-3 accent-red-600 cursor-pointer"
+                          />
+                        </div>
+                        <Input
+                          type="number"
+                          value={variation.discountPrice || ''}
+                          disabled={!activeDiscounts[index] && (!variation.discountPrice || variation.discountPrice === 0)}
+                          onChange={(e) => {
+                            const vars = [...product.variations];
+                            vars[index].discountPrice = e.target.value ? parseFloat(e.target.value) : 0;
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg disabled:bg-gray-50 disabled:opacity-30 focus:border-red-600"
+                          placeholder="Sale price"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Stock</label>
+                        <Input
+                          type="number"
+                          value={variation.stock}
+                          onChange={(e) => {
+                            const vars = [...product.variations];
+                            vars[index].stock = parseInt(e.target.value);
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                        />
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Stock</label>
-                      <Input
-                        type="number"
-                        value={variation.stock}
-                        onChange={(e) => {
-                          const vars = [...product.variations];
-                          vars[index].stock = parseInt(e.target.value);
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className="h-9 px-3 text-[10px] font-black border-2 border-gray-50 rounded-lg focus:border-red-600"
-                      />
-                    </div>
+                    {/* Row 2: Image and Controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end border-t border-gray-100 pt-6">
+                      <div className="md:col-span-9 space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">SKU Image URL</label>
+                        <Input
+                          type="text"
+                          value={variation.image || ''}
+                          onChange={(e) => {
+                            const vars = [...product.variations];
+                            vars[index].image = e.target.value;
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-4 text-[11px] font-medium border-2 border-gray-50 rounded-lg focus:border-red-600 bg-gray-50/30"
+                          placeholder="e.g. /images/products/example.webp"
+                        />
+                      </div>
 
-                    <div className="flex justify-end gap-2 pb-0.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          const vars = product.variations.map((v, i) => ({ ...v, isDefault: i === index }));
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className={`h-9 px-4 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${variation.isDefault ? 'bg-black text-white' : 'text-gray-300 hover:text-red-600'}`}
-                      >
-                        Main SKU
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          if (product.variations.length === 1) return;
-                          const vars = product.variations.filter((_, i) => i !== index);
-                          if (variation.isDefault) vars[0].isDefault = true;
-                          setProduct({ ...product, variations: vars });
-                        }}
-                        className="h-9 px-2 text-gray-200 hover:text-red-600 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </Button>
+                      <div className="md:col-span-3 flex justify-end gap-2 pb-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const vars = product.variations.map((v, i) => ({ ...v, isDefault: i === index }));
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className={`h-10 px-5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${variation.isDefault ? 'bg-black text-white' : 'text-gray-400 hover:text-red-600 border-2 border-transparent hover:border-red-100'}`}
+                        >
+                          {variation.isDefault ? 'Primary SKU' : 'Set Primary'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            if (product.variations.length === 1) return;
+                            const vars = product.variations.filter((_, i) => i !== index);
+                            if (variation.isDefault) vars[0].isDefault = true;
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-gray-300 hover:text-red-600 transition-colors border-2 border-transparent hover:border-red-100 rounded-xl"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </Card>
