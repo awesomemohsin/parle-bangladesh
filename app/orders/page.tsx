@@ -26,6 +26,8 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -36,7 +38,11 @@ export default function MyOrdersPage() {
           return;
         }
 
-        const res = await fetch("/api/orders", {
+        const params = new URLSearchParams()
+        if (search) params.append('q', search)
+        if (status !== 'all') params.append('status', status)
+
+        const res = await fetch(`/api/orders?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -54,13 +60,46 @@ export default function MyOrdersPage() {
     };
 
     fetchOrders();
-  }, []);
+  }, [search, status]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 leading-none">My Orders</h1>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px] mt-2">Track your history & status</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="relative group">
+            <input 
+              type="text" 
+              placeholder="SEARCH BY PRODUCT OR ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-10 px-4 pl-10 text-[10px] font-black uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg focus:border-red-600 focus:bg-white focus:outline-none transition-all w-full sm:w-[240px]"
+            />
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          <select 
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="h-10 px-4 text-[10px] font-black uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg focus:border-red-600 focus:bg-white focus:outline-none transition-all cursor-pointer appearance-none min-w-[140px]"
+          >
+            <option value="all">ALL STATUSES</option>
+            <option value="pending">PENDING</option>
+            <option value="processing">PROCESSING</option>
+            <option value="shipped">SHIPPED</option>
+            <option value="delivered">DELIVERED</option>
+            <option value="cancelled">CANCELLED</option>
+          </select>
+        </div>
+      </div>
       
-      {isLoading ? (
+      {isLoading && orders.length === 0 ? (
         <p className="text-gray-500">Loading your orders...</p>
       ) : error ? (
         <p className="text-red-500">{error}</p>

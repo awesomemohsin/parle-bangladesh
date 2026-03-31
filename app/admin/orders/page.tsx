@@ -39,11 +39,15 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [searchTerm, statusFilter])
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders', {
+      const params = new URLSearchParams()
+      if (searchTerm) params.append('q', searchTerm)
+      if (statusFilter !== 'all') params.append('status', statusFilter)
+      
+      const response = await fetch(`/api/orders?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -108,15 +112,7 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.id.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const filteredOrders = orders; // Now filtered by API
 
   if (isLoading) {
     return (
