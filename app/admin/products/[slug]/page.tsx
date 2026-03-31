@@ -14,6 +14,7 @@ interface Variation {
   stock: number
   image?: string
   isDefault?: boolean
+  isBulk?: boolean
 }
 
 interface Product {
@@ -23,6 +24,7 @@ interface Product {
   category: string
   description: string
   variations: Variation[]
+  isBulk?: boolean
 }
 
 interface Category {
@@ -176,6 +178,17 @@ export default function AdminProductFormPage() {
                   required
                 />
               </div>
+
+              <div className="flex items-center gap-2 mt-auto pb-3">
+                <input
+                  type="checkbox"
+                  id="bulkProduct"
+                  checked={product.isBulk || false}
+                  onChange={(e) => setProduct({ ...product, isBulk: e.target.checked })}
+                  className="w-4 h-4 accent-black rounded cursor-pointer"
+                />
+                <label htmlFor="bulkProduct" className="text-[9px] font-black uppercase text-gray-400 tracking-widest cursor-pointer">Family Pack / Bulk</label>
+              </div>
               <div className="space-y-1 md:col-span-2">
                 <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Category</label>
                 <select
@@ -216,8 +229,16 @@ export default function AdminProductFormPage() {
               {product.variations.map((variation, index) => (
                 <Card key={index} className={`p-6 border-2 transition-all relative overflow-hidden ${variation.isDefault ? 'border-red-600 bg-red-50/10' : 'border-gray-50 bg-white hover:border-gray-100'}`}>
                   {variation.isDefault && (
+                    <div className="absolute top-0 right-0 p-2 flex gap-2">
+                      {variation.isBulk && (
+                        <span className="text-[7px] font-black uppercase bg-black text-white px-2 py-0.5 rounded-lg border border-white/20">Bulk SKU</span>
+                      )}
+                      <span className="text-[7px] font-black uppercase bg-red-600 text-white px-2 py-0.5 rounded-lg">Primary SKU</span>
+                    </div>
+                  )}
+                  {!variation.isDefault && variation.isBulk && (
                     <div className="absolute top-0 right-0 p-2">
-                      <span className="text-[7px] font-black uppercase bg-red-600 text-white px-2 py-0.5 rounded-bl-lg">Primary SKU</span>
+                      <span className="text-[7px] font-black uppercase bg-black text-white px-2 py-0.5 rounded-lg border border-white/20">Bulk SKU</span>
                     </div>
                   )}
                   
@@ -298,6 +319,25 @@ export default function AdminProductFormPage() {
                           className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg disabled:bg-gray-50 disabled:opacity-30 focus:border-red-600"
                           placeholder="Sale price"
                         />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 mb-1 justify-between pr-1">
+                          <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em]">Bulk</label>
+                          <input 
+                            type="checkbox" 
+                            checked={variation.isBulk || false}
+                            onChange={(e) => {
+                              const vars = [...product.variations];
+                              vars[index].isBulk = e.target.checked;
+                              setProduct({ ...product, variations: vars });
+                            }}
+                            className="w-3 h-3 accent-black cursor-pointer"
+                          />
+                        </div>
+                        <div className="h-10 flex items-center justify-center border-2 border-dashed border-gray-100 rounded-lg bg-gray-50/10">
+                           <span className="text-[8px] font-bold text-gray-300 uppercase tracking-tighter">{variation.isBulk ? 'YES' : 'NO'}</span>
+                        </div>
                       </div>
 
                       <div className="space-y-1">
