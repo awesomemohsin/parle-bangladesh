@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { User, ShoppingBag, Clock, Package, ChevronRight, Hash, Calendar, ShieldCheck } from "lucide-react";
+
 const formatCurrency = (val: number) => `৳${val.toFixed(2)}`;
 const formatDate = (dateString: string) => new Date(dateString).toLocaleString()
 
@@ -20,6 +22,9 @@ interface Order {
   total: number;
   status: string;
   items: OrderItem[];
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
 }
 
 export default function MyOrdersPage() {
@@ -28,15 +33,21 @@ export default function MyOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) {
+        const userStr = localStorage.getItem("user");
+        
+        if (!token || !userStr) {
           window.location.href = "/auth/login";
           return;
         }
+
+        const user = JSON.parse(userStr);
+        setIsAdmin(user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin');
 
         const params = new URLSearchParams()
         if (search) params.append('q', search)
@@ -63,33 +74,37 @@ export default function MyOrdersPage() {
   }, [search, status]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Mini Profile Header */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 leading-none">My Orders</h1>
-          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px] mt-2">Track your history & status</p>
+           <div className="flex items-center gap-2 mb-1">
+              <span className="w-6 h-1 bg-red-600 rounded-full"></span>
+              <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Order Log</span>
+           </div>
+          <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic leading-none">
+            {isAdmin ? 'System Database' : 'My Orders'}
+          </h1>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <div className="relative group">
+        <div className="flex gap-2 w-full md:w-auto">
+          <div className="relative group flex-1">
             <input 
               type="text" 
-              placeholder="SEARCH BY PRODUCT OR ID..."
+              placeholder="SEARCH PID OR USER..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-10 px-4 pl-10 text-[10px] font-black uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg focus:border-red-600 focus:bg-white focus:outline-none transition-all w-full sm:w-[240px]"
+              className="h-10 px-4 pl-10 text-[10px] font-black uppercase tracking-widest bg-white border border-gray-100 rounded-lg focus:border-red-600 focus:outline-none transition-all w-full md:w-64"
             />
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-red-600 transition-colors" />
           </div>
 
           <select 
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="h-10 px-4 text-[10px] font-black uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg focus:border-red-600 focus:bg-white focus:outline-none transition-all cursor-pointer appearance-none min-w-[140px]"
+            className="h-10 px-4 text-[10px] font-black uppercase tracking-widest bg-white border border-gray-100 rounded-lg focus:border-red-600 focus:outline-none transition-all cursor-pointer min-w-[120px]"
           >
-            <option value="all">ALL STATUSES</option>
+            <option value="all">ALL STAGES</option>
             <option value="pending">PENDING</option>
             <option value="processing">PROCESSING</option>
             <option value="shipped">SHIPPED</option>
@@ -100,72 +115,105 @@ export default function MyOrdersPage() {
       </div>
       
       {isLoading && orders.length === 0 ? (
-        <p className="text-gray-500">Loading your orders...</p>
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+           <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Querying...</p>
+        </div>
       ) : error ? (
-        <p className="text-red-500">{error}</p>
+        <div className="p-6 text-center bg-red-50 border border-red-100 rounded-xl">
+           <p className="text-red-600 font-black uppercase tracking-widest text-[10px]">{error}</p>
+        </div>
       ) : orders.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="text-gray-600 mb-4">You have not placed any orders yet.</p>
-          <Link href="/shop" className="text-red-600 font-medium hover:underline">
-            Start Shopping
+        <Card className="p-12 text-center border border-dashed border-gray-100 rounded-2xl bg-gray-50/50">
+          <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">No Records identifed</h2>
+          <Link href="/shop" className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-black transition-all">
+            Return to Storefront
           </Link>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {orders.map((order) => (
-            <Card key={order.id} className="p-6 transition-all hover:shadow-md">
-              <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-4 border-b border-gray-100">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">
-                    Order ID: <span className="font-mono text-gray-700">{order.id}</span>
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Placed on {formatDate(order.createdAt)}
-                  </p>
-                </div>
-                <div className="mt-4 md:mt-0 flex gap-4 items-center">
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full capitalize 
-                    ${order.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                      order.status === 'processing' ? 'bg-red-100 text-red-800' : 
-                      order.status === 'cancelled' ? 'bg-gray-100 text-gray-800' : 
-                      'bg-red-50 text-red-700 font-bold border border-red-100'}`}>
-                    {order.status}
-                  </span>
-                  <span className="text-lg font-bold text-red-600">{formatCurrency(order.total)}</span>
-                </div>
+            <Card key={order.id} className="overflow-hidden border border-gray-100 rounded-xl shadow-none hover:border-red-600 transition-all duration-300">
+              {/* Header Bar - More Compact */}
+              <div className="bg-slate-50/80 border-b border-gray-100 px-5 py-2 flex flex-wrap justify-between items-center gap-4">
+                 <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black text-gray-900 uppercase tracking-tight">
+                       ORDER ID: <span className="text-red-600 ml-1 select-all">{order.id.toUpperCase()}</span>
+                    </span>
+                 </div>
+                 
+                 <div className="flex items-center gap-4">
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                       {new Date(order.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className={`px-2.5 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
+                      ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-100' : 
+                        order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
+                        order.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' : 
+                        'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                      {order.status}
+                    </span>
+                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-gray-700">Items:</h4>
-                <ul className="divide-y divide-gray-50">
-                  {order.items.map((item, idx) => (
-                    <li key={idx} className="py-2 flex justify-between text-sm">
-                      <div className="flex flex-col">
-                        <span className="text-gray-900 font-medium">
-                          {item.quantity}x {item.name}
-                        </span>
-                        <div className="flex gap-2 mt-1">
-                          {item.weight && (
-                            <span className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100">
-                              W: {item.weight}
-                            </span>
-                          )}
-                          {item.flavor && (
-                            <span className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100">
-                              F: {item.flavor}
-                            </span>
-                          )}
-                          <span className="text-[10px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100 font-semibold">
-                            Unit Price: {formatCurrency(item.price)}
-                          </span>
+
+              {/* Card Body - Highly Compact */}
+              <div className="p-5 flex flex-col md:flex-row gap-6">
+                {/* Admin Role Section - Smaller */}
+                {isAdmin && (
+                  <div className="md:w-44 shrink-0 flex flex-col gap-2 border-r border-gray-50 pr-4">
+                    <div className="flex items-center gap-2 mb-1">
+                       <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
+                       <span className="text-[9px] font-black text-gray-900 uppercase tracking-widest">Admin Intel</span>
+                    </div>
+                    <div>
+                       <p className="text-xs font-black text-gray-900 truncate leading-tight mb-1">{order.customerName}</p>
+                       <p className="text-[8px] font-bold text-gray-300 uppercase truncate leading-none mb-0.5">{order.customerEmail}</p>
+                       <p className="text-[8px] font-black text-gray-300 uppercase leading-none">{order.customerPhone}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Viewport */}
+                <div className="flex-1 flex flex-col justify-between self-stretch gap-4">
+                  <ul className="space-y-2">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-[11px] group/item">
+                        <div className="flex items-center gap-3">
+                           <div className="w-6 h-6 bg-gray-50 rounded-md flex items-center justify-center font-black text-[9px] text-gray-300 border border-gray-100">
+                             {item.quantity}
+                           </div>
+                           <div className="flex flex-col">
+                             <span className="font-black text-gray-900 leading-none uppercase group-hover/item:text-red-600 transition-colors">{item.name}</span>
+                             <div className="flex gap-1.5 mt-0.5">
+                               {item.weight && <span className="text-[7px] text-gray-400 uppercase font-black">{item.weight}</span>}
+                               {item.flavor && <span className="text-[7px] text-gray-400 uppercase font-bold border-l pl-1.5">{item.flavor}</span>}
+                             </div>
+                           </div>
                         </div>
+                        <span className="font-black text-gray-900 leading-none shrink-0">{formatCurrency(item.price * item.quantity)}</span>
                       </div>
-                      <span className="text-gray-800 font-medium">
-                        {formatCurrency(item.price * item.quantity)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                    ))}
+                  </ul>
+
+                  {/* Summary Segment - Compact */}
+                  <div className="flex justify-between items-end border-t border-gray-50 pt-3 mt-auto">
+                     <Link href={isAdmin ? `/admin/orders` : '/shop'}>
+                        <button className={`text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1 group/btn
+                          ${isAdmin ? 'text-red-600 hover:bg-red-600 border border-red-600 px-3 py-1 rounded-md hover:text-white' : 'text-gray-400 hover:text-red-600'}`}>
+                           {isAdmin ? 'Management' : 'Buy Again'}
+                           <ChevronRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
+                        </button>
+                     </Link>
+
+                     <div className="text-right flex flex-col items-end">
+                        <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest block leading-none mb-1">TOTAL</span>
+                        <div className="text-xl font-black italic tracking-tighter text-gray-900 flex items-center gap-2 leading-none p-2 bg-slate-50 rounded-lg border border-slate-100">
+                           <Package className="w-4 h-4 text-red-600 not-italic shrink-0 translate-y-0.5" />
+                           {formatCurrency(order.total)}
+                        </div>
+                     </div>
+                  </div>
+                </div>
               </div>
             </Card>
           ))}
