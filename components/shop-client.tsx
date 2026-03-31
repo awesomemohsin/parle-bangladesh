@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/hooks/useCart";
 import { Search, ShoppingCart, Filter } from "lucide-react";
@@ -38,8 +39,31 @@ export default function ShopClient({
   categories: any[] 
 }) {
   const { addItem } = useCart();
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [search, setSearch] = useState("");
+
+  // Sync state with URL
+  useEffect(() => {
+    const category = searchParams.get("category");
+    if (category) {
+      setSelectedCategory(category);
+    } else {
+      setSelectedCategory("all");
+    }
+  }, [searchParams]);
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    const params = new URLSearchParams(searchParams.toString());
+    if (category === "all") {
+      params.delete("category");
+    } else {
+      params.set("category", category);
+    }
+    router.push(`/shop?${params.toString()}`, { scroll: false });
+  };
 
   const filteredProducts = useMemo(() => {
     return initialProducts.filter((product) => {
@@ -82,7 +106,7 @@ export default function ShopClient({
           </label>
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             className="w-full px-5 py-3 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
           >
             <option value="all">All Categories</option>

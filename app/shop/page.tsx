@@ -1,6 +1,7 @@
 import { getProducts, getCategories } from "@/lib/data";
 import ShopClient from "@/components/shop-client";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Shop | Parle Bangladesh",
@@ -44,10 +45,12 @@ export default async function ShopPage() {
           </p>
         </div>
 
-        <ShopClient 
-          initialProducts={serializedProducts} 
-          categories={serializedCategories} 
-        />
+        <Suspense fallback={<div>Loading shop...</div>}>
+          <ShopClient 
+            initialProducts={serializedProducts} 
+            categories={serializedCategories} 
+          />
+        </Suspense>
       </main>
     </div>
   );

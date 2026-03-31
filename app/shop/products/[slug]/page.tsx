@@ -1,7 +1,8 @@
-import { getProductBySlug, getProducts } from "@/lib/data";
+import { getProductBySlug, getProducts, getCategoryBySlug } from "@/lib/data";
 import { notFound } from "next/navigation";
 import ProductDetailsClient from "@/components/product-details-client";
 import { Metadata } from "next";
+import Link from "next/link";
 
 export const revalidate = 60; // ISR: Revalidate every 60 seconds
 
@@ -41,6 +42,9 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
     notFound();
   }
 
+  // Fetch category to get name (if slug is different from name or to ensure formatting)
+  const category = await getCategoryBySlug(product.category);
+
   // Serialize product for client component (handling _id as string)
   const serializedProduct = {
     ...JSON.parse(JSON.stringify(product)),
@@ -56,7 +60,16 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
              <span className="w-1 h-5 bg-red-600 rounded-full"></span>
-             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Shop / {product.category}</h2>
+             <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none flex items-center gap-1">
+               <Link href="/shop" className="hover:text-red-600 transition-colors">Shop</Link>
+               <span className="text-gray-300">/</span>
+               <Link 
+                href={`/shop?category=${product.category}`} 
+                className="hover:text-red-600 transition-colors"
+               >
+                 {category?.name || product.category}
+               </Link>
+             </h2>
           </div>
         </div>
 
