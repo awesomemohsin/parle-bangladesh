@@ -16,6 +16,7 @@ export const VariationSchema = z.object({
   flavor: z.string().optional(),
   price: z.number().positive(),
   stock: z.number().nonnegative().optional(),
+  isBulk: z.boolean().optional(),
 })
 
 export const ProductSchema = z.object({
@@ -30,6 +31,7 @@ export const ProductSchema = z.object({
   weight: z.string().optional(),
   flavor: z.string().optional(),
   variations: z.array(VariationSchema).optional(),
+  isBulk: z.boolean().optional(),
 })
 
 export const CategorySchema = z.object({
