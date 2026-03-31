@@ -25,15 +25,38 @@ interface Product {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<{name: string, slug: string}[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+
+  useEffect(() => {
+    fetchCategories()
+  }, [])
 
   useEffect(() => {
     fetchProducts()
-  }, [])
+  }, [search, selectedCategory])
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories')
+      if (res.ok) {
+        const data = await res.json()
+        setCategories(data.categories || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error)
+    }
+  }
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products')
+      const params = new URLSearchParams()
+      if (search) params.append('q', search)
+      if (selectedCategory !== 'all') params.append('category', selectedCategory)
+      
+      const response = await fetch(`/api/products?${params.toString()}`)
 
       if (response.ok) {
         const data = await response.json()
@@ -78,11 +101,37 @@ export default function AdminProductsPage() {
           <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Inventory</h1>
           <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Stock & Variation Control</p>
         </div>
-        <Link href="/admin/products/new">
-          <Button className="bg-red-600 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] px-6 py-4 h-10 rounded-lg shadow-lg shadow-red-100 transition-all active:scale-95">
-            + New Product
-          </Button>
-        </Link>
+        <div className="flex gap-4 items-center">
+          <div className="relative group">
+            <input 
+              type="text" 
+              placeholder="SEARCH PRODUCTS..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-10 px-4 pl-10 text-[10px] font-black uppercase tracking-widest bg-gray-50 border-2 border-gray-100 rounded-lg focus:border-red-600 focus:bg-white focus:outline-none transition-all w-[240px]"
+            />
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          <select 
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="h-10 px-4 text-[10px] font-black uppercase tracking-widest bg-gray-50 border-2 border-gray-100 rounded-lg focus:border-red-600 focus:bg-white focus:outline-none transition-all cursor-pointer appearance-none"
+          >
+            <option value="all">ALL CATEGORIES</option>
+            {categories.map((cat) => (
+              <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+            ))}
+          </select>
+
+          <Link href="/admin/products/new">
+            <Button className="bg-red-600 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] px-6 py-4 h-10 rounded-lg shadow-lg shadow-red-100 transition-all active:scale-95">
+              + New Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="overflow-hidden border-2 border-gray-100 shadow-sm rounded-xl">
