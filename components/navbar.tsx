@@ -79,9 +79,14 @@ export default function Navbar() {
             </Link>
 
             {isLoggedIn && user?.role?.includes('admin') && (
-              <Link href="/admin/dashboard" className="text-gray-700 hover:text-red-600 font-medium transition-colors">
-                Admin
-              </Link>
+              <>
+                <Link href="/admin/dashboard" className="text-gray-700 hover:text-red-600 font-medium transition-colors">
+                  Admin
+                </Link>
+                <Link href="/admin/orders" className="text-gray-700 hover:text-red-600 font-medium transition-colors">
+                  Orders
+                </Link>
+              </>
             )}
           </div>
 
