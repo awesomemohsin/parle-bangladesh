@@ -25,11 +25,12 @@ interface Product {
   stock: number
   category: string
   ordersCount?: number
-  variations?: any[]
+  variations: any[]
 }
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([])
+  const [recentProducts, setRecentProducts] = useState<Product[]>([])
   const [bestSellers, setBestSellers] = useState<Product[]>([])
   const { addItem } = useCart()
   const [isLoading, setIsLoading] = useState(true)
@@ -38,9 +39,10 @@ export default function HomePage() {
     document.title = 'Home | Parle Bangladesh'
     const loadData = async () => {
       try {
-        const [categoriesRes, productsRes] = await Promise.all([
-          fetch('/api/categories'),
-          fetch('/api/products?sort=orders&limit=8'), // Sort by most ordered
+        const [categoriesRes, recentRes, bestRes] = await Promise.all([
+          fetch('/api/categories?t=' + Date.now()),
+          fetch('/api/products?limit=8&t=' + Date.now()), // Sort by newest (default)
+          fetch('/api/products?sort=orders&limit=8&t=' + Date.now()), // Sort by best sellers
         ])
 
         if (categoriesRes.ok) {
@@ -48,9 +50,14 @@ export default function HomePage() {
           setCategories(data.categories || [])
         }
 
-        if (productsRes.ok) {
-          const data = await productsRes.json()
-          setBestSellers((data.products || []).slice(0, 8))
+        if (recentRes.ok) {
+          const data = await recentRes.json()
+          setRecentProducts(data.products || [])
+        }
+
+        if (bestRes.ok) {
+          const data = await bestRes.json()
+          setBestSellers(data.products || [])
         }
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -241,17 +248,17 @@ export default function HomePage() {
               >
                 <Link
                   href={`/shop/categories/${cat.slug}`}
-                  className="group relative block aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100 border-2 border-white shadow-lg"
+                  className="group relative block aspect-square rounded-3xl overflow-hidden bg-white border-2 border-gray-50 shadow-md p-4"
                 >
                   <img 
-                    src={cat.image || `/images/${cat.slug}/thumb.webp`} 
+                    src={cat.image || `/images/${cat.slug}/${cat.slug}.webp`} 
                     alt={cat.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-[0.8] group-hover:brightness-90"
+                    className="w-full h-full object-contain transition-transform duration-700"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?q=80&w=600&auto=format&fit=crop';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-6 flex flex-col justify-end">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-6 flex flex-col justify-end text-left">
                     <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-1">
                       {cat.name}
                     </h3>
@@ -280,81 +287,48 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
-            {[
-              {
-                id: 'new-1',
-                name: 'Jam-In Cream',
-                slug: 'jam-in-cream',
-                price: 45,
-                image: '/images/products/Jam-In Cream.webp',
-                stock: 100,
-                category: 'biscuits',
-                variations: [{ weight: '100g', price: 45, stock: 100 }]
-              },
-              {
-                id: 'new-2',
-                name: 'Krack Jack (Multipack)',
-                slug: 'krack-jack-multipack',
-                price: 150,
-                image: '/images/products/Krack Jack (Multipack).jpg',
-                stock: 100,
-                category: 'biscuits',
-                variations: [{ weight: '500g', price: 150, stock: 100 }]
-              },
-              {
-                id: 'new-3',
-                name: 'Parle Wafer Bulk Pack',
-                slug: 'parle-wafer-bulk',
-                price: 250,
-                image: '/images/products/Parle Wafer Bulk Pack.jpg',
-                stock: 100,
-                category: 'snacks',
-                variations: [{ weight: '1kg', price: 250, stock: 100 }]
-              },
-              {
-                id: 'new-4',
-                name: 'Parle-G Gold',
-                slug: 'parle-g-gold',
-                price: 20,
-                image: '/images/products/Parle-G Gold.jpg',
-                stock: 100,
-                category: 'biscuits',
-                variations: [{ weight: '50g', price: 20, stock: 100 }]
-              }
-            ].map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-                className="relative"
-              >
-                <div className="absolute -top-2 -right-2 z-10">
-                   <span className="bg-red-600 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg">
-                     New
-                   </span>
-                </div>
-                <ProductCard
-                  {...product}
-                  variations={product.variations || []}
-                  onAddToCart={(v) => {
-                    addItem({
-                      productId: product.id,
-                      productName: product.name,
-                      productSlug: product.slug,
-                      price: v.price,
-                      image: product.image,
-                      quantity: 1,
-                      weight: v.weight,
-                      flavor: v.flavor,
-                    })
-                  }}
-                />
-              </motion.div>
-            ))}
-          </div>
+          {!isLoading && recentProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
+              {recentProducts.map((product, i) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  viewport={{ once: true }}
+                  className="relative"
+                >
+                  <div className="absolute -top-2 -right-2 z-10">
+                     <span className="bg-red-600 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg">
+                       New
+                     </span>
+                  </div>
+                  <ProductCard
+                    {...product}
+                    onAddToCart={(v) => {
+                      addItem({
+                        productId: product.id,
+                        productName: product.name,
+                        productSlug: product.slug,
+                        price: v.price,
+                        image: v.image || product.image,
+                        quantity: 1,
+                        weight: v.weight,
+                        flavor: v.flavor,
+                      })
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+               <Zap className="w-10 h-10 text-slate-100 mb-4 animate-pulse" />
+               <p className="text-[10px] font-bold uppercase tracking-widest">
+                 {isLoading ? 'Checking for new arrivals...' : 'No new arrivals yet'}
+               </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -393,14 +367,13 @@ export default function HomePage() {
                   </div>
                   <ProductCard
                     {...product}
-                    variations={product.variations || []}
                     onAddToCart={(v) => {
                       addItem({
                         productId: product.id,
                         productName: product.name,
                         productSlug: product.slug,
                         price: v.price,
-                        image: product.image,
+                        image: v.image || product.image,
                         quantity: 1,
                         weight: v.weight,
                         flavor: v.flavor,
