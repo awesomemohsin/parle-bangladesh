@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateEmail } from "@/lib/api-helpers";
-import { getAuthUserFromRequest } from "@/lib/api-auth";
+import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Admin } from "@/lib/models";
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const users = await Admin.find({}, { password: 0 }).lean();
     return NextResponse.json({ users: users.map((u: any) => ({ ...u, id: u._id.toString() })) });
@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (currentUser.role === ROLES.OWNER) {
+      return NextResponse.json({ error: "Restricted: Owner cannot create users directly." }, { status: 403 });
+    }
+    if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
     const email = String(body.email || "").toLowerCase().trim();

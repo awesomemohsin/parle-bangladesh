@@ -70,7 +70,14 @@ export async function GET(_: NextRequest, { params }: Params) {
       images = productDoc.images;
     }
 
-    return NextResponse.json({ product, images });
+    // Fetch pending approvals for this product
+    const { ApprovalRequest } = require("@/lib/models");
+    const pendingApprovals = await ApprovalRequest.find({ 
+      targetId: productDoc._id.toString(), 
+      status: "pending" 
+    });
+
+    return NextResponse.json({ product, images, pendingApprovals });
   } catch (error) {
     console.error("Product GET by slug error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -91,15 +98,85 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json();
+    const isOwner = user.role === ROLES.OWNER;
+    
+    // RESTRICTION: Owner can see everything but cannot update directly
+    if (isOwner) {
+      return NextResponse.json({ error: "Restricted: Owner Authorization required for updates. Please use the Approval system." }, { status: 403 });
+    }
+
+    let pendingApproval = false;
+    let changeLog = [];
     
     // We update values from body. Price/Stock are now in variations.
-    // If body contains top level price/stock, we ignore them or map them to the first variation.
     if (body.variations) {
+      const { ApprovalRequest } = require("@/lib/models");
+      
+      for (let i = 0; i < body.variations.length; i++) {
+        const newVar = body.variations[i];
+        const oldVar = existing.variations[i];
+        
+        if (oldVar) {
+          // Price Change Check
+          if (newVar.price !== undefined && Number(newVar.price) !== oldVar.price && !isOwner) {
+            const approvalRequest = new ApprovalRequest({
+              requesterEmail: user.email,
+              type: "product",
+              targetId: existing._id.toString(),
+              targetName: existing.name,
+              targetSlug: existing.slug,
+              field: "price",
+              oldValue: String(oldVar.price),
+              newValue: String(newVar.price),
+              weight: oldVar.weight,
+              flavor: oldVar.flavor,
+              variationIndex: i,
+              status: "pending",
+            });
+            await approvalRequest.save();
+            changeLog.push(`Proposed price change for variation ${i} from ${oldVar.price} to ${newVar.price} (PENDING)`);
+            newVar.price = oldVar.price; // Revert for this immediate save
+            pendingApproval = true;
+          } else if (newVar.price !== undefined && Number(newVar.price) !== oldVar.price) {
+             changeLog.push(`Changed price for variation ${i} from ${oldVar.price} to ${newVar.price}`);
+          }
+          
+          // Stock Change Check
+          if (newVar.stock !== undefined && Number(newVar.stock) !== oldVar.stock && !isOwner) {
+            const approvalRequest = new ApprovalRequest({
+              requesterEmail: user.email,
+              type: "product",
+              targetId: existing._id.toString(),
+              targetName: existing.name,
+              targetSlug: existing.slug,
+              field: "stock",
+              oldValue: String(oldVar.stock),
+              newValue: String(newVar.stock),
+              weight: oldVar.weight,
+              flavor: oldVar.flavor,
+              variationIndex: i,
+              status: "pending",
+            });
+            await approvalRequest.save();
+            changeLog.push(`Proposed stock change for variation ${i} from ${oldVar.stock} to ${newVar.stock} (PENDING)`);
+            newVar.stock = oldVar.stock; // Revert for this immediate save
+            pendingApproval = true;
+          } else if (newVar.stock !== undefined && Number(newVar.stock) !== oldVar.stock) {
+             changeLog.push(`Changed stock for variation ${i} from ${oldVar.stock} to ${newVar.stock}`);
+          }
+        }
+      }
       existing.variations = body.variations;
     }
     
-    if (body.name) existing.name = body.name;
-    if (body.category) existing.category = body.category;
+    if (body.name && body.name !== existing.name) {
+       changeLog.push(`Changed name from "${existing.name}" to "${body.name}"`);
+       existing.name = body.name;
+    }
+    if (body.category && body.category !== existing.category) {
+       changeLog.push(`Changed category from "${existing.category}" to "${body.category}"`);
+       existing.category = body.category;
+    }
     if (body.description) existing.description = body.description;
     if (body.images) existing.images = body.images;
 
@@ -111,10 +188,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
       action: "update_product",
       targetId: existing._id.toString(),
       targetName: existing.name,
-      details: `Updated product: ${existing.name} (${existing.slug})`
+      details: changeLog.length > 0 ? changeLog.join(" | ") : "Updated product properties"
     });
 
-    return NextResponse.json({ product: mapDoc(existing) });
+    return NextResponse.json({ 
+      product: mapDoc(existing),
+      pendingApproval,
+      message: pendingApproval ? "Some changes require owner approval" : "Product updated successfully"
+    });
   } catch (error) {
     console.error("Product PUT error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -9,9 +9,9 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     
-    // Only SUPER_ADMIN can view activity logs
-    if (!user || !hasAnyRole(user, [ROLES.SUPER_ADMIN])) {
-      return NextResponse.json({ error: "Forbidden. Super Admin access required." }, { status: 403 });
+    // Only SUPER_ADMIN and OWNER can view/delete activity logs
+    if (!user || !hasAnyRole(user, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+      return NextResponse.json({ error: "Forbidden. Authorization Level 4 Access Required." }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -57,7 +57,7 @@ export async function DELETE(request: NextRequest) {
     const user = getAuthUserFromRequest(request);
     
     // Only SUPER_ADMIN can delete activity logs
-    if (!user || !hasAnyRole(user, [ROLES.SUPER_ADMIN])) {
+    if (!user || !hasAnyRole(user, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: "Forbidden. Super Admin access required." }, { status: 403 });
     }
 

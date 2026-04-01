@@ -60,11 +60,21 @@ export async function GET(request: NextRequest) {
     // 3. Sort Stage
     pipeline.push({ $sort: { createdAt: -1 } });
 
-    const orders = await Order.aggregate(pipeline);
+    const ordersRaw = await Order.aggregate(pipeline);
+
+    // Fetch all pending order approvals to mark them in the list
+    const { ApprovalRequest } = require("@/lib/models");
+    const pendingRequests = await ApprovalRequest.find({ 
+      type: "order", 
+      status: "pending" 
+    });
+
+    const pendingIds = new Set(pendingRequests.map((r: any) => r.targetId));
     
     return NextResponse.json({ 
-      orders: orders.map(o => { 
+      orders: ordersRaw.map(o => { 
         o.id = o._id.toString(); 
+        o.pendingApproval = pendingIds.has(o.id);
         delete o.idString; 
         return o; 
       }) 

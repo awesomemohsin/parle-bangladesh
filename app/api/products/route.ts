@@ -65,6 +65,10 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role === ROLES.OWNER) {
+       return NextResponse.json({ error: "Restricted: Owner cannot create products directly. Please use Admin/Super Admin roles." }, { status: 403 });
+    }
+
     if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();

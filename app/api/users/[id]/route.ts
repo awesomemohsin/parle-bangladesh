@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUserFromRequest } from "@/lib/api-auth";
+import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { User } from "@/lib/models";
@@ -17,7 +17,10 @@ export async function PATCH(
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (currentUser.role === ROLES.OWNER) {
+      return NextResponse.json({ error: "Restricted: Owner cannot update users directly." }, { status: 403 });
+    }
+    if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
     const body = await request.json();
@@ -26,7 +29,7 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     if (body.role) {
-      if (!["admin", "customer", "moderator", "super_admin"].includes(body.role)) {
+      if (!["admin", "customer", "moderator", "super_admin", "owner"].includes(body.role)) {
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
       }
       user.role = body.role;
@@ -66,7 +69,10 @@ export async function DELETE(
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (currentUser.role !== ROLES.SUPER_ADMIN) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (currentUser.role === ROLES.OWNER) {
+      return NextResponse.json({ error: "Restricted: Owner cannot delete users directly." }, { status: 403 });
+    }
+    if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
     
