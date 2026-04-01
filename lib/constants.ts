@@ -3,6 +3,7 @@ export const ROLES = {
   ADMIN: 'admin',
   MODERATOR: 'moderator',
   SUPER_ADMIN: 'super_admin',
+  OWNER: 'owner',
 } as const
 
 export const ORDER_STATUS = {
@@ -11,6 +12,8 @@ export const ORDER_STATUS = {
   PROCESSING: 'processing',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
+  DAMAGED: 'damaged',
+  LOST: 'lost',
 } as const
 
 export const PRODUCT_CATEGORIES = [

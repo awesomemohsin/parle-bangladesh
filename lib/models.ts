@@ -6,7 +6,7 @@ export interface IUser extends Document {
   mobile: string;
   password?: string;
   name: string;
-  role: "customer" | "admin" | "moderator" | "super_admin";
+  role: "customer" | "admin" | "moderator" | "super_admin" | "owner";
   status: "active" | "disabled";
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
@@ -20,7 +20,7 @@ const UserSchema = new Schema<IUser>(
     mobile: { type: String, required: true },
     password: { type: String }, // optional for oauth, required for credentials
     name: { type: String, required: true },
-    role: { type: String, enum: ["customer", "admin", "moderator", "super_admin"], default: "customer" },
+    role: { type: String, enum: ["customer", "admin", "moderator", "super_admin", "owner"], default: "customer" },
     status: { type: String, enum: ["active", "disabled"], default: "active" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
@@ -171,6 +171,7 @@ export interface IOrderLog {
   fromStatus: string;
   toStatus: string;
   changedBy: string; // Admin ID or Name
+  reason?: string;
   changedAt: Date;
 }
 
@@ -192,6 +193,7 @@ export interface IOrder extends Document {
   discountAmount?: number;
   status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
   cancelReason?: string;
+  statusReason?: string;
   orderLogs?: IOrderLog[];
   createdAt: Date;
   updatedAt: Date;
@@ -212,6 +214,7 @@ const OrderLogSchema = new Schema<IOrderLog>({
   fromStatus: { type: String, required: true },
   toStatus: { type: String, required: true },
   changedBy: { type: String, required: true },
+  reason: { type: String },
   changedAt: { type: Date, default: Date.now },
 });
 
@@ -234,6 +237,7 @@ const OrderSchema = new Schema<IOrder>(
     discountAmount: { type: Number, default: 0 },
     status: { type: String, default: "pending" },
     cancelReason: { type: String },
+    statusReason: { type: String },
     orderLogs: [OrderLogSchema],
   },
   { timestamps: true }
@@ -275,3 +279,51 @@ AdminActivitySchema.index({ action: 1 });
 AdminActivitySchema.index({ createdAt: -1 });
  
 export const AdminActivity = mongoose.models?.AdminActivity || mongoose.model<IAdminActivity>("AdminActivity", AdminActivitySchema, "admin_activities");
+ 
+// --- APPROVAL REQUEST MODEL ---
+export interface IApprovalRequest extends Document {
+  requesterEmail: string;
+  type: "product" | "order";
+  targetId: string;
+  targetName: string;
+  targetSlug?: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  weight?: string;
+  flavor?: string;
+  variationIndex?: number; // for product variations
+  status: "pending" | "approved" | "declined";
+  ownerEmail?: string;
+  ownerComment?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ApprovalRequestSchema = new Schema<IApprovalRequest>(
+  {
+    requesterEmail: { type: String, required: true },
+    type: { type: String, enum: ["product", "order"], required: true },
+    targetId: { type: String, required: true },
+    targetName: { type: String, required: true },
+    targetSlug: { type: String }, // For products
+    field: { type: String, required: true },
+    oldValue: { type: String, required: true },
+    newValue: { type: String, required: true },
+    weight: { type: String },
+    flavor: { type: String },
+    variationIndex: { type: Number },
+    status: { type: String, enum: ["pending", "approved", "declined"], default: "pending" },
+    ownerEmail: { type: String },
+    ownerComment: { type: String },
+  },
+  { timestamps: true }
+);
+
+ApprovalRequestSchema.index({ status: 1 });
+ApprovalRequestSchema.index({ type: 1 });
+ApprovalRequestSchema.index({ requesterEmail: 1 });
+ApprovalRequestSchema.index({ createdAt: -1 });
+
+export const ApprovalRequest = mongoose.models?.ApprovalRequest || mongoose.model<IApprovalRequest>("ApprovalRequest", ApprovalRequestSchema, "approval_requests");
+ 

@@ -6,7 +6,7 @@ export interface JWTPayload {
   id: string
   email: string
   name?: string
-  role: 'customer' | 'admin' | 'moderator' | 'super_admin'
+  role: 'customer' | 'admin' | 'moderator' | 'super_admin' | 'owner'
   iat?: number
   exp?: number
 }
