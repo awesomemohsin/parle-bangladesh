@@ -21,6 +21,8 @@ interface Order {
   createdAt: string;
   total: number;
   status: string;
+  cancelReason?: string;
+  statusReason?: string;
   items: OrderItem[];
   customerName?: string;
   customerEmail?: string;
@@ -47,7 +49,7 @@ export default function MyOrdersPage() {
         }
 
         const user = JSON.parse(userStr);
-        setIsAdmin(user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin');
+        setIsAdmin(user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner');
 
         const params = new URLSearchParams()
         if (search) params.append('q', search)
@@ -146,15 +148,28 @@ export default function MyOrdersPage() {
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
                        {new Date(order.createdAt).toLocaleDateString()}
                     </span>
-                    <span className={`px-2.5 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
+                     <span className={`px-2.5 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
                       ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-100' : 
                         order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
                         order.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' : 
+                        order.status === 'damaged' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                        order.status === 'lost' ? 'bg-gray-50 text-gray-700 border-gray-100' :
                         'bg-blue-50 text-blue-700 border-blue-100'}`}>
                       {order.status}
                     </span>
                  </div>
               </div>
+
+              {(order.statusReason || order.cancelReason) && (
+                <div className={`px-5 py-2 border-b text-[10px] font-bold ${
+                  order.status === 'cancelled' ? 'bg-red-50/30 text-red-700 border-red-50' :
+                  order.status === 'damaged' ? 'bg-amber-50/30 text-amber-700 border-amber-50' :
+                  'bg-gray-50/30 text-gray-700 border-gray-50'
+                }`}>
+                  <span className="uppercase tracking-widest text-[8px] opacity-60 mr-2">{order.status} REASON:</span>
+                  {order.statusReason || order.cancelReason}
+                </div>
+              )}
 
               {/* Card Body - Highly Compact */}
               <div className="p-5 flex flex-col md:flex-row gap-6">
