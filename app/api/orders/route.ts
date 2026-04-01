@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Initial Match (Security + Status)
     let matchStage: any = {};
-    if (!hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
+    if (!hasAnyRole(user, [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR])) {
       matchStage = { 
         $or: [
           { userId: user.id },

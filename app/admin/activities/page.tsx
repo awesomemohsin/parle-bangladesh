@@ -158,6 +158,11 @@ export default function AdminActivitiesPage() {
             <option value="delete_product">Delete Product</option>
             <option value="create_category">Create Category</option>
             <option value="update_order_status">Update Order Status</option>
+            <option value="create_admin">Create Admin (User MGMT)</option>
+            <option value="delete_admin">Delete Admin (User MGMT)</option>
+            <option value="approved_request">Owner Approved</option>
+            <option value="declined_request">Owner Declined</option>
+            <option value="undo_approval">Owner Undo</option>
           </select>
         </div>
         <div className="space-y-1">
@@ -202,7 +207,7 @@ export default function AdminActivitiesPage() {
                 </tr>
               ) : activities.length > 0 ? (
                 activities.map((activity) => (
-                  <tr key={activity._id} className="group hover:bg-gray-50/50 transition-colors">
+                  <tr key={activity._id} className={`group hover:bg-gray-50/50 transition-colors ${activity.action === 'delete_admin' ? 'bg-red-50/40 border-l-4 border-red-600' : ''}`}>
                     <td className="px-6 py-4">
                       <p className="font-black text-gray-900 text-[10px] tracking-tight truncate w-40">{activity.adminEmail}</p>
                     </td>

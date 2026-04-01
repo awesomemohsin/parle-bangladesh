@@ -170,7 +170,7 @@ export default function ApprovalLogsPage() {
                        {isProcessing[request._id] ? "..." : "Undo Action"}
                      </Button>
                    )}
-                   <p className="text-[7px] text-gray-300 font-bold uppercase tracking-tighter text-center">
+                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter text-center">
                      Processed {new Date(request.updatedAt).toLocaleString()}
                    </p>
                 </div>

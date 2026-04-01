@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const users = await Admin.find({}, { password: 0 }).lean();
+    const users = await Admin.find({ role: { $ne: ROLES.OWNER } }, { password: 0 }).lean();
     return NextResponse.json({ users: users.map((u: any) => ({ ...u, id: u._id.toString() })) });
   } catch (error) {
     console.error("Users GET error:", error);
@@ -31,10 +31,9 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (currentUser.role === ROLES.OWNER) {
-      return NextResponse.json({ error: "Restricted: Owner cannot create users directly." }, { status: 403 });
+    if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+      return NextResponse.json({ error: "Access denied. Authority Level 4 required." }, { status: 403 });
     }
-    if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
     const email = String(body.email || "").toLowerCase().trim();

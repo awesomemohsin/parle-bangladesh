@@ -23,6 +23,9 @@ interface Order {
   statusReason?: string
   orderLogs?: OrderLog[]
   items: any[]
+  address: string
+  city: string
+  postalCode: string
   createdAt: string
   pendingApproval?: boolean
 }
@@ -133,11 +136,11 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="flex-1">
           <input
             type="text"
@@ -165,14 +168,14 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order) => {
             const currentStatus = pendingChanges[order.id] || order.status;
             const hasChange = !!pendingChanges[order.id];
-            return (
-            <Card key={order.id} className="p-4">
-              <div className="flex justify-between items-start mb-2">
+              return (
+            <Card key={order.id} className="p-3 px-4 shadow-sm border-gray-100/60">
+              <div className="flex justify-between items-start mb-1">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 uppercase">
                     Order ID: {order.id.toUpperCase()}
@@ -225,7 +228,7 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mb-2 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-1 text-sm">
                 <div>
                   <p className="text-gray-600">Customer</p>
                   <p className="font-medium text-gray-900">{order.customerName}</p>
@@ -235,6 +238,12 @@ export default function AdminOrdersPage() {
                   <p className="text-gray-600">Phone</p>
                   <p className="font-medium text-gray-900">{order.customerPhone}</p>
                 </div>
+                <div className="col-span-2 md:col-span-1 border-t md:border-t-0 pt-1 md:pt-0">
+                  <p className="text-gray-600">Shipping Address</p>
+                  <p className="font-medium text-gray-900 leading-tight">
+                    {order.address}, {order.city} - {order.postalCode}
+                  </p>
+                </div>
               </div>
 
               <button
@@ -243,7 +252,7 @@ export default function AdminOrdersPage() {
                     expandedOrder === order.id ? null : order.id
                   )
                 }
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium mb-2"
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
               >
                 {expandedOrder === order.id
                   ? 'Hide Items'
@@ -251,20 +260,20 @@ export default function AdminOrdersPage() {
               </button>
 
               {expandedOrder === order.id && (
-                <div className="mb-3 pt-2 border-t border-dashed">
+                <div className="mb-2 pt-1 border-t border-dashed">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-gray-600 border-b">
-                        <th className="text-left py-2">Product</th>
-                        <th className="text-right py-2">Qty</th>
-                        <th className="text-right py-2">Price</th>
-                        <th className="text-right py-2">Total</th>
+                        <th className="text-left py-1">Product</th>
+                        <th className="text-right py-1">Qty</th>
+                        <th className="text-right py-1">Price</th>
+                        <th className="text-right py-1">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {order.items.map((item, idx) => (
                         <tr key={idx} className="border-b">
-                          <td className="py-2">
+                          <td className="py-1">
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900">{item.name}</span>
                               <div className="flex flex-wrap gap-1 mt-1">
@@ -298,7 +307,7 @@ export default function AdminOrdersPage() {
               )}
 
               {(order.statusReason || order.cancelReason) && (
-                <div className={`mt-2 p-1.5 border rounded text-sm ${
+                <div className={`mt-1 p-1.5 border rounded text-sm ${
                   order.status === 'cancelled' ? 'bg-red-50 border-red-100 text-red-700' :
                   order.status === 'damaged' ? 'bg-amber-50 border-amber-100 text-amber-700' :
                   order.status === 'lost' ? 'bg-gray-50 border-gray-100 text-gray-700' : 
@@ -309,8 +318,8 @@ export default function AdminOrdersPage() {
               )}
 
               {/* Order Logs */}
-              <div className="mt-3 pt-2 border-t">
-                <div className="flex justify-between items-center mb-2">
+              <div className="mt-2 pt-1 border-t">
+                <div className="flex justify-between items-center mb-1">
                    <h4 className="text-sm font-semibold text-gray-900">Order Status History</h4>
                    {order.orderLogs && order.orderLogs.length > 5 && (
                       <button 
@@ -321,7 +330,7 @@ export default function AdminOrdersPage() {
                       </button>
                    )}
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {order.orderLogs && order.orderLogs.length > 0 ? (
                     (() => {
                         const sortedLogs = [...order.orderLogs].sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());

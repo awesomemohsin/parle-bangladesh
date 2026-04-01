@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
 
     let query: any = {};
-    if (email) query.adminEmail = email;
+    if (email) query.adminEmail = new RegExp(email, "i");
     if (action) query.action = action;
     if (date) {
       const start = new Date(date);

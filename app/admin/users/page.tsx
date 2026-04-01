@@ -27,11 +27,13 @@ export default function AdminUsersPage() {
     role: "admin",
   });
   const [isAdding, setIsAdding] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem("user");
     if (user) {
       const parsedUser = JSON.parse(user);
+      setCurrentUserRole(parsedUser.role);
       if (parsedUser.role !== "super_admin" && parsedUser.role !== "owner") {
         router.push("/admin");
         return;
@@ -123,67 +125,69 @@ export default function AdminUsersPage() {
       <h1 className="text-3xl font-bold text-gray-900 mb-8">User Management</h1>
 
       {/* Add User Form */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Add New User
-        </h2>
-        <form onSubmit={handleAddUser} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email *
-              </label>
-              <Input
-                type="email"
-                value={newUser.email}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, email: e.target.value })
-                }
-                placeholder="user@example.com"
-                required
-              />
+      {(currentUserRole === "super_admin" || currentUserRole === "owner") && (
+        <Card className="p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Add New User
+          </h2>
+          <form onSubmit={handleAddUser} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email *
+                </label>
+                <Input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                  placeholder="user@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password *
+                </label>
+                <Input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, password: e.target.value })
+                  }
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Role *
+                </label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      role: e.target.value as "admin" | "moderator",
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="moderator">Moderator</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password *
-              </label>
-              <Input
-                type="password"
-                value={newUser.password}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, password: e.target.value })
-                }
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role *
-              </label>
-              <select
-                value={newUser.role}
-                onChange={(e) =>
-                  setNewUser({
-                    ...newUser,
-                    role: e.target.value as "admin" | "moderator",
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="admin">Admin</option>
-                <option value="moderator">Moderator</option>
-              </select>
-            </div>
-          </div>
-
-          <Button type="submit" disabled={isAdding}>
-            {isAdding ? "Adding..." : "Add User"}
-          </Button>
-        </form>
-      </Card>
+            <Button type="submit" disabled={isAdding}>
+              {isAdding ? "Adding..." : "Add User"}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       {/* Users List */}
       <Card className="overflow-hidden">
@@ -220,15 +224,17 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4 text-gray-600">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(user.id)}
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        Delete
-                      </Button>
+                    <td className="px-6 py-4 text-right">
+                      {(currentUserRole === "super_admin" || currentUserRole === "owner") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(user.id)}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
