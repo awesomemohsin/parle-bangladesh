@@ -35,8 +35,8 @@ export default function AdminLayout({
 
       try {
         const user = JSON.parse(userStr);
-        // Only allow admins or moderators
-        const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin';
+        // Only allow admins, moderators, super admins or owners
+        const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner';
         
         if (!isAdmin) {
           alert('ACCESS DENIED: Unauthorized Entrance Identified. Establishing Terminal Redirection...');

@@ -34,8 +34,8 @@ export default function AdminActivitiesPage() {
     if (userData) {
       const parsed = JSON.parse(userData)
       setUser(parsed)
-      if (parsed.role !== 'super_admin') {
-        setError('Forbidden: Super Admin access required.')
+      if (parsed.role !== 'super_admin' && parsed.role !== 'owner') {
+        setError('Forbidden: Authorization Level 4 (Super Admin/Owner) Access Required.')
         setIsLoading(false)
         return
       }

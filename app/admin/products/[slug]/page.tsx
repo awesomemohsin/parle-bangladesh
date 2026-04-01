@@ -44,6 +44,7 @@ export default function AdminProductFormPage() {
   const [isLoading, setIsLoading] = useState(!isNew)
   const [isSaving, setIsSaving] = useState(false)
   const [activeDiscounts, setActiveDiscounts] = useState<Record<number, boolean>>({})
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
 
   useEffect(() => {
     const loadData = async () => {
@@ -59,6 +60,7 @@ export default function AdminProductFormPage() {
           if (prodResponse.ok) {
             const data = await prodResponse.json()
             setProduct(data.product)
+            setPendingApprovals(data.pendingApprovals || [])
             
             // Initialize discount toggles
             const discounts: Record<number, boolean> = {}
@@ -113,7 +115,19 @@ export default function AdminProductFormPage() {
       })
 
       if (response.ok) {
-        router.push('/admin/products')
+        const data = await response.json();
+        if (data.pendingApproval) {
+          alert("Some changes (price/stock) require OWNER approval and have been queued.");
+          // Refresh data to show pending status
+          const prodResponse = await fetch(`/api/products/${slug}`)
+          if (prodResponse.ok) {
+            const data = await prodResponse.json()
+            setProduct(data.product)
+            setPendingApprovals(data.pendingApprovals || [])
+          }
+        } else {
+          router.push('/admin/products')
+        }
       } else {
         const error = await response.json()
         alert(`Error: ${error.error}`)
@@ -226,8 +240,18 @@ export default function AdminProductFormPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {product.variations.map((variation, index) => (
-                <Card key={index} className={`p-6 border-2 transition-all relative overflow-hidden ${variation.isDefault ? 'border-red-600 bg-red-50/10' : 'border-gray-50 bg-white hover:border-gray-100'}`}>
+              {product.variations.map((variation, index) => {
+                const isPending = pendingApprovals.some(p => p.variationIndex === index);
+                return (
+                <Card key={index} className={`p-6 border-2 transition-all relative overflow-hidden ${variation.isDefault ? 'border-red-600 bg-red-50/10' : 'border-gray-50 bg-white hover:border-gray-100'} ${isPending ? 'opacity-70 grayscale-[0.5]' : ''}`}>
+                  {isPending && (
+                    <div className="absolute inset-0 z-10 bg-white/40 flex items-center justify-center backdrop-blur-[1px]">
+                       <div className="bg-amber-600 text-white text-[10px] font-black uppercase px-4 py-2 rounded-full shadow-xl animate-pulse flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                          Waiting for Owner Approval
+                       </div>
+                    </div>
+                  )}
                   {variation.isDefault && (
                     <div className="absolute top-0 right-0 p-2 flex gap-2">
                       {variation.isBulk && (
@@ -257,6 +281,7 @@ export default function AdminProductFormPage() {
                           }}
                           className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
                           placeholder="e.g. 200g"
+                          disabled={isPending}
                         />
                       </div>
 
@@ -272,6 +297,7 @@ export default function AdminProductFormPage() {
                           }}
                           className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
                           placeholder="Original"
+                          disabled={isPending}
                         />
                       </div>
 
@@ -286,7 +312,11 @@ export default function AdminProductFormPage() {
                             setProduct({ ...product, variations: vars });
                           }}
                           className="h-10 px-3 text-xs font-bold text-red-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          disabled={isPending}
                         />
+                        {pendingApprovals.some(p => p.field === 'price' && p.variationIndex === index) && (
+                          <p className="text-[8px] text-amber-600 font-black uppercase mt-1 animate-pulse">Pending Review</p>
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -351,7 +381,11 @@ export default function AdminProductFormPage() {
                             setProduct({ ...product, variations: vars });
                           }}
                           className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          disabled={isPending}
                         />
+                        {pendingApprovals.some(p => p.field === 'stock' && p.variationIndex === index) && (
+                          <p className="text-[8px] text-amber-600 font-black uppercase mt-1 animate-pulse">Pending Review</p>
+                        )}
                       </div>
                     </div>
 
@@ -369,6 +403,7 @@ export default function AdminProductFormPage() {
                           }}
                           className="h-10 px-4 text-[11px] font-medium border-2 border-gray-50 rounded-lg focus:border-red-600 bg-gray-50/30"
                           placeholder="e.g. /images/products/example.webp"
+                          disabled={isPending}
                         />
                       </div>
 
@@ -381,6 +416,7 @@ export default function AdminProductFormPage() {
                             setProduct({ ...product, variations: vars });
                           }}
                           className={`h-10 px-5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${variation.isDefault ? 'bg-black text-white' : 'text-gray-400 hover:text-red-600 border-2 border-transparent hover:border-red-100'}`}
+                          disabled={isPending}
                         >
                           {variation.isDefault ? 'Primary SKU' : 'Set Primary'}
                         </Button>
@@ -393,6 +429,7 @@ export default function AdminProductFormPage() {
                             if (variation.isDefault) vars[0].isDefault = true;
                             setProduct({ ...product, variations: vars });
                           }}
+                          disabled={isPending}
                           className="h-10 px-3 text-gray-300 hover:text-red-600 transition-colors border-2 border-transparent hover:border-red-100 rounded-xl"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -401,7 +438,8 @@ export default function AdminProductFormPage() {
                     </div>
                   </div>
                 </Card>
-                ))}
+                );
+                })}
               </div>
             </div>
 

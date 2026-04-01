@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 interface Variation {
   weight?: string;
@@ -29,6 +30,7 @@ export default function AdminProductsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'category' | 'price' | 'stock', direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
 
   useEffect(() => {
     fetchCategories()
@@ -67,6 +69,54 @@ export default function AdminProductsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const sortedProducts = useMemo(() => {
+    let sortableItems = [...products]
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue: any
+        let bValue: any
+
+        if (sortConfig.key === 'name') {
+          aValue = a.name.toLowerCase()
+          bValue = b.name.toLowerCase()
+        } else if (sortConfig.key === 'category') {
+          aValue = a.category.toLowerCase()
+          bValue = b.category.toLowerCase()
+        } else if (sortConfig.key === 'price') {
+          const aVar = a.variations?.find(v => v.isDefault) || a.variations?.[0] || { price: 0, stock: 0 }
+          const bVar = b.variations?.find(v => v.isDefault) || b.variations?.[0] || { price: 0, stock: 0 }
+          aValue = aVar.discountPrice ?? aVar.price
+          bValue = bVar.discountPrice ?? bVar.price
+        } else if (sortConfig.key === 'stock') {
+          aValue = a.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0
+          bValue = b.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1
+        }
+        return 0
+      })
+    }
+    return sortableItems
+  }, [products, sortConfig])
+
+  const requestSort = (key: 'name' | 'category' | 'price' | 'stock') => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const getSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown className="w-3 h-3 text-gray-300" />
+    return sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-red-600" /> : <ArrowDown className="w-3 h-3 text-red-600" />
   }
 
   const handleDelete = async (slug: string) => {
@@ -135,22 +185,42 @@ export default function AdminProductsPage() {
       </div>
 
       <Card className="overflow-hidden border-2 border-gray-100 shadow-sm rounded-xl">
-        {products.length > 0 ? (
+        {sortedProducts.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b-2 border-gray-100">
                 <tr>
-                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
-                    Product
+                  <th className="px-6 py-3 text-left">
+                    <button 
+                      onClick={() => requestSort('name')}
+                      className="flex items-center gap-1 font-black text-gray-400 uppercase tracking-widest text-[9px] hover:text-red-600 transition-colors"
+                    >
+                      Product {getSortIcon('name')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
-                    Category
+                  <th className="px-6 py-3 text-left">
+                    <button 
+                      onClick={() => requestSort('category')}
+                      className="flex items-center gap-1 font-black text-gray-400 uppercase tracking-widest text-[9px] hover:text-red-600 transition-colors"
+                    >
+                      Category {getSortIcon('category')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
-                    Price (৳)
+                  <th className="px-6 py-3 text-left">
+                    <button 
+                      onClick={() => requestSort('price')}
+                      className="flex items-center gap-1 font-black text-gray-400 uppercase tracking-widest text-[9px] hover:text-red-600 transition-colors"
+                    >
+                      Price (৳) {getSortIcon('price')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left font-black text-gray-400 uppercase tracking-widest text-[9px]">
-                    Stock
+                  <th className="px-6 py-3 text-left">
+                    <button 
+                      onClick={() => requestSort('stock')}
+                      className="flex items-center gap-1 font-black text-gray-400 uppercase tracking-widest text-[9px] hover:text-red-600 transition-colors"
+                    >
+                      Stock {getSortIcon('stock')}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-right font-black text-gray-400 uppercase tracking-widest text-[9px]">
                     Actions
@@ -158,7 +228,7 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {products.map((product) => {
+                {sortedProducts.map((product) => {
                   const defaultVar = product.variations?.find(v => v.isDefault) || product.variations?.[0] || { price: 0, stock: 0 };
                   const totalStock = product.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0;
 

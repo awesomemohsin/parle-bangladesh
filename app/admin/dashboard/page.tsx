@@ -117,7 +117,11 @@ export default function AdminDashboard() {
                       ৳{order.total.toFixed(2)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                        order.status === 'cancelled' || order.status === 'damaged' || order.status === 'lost' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
                         {order.status}
                       </span>
                     </td>

@@ -32,8 +32,8 @@ export default function AdminUsersPage() {
     const user = localStorage.getItem("user");
     if (user) {
       const parsedUser = JSON.parse(user);
-      if (parsedUser.role !== "super_admin") {
-        router.push("/admin/dashboard");
+      if (parsedUser.role !== "super_admin" && parsedUser.role !== "owner") {
+        router.push("/admin");
         return;
       }
     }

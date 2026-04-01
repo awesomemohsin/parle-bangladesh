@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 interface User {
   id: string
   email: string
-  role: 'super_admin' | 'admin' | 'moderator'
+  role: 'super_admin' | 'admin' | 'moderator' | 'owner'
 }
 
 export default function AdminSidebar() {
@@ -28,7 +28,8 @@ export default function AdminSidebar() {
     router.push('/admin/login')
   }
 
-  const isSuperAdmin = user?.role === 'super_admin'
+  const isOwner = user?.role === 'owner'
+  const isSuperAdmin = user?.role === 'super_admin' || isOwner
   const isAdmin = user?.role === 'admin' || isSuperAdmin
   const isModerator = user?.role === 'moderator' || isAdmin
 
@@ -113,6 +114,40 @@ export default function AdminSidebar() {
               </Button>
             </Link>
           </>
+        )}
+
+        {isOwner && (
+          <div className="mt-8 pt-4 border-t border-gray-800">
+            <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em] mb-4 ml-4">Owner Area</p>
+            <div className="space-y-1">
+              <Link href="/admin/approvals/products">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                >
+                  Product Approval
+                </Button>
+              </Link>
+
+              <Link href="/admin/approvals/orders">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                >
+                  Order Approval
+                </Button>
+              </Link>
+
+              <Link href="/admin/approvals/logs">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                >
+                  Approval Logs
+                </Button>
+              </Link>
+            </div>
+          </div>
         )}
       </nav>
 
