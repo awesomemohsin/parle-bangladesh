@@ -22,6 +22,7 @@ interface Product {
   name: string
   slug: string
   category: string
+  brand?: string
   description: string
   variations: Variation[]
   isBulk?: boolean
@@ -33,6 +34,13 @@ interface Category {
   slug: string
 }
 
+interface Brand {
+  id: string
+  name: string
+  slug: string
+  category: string
+}
+
 export default function AdminProductFormPage() {
   const router = useRouter()
   const params = useParams()
@@ -41,6 +49,7 @@ export default function AdminProductFormPage() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
   const [isLoading, setIsLoading] = useState(!isNew)
   const [isSaving, setIsSaving] = useState(false)
   const [activeDiscounts, setActiveDiscounts] = useState<Record<number, boolean>>({})
@@ -49,10 +58,19 @@ export default function AdminProductFormPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const catResponse = await fetch('/api/categories')
-        if (catResponse.ok) {
-          const data = await catResponse.json()
+        const [catRes, brandRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/brands')
+        ])
+        
+        if (catRes.ok) {
+          const data = await catRes.json()
           setCategories(data.categories || [])
+        }
+
+        if (brandRes.ok) {
+          const data = await brandRes.json()
+          setBrands(data.brands || [])
         }
 
         if (!isNew) {
@@ -77,6 +95,7 @@ export default function AdminProductFormPage() {
             name: '',
             slug: '',
             category: '',
+            brand: '',
             description: '',
             variations: [{ weight: '', flavor: '', price: 0, stock: 0, image: '', isDefault: true }],
           })
@@ -90,6 +109,9 @@ export default function AdminProductFormPage() {
 
     loadData()
   }, [isNew, slug])
+
+  // Filter brands based on selected category
+  const filteredBrands = brands.filter(b => b.category === product?.category);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -172,13 +194,13 @@ export default function AdminProductFormPage() {
           {/* Main Info - Top horizontal strip */}
           <Card className="p-6 border-2 border-gray-100 shadow-sm rounded-xl">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-1">
+              <div className="space-y-1 md:col-span-2">
                 <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Title</label>
                 <Input
                   type="text"
                   value={product.name}
                   onChange={(e) => setProduct({ ...product, name: e.target.value })}
-                  className="h-10 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600 col-span-2"
+                  className="h-10 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
                   required
                 />
               </div>
@@ -203,17 +225,37 @@ export default function AdminProductFormPage() {
                 />
                 <label htmlFor="bulkProduct" className="text-[9px] font-black uppercase text-gray-400 tracking-widest cursor-pointer">Family Pack / Bulk</label>
               </div>
+
               <div className="space-y-1 md:col-span-2">
                 <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Category</label>
                 <select
                   value={product.category}
-                  onChange={(e) => setProduct({ ...product, category: e.target.value })}
+                  onChange={(e) => {
+                    const newCat = e.target.value;
+                    // Reset brand if it doesn't belong to the new category
+                    setProduct({ ...product, category: newCat, brand: '' });
+                  }}
                   required
                   className="w-full h-10 px-3 text-[10px] font-black uppercase text-gray-600 border-2 border-gray-50 rounded-lg bg-white focus:border-red-600 outline-none"
                 >
-                  <option value="">Category</option>
+                  <option value="">Select Category</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Brand Identity</label>
+                <select
+                  value={product.brand}
+                  onChange={(e) => setProduct({ ...product, brand: e.target.value })}
+                  className="w-full h-10 px-3 text-[10px] font-black uppercase text-gray-600 border-2 border-gray-50 rounded-lg bg-white focus:border-red-600 outline-none disabled:opacity-50"
+                  disabled={!product.category}
+                >
+                  <option value="">{product.category ? 'Generic / No Brand' : 'Select Category First'}</option>
+                  {filteredBrands.map((brand) => (
+                    <option key={brand.id} value={brand.name}>{brand.name}</option>
                   ))}
                 </select>
               </div>
