@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
     const categoryQuery = searchParams.get("category")?.toLowerCase();
     const searchQuery = searchParams.get("q")?.toLowerCase();
     const sortParam = searchParams.get("sort");
-    const limitParam = parseInt(searchParams.get("limit") || "0");
+    
+    // Pagination parameters
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "12");
+    const skip = (page - 1) * limit;
 
     let query: any = {};
     if (categoryQuery && categoryQuery !== "all") {
@@ -28,30 +32,45 @@ export async function GET(request: NextRequest) {
     }
     
     if (searchQuery) {
+      // Use text index if possible, or fallback to regex
+      // Note: Full-text search requires a text index on name and description
       query.$or = [
         { name: new RegExp(searchQuery, "i") },
-        { description: new RegExp(searchQuery, "i") },
+        { slug: new RegExp(searchQuery, "i") },
       ];
     }
 
     let sort: any = { createdAt: -1 };
     if (sortParam === "orders") {
       sort = { ordersCount: -1 };
+    } else if (sortParam === "price_asc") {
+      sort = { "variations.0.price": 1 };
+    } else if (sortParam === "price_desc") {
+      sort = { "variations.0.price": -1 };
     }
 
-    let databaseQuery = Product.find(query, { images: 0 }).sort(sort);
+    // Get total count for pagination metadata
+    const total = await Product.countDocuments(query);
     
-    if (limitParam > 0) {
-      databaseQuery = databaseQuery.limit(limitParam);
-    }
-
-    const products = await databaseQuery.lean();
+    // Fetch products with pagination and lean for performance
+    const products = await Product.find(query, { images: { $slice: 1 } })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean();
     
     const response = NextResponse.json({ 
-      products: products.map((p: any) => ({ ...p, id: p._id.toString(), _id: undefined })) 
+      products: products.map((p: any) => ({ ...p, id: p._id.toString(), _id: undefined })),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     });
 
-    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
+    // Cache control for public data
+    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=15');
     
     return response;
   } catch (error) {

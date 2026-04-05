@@ -19,7 +19,14 @@ export async function GET() {
   try {
     await connectDB();
     const categories = await Category.find().lean();
-    return NextResponse.json({ categories: categories.map((c: any) => { c.id = c._id.toString(); return c; }) });
+    const response = NextResponse.json({ 
+      categories: categories.map((c: any) => { c.id = c._id.toString(); return c; }) 
+    });
+    
+    // Cache categories for 1 hour as they change infrequently
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
+    
+    return response;
   } catch (error) {
     console.error("Categories GET error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });

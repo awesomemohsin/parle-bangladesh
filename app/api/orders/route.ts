@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product, Customer } from "@/lib/models";
+import { Order, Product, Customer, PromoCode } from "@/lib/models";
 import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("q") || "";
     const statusQuery = searchParams.get("status") || "all";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
     // 1. Initial Match (Security + Status)
     let matchStage: any = {};
@@ -29,6 +32,9 @@ export async function GET(request: NextRequest) {
     if (statusQuery !== "all") {
       matchStage.status = statusQuery;
     }
+
+    // Get total count (using a separate query for simplicity and speed on large datasets)
+    const total = await Order.countDocuments(matchStage);
 
     // Pipeline
     const pipeline: any[] = [
@@ -57,8 +63,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 3. Sort Stage
+    // 3. Sort & Pagination Stage
     pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
 
     const ordersRaw = await Order.aggregate(pipeline);
 
@@ -67,7 +75,7 @@ export async function GET(request: NextRequest) {
     const pendingRequests = await ApprovalRequest.find({ 
       type: "order", 
       status: "pending" 
-    });
+    }).lean();
 
     const pendingIds = new Set(pendingRequests.map((r: any) => r.targetId));
     
@@ -77,7 +85,13 @@ export async function GET(request: NextRequest) {
         o.pendingApproval = pendingIds.has(o.id);
         delete o.idString; 
         return o; 
-      }) 
+      }),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
     console.error("Orders GET error:", error);
@@ -134,24 +148,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Order requires at least one valid item" }, { status: 400 });
     }
 
+    const billingAddress = body.billingAddress || {};
     const shippingAddress = body.shippingAddress || {};
-    const customerName = body.customerName || shippingAddress.name;
-    const customerEmail = (body.customerEmail || body.email || shippingAddress.email || "").toLowerCase().trim();
-    const customerPhone = body.customerPhone || body.phone || shippingAddress.phone;
-    const address = body.address || shippingAddress.address;
-    const city = body.city || shippingAddress.city;
-    const postalCode = body.postalCode || shippingAddress.postalCode;
+    const instruction = body.instruction || "";
+
+    const customerName = body.customerName || billingAddress.name;
+    const customerEmail = (body.customerEmail || body.email || billingAddress.email || "").toLowerCase().trim();
+    const customerPhone = body.customerPhone || body.phone || billingAddress.phone;
+    const address = body.address || billingAddress.address;
+    const city = body.city || billingAddress.city;
+    const postalCode = body.postalCode || billingAddress.postalCode;
+
+    const reqShippingAddress = shippingAddress.address || address;
+    const reqShippingCity = shippingAddress.city || city;
+    const reqShippingPostalCode = shippingAddress.postalCode || postalCode;
 
     const missing = [];
     if (!customerName) missing.push("Name");
     if (!customerEmail) missing.push("Email");
     if (!customerPhone) missing.push("Phone");
-    if (!address) missing.push("Address");
-    if (!city) missing.push("City");
-    if (!postalCode) missing.push("Postal Code");
+    if (!address) missing.push("Billing Address");
+    if (!city) missing.push("Billing City");
+    if (!postalCode) missing.push("Billing Postal Code");
 
     if (missing.length > 0) {
-      return NextResponse.json({ error: `Missing shipping information: ${missing.join(", ")}` }, { status: 400 });
+      return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -189,6 +210,10 @@ export async function POST(request: NextRequest) {
       address,
       city,
       postalCode,
+      shippingAddress: reqShippingAddress,
+      shippingCity: reqShippingCity,
+      shippingPostalCode: reqShippingPostalCode,
+      instruction,
       paymentMethod: body.paymentMethod || "cash_on_delivery",
       items,
       subtotal,
@@ -210,6 +235,13 @@ export async function POST(request: NextRequest) {
           { $inc: { ordersCount: item.quantity } }
         );
       }
+    }
+
+    if (body.promoCode) {
+      await PromoCode.findOneAndUpdate(
+        { code: body.promoCode.toUpperCase() },
+        { $inc: { currentUsage: 1 } }
+      );
     }
 
     const mappedOrder = order.toObject();
