@@ -26,7 +26,7 @@ export default function ApprovalDashboardPage() {
   return (
     <div className="space-y-10 pb-20">
       <div className="flex flex-col gap-1">
-        <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tight">Consensus Control</h1>
+        <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tight">Approvals Terminal</h1>
         <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Multi-Tier Identity Management System</p>
       </div>
 

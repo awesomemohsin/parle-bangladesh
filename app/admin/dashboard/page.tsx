@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 
 interface DashboardStats {
@@ -12,11 +13,21 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        const user = JSON.parse(userData)
+        if (user.role === 'super_admin' || user.role === 'owner') {
+          router.push('/admin/approvals')
+          return
+        }
+      }
+      
       try {
         const response = await fetch('/api/admin/stats', {
           headers: {
@@ -36,7 +47,7 @@ export default function AdminDashboard() {
     }
 
     fetchStats()
-  }, [])
+  }, [router])
 
   if (isLoading) {
     return (

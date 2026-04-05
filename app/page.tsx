@@ -101,24 +101,27 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {categories.map((cat: any, i: number) => (
-              <MotionDiv key={cat.id} i={i}>
+              <MotionDiv key={cat._id || i} i={i}>
                 <Link
-                  href={`/shop/categories/${cat.slug}`}
-                  className="group relative block aspect-square rounded-3xl overflow-hidden bg-white border-2 border-gray-50 shadow-md p-4"
+                  href={`/shop?category=${cat.slug}`}
+                  className="group relative block aspect-[16/10] rounded-[2.5rem] overflow-hidden bg-white border border-gray-100 shadow-2xl shadow-slate-200/50 transition-all hover:shadow-red-100 hover:-translate-y-1"
                 >
                   <img 
-                    src={cat.image || `/images/${cat.slug}/${cat.slug}.webp`} 
+                    src={cat.image || `/images/categories/${cat.slug}.webp`} 
                     alt={cat.name} 
-                    className="w-full h-full object-contain transition-transform duration-700"
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-6 flex flex-col justify-end text-left">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-1">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-10 flex flex-col justify-end">
+                    <div className="backdrop-blur-md bg-white/10 w-fit px-4 py-1.5 rounded-full border border-white/20 mb-4 transform -translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                      <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Explore Collection</span>
+                    </div>
+                    <h3 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none mb-3">
                       {cat.name}
                     </h3>
-                    <p className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors duration-300">
-                      View Items
+                    <p className="text-xs font-bold text-white/60 uppercase tracking-widest group-hover:text-red-400 transition-colors duration-300">
+                      {cat.description || `View All ${cat.name}`}
                     </p>
                   </div>
                 </Link>
@@ -145,7 +148,7 @@ export default async function HomePage() {
           {recentProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
               {recentProducts.map((product: any, i: number) => (
-                <MotionDiv key={product.id} i={i} className="relative">
+                <MotionDiv key={product._id || i} i={i} className="relative">
                   <div className="absolute -top-2 -right-2 z-10">
                     <span className="bg-red-600 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg">
                       New
@@ -186,7 +189,7 @@ export default async function HomePage() {
           {bestSellers.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
               {bestSellers.map((product: any, i: number) => (
-                <MotionDiv key={product.id} i={i} className="relative">
+                <MotionDiv key={product._id || i} i={i} className="relative">
                   <div className="absolute -top-2 -right-2 z-10">
                     <span className="bg-black text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg border border-white/10">
                       Best Seller

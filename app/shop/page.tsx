@@ -10,11 +10,21 @@ export const metadata: Metadata = {
 
 export const revalidate = 60; // Refresh data every minute
 
-export default async function ShopPage() {
+export default async function ShopPage({ 
+  searchParams 
+}: { 
+  searchParams: { category?: string } 
+}) {
   const [products, categories] = await Promise.all([
     getProducts(),
     getCategories(),
   ]);
+
+  const activeCategory = categories.find((c: any) => c.slug === searchParams.category);
+  const pageTitle = activeCategory ? activeCategory.name : "Shop All";
+  const pageDescription = activeCategory 
+    ? activeCategory.description || `Browse our premium range of ${activeCategory.name}.`
+    : "Browse our selection of premium Parle biscuits and snacks.";
 
   // Serialize IDs for client-side usage
   const serializedProducts = products.map((p: any) => ({
@@ -34,14 +44,16 @@ export default async function ShopPage() {
         <div className="mb-12 flex flex-col items-center text-center">
           <div className="flex items-center gap-2 mb-4 animate-fade-in">
              <span className="w-8 h-1 bg-red-600 rounded-full"></span>
-             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Our Products</span>
+             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+               {activeCategory ? activeCategory.name : "Our Products"}
+             </span>
              <span className="w-8 h-1 bg-red-600 rounded-full"></span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 uppercase tracking-tight leading-none mb-4">
-            Shop All
+            {pageTitle}
           </h1>
           <p className="text-base text-gray-500 font-medium max-w-xl leading-relaxed">
-            Browse our selection of premium Parle biscuits and snacks.
+            {pageDescription}
           </p>
         </div>
 

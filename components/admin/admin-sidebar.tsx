@@ -4,16 +4,19 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import NotificationCenter from '@/components/admin/notification-center'
 
 interface User {
   id: string
   email: string
+  name?: string
   role: 'super_admin' | 'admin' | 'moderator' | 'owner'
 }
 
 export default function AdminSidebar() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [pendingCount, setPendingCount] = useState<number>(0)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -21,6 +24,27 @@ export default function AdminSidebar() {
       setUser(JSON.parse(userData))
     }
   }, [])
+
+  useEffect(() => {
+    if (user && (user.role === 'super_admin' || user.role === 'owner')) {
+      fetchPendingCount()
+      const interval = setInterval(fetchPendingCount, 30000) // Update every 30s
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
+  const fetchPendingCount = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/approvals?status=pending', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setPendingCount(data.requests?.length || 0)
+      }
+    } catch (e) {}
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -42,12 +66,15 @@ export default function AdminSidebar() {
       </div>
 
       {/* User Info */}
-      <div className="p-4 bg-gray-800 mx-4 mt-4 rounded-lg">
-        <p className="text-xs text-gray-400">Logged in as</p>
-        <p className="font-semibold text-sm truncate">{user?.email}</p>
-        <p className="text-xs text-gray-400 mt-1 capitalize">
-          {user?.role.replace('_', ' ')}
-        </p>
+      <div className="p-4 bg-gray-800 mx-4 mt-4 rounded-lg flex items-center gap-4">
+        <NotificationCenter />
+        <div className="flex-1 overflow-hidden">
+          <p className="text-xs text-gray-400">Logged in as</p>
+          <p className="font-semibold text-sm truncate">{user?.name || user?.email}</p>
+          <p className="text-xs text-gray-400 mt-1 capitalize">
+            {user?.role.replace('_', ' ')}
+          </p>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -132,27 +159,23 @@ export default function AdminSidebar() {
               <Link href="/admin/approvals">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800 relative group"
                 >
-                  Consensus Control
-                </Button>
-              </Link>
-              
-              <Link href="/admin/approvals/products">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-                >
-                  Product Approval
+                  Approvals
+                  {pendingCount > 0 && (
+                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:bg-red-500">
+                      {pendingCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
 
-              <Link href="/admin/approvals/orders">
+              <Link href="/admin/approvals/logs">
                 <Button
                   variant="ghost"
                   className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
                 >
-                  Order Approval
+                  Approval Logs
                 </Button>
               </Link>
             </div>

@@ -149,22 +149,26 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
         {/* Price */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-4">
+          <div className="flex items-end gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="text-3xl font-bold text-red-600">৳</span>
               <span className="text-5xl font-bold text-red-600 tracking-tight tabular-nums">
                 {Math.round(displayPrice)}
               </span>
             </div>
-            {hasDiscount && (
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                   <span className="text-sm font-bold text-gray-300">৳</span>
-                   <span className="text-gray-300 line-through font-bold text-xl tabular-nums leading-none">{Math.round(originalPrice)}</span>
-                </div>
-                <span className="text-green-600 text-[10px] font-bold uppercase tracking-widest mt-1">{discountPercentage}% off</span>
-              </div>
-            )}
+            
+            <div className="flex flex-col mb-1.5">
+               <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">(Including Vat)</span>
+               {hasDiscount && (
+                 <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 opacity-40">
+                       <span className="text-xs font-bold text-gray-400">৳</span>
+                       <span className="text-gray-400 line-through font-bold text-base tabular-nums leading-none">{Math.round(originalPrice)}</span>
+                    </div>
+                    <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">{discountPercentage}% off</span>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
 
