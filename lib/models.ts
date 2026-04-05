@@ -98,6 +98,31 @@ const CategorySchema = new Schema<ICategory>(
 export const Category = mongoose.models?.Category || mongoose.model<ICategory>("Category", CategorySchema);
 
 
+// --- BRAND MODEL ---
+export interface IBrand extends Document {
+  name: string;
+  slug: string;
+  category: string; // Slug reference to its parent category
+  description?: string;
+  image?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const BrandSchema = new Schema<IBrand>(
+  {
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true, lowercase: true },
+    category: { type: String, default: 'biscuits' },
+    description: { type: String },
+    image: { type: String },
+  },
+  { timestamps: true }
+);
+
+export const Brand = mongoose.models?.Brand || mongoose.model<IBrand>("Brand", BrandSchema);
+
+
 // --- PRODUCT MODEL ---
 export interface IVariation {
   weight?: string;
@@ -118,6 +143,7 @@ export interface IProduct extends Document {
   variations: IVariation[];
   images: string[]; // Additional gallery images
   ordersCount: number;
+  brand?: string;
   isBulk?: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -143,6 +169,7 @@ const ProductSchema = new Schema<IProduct>(
     variations: { type: [VariationSchema], default: [] },
     images: [{ type: String }],
     ordersCount: { type: Number, default: 0 },
+    brand: { type: String },
     isBulk: { type: Boolean, default: false },
   },
   { timestamps: true }
