@@ -372,6 +372,39 @@ ApprovalRequestSchema.index({ createdAt: -1 });
 
 export const ApprovalRequest = mongoose.models?.ApprovalRequest || mongoose.model<IApprovalRequest>("ApprovalRequest", ApprovalRequestSchema, "approval_requests");
 
+// --- NOTIFICATION MODEL ---
+export interface INotification extends Document {
+  userId?: string; // Specific user target
+  role?: string; // Target role (e.g., 'admin', 'super_admin')
+  title: string;
+  message: string;
+  type: "order" | "approval" | "system" | "alert";
+  targetLink?: string;
+  isRead: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const NotificationSchema = new Schema<INotification>(
+  {
+    userId: { type: String },
+    role: { type: String },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    type: { type: String, enum: ["order", "approval", "system", "alert"], required: true },
+    targetLink: { type: String },
+    isRead: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+NotificationSchema.index({ role: 1 });
+NotificationSchema.index({ userId: 1 });
+NotificationSchema.index({ isRead: 1 });
+NotificationSchema.index({ createdAt: -1 });
+
+export const Notification = mongoose.models?.Notification || mongoose.model<INotification>("Notification", NotificationSchema, "notifications");
+
 // --- PROMO CODE MODEL ---
 export interface IPromoCode extends Document {
   code: string;
