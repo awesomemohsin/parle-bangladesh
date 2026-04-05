@@ -18,9 +18,20 @@ export async function GET(request: NextRequest) {
     if (status !== 'all') query.status = status;
     if (type) query.type = type;
 
-    // Only owner can see all approvals. 
-    if (user.role !== ROLES.OWNER) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Zero-Bother Identity Filtering
+    const userName = (user.name || user.email || "Unknown").toLowerCase();
+
+    if (user.role === ROLES.OWNER) {
+        // Owner only sees requests that PASSED superadmin verify stage AND he hasn't signed
+        query.stage = "owner";
+        query.ownerApproved = false;
+    } else if (user.role === ROLES.SUPER_ADMIN) {
+        // Superadmin only sees pending requests for his stage he hasn't signed yet
+        query.stage = "superadmin";
+        query.superadminApprovals = { $ne: userName };
+        query.status = "pending";
+    } else {
+        return NextResponse.json({ error: "Forbidden: Higher authorization required" }, { status: 403 });
     }
 
     const requests = await ApprovalRequest.find(query).sort({ updatedAt: -1 });
@@ -54,6 +65,7 @@ export async function POST(request: NextRequest) {
       newValue: String(newValue),
       variationIndex,
       status: "pending",
+      stage: "superadmin",
     });
 
     await approvalRequest.save();

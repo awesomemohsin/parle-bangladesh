@@ -226,6 +226,15 @@ export async function POST(request: NextRequest) {
 
     await order.save();
 
+    const { Notification } = require("@/lib/models");
+    await Notification.create({
+      role: ROLES.ADMIN,
+      title: "New Order Received",
+      message: `A new order #${order._id.toString().slice(-6)} has been placed by ${customerName}.`,
+      type: "order",
+      targetLink: `/admin/orders`
+    });
+
     // Increment ordersCount for each product
     for (const item of items) {
       if (item.productSlug) {

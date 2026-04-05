@@ -84,11 +84,9 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role === ROLES.OWNER) {
-       return NextResponse.json({ error: "Restricted: Owner cannot create products directly. Please use Admin/Super Admin roles." }, { status: 403 });
+    if (user.role !== ROLES.ADMIN) {
+        return NextResponse.json({ error: "Restricted: Only Admins can create or update products directly. Superadmins/Owners must use the Approvals system." }, { status: 403 });
     }
-
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
     
@@ -101,6 +99,7 @@ export async function POST(request: NextRequest) {
       action = "update_product";
       if (body.name) product.name = body.name;
       if (body.category) product.category = body.category;
+      if (body.brand) product.brand = body.brand;
       if (body.description) product.description = body.description;
       if (body.variations) product.variations = body.variations;
       if (body.images) product.images = body.images;
@@ -110,6 +109,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         slug: slug,
         category: body.category,
+        brand: body.brand,
         description: body.description,
         variations: body.variations || [],
         images: body.images || [],

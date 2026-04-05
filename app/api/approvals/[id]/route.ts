@@ -42,6 +42,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         approvalRequest.comments.push({ user: userName, text: comment, date: new Date() });
       }
       await approvalRequest.save();
+
+      // Notify Requester (Admin) of the decline
+      const { Notification } = require("@/lib/models");
+      await Notification.create({
+        userId: approvalRequest.requesterEmail, // We use email as userId here for simplistic routing
+        title: "Request Declined",
+        message: `Your change request for ${approvalRequest.targetName} was declined by Stage ${approvalRequest.stage.toUpperCase()}${comment ? `. Reason: ${comment}` : ""}.`,
+        type: "alert",
+        targetLink: `/admin/products`
+      });
       
       // Log audit
       await logAdminActivity({
@@ -76,6 +86,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
         if (hasAnindo && hasSaiful) {
           approvalRequest.stage = "owner";
+          
+          // MISSION CRITICAL: Notify Owner only when superadmin vetting is complete
+          const { Notification } = require("@/lib/models");
+          await Notification.create({
+            role: ROLES.OWNER,
+            title: "Authorization Required",
+            message: `A change request for ${approvalRequest.targetName} has been fully vetted by Anindo & Saiful. Your final signature is required.`,
+            type: "approval",
+            targetLink: `/admin/approvals`
+          });
         }
 
         if (comment) {
@@ -95,6 +115,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           if (!approvalRequest.comments) approvalRequest.comments = [];
           approvalRequest.comments.push({ user: userName, text: comment, date: new Date() });
         }
+
+        // Notify Requester (Admin) of final success
+        const { Notification } = require("@/lib/models");
+        await Notification.create({
+          userId: approvalRequest.requesterEmail,
+          title: "Request Processed (FINAL)",
+          message: `Your change for ${approvalRequest.targetName} has been fully approved by Anindo, Saiful, and Razu. Changes are now LIVE.`,
+          type: "system",
+          targetLink: `/admin/products`
+        });
 
         // --- APPLY CHANGES ---
         if (approvalRequest.type === 'product') {

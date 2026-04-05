@@ -3,7 +3,7 @@ import { ProductSchema } from "@/lib/schemas";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Product } from "@/lib/models";
+import { Product, ApprovalRequest } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
@@ -71,7 +71,6 @@ export async function GET(_: NextRequest, { params }: Params) {
     }
 
     // Fetch pending approvals for this product
-    const { ApprovalRequest } = require("@/lib/models");
     const pendingApprovals = await ApprovalRequest.find({ 
       targetId: productDoc._id.toString(), 
       status: "pending" 
@@ -89,7 +88,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (user.role !== ROLES.ADMIN) {
+        return NextResponse.json({ error: "Restricted: Only Admins can modify products directly. Superadmins/Owners must use the Approvals system." }, { status: 403 });
+    }
 
     const { slug } = await params;
     const existing = await Product.findOne({ slug });
@@ -98,27 +99,19 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json();
-    const isOwner = user.role === ROLES.OWNER;
-    
-    // RESTRICTION: Owner can see everything but cannot update directly
-    if (isOwner) {
-      return NextResponse.json({ error: "Restricted: Owner Authorization required for updates. Please use the Approval system." }, { status: 403 });
-    }
-
     let pendingApproval = false;
     let changeLog = [];
     
     // We update values from body. Price/Stock are now in variations.
     if (body.variations) {
-      const { ApprovalRequest } = require("@/lib/models");
-      
       for (let i = 0; i < body.variations.length; i++) {
         const newVar = body.variations[i];
         const oldVar = existing.variations[i];
         
         if (oldVar) {
           // Price Change Check
-          if (newVar.price !== undefined && Number(newVar.price) !== oldVar.price && !isOwner) {
+          if (newVar.price !== undefined && Number(newVar.price) !== oldVar.price) {
+            console.log(`[APPROVAL] Creating price change request for ${existing.slug} variation ${i}`);
             const approvalRequest = new ApprovalRequest({
               requesterEmail: user.email,
               type: "product",
@@ -132,17 +125,27 @@ export async function PUT(request: NextRequest, { params }: Params) {
               flavor: oldVar.flavor,
               variationIndex: i,
               status: "pending",
+              stage: "superadmin", // Explicitly start at superadmin stage
             });
             await approvalRequest.save();
+
+            const { Notification } = require("@/lib/models");
+            await Notification.create({
+              role: ROLES.SUPER_ADMIN,
+              title: "Product Change Req",
+              message: `Price adjustment requested for ${existing.name} variation ${i}. Verification needed.`,
+              type: "approval",
+              targetLink: `/admin/approvals/products`
+            });
+
             changeLog.push(`Proposed price change for variation ${i} from ${oldVar.price} to ${newVar.price} (PENDING)`);
             newVar.price = oldVar.price; // Revert for this immediate save
             pendingApproval = true;
-          } else if (newVar.price !== undefined && Number(newVar.price) !== oldVar.price) {
-             changeLog.push(`Changed price for variation ${i} from ${oldVar.price} to ${newVar.price}`);
           }
           
           // Stock Change Check
-          if (newVar.stock !== undefined && Number(newVar.stock) !== oldVar.stock && !isOwner) {
+          if (newVar.stock !== undefined && Number(newVar.stock) !== oldVar.stock) {
+            console.log(`[APPROVAL] Creating stock change request for ${existing.slug} variation ${i}`);
             const approvalRequest = new ApprovalRequest({
               requesterEmail: user.email,
               type: "product",
@@ -156,13 +159,22 @@ export async function PUT(request: NextRequest, { params }: Params) {
               flavor: oldVar.flavor,
               variationIndex: i,
               status: "pending",
+              stage: "superadmin",
             });
             await approvalRequest.save();
+
+            const { Notification } = require("@/lib/models");
+            await Notification.create({
+              role: ROLES.SUPER_ADMIN,
+              title: "Stock Adjustment Req",
+              message: `Inventory modification for ${existing.name} variation ${i}. Verification required.`,
+              type: "approval",
+              targetLink: `/admin/approvals/products`
+            });
+
             changeLog.push(`Proposed stock change for variation ${i} from ${oldVar.stock} to ${newVar.stock} (PENDING)`);
             newVar.stock = oldVar.stock; // Revert for this immediate save
             pendingApproval = true;
-          } else if (newVar.stock !== undefined && Number(newVar.stock) !== oldVar.stock) {
-             changeLog.push(`Changed stock for variation ${i} from ${oldVar.stock} to ${newVar.stock}`);
           }
         }
       }
@@ -176,6 +188,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (body.category && body.category !== existing.category) {
        changeLog.push(`Changed category from "${existing.category}" to "${body.category}"`);
        existing.category = body.category;
+    }
+    if (body.brand && body.brand !== existing.brand) {
+       changeLog.push(`Changed brand from "${existing.brand}" to "${body.brand}"`);
+       existing.brand = body.brand;
     }
     if (body.description) existing.description = body.description;
     if (body.images) existing.images = body.images;
@@ -207,7 +223,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (user.role !== ROLES.ADMIN) {
+        return NextResponse.json({ error: "Restricted: Only Admins can delete products." }, { status: 403 });
+    }
 
     const { slug } = await params;
     const deleted = await Product.findOneAndDelete({ slug });
