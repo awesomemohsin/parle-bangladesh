@@ -11,13 +11,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (user.role !== ROLES.OWNER) {
-      return NextResponse.json({ error: "Forbidden: Only owner can approve/decline" }, { status: 403 });
-    }
-
     const { id } = await params;
     const body = await request.json();
-    const { status, ownerComment } = body; // 'approved' or 'declined'
+    const { status, comment } = body; // 'approved' or 'declined'
 
     if (!['approved', 'declined'].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
@@ -32,79 +28,129 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Already processed" }, { status: 400 });
     }
 
-    approvalRequest.status = status;
-    approvalRequest.ownerEmail = user.email;
-    approvalRequest.ownerComment = ownerComment;
+    const userName = (user.name || user.email || "Unknown").toLowerCase();
+    const isAnindo = userName.includes("anindo");
+    const isSaiful = userName.includes("saiful");
+    const isRazu = userName.includes("razu");
 
-    if (status === 'approved') {
-      if (approvalRequest.type === 'product') {
-        const product = await Product.findById(approvalRequest.targetId);
-        if (product) {
-          if (approvalRequest.field === 'price' || approvalRequest.field === 'stock') {
-            if (approvalRequest.variationIndex !== undefined) {
-              const varIndex = Number(approvalRequest.variationIndex);
-              if (product.variations[varIndex]) {
-                  if (approvalRequest.field === 'price') product.variations[varIndex].price = Number(approvalRequest.newValue);
-                  if (approvalRequest.field === 'stock') product.variations[varIndex].stock = Number(approvalRequest.newValue);
-              }
-            } else {
-               // Top level field? Not currently used but let's be safe
-               (product as any)[approvalRequest.field] = Number(approvalRequest.newValue);
-            }
-            await product.save();
-          }
-        }
-      } else if (approvalRequest.type === 'order') {
-        const order = await Order.findById(approvalRequest.targetId);
-        if (order) {
-          if (approvalRequest.field === 'status') {
-            const oldStatus = order.status;
-            const newStatus = approvalRequest.newValue;
-            order.status = newStatus;
-            
-            // Log to order history
-            if (!order.orderLogs) order.orderLogs = [];
-            order.orderLogs.push({
-              fromStatus: oldStatus,
-              toStatus: newStatus as any,
-              changedBy: `Owner Approved: ${user.email}`,
-              reason: `Initiated by ${approvalRequest.requesterEmail}${ownerComment ? `. Owner Comment: ${ownerComment}` : ""}`,
-              changedAt: new Date(),
-            });
-            await order.save();
-          }
-        }
+    // Decline logic - If anyone declines, it's final
+    if (status === 'declined') {
+      approvalRequest.status = 'declined';
+      approvalRequest.declinedBy = user.name || user.email;
+      if (comment) {
+        if (!approvalRequest.comments) approvalRequest.comments = [];
+        approvalRequest.comments.push({ user: userName, text: comment, date: new Date() });
       }
-    } else {
-        // Declined - optional: log to order history that it was declined
-        if (approvalRequest.type === 'order') {
-            const order = await Order.findById(approvalRequest.targetId);
-            if (order) {
-                if (!order.orderLogs) order.orderLogs = [];
-                order.orderLogs.push({
-                   fromStatus: approvalRequest.oldValue,
-                   toStatus: approvalRequest.newValue as any,
-                   changedBy: `Owner Declined: ${user.email}`,
-                   reason: `Request by ${approvalRequest.requesterEmail} was declined by the owner${ownerComment ? `: ${ownerComment}` : "."}`,
-                   changedAt: new Date(),
-                });
-                await order.save();
-            }
-        }
+      await approvalRequest.save();
+      
+      // Log audit
+      await logAdminActivity({
+        adminEmail: user.email,
+        action: `decline_request`,
+        targetId: approvalRequest.targetId,
+        targetName: approvalRequest.targetName,
+        details: `Stage ${approvalRequest.stage.toUpperCase()}: ${approvalRequest.type} ${approvalRequest.field} change from ${approvalRequest.oldValue} to ${approvalRequest.newValue} was DECLINED by ${userName}.`
+      });
+
+      return NextResponse.json({ message: "Request declined successfully", request: approvalRequest });
     }
 
-    await approvalRequest.save();
+    // Approval logic
+    if (status === 'approved') {
+      if (isAnindo || isSaiful) {
+        // Stage 1: Superadmin
+        if (approvalRequest.stage !== 'superadmin') {
+           return NextResponse.json({ error: "Superadmin approval already complete" }, { status: 400 });
+        }
+        
+        // Don't allow double approval from same person
+        if (approvalRequest.superadminApprovals.some(a => a.toLowerCase().includes(userName))) {
+           return NextResponse.json({ error: "You already approved this request" }, { status: 400 });
+        }
 
-    // Log the approval action
-    await logAdminActivity({
-      adminEmail: user.email,
-      action: `${status}_request`,
-      targetId: approvalRequest.targetId,
-      targetName: approvalRequest.targetName,
-      details: `${status.charAt(0).toUpperCase() + status.slice(1)} ${approvalRequest.type} ${approvalRequest.field} change (from ${approvalRequest.oldValue} to ${approvalRequest.newValue}) requested by ${approvalRequest.requesterEmail}. Owner Comment: ${ownerComment || "none"}`
-    });
+        approvalRequest.superadminApprovals.push(userName);
+        
+        // If BOTH have approved, move to next stage
+        const hasAnindo = approvalRequest.superadminApprovals.some(a => a.includes("anindo"));
+        const hasSaiful = approvalRequest.superadminApprovals.some(a => a.includes("saiful"));
+        
+        if (hasAnindo && hasSaiful) {
+          approvalRequest.stage = "owner";
+        }
 
-    return NextResponse.json({ message: `Request ${status} successfully`, request: approvalRequest });
+        if (comment) {
+          if (!approvalRequest.comments) approvalRequest.comments = [];
+          approvalRequest.comments.push({ user: userName, text: comment, date: new Date() });
+        }
+      } else if (isRazu) {
+        // Stage 2: Owner
+        if (approvalRequest.stage === 'superadmin') {
+          return NextResponse.json({ error: "Waiting for Superadmin (Anindo & Saiful) approval first" }, { status: 400 });
+        }
+        
+        approvalRequest.ownerApproved = true;
+        approvalRequest.status = 'approved';
+
+        if (comment) {
+          if (!approvalRequest.comments) approvalRequest.comments = [];
+          approvalRequest.comments.push({ user: userName, text: comment, date: new Date() });
+        }
+
+        // --- APPLY CHANGES ---
+        if (approvalRequest.type === 'product') {
+          const product = await Product.findById(approvalRequest.targetId);
+          if (product) {
+            if (approvalRequest.field === 'price' || approvalRequest.field === 'stock') {
+              if (approvalRequest.variationIndex !== undefined) {
+                const varIndex = Number(approvalRequest.variationIndex);
+                if (product.variations[varIndex]) {
+                  if (approvalRequest.field === 'price') product.variations[varIndex].price = Number(approvalRequest.newValue);
+                  if (approvalRequest.field === 'stock') product.variations[varIndex].stock = Number(approvalRequest.newValue);
+                }
+              } else {
+                (product as any)[approvalRequest.field] = Number(approvalRequest.newValue);
+              }
+              await product.save();
+            }
+          }
+        } else if (approvalRequest.type === 'order') {
+          const order = await Order.findById(approvalRequest.targetId);
+          if (order) {
+            if (approvalRequest.field === 'status') {
+              const oldStatus = order.status;
+              const newStatus = approvalRequest.newValue;
+              order.status = newStatus;
+              if (!order.orderLogs) order.orderLogs = [];
+              order.orderLogs.push({
+                fromStatus: oldStatus,
+                toStatus: newStatus as any,
+                changedBy: `Consensus Approved: ${userName} (FINAL)`,
+                reason: `Requested by ${approvalRequest.requesterEmail}${comment ? `. Owner Comment: ${comment}` : ""}`,
+                changedAt: new Date(),
+              });
+              await order.save();
+            }
+          }
+        }
+      } else {
+        return NextResponse.json({ error: "Forbidden: You are not authorized for consensus approval" }, { status: 403 });
+      }
+
+      await approvalRequest.save();
+
+      // Log audit
+      await logAdminActivity({
+        adminEmail: user.email,
+        action: `approve_request_stage`,
+        targetId: approvalRequest.targetId,
+        targetName: approvalRequest.targetName,
+        details: `Stage ${approvalRequest.stage.toUpperCase()}: ${approvalRequest.type} ${approvalRequest.field} change approved by ${userName}. Status: ${approvalRequest.status}`
+      });
+
+      return NextResponse.json({ message: "Approval recorded successfully", request: approvalRequest });
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("Approval process error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
