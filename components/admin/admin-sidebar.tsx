@@ -125,10 +125,19 @@ export default function AdminSidebar() {
           </>
         )}
 
-        {isOwner && (
+        {(isSuperAdmin || isOwner) && (
           <div className="mt-8 pt-4 border-t border-gray-800">
-            <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em] mb-4 ml-4">Owner Area</p>
+            <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em] mb-4 ml-4">Verification System</p>
             <div className="space-y-1">
+              <Link href="/admin/approvals">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                >
+                  Consensus Control
+                </Button>
+              </Link>
+              
               <Link href="/admin/approvals/products">
                 <Button
                   variant="ghost"
@@ -144,15 +153,6 @@ export default function AdminSidebar() {
                   className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
                 >
                   Order Approval
-                </Button>
-              </Link>
-
-              <Link href="/admin/approvals/logs">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-                >
-                  Approval Logs
                 </Button>
               </Link>
             </div>
