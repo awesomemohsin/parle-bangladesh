@@ -11,6 +11,7 @@ export interface CartItem {
   image?: string;
   weight?: string;
   flavor?: string;
+  stock?: number;
 }
 
 export interface Cart {
@@ -57,6 +58,7 @@ function normalizeItem(item: any): CartItem | null {
     image: item.image,
     weight: item.weight,
     flavor: item.flavor,
+    stock: item.stock !== undefined ? Number(item.stock) : undefined,
   };
 }
 

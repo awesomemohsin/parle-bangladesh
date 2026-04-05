@@ -82,6 +82,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
       quantity: quantity,
       weight: selectedVariation?.weight || "",
       flavor: selectedVariation?.flavor || "",
+      stock: displayStock,
     });
     setIsFlying(true);
     setTimeout(() => setIsFlying(false), 800);
@@ -203,7 +204,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-1.5 rounded-full ${displayStock > 0 ? "bg-green-500" : "bg-red-500"}`}></div>
               <span className={`text-[9px] font-bold uppercase tracking-widest ${displayStock > 0 ? "text-green-600" : "text-red-600"}`}>
-                {displayStock > 0 ? `${displayStock} in stock` : "Out of stock"}
+                {displayStock > 0 ? "In Stock" : "Out of stock"}
               </span>
             </div>
           </div>

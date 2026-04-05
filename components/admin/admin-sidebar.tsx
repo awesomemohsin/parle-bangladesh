@@ -105,6 +105,15 @@ export default function AdminSidebar() {
               </Button>
             </Link>
 
+            <Link href="/admin/promo-codes">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+              >
+                Promo Codes
+              </Button>
+            </Link>
+
             <Link href="/admin/activities">
               <Button
                 variant="ghost"

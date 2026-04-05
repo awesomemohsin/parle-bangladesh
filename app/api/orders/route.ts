@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product, Customer, PromoCode } from "@/lib/models";
+import { Order, Product, Customer, PromoCode, ApprovalRequest } from "@/lib/models";
 import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
     const ordersRaw = await Order.aggregate(pipeline);
 
     // Fetch all pending order approvals to mark them in the list
-    const { ApprovalRequest } = require("@/lib/models");
     const pendingRequests = await ApprovalRequest.find({ 
       type: "order", 
       status: "pending" 

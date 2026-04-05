@@ -29,12 +29,28 @@ export default function CartPage() {
   const grandTotal = total + shippingCost - currentDiscount;
   const amountToFree = 1000 - total;
 
-  const handleApplyPromo = () => {
-    if (promoInput.toUpperCase() === 'PARLE10') {
-      applyPromo('PARLE10', total * 0.1);
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) {
+      setPromoError('Please enter a code');
+      return;
+    }
+    setPromoError('Validating...');
+    try {
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoInput }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPromoError(data.error || 'Invalid code');
+        return;
+      }
+      applyPromo(data.code, data.discountAmount);
       setPromoError('');
-    } else {
-      setPromoError('Invalid code');
+      setPromoInput(''); // Clear input after successful apply
+    } catch (err) {
+      setPromoError('Validation failed, try again');
     }
   };
 
@@ -262,14 +278,16 @@ export default function CartPage() {
                             <input
                               type="number"
                               value={item.quantity}
-                              onChange={(e) =>
-                                updateQuantity(itemKey, parseInt(e.target.value) || 1)
-                              }
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 1;
+                                updateQuantity(itemKey, item.stock !== undefined ? Math.min(val, item.stock) : val);
+                              }}
                               className="w-10 bg-transparent text-center border-0 focus:outline-none font-black text-gray-900 text-sm"
                             />
                             <button
                               onClick={() => updateQuantity(itemKey, item.quantity + 1)}
-                              className="w-10 h-full flex items-center justify-center text-gray-400 hover:bg-slate-50 hover:text-red-600 transition-all"
+                              className="w-10 h-full flex items-center justify-center text-gray-400 hover:bg-slate-50 hover:text-red-600 transition-all disabled:opacity-20"
+                              disabled={item.stock !== undefined && item.quantity >= item.stock}
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
