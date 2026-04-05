@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useDebounce } from '@/hooks/use-debounce'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface OrderLog {
   fromStatus: string
@@ -26,8 +28,14 @@ interface Order {
   address: string
   city: string
   postalCode: string
+  shippingAddress?: string
+  shippingCity?: string
+  shippingPostalCode?: string
+  instruction?: string
   createdAt: string
   pendingApproval?: boolean
+  promoCode?: string
+  discountAmount?: number
 }
 
 export default function AdminOrdersPage() {
@@ -37,22 +45,35 @@ export default function AdminOrdersPage() {
   
   // Search and Filter state
   const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, 500)
   const [statusFilter, setStatusFilter] = useState('all')
   
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const limit = 10
+
   // Unsaved status changes
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({})
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({})
   const [showAllLogs, setShowAllLogs] = useState<{ [key: string]: boolean }>({})
 
   useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, statusFilter])
+
+  useEffect(() => {
     fetchOrders()
-  }, [searchTerm, statusFilter])
+  }, [debouncedSearch, statusFilter, page])
 
   const fetchOrders = async () => {
+    setIsLoading(true)
     try {
       const params = new URLSearchParams()
-      if (searchTerm) params.append('q', searchTerm)
+      if (debouncedSearch) params.append('q', debouncedSearch)
       if (statusFilter !== 'all') params.append('status', statusFilter)
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
       
       const response = await fetch(`/api/orders?${params.toString()}`, {
         headers: {
@@ -63,6 +84,7 @@ export default function AdminOrdersPage() {
       if (response.ok) {
         const data = await response.json()
         setOrders(data.orders || [])
+        setTotalPages(data.pagination?.totalPages || 1)
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error)
@@ -189,6 +211,11 @@ export default function AdminOrdersPage() {
                   <p className="text-2xl font-bold text-gray-900">
                     ৳{order.total.toFixed(2)}
                   </p>
+                  {(order.discountAmount || 0) > 0 && (
+                     <div className="text-sm font-bold text-green-600 mt-1 uppercase tracking-tighter">
+                       Promo: {order.promoCode} (-৳{(order.discountAmount || 0).toFixed(2)})
+                     </div>
+                  )}
                   {order.pendingApproval && (
                     <div className="bg-amber-100 text-amber-700 text-[11px] font-black uppercase px-3 py-1 rounded shadow-sm animate-pulse border-2 border-amber-300 mt-2 flex items-center gap-2 justify-center">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -239,11 +266,28 @@ export default function AdminOrdersPage() {
                   <p className="font-medium text-gray-900">{order.customerPhone}</p>
                 </div>
                 <div className="col-span-2 md:col-span-1 border-t md:border-t-0 pt-1 md:pt-0">
-                  <p className="text-gray-600">Shipping Address</p>
+                  <p className="text-gray-600">Billing Address</p>
                   <p className="font-medium text-gray-900 leading-tight">
                     {order.address}, {order.city} - {order.postalCode}
                   </p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 text-sm mt-3 pt-3 border-t border-dashed">
+                 <div>
+                   <p className="text-gray-600">Shipping Address</p>
+                   <p className="font-medium text-gray-900 leading-tight">
+                     {order.shippingAddress || order.address}, {order.shippingCity || order.city} - {order.shippingPostalCode || order.postalCode}
+                   </p>
+                 </div>
+                 {order.instruction && (
+                   <div>
+                     <p className="text-gray-600">Delivery Instruction</p>
+                     <p className="font-medium text-amber-800 bg-amber-50 p-2 rounded-md leading-tight border border-amber-100">
+                       {order.instruction}
+                     </p>
+                   </div>
+                 )}
               </div>
 
               <button
@@ -375,6 +419,55 @@ export default function AdminOrdersPage() {
           </Card>
         )}
       </div>
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center bg-white p-4 border border-gray-100 rounded-xl shadow-sm mt-6">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {[...Array(totalPages)].map((_, i) => {
+              const p = i + 1;
+              if (p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2)) {
+                return (
+                  <Button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    variant={page === p ? 'default' : 'outline'}
+                    size="sm"
+                    className={`h-8 w-8 p-0 text-[10px] font-bold ${page === p ? 'bg-blue-600 text-white border-blue-600' : ''}`}
+                  >
+                    {p}
+                  </Button>
+                );
+              }
+              if (p === page - 3 || p === page + 3) {
+                return <span key={p} className="text-gray-300">...</span>;
+              }
+              return null;
+            })}
+            <Button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
