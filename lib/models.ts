@@ -329,8 +329,14 @@ export interface IApprovalRequest extends Document {
   flavor?: string;
   variationIndex?: number; // for product variations
   status: "pending" | "approved" | "declined";
-  ownerEmail?: string;
-  ownerComment?: string;
+  
+  // Multi-tier approval
+  stage: "superadmin" | "owner";
+  superadminApprovals: string[]; // ['Anindo', 'Saiful']
+  ownerApproved: boolean;
+  declinedBy?: string; // name or email of the person who declined
+  comments?: { user: string; text: string; date: Date }[];
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -349,8 +355,12 @@ const ApprovalRequestSchema = new Schema<IApprovalRequest>(
     flavor: { type: String },
     variationIndex: { type: Number },
     status: { type: String, enum: ["pending", "approved", "declined"], default: "pending" },
-    ownerEmail: { type: String },
-    ownerComment: { type: String },
+    
+    stage: { type: String, enum: ["superadmin", "owner"], default: "superadmin" },
+    superadminApprovals: { type: [String], default: [] },
+    ownerApproved: { type: Boolean, default: false },
+    declinedBy: { type: String },
+    comments: [{ user: String, text: String, date: { type: Date, default: Date.now } }],
   },
   { timestamps: true }
 );
