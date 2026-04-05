@@ -64,15 +64,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
         
         // Don't allow double approval from same person
-        if (approvalRequest.superadminApprovals.some(a => a.toLowerCase().includes(userName))) {
+        if (approvalRequest.superadminApprovals.some((a: string) => a.toLowerCase().includes(userName))) {
            return NextResponse.json({ error: "You already approved this request" }, { status: 400 });
         }
 
         approvalRequest.superadminApprovals.push(userName);
         
         // If BOTH have approved, move to next stage
-        const hasAnindo = approvalRequest.superadminApprovals.some(a => a.includes("anindo"));
-        const hasSaiful = approvalRequest.superadminApprovals.some(a => a.includes("saiful"));
+        const hasAnindo = approvalRequest.superadminApprovals.some((a: string) => a.includes("anindo"));
+        const hasSaiful = approvalRequest.superadminApprovals.some((a: string) => a.includes("saiful"));
         
         if (hasAnindo && hasSaiful) {
           approvalRequest.stage = "owner";
