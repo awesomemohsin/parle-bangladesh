@@ -194,6 +194,10 @@ export interface IOrder extends Document {
   status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
   cancelReason?: string;
   statusReason?: string;
+  instruction?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingPostalCode?: string;
   orderLogs?: IOrderLog[];
   createdAt: Date;
   updatedAt: Date;
@@ -238,6 +242,10 @@ const OrderSchema = new Schema<IOrder>(
     status: { type: String, default: "pending" },
     cancelReason: { type: String },
     statusReason: { type: String },
+    instruction: { type: String },
+    shippingAddress: { type: String },
+    shippingCity: { type: String },
+    shippingPostalCode: { type: String },
     orderLogs: [OrderLogSchema],
   },
   { timestamps: true }
@@ -326,4 +334,33 @@ ApprovalRequestSchema.index({ requesterEmail: 1 });
 ApprovalRequestSchema.index({ createdAt: -1 });
 
 export const ApprovalRequest = mongoose.models?.ApprovalRequest || mongoose.model<IApprovalRequest>("ApprovalRequest", ApprovalRequestSchema, "approval_requests");
- 
+
+// --- PROMO CODE MODEL ---
+export interface IPromoCode extends Document {
+  code: string;
+  discountAmount: number;
+  maxUsage: number;
+  currentUsage: number;
+  isActive: boolean;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const PromoCodeSchema = new Schema<IPromoCode>(
+  {
+    code: { type: String, required: true, unique: true, uppercase: true },
+    discountAmount: { type: Number, required: true },
+    maxUsage: { type: Number, required: true },
+    currentUsage: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+    expiresAt: { type: Date },
+  },
+  { timestamps: true }
+);
+
+PromoCodeSchema.index({ code: 1 });
+PromoCodeSchema.index({ isActive: 1 });
+PromoCodeSchema.index({ expiresAt: 1 });
+
+export const PromoCode = mongoose.models?.PromoCode || mongoose.model<IPromoCode>("PromoCode", PromoCodeSchema, "promo_codes"); 

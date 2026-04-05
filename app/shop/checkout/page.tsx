@@ -23,8 +23,13 @@ export default function CheckoutPage() {
     address: '',
     city: '',
     postalCode: '',
+    shippingAddress: '',
+    shippingCity: '',
+    shippingPostalCode: '',
+    instruction: '',
     paymentMethod: 'cash_on_delivery',
   });
+  const [sameAsBilling, setSameAsBilling] = useState(false);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
 
   useEffect(() => {
@@ -79,6 +84,19 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSameAsBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    if (isChecked) {
+      if (!formData.address || !formData.city || !formData.postalCode) {
+        alert("Please fill up the billing address first.");
+        return;
+      }
+      setSameAsBilling(true);
+    } else {
+      setSameAsBilling(false);
+    }
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     const currentSubtotal = total; // Capture subtotal before clearing
@@ -106,7 +124,7 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           items: orderItems,
-          shippingAddress: {
+          billingAddress: {
             name: formData.name,
             phone: formData.phone,
             email: formData.email,
@@ -114,6 +132,12 @@ export default function CheckoutPage() {
             city: formData.city,
             postalCode: formData.postalCode,
           },
+          shippingAddress: {
+            address: sameAsBilling ? formData.address : formData.shippingAddress,
+            city: sameAsBilling ? formData.city : formData.shippingCity,
+            postalCode: sameAsBilling ? formData.postalCode : formData.shippingPostalCode,
+          },
+          instruction: formData.instruction,
           paymentMethod: formData.paymentMethod,
           promoCode,
           discountAmount,
@@ -146,7 +170,7 @@ export default function CheckoutPage() {
     const displaySubtotal = orderState.finalSubtotal || 0;
     const isFree = displaySubtotal >= 1000;
     const displayShipping = isFree ? 0 : 80;
-    const displayTotal = displaySubtotal + displayShipping;
+    const displayTotal = displaySubtotal + displayShipping - (discountAmount || 0);
 
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -179,11 +203,11 @@ export default function CheckoutPage() {
                       <span className="font-semibold text-gray-300 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
                       <span className="font-bold text-gray-900">{displayShipping === 0 ? "FREE" : `৳ ${Math.round(displayShipping)}`}</span>
                     </div>
-                    {discountAmount && discountAmount > 0 && (
+                    {(discountAmount || 0) > 0 && (
                       <div className="flex justify-between items-center text-sm text-green-600">
                         <span className="font-bold uppercase tracking-tight flex items-center gap-1"><Tag className="w-3 h-3" /> Promo Discount</span>
                         <span className="font-semibold text-gray-100 border-b border-dotted border-gray-100 flex-grow mx-4"></span>
-                        <span className="font-bold">- ৳ {Math.round(discountAmount)}</span>
+                        <span className="font-bold">- ৳ {Math.round(discountAmount || 0)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-4 mt-2">
@@ -279,141 +303,173 @@ export default function CheckoutPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Checkout Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmitOrder} className="space-y-6">
-              {/* Shipping Information */}
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b">Shipping Information</h2>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        readOnly={prefilled.name}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.name ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address *</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        readOnly={prefilled.email}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.email ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        placeholder="john@example.com"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        readOnly={prefilled.phone}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.phone ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        placeholder="01XXXXXXXXX"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
-                      <input
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
-                        placeholder="House #, Road #"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City *</label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
-                        placeholder="Dhaka"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
-                      <input
-                        type="text"
-                        name="postalCode"
-                        value={formData.postalCode}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
-                        placeholder="1000"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="border-t pt-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b">Payment Method</h2>
-                <div>
-                  <label className="flex items-center p-4 border-2 border-red-50 bg-red-50/20 rounded-lg cursor-pointer hover:bg-red-50/50 transition-colors">
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Checkout Form - Left Column */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Contact Information */}
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Contact Information</h2>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
                     <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cash_on_delivery"
-                      checked={formData.paymentMethod === 'cash_on_delivery'}
+                      type="text"
+                      name="name"
+                      value={formData.name}
                       onChange={handleInputChange}
-                      className="w-5 h-5 text-red-600 accent-red-600"
+                      required
+                      readOnly={prefilled.name}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.name ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      placeholder="John Doe"
                     />
-                    <div className="ml-4">
-                      <span className="block font-bold text-gray-900">Cash on Delivery</span>
-                      <span className="text-sm text-gray-500">Pay with cash when your product arrives.</span>
-                    </div>
-                  </label>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      readOnly={prefilled.email}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.email ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                    readOnly={prefilled.phone}
+                    className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.phone ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    placeholder="01XXXXXXXXX"
+                  />
                 </div>
               </div>
+            </div>
 
-              {/* Submit Button */}
-              <div className="border-t pt-6">
-                <Button
-                  type="submit"
-                  disabled={orderState.status === 'confirming'}
-                  className="w-full py-4 font-bold text-lg uppercase tracking-wide shadow-lg"
-                >
-                  {orderState.status === 'confirming' ? 'Placing Order...' : 'Place Order'}
-                </Button>
+            {/* Billing Address */}
+            <div className="border-t pt-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Billing Address</h2>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                    placeholder="House #, Road #"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City *</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                      placeholder="Dhaka"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
+                    <input
+                      type="text"
+                      name="postalCode"
+                      value={formData.postalCode}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                      placeholder="1000"
+                    />
+                  </div>
+                </div>
               </div>
-            </form>
+            </div>
+
+            {/* Shipping Information */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                <h2 className="text-xl font-bold text-gray-900">Shipping Information</h2>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sameAsBilling}
+                    onChange={handleSameAsBillingChange}
+                    className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-600"
+                  />
+                  <span className="text-sm text-gray-600">Same as billing address</span>
+                </label>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
+                    <input
+                      type="text"
+                      name="shippingAddress"
+                      value={sameAsBilling ? formData.address : formData.shippingAddress}
+                      onChange={handleInputChange}
+                      required
+                      readOnly={sameAsBilling}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      placeholder="House #, Road #"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City *</label>
+                    <input
+                      type="text"
+                      name="shippingCity"
+                      value={sameAsBilling ? formData.city : formData.shippingCity}
+                      onChange={handleInputChange}
+                      required
+                      readOnly={sameAsBilling}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      placeholder="Dhaka"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
+                    <input
+                      type="text"
+                      name="shippingPostalCode"
+                      value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
+                      onChange={handleInputChange}
+                      required
+                      readOnly={sameAsBilling}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      placeholder="1000"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Order Summary */}
-          <div>
-            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 sticky top-24">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
+          {/* Right Column (Sticky Container) */}
+          <div className="space-y-4 lg:sticky lg:top-8 h-fit">
+            {/* Order Summary */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Order Summary</h2>
 
-              <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {items.map(item => {
                   const itemKey = getItemKey(item);
                   return (
@@ -434,7 +490,7 @@ export default function CheckoutPage() {
                 })}
               </div>
 
-              <div className="space-y-3 text-left mb-6">
+              <div className="space-y-2 text-left mb-4 border-t pt-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-semibold text-gray-900">৳ {Math.round(total)}</span>
@@ -443,23 +499,62 @@ export default function CheckoutPage() {
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-semibold text-gray-900">৳ {Math.round(shippingCost)}</span>
                 </div>
-                {discountAmount && discountAmount > 0 && (
+                {(discountAmount || 0) > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Promo ({promoCode})</span>
-                    <span className="font-semibold">- ৳ {Math.round(discountAmount)}</span>
+                    <span className="font-semibold">- ৳ {Math.round(discountAmount || 0)}</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between">
-                <span className="font-bold text-gray-900">Total</span>
+              <div className="flex justify-between border-t border-gray-200 pt-3">
+                <span className="font-bold text-gray-900 text-lg">Total</span>
                 <span className="text-2xl font-bold text-red-600">
                   ৳ {Math.round(grandTotal)}
                 </span>
               </div>
             </div>
+
+            {/* Instruction */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Delivery Instruction</h2>
+              <textarea
+                name="instruction"
+                value={formData.instruction}
+                onChange={(e: any) => handleInputChange(e)}
+                rows={2}
+                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all resize-y"
+                placeholder="Any specific instructions?"
+              ></textarea>
+            </div>
+
+            {/* Payment Method & Submit */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Payment Method</h2>
+              <label className="flex items-center p-3 border border-red-200 bg-red-50/50 rounded-lg cursor-pointer mb-4">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="cash_on_delivery"
+                  checked={formData.paymentMethod === 'cash_on_delivery'}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-red-600 accent-red-600"
+                />
+                <div className="ml-3">
+                  <span className="block font-bold text-gray-900 text-sm">Cash on Delivery</span>
+                </div>
+              </label>
+
+              <Button
+                type="submit"
+                disabled={orderState.status === 'confirming'}
+                className="w-full py-3 font-bold text-lg uppercase tracking-wide shadow-md hover:shadow-lg transition-all border-b-4 border-red-800 active:border-b-0 active:translate-y-1"
+              >
+                {orderState.status === 'confirming' ? 'Placing Order...' : 'Place Order'}
+              </Button>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
