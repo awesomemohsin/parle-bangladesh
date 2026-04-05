@@ -6,6 +6,9 @@ import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
+import { useDebounce } from '@/hooks/use-debounce'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
 interface Variation {
   weight?: string;
   flavor?: string;
@@ -29,7 +32,14 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<{name: string, slug: string}[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 500)
   const [selectedCategory, setSelectedCategory] = useState('all')
+  
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const limit = 20
+
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'category' | 'price' | 'stock', direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
 
   useEffect(() => {
@@ -37,8 +47,12 @@ export default function AdminProductsPage() {
   }, [])
 
   useEffect(() => {
+    setPage(1) // Reset to first page on new search or category
+  }, [debouncedSearch, selectedCategory])
+
+  useEffect(() => {
     fetchProducts()
-  }, [search, selectedCategory])
+  }, [debouncedSearch, selectedCategory, page])
 
   const fetchCategories = async () => {
     try {
@@ -53,16 +67,20 @@ export default function AdminProductsPage() {
   }
 
   const fetchProducts = async () => {
+    setIsLoading(true)
     try {
       const params = new URLSearchParams()
-      if (search) params.append('q', search)
+      if (debouncedSearch) params.append('q', debouncedSearch)
       if (selectedCategory !== 'all') params.append('category', selectedCategory)
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
       
       const response = await fetch(`/api/products?${params.toString()}`)
 
       if (response.ok) {
         const data = await response.json()
         setProducts(data.products || [])
+        setTotalPages(data.pagination?.totalPages || 1)
       }
     } catch (error) {
       console.error('Failed to fetch products:', error)
@@ -184,8 +202,8 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      <Card className="overflow-hidden border-2 border-gray-100 shadow-sm rounded-xl">
-        {sortedProducts.length > 0 ? (
+      <Card className="overflow-hidden border-2 border-gray-100 shadow-sm rounded-xl mb-4">
+        {products.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b-2 border-gray-100">
@@ -296,6 +314,56 @@ export default function AdminProductsPage() {
           </div>
         )}
       </Card>
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center bg-white p-4 border-2 border-gray-100 rounded-xl shadow-sm">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {[...Array(totalPages)].map((_, i) => {
+              const p = i + 1;
+              // Only show a limited number of page buttons
+              if (p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2)) {
+                return (
+                  <Button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    variant={page === p ? 'default' : 'outline'}
+                    size="sm"
+                    className={`h-8 w-8 p-0 text-[10px] font-black ${page === p ? 'bg-red-600 text-white' : ''}`}
+                  >
+                    {p}
+                  </Button>
+                );
+              }
+              if (p === page - 3 || p === page + 3) {
+                return <span key={p} className="text-gray-300">...</span>;
+              }
+              return null;
+            })}
+            <Button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
