@@ -92,12 +92,28 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const oldStatus = order.status;
+    const { Notification } = require("@/lib/models");
+
+    // ROLE-BASED CONSTRAINTS
+    // 1. Moderator can only change status from processing onwards
+    if (user.role === ROLES.MODERATOR) {
+      if (oldStatus === ORDER_STATUS.PENDING) {
+        return NextResponse.json({ error: "Moderators cannot modify pending orders. Please wait for Admin processing." }, { status: 403 });
+      }
+      if (newStatus === ORDER_STATUS.PENDING) {
+        return NextResponse.json({ error: "Moderators cannot revert orders to pending status." }, { status: 403 });
+      }
+    }
+
+    // 2. No role can revert to pending after processing started
+    if (newStatus === ORDER_STATUS.PENDING && oldStatus !== ORDER_STATUS.PENDING) {
+       return NextResponse.json({ error: "Orders cannot be reverted to pending status once processing has begun." }, { status: 400 });
+    }
 
     // Check if permission required from Owner (for damaged and lost)
     const requiresApproval = [ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any);
-    const isOwner = user.role === ROLES.OWNER;
 
-    if (requiresApproval && !isOwner) {
+    if (requiresApproval) {
        // Create approval request instead of updating order
        const { ApprovalRequest } = require("@/lib/models");
        const approvalRequest = new ApprovalRequest({
@@ -109,8 +125,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
          oldValue: oldStatus,
          newValue: newStatus,
          status: "pending",
+         stage: "superadmin",
        });
        await approvalRequest.save();
+
+       // Notify Superadmins of new pending approval
+       await Notification.create({
+         role: ROLES.SUPER_ADMIN,
+         title: "New Order Approval Req",
+         message: `Approval required for Order #${order._id.toString().slice(-6)} status change to ${newStatus}`,
+         type: "approval",
+         targetLink: `/admin/approvals/orders`
+       });
 
        // Log to order history that it's waiting for approval
        if (!order.orderLogs) order.orderLogs = [];
@@ -158,6 +184,26 @@ export async function PUT(request: NextRequest, { params }: Params) {
     });
 
     await order.save();
+
+    // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF
+    if (newStatus === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING) {
+      await Notification.create({
+        role: ROLES.MODERATOR,
+        title: "Order Ready for Dispatch",
+        message: `Order #${order._id.toString().slice(-6)} has been processed and is ready for status management.`,
+        type: "order",
+        targetLink: `/admin/orders`
+      });
+    } else if (newStatus !== ORDER_STATUS.PROCESSING && newStatus !== oldStatus) {
+      // Notify Admin of status updates (Shipped, Delivered, Cancelled, etc)
+      await Notification.create({
+        role: ROLES.ADMIN,
+        title: "Order Status Updated",
+        message: `Order #${order._id.toString().slice(-6)} status changed from ${oldStatus} to ${newStatus}.`,
+        type: "order",
+        targetLink: `/admin/orders`
+      });
+    }
 
     // Log administrative activity globally
     await logAdminActivity({
