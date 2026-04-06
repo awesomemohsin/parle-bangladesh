@@ -242,6 +242,7 @@ export default function ShopClient({
                   quantity: 1,
                   weight: variation.weight,
                   flavor: variation.flavor,
+                  stock: variation.stock,
                 })
               }
             />
