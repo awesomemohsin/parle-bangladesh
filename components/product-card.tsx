@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeProductImagePath } from "@/lib/utils";
+import { useCart, getItemKey } from "@/hooks/useCart";
 
 interface Variation {
   weight?: string;
@@ -13,6 +14,10 @@ interface Variation {
   price: number;
   discountPrice?: number;
   stock: number;
+  holdStock?: number;
+  deliveredCount?: number;
+  lostCount?: number;
+  damagedCount?: number;
   image?: string;
   isDefault?: boolean;
 }
@@ -29,6 +34,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({
+  id,
   name,
   slug,
   category,
@@ -37,10 +43,14 @@ export default function ProductCard({
   price = 0,
   stock = 0,
 }: ProductCardProps) {
+  const { items } = useCart();
   const [isFlying, setIsFlying] = useState(false);
 
-  // Find default variation or use the first one
-  const v = variations.find(v => v.isDefault) || variations[0];
+  // Intelligent Default Selection: Skip out-of-stock items for the main display
+  const primaryVar = variations.find(v => v.isDefault);
+  const v = (primaryVar && primaryVar.stock > 0) 
+    ? primaryVar 
+    : (variations.find(v => v.stock > 0) || variations[0]);
   const defaultVariation = {
     ...v,
     price: v?.price ?? price,
@@ -60,15 +70,19 @@ export default function ProductCard({
     ? Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100) 
     : 0;
 
+  const cartItemKey = getItemKey({ productId: id || slug, weight: defaultVariation.weight, flavor: defaultVariation.flavor });
+  const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
+  const cartQuantity = existingCartItem?.quantity || 0;
+  const isOutOfStock = defaultVariation.stock === 0;
+  const isAtMax = defaultVariation.stock > 0 && cartQuantity >= defaultVariation.stock;
+
   const handleAddToCart = () => {
-    if (onAddToCart && defaultVariation.stock > 0) {
+    if (onAddToCart && defaultVariation.stock > 0 && !isAtMax) {
       onAddToCart(defaultVariation);
       setIsFlying(true);
       setTimeout(() => setIsFlying(false), 800);
     }
   };
-
-  const isOutOfStock = defaultVariation.stock === 0;
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
@@ -79,7 +93,7 @@ export default function ProductCard({
       )}
       {/* Image Container */}
       <Link href={`/shop/products/${slug}`}>
-        <div className="relative w-full h-56 bg-gray-50 overflow-hidden flex items-center justify-center p-4">
+        <div className="relative w-full h-56 bg-white overflow-hidden flex items-center justify-center p-4">
           <Image
             src={productImg}
             alt={name}
@@ -92,6 +106,11 @@ export default function ProductCard({
               <span className="bg-white text-gray-900 border-2 border-red-600 px-4 py-1 font-black text-sm uppercase tracking-tighter">Out of Stock</span>
             </div>
           )}
+          {isAtMax && !isOutOfStock && (
+            <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-20">
+               <span className="bg-white text-amber-600 border border-amber-500 px-2 py-1 font-black text-xs uppercase tracking-tighter shadow-sm">Max in Cart</span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -102,16 +121,10 @@ export default function ProductCard({
             {name}
           </h3>
         </Link>
-        
         <div className="flex items-center justify-between mb-3 min-h-[1.5rem]">
           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
             {defaultVariation.weight || defaultVariation.flavor || "Standard"}
           </span>
-          {!isOutOfStock && (
-            <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-bold uppercase">
-              In Stock
-            </span>
-          )}
         </div>
 
         <div className="flex flex-col gap-0.5 mb-4">
@@ -133,10 +146,10 @@ export default function ProductCard({
         <div className="relative">
           <Button
             onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className={`w-full py-6 font-black uppercase tracking-wider text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg'}`}
+            disabled={isOutOfStock || isAtMax}
+            className={`w-full py-6 font-black uppercase tracking-wider text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
           >
-            {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+            {isOutOfStock ? "Out of Stock" : (isAtMax ? "Stock Reached" : "Add to Cart")}
           </Button>
 
           {/* Flying Dot Animation */}
