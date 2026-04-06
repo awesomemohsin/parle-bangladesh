@@ -107,6 +107,15 @@ export default function AdminSidebar() {
                 Categories
               </Button>
             </Link>
+
+            <Link href="/admin/inventory">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+              >
+                Inventory
+              </Button>
+            </Link>
           </>
         )}
 
