@@ -21,6 +21,7 @@ interface ApprovalRequest {
   ownerApproved: boolean
   createdAt: string
   comments: { user: string; text: string; date: string }[]
+  targetDetails?: any
 }
 
 export default function OrderApprovalsPage() {
@@ -186,6 +187,39 @@ export default function OrderApprovalsPage() {
                       Target ID: {request.targetId}
                     </p>
                   </div>
+
+                  {request.targetDetails && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-y border-gray-50 my-2">
+                       {/* Customer Card */}
+                       <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex flex-col gap-1.5">
+                          <p className="text-[8px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Customer Insight</p>
+                          <p className="text-xs font-black text-gray-900 uppercase">{request.targetDetails.customerName}</p>
+                          <div className="flex flex-col gap-0.5">
+                             <p className="text-[9px] text-gray-400 font-bold uppercase">{request.targetDetails.customerPhone}</p>
+                             <p className="text-[9px] text-gray-400 font-bold uppercase">{request.targetDetails.customerEmail}</p>
+                             <p className="text-[8px] text-gray-500 font-medium leading-tight mt-1 line-clamp-2">
+                               {request.targetDetails.address}, {request.targetDetails.city}
+                             </p>
+                          </div>
+                       </div>
+                       
+                       {/* Items Summary */}
+                       <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col gap-2">
+                          <div className="flex justify-between items-center mb-1">
+                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">Package Payload</p>
+                             <p className="text-[10px] font-black text-red-600">৳{request.targetDetails.total}</p>
+                          </div>
+                          <div className="space-y-1 max-h-[80px] overflow-y-auto pr-2 custom-scrollbar">
+                             {request.targetDetails.items?.map((item: any, idx: number) => (
+                               <div key={idx} className="flex justify-between text-[10px] items-center border-b border-gray-50 pb-1">
+                                  <span className="font-bold text-gray-700 truncate max-w-[140px] uppercase">{item.name}</span>
+                                  <span className="text-gray-400 font-black">×{item.quantity}</span>
+                               </div>
+                             ))}
+                          </div>
+                       </div>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-6 py-2">
                     <div className="flex flex-col">
