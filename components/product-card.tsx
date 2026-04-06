@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { sanitizeProductImagePath } from "@/lib/utils";
 
 interface Variation {
   weight?: string;
@@ -23,6 +24,8 @@ interface ProductCardProps {
   category: string;
   variations: Variation[];
   onAddToCart?: (variation: Variation) => void;
+  price?: number;
+  stock?: number;
 }
 
 export default function ProductCard({
@@ -31,20 +34,24 @@ export default function ProductCard({
   category,
   variations = [],
   onAddToCart,
+  price = 0,
+  stock = 0,
 }: ProductCardProps) {
   const [isFlying, setIsFlying] = useState(false);
 
   // Find default variation or use the first one
-  const defaultVariation = variations.find(v => v.isDefault) || variations[0] || {
-    price: 0,
-    discountPrice: 0,
-    stock: 0,
-    weight: "",
-    flavor: "",
-    image: ""
+  const v = variations.find(v => v.isDefault) || variations[0];
+  const defaultVariation = {
+    ...v,
+    price: v?.price ?? price,
+    discountPrice: v?.discountPrice ?? 0,
+    stock: v?.stock ?? stock,
+    weight: v?.weight ?? "",
+    flavor: v?.flavor ?? "",
+    image: v?.image ?? ""
   };
 
-  const productImg = defaultVariation.image || "/images/placeholder.webp";
+  const productImg = sanitizeProductImagePath(defaultVariation.image || "");
 
   const hasDiscount = !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
   const currentPrice = (hasDiscount ? defaultVariation.discountPrice : defaultVariation.price) || 0;

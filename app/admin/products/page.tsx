@@ -25,6 +25,8 @@ interface Product {
   category: string
   variations: Variation[]
   description: string
+  price?: number
+  stock?: number
 }
 
 export default function AdminProductsPage() {
@@ -103,13 +105,13 @@ export default function AdminProductsPage() {
           aValue = a.category.toLowerCase()
           bValue = b.category.toLowerCase()
         } else if (sortConfig.key === 'price') {
-          const aVar = a.variations?.find(v => v.isDefault) || a.variations?.[0] || { price: 0, stock: 0 }
-          const bVar = b.variations?.find(v => v.isDefault) || b.variations?.[0] || { price: 0, stock: 0 }
+          const aVar = a.variations?.find(v => v.isDefault) || a.variations?.[0] || { price: a.price || 0, stock: a.stock || 0 }
+          const bVar = b.variations?.find(v => v.isDefault) || b.variations?.[0] || { price: b.price || 0, stock: b.stock || 0 }
           aValue = aVar.discountPrice ?? aVar.price
           bValue = bVar.discountPrice ?? bVar.price
         } else if (sortConfig.key === 'stock') {
-          aValue = a.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0
-          bValue = b.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0
+          aValue = a.variations && a.variations.length > 0 ? a.variations.reduce((acc, v) => acc + (v.stock || 0), 0) : (a.stock || 0)
+          bValue = b.variations && b.variations.length > 0 ? b.variations.reduce((acc, v) => acc + (v.stock || 0), 0) : (b.stock || 0)
         }
 
         if (aValue < bValue) {
@@ -247,8 +249,8 @@ export default function AdminProductsPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {sortedProducts.map((product) => {
-                  const defaultVar = product.variations?.find(v => v.isDefault) || product.variations?.[0] || { price: 0, stock: 0 };
-                  const totalStock = product.variations?.reduce((acc, v) => acc + (v.stock || 0), 0) || 0;
+                  const defaultVar = product.variations?.find((v: any) => v.isDefault) || product.variations?.[0] || { price: product.price || 0, stock: product.stock || 0 };
+                  const totalStock = product.variations && product.variations.length > 0 ? product.variations.reduce((acc: number, v: any) => acc + (v.stock || 0), 0) : (product.stock || 0);
 
                   return (
                     <tr key={product.slug} className="group hover:bg-gray-50/50 transition-colors">

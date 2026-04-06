@@ -238,7 +238,7 @@ export default function ShopClient({
                   productSlug: product.slug,
                   productName: product.name,
                   price: variation.price,
-                  image: product.image,
+                  image: variation.image,
                   quantity: 1,
                   weight: variation.weight,
                   flavor: variation.flavor,

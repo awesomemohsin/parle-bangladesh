@@ -13,14 +13,15 @@ export const revalidate = 60; // Refresh data every minute
 export default async function ShopPage({ 
   searchParams 
 }: { 
-  searchParams: { category?: string } 
+  searchParams: Promise<{ category?: string }> 
 }) {
+  const params = await searchParams;
   const [products, categories] = await Promise.all([
     getProducts(),
     getCategories(),
   ]);
 
-  const activeCategory = categories.find((c: any) => c.slug === searchParams.category);
+  const activeCategory = categories.find((c: any) => c.slug === params.category);
   const pageTitle = activeCategory ? activeCategory.name : "Shop All";
   const pageDescription = activeCategory 
     ? activeCategory.description || `Browse our premium range of ${activeCategory.name}.`

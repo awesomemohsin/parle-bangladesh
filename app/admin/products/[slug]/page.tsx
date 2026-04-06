@@ -495,7 +495,7 @@ export default function AdminProductFormPage() {
               className="w-full p-4 h-24 text-[11px] font-medium text-gray-500 border-2 border-gray-50 rounded-xl focus:border-red-600 transition-all resize-none leading-relaxed outline-none"
             />
           </Card>
-
+          
         </div>
 
         <div className="flex gap-4 pt-6 border-t border-gray-50">

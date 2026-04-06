@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { sanitizeProductImagePath } from "@/lib/utils";
 
 interface Variation {
   weight?: string;
@@ -42,22 +43,27 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const [quantity, setQuantity] = useState(1);
   const [isFlying, setIsFlying] = useState(false);
 
-  const selectedVariation = product.variations[selectedVarIndex];
-  const displayPrice = selectedVariation?.discountPrice || selectedVariation?.price || 0;
-  const originalPrice = selectedVariation?.price || 0;
-  const displayStock = selectedVariation ? selectedVariation.stock : 0;
+  const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
+  const displayPrice = selectedVariation?.discountPrice || selectedVariation?.price || product.price || 0;
+  const originalPrice = selectedVariation?.price || product.price || 0;
+  const displayStock = selectedVariation?.stock ?? product.stock ?? 0;
   const hasDiscount = !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
   const discountPercentage = hasDiscount ? Math.round(((originalPrice - (selectedVariation?.discountPrice || 0)) / originalPrice) * 100) : 0;
 
   // Sync image with variation selection
   useEffect(() => {
     if (selectedVariation?.image) {
-      const idx = images.indexOf(selectedVariation.image);
+      const sanitizedImage = sanitizeProductImagePath(selectedVariation.image);
+      const idx = images.indexOf(sanitizedImage);
       if (idx !== -1) {
         setCurrentImageIndex(idx);
+      } else {
+        setCurrentImageIndex(-1); // Show no image found
       }
+    } else {
+      setCurrentImageIndex(-1); // Show no image found
     }
-  }, [selectedVarIndex, images]);
+  }, [selectedVarIndex, images, selectedVariation]);
 
   // Sync variation with image selection
   const handleImageSelect = (idx: number) => {
@@ -78,7 +84,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
       productSlug: product.slug,
       productName: product.name,
       price: displayPrice,
-      image: selectedVariation?.image || images[currentImageIndex] || "/images/placeholder.webp",
+      image: selectedVariation?.image || images[currentImageIndex] || "/placeholder.svg",
       quantity: quantity,
       weight: selectedVariation?.weight || "",
       flavor: selectedVariation?.flavor || "",
@@ -95,7 +101,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
     }
   };
 
-  const mainImageUrl = images[currentImageIndex] || "/images/placeholder.webp";
+  const mainImageUrl = images[currentImageIndex] || "/placeholder.svg";
 
   return (
     <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-12 gap-0 border border-gray-100">
@@ -106,6 +112,9 @@ export default function ProductDetailsClient({ product, images }: { product: any
             src={mainImageUrl} 
             alt={product.name} 
             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/placeholder.svg";
+            }}
           />
           {displayStock === 0 && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
@@ -118,7 +127,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
         {/* Thumbnails */}
         {images.length > 1 && (
-          <div className="flex gap-4 overflow-x-auto py-8 no-scrollbar">
+          <div className="flex gap-4 overflow-x-auto py-8 px-2 md:px-4 no-scrollbar">
             {images.map((img, idx) => (
               <button
                 key={idx}
@@ -129,7 +138,14 @@ export default function ProductDetailsClient({ product, images }: { product: any
                     : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
-                <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-contain p-3" />
+                <img 
+                  src={img} 
+                  alt={`View ${idx + 1}`} 
+                  className="w-full h-full object-contain p-3" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/placeholder.svg";
+                  }}
+                />
               </button>
             ))}
           </div>

@@ -35,16 +35,16 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-4 flex-shrink-0 group">
+          <Link href="/" className="flex items-center gap-4 lg:gap-10 flex-shrink-0 group">
+            <div className="flex flex-col -space-y-1">
+              <span className="text-3xl lg:text-4xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
+              <span className="text-[11px] lg:text-xs font-bold text-gray-900 uppercase tracking-[0.25em] leading-none mt-1">Bangladesh</span>
+            </div>
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="h-18 w-auto object-contain brightness-100 transition-transform group-hover:scale-105 duration-300" 
+              className="h-14 lg:h-16 w-auto object-contain brightness-100 transition-transform group-hover:scale-105 duration-300" 
             />
-            <div className="flex flex-col -space-y-1">
-              <span className="text-2xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
-              <span className="text-[11px] font-bold text-gray-900 uppercase tracking-[0.25em] leading-none">Bangladesh</span>
-            </div>
           </Link>
 
           {/* Navigation Links - Centered (Serial: Shop, Cart, Orders) */}

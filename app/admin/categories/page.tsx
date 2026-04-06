@@ -223,7 +223,7 @@ export default function AdminCategorizationPage() {
                         src={item.image || '/images/placeholder.webp'} 
                         alt={item.name} 
                         className="w-full h-full object-contain"
-                        onError={(e) => (e.currentTarget.src = '/images/placeholder.webp')}
+                        onError={(e) => (e.currentTarget.src = '/placeholder.svg')}
                       />
                     </div>
                     <div className="w-48">

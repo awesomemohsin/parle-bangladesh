@@ -141,10 +141,11 @@ export interface IProduct extends Document {
   category: string; // Slug reference
   description?: string;
   variations: IVariation[];
-  images: string[]; // Additional gallery images
   ordersCount: number;
   brand?: string;
   isBulk?: boolean;
+  price?: number; // legacy fallback
+  stock?: number; // legacy fallback
   createdAt: Date;
   updatedAt: Date;
 }
@@ -167,10 +168,11 @@ const ProductSchema = new Schema<IProduct>(
     category: { type: String, required: true },
     description: { type: String },
     variations: { type: [VariationSchema], default: [] },
-    images: [{ type: String }],
     ordersCount: { type: Number, default: 0 },
     brand: { type: String },
     isBulk: { type: Boolean, default: false },
+    price: { type: Number },
+    stock: { type: Number },
   },
   { timestamps: true }
 );

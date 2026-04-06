@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import ProductDetailsClient from "@/components/product-details-client";
 import { Metadata } from "next";
 import Link from "next/link";
+import { sanitizeProductImagePath } from "@/lib/utils";
 
 export const revalidate = 60; // ISR: Revalidate every 60 seconds
 
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   const defaultVariation = product.variations?.find((v: any) => v.isDefault) || product.variations?.[0];
-  const mainImage = defaultVariation?.image || (product.images?.[0]) || "";
+  const mainImage = sanitizeProductImagePath(defaultVariation?.image || "");
 
   return {
     title: `${product.name} | Parle Bangladesh`,
@@ -55,7 +56,19 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
   };
 
   const variationImages = product.variations?.map((v: any) => v.image).filter(Boolean) || [];
-  const images = Array.from(new Set([...variationImages, ...(product.images || [])])).filter(Boolean);
+  
+  // Robust image deduplication: normalize and sanitize paths
+  const uniqueImagesMap = new Map();
+  variationImages.forEach(img => {
+    if (img) {
+      const sanitized = sanitizeProductImagePath(img);
+      if (!uniqueImagesMap.has(sanitized)) {
+        uniqueImagesMap.set(sanitized, sanitized);
+      }
+    }
+  });
+  
+  const images = Array.from(uniqueImagesMap.values());
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
