@@ -19,6 +19,7 @@ export default function ClientAddToCartWrapper({ product }: { product: any }) {
           quantity: 1,
           weight: variation.weight,
           flavor: variation.flavor,
+          stock: variation.stock,
         })
       }
     />
