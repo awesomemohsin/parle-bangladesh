@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order } from "@/lib/models";
+import { Order, Product } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
@@ -94,6 +94,15 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const oldStatus = order.status;
     const { Notification } = require("@/lib/models");
 
+    // IMMUTABILITY CONSTRAINTS
+    // Prevent any changes once an order has hit a 'terminal' state
+    const terminalStatuses = [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED, ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST];
+    if (terminalStatuses.includes(oldStatus as any)) {
+       return NextResponse.json({ 
+         error: `This order is already marked as ${oldStatus.toUpperCase()} and cannot be modified again. Status is final.` 
+       }, { status: 400 });
+    }
+
     // ROLE-BASED CONSTRAINTS
     // 1. Moderator can only change status from processing onwards
     if (user.role === ROLES.MODERATOR) {
@@ -125,6 +134,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
          oldValue: oldStatus,
          newValue: newStatus,
          status: "pending",
+         targetDetails: order.toObject(),
          stage: "superadmin",
        });
        await approvalRequest.save();
@@ -160,6 +170,77 @@ export async function PUT(request: NextRequest, { params }: Params) {
     order.status = newStatus;
     const reasonRequiredStatuses = [ORDER_STATUS.CANCELLED, ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST];
     
+    // --- STOCK MANAGEMENT LOGIC ---
+    // If transitioning from a 'holding' state (pending/processing/shipped) to a 'terminal' state
+    const holdingStatuses = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING, ORDER_STATUS.SHIPPED];
+    const isFromHolding = holdingStatuses.includes(oldStatus as any);
+
+    if (isFromHolding) {
+      if (newStatus === ORDER_STATUS.DELIVERED) {
+        // Delivered: Release hold, subtract from physical stock, add to delivered count
+        for (const item of order.items) {
+          const product = await Product.findOne({ slug: item.productSlug });
+          if (product && product.variations) {
+            const varIndex = product.variations.findIndex((v: any) => {
+              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+              return weightMatch && flavorMatch;
+            });
+            if (varIndex !== -1) {
+              const qty = item.quantity;
+              const update: any = { $inc: {} };
+              // Stock was already reduced at order time
+              // We only clear the hold now
+              update.$inc[`variations.${varIndex}.holdStock`] = -qty;
+              update.$inc[`variations.${varIndex}.deliveredCount`] = qty;
+              await Product.updateOne({ _id: product._id }, update);
+            }
+          }
+        }
+      } else if (newStatus === ORDER_STATUS.CANCELLED) {
+        // Cancelled: Return stock from hold to available pool
+        for (const item of order.items) {
+          const product = await Product.findOne({ slug: item.productSlug });
+          if (product && product.variations) {
+            const varIndex = product.variations.findIndex((v: any) => {
+              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+              return weightMatch && flavorMatch;
+            });
+            if (varIndex !== -1) {
+               await Product.updateOne(
+                 { _id: product._id },
+                 { $inc: { 
+                   [`variations.${varIndex}.holdStock`]: -item.quantity,
+                   [`variations.${varIndex}.stock`]: item.quantity
+                 } }
+               );
+            }
+          }
+        }
+      } else if (newStatus === ORDER_STATUS.DAMAGED || newStatus === ORDER_STATUS.LOST) {
+          // Damaged/Lost: Just release the hold. Stock was already deducted at checkout.
+          for (const item of order.items) {
+            const product = await Product.findOne({ slug: item.productSlug });
+            if (product && product.variations) {
+              const varIndex = product.variations.findIndex((v: any) => {
+                const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+                const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+                return weightMatch && flavorMatch;
+              });
+              if (varIndex !== -1) {
+                const qty = item.quantity;
+                const update: any = { $inc: {} };
+                update.$inc[`variations.${varIndex}.holdStock`] = -qty;
+                if (newStatus === ORDER_STATUS.DAMAGED) update.$inc[`variations.${varIndex}.damagedCount`] = qty;
+                if (newStatus === ORDER_STATUS.LOST) update.$inc[`variations.${varIndex}.lostCount`] = qty;
+                await Product.updateOne({ _id: product._id }, update);
+              }
+            }
+          }
+      }
+    }
+
     if (reasonRequiredStatuses.includes(newStatus as any)) {
       if (statusReason) {
         order.statusReason = statusReason;
