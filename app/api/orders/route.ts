@@ -235,13 +235,33 @@ export async function POST(request: NextRequest) {
       targetLink: `/admin/orders`
     });
 
-    // Increment ordersCount for each product
+    // Increment ordersCount and holdStock for each product
     for (const item of items) {
       if (item.productSlug) {
+        // Increment global ordersCount
         await Product.findOneAndUpdate(
           { slug: item.productSlug },
           { $inc: { ordersCount: item.quantity } }
         );
+
+        // Increment variation-specific holdStock
+        const product = await Product.findOne({ slug: item.productSlug });
+        if (product && product.variations) {
+          const varIndex = product.variations.findIndex((v: any) => {
+            const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+            const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+            return weightMatch && flavorMatch;
+          });
+          
+          if (varIndex !== -1) {
+            const holdField = `variations.${varIndex}.holdStock`;
+            const stockField = `variations.${varIndex}.stock`;
+            await Product.updateOne(
+              { _id: product._id },
+              { $inc: { [holdField]: item.quantity, [stockField]: -item.quantity } }
+            );
+          }
+        }
       }
     }
 
