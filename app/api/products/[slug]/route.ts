@@ -76,7 +76,9 @@ export async function GET(_: NextRequest, { params }: Params) {
       status: "pending" 
     });
 
-    return NextResponse.json({ product, images, pendingApprovals });
+    const response = NextResponse.json({ product, images, pendingApprovals });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response;
   } catch (error) {
     console.error("Product GET by slug error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -125,6 +127,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
               flavor: oldVar.flavor,
               variationIndex: i,
               status: "pending",
+              targetDetails: { ...existing.toObject(), currentVariation: existing.variations[i] },
               stage: "superadmin", // Explicitly start at superadmin stage
             });
             await approvalRequest.save();
@@ -159,6 +162,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
               flavor: oldVar.flavor,
               variationIndex: i,
               status: "pending",
+              targetDetails: { ...existing.toObject(), currentVariation: existing.variations[i] },
               stage: "superadmin",
             });
             await approvalRequest.save();
