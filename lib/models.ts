@@ -130,6 +130,15 @@ export interface IVariation {
   price: number;
   discountPrice?: number;
   stock: number;
+  holdStock: number;
+  deliveredCount: number;
+  lostCount: number;
+  damagedCount: number;
+  stockHistory?: {
+    amount: number;
+    date: Date;
+    reason?: string;
+  }[];
   image?: string; // Image specific to this variation
   isDefault?: boolean;
   isBulk?: boolean;
@@ -156,6 +165,15 @@ const VariationSchema = new Schema<IVariation>({
   price: { type: Number, required: true },
   discountPrice: { type: Number },
   stock: { type: Number, required: true, default: 0 },
+  holdStock: { type: Number, default: 0 },
+  deliveredCount: { type: Number, default: 0 },
+  lostCount: { type: Number, default: 0 },
+  damagedCount: { type: Number, default: 0 },
+  stockHistory: [{
+    amount: { type: Number },
+    date: { type: Date, default: Date.now },
+    reason: { type: String }
+  }],
   image: { type: String },
   isDefault: { type: Boolean, default: false },
   isBulk: { type: Boolean, default: false },
@@ -332,6 +350,9 @@ export interface IApprovalRequest extends Document {
   variationIndex?: number; // for product variations
   status: "pending" | "approved" | "declined";
   
+  // High-Fidelity Context: Store the full object (Order or Product variation) for review
+  targetDetails?: any;
+
   // Multi-tier approval
   stage: "superadmin" | "owner";
   superadminApprovals: string[]; // ['Anindo', 'Saiful']
@@ -358,6 +379,9 @@ const ApprovalRequestSchema = new Schema<IApprovalRequest>(
     variationIndex: { type: Number },
     status: { type: String, enum: ["pending", "approved", "declined"], default: "pending" },
     
+    // Store full snapshot for review
+    targetDetails: { type: Schema.Types.Mixed },
+
     stage: { type: String, enum: ["superadmin", "owner"], default: "superadmin" },
     superadminApprovals: { type: [String], default: [] },
     ownerApproved: { type: Boolean, default: false },
