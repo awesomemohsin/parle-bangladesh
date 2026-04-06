@@ -196,12 +196,23 @@ export function useCart() {
         let newItems: CartItem[];
  
         if (existingItem) {
-          newItems = prevCart.items.map((i) =>
-            itemMatchesKey(i, itemKey)
-              ? { ...i, quantity: i.quantity + normalized.quantity }
-              : i,
-          );
+          newItems = prevCart.items.map((i) => {
+            if (itemMatchesKey(i, itemKey)) {
+              let nextQuantity = i.quantity + (item.quantity ?? quantity);
+              // Hard cap at available stock
+              if (i.stock !== undefined && nextQuantity > i.stock) {
+                nextQuantity = i.stock;
+              }
+              return { ...i, quantity: nextQuantity };
+            }
+            return i;
+          });
         } else {
+          // Check stock before adding new item
+          if (normalized.stock !== undefined && normalized.quantity > normalized.stock) {
+            normalized.quantity = normalized.stock;
+          }
+          if (normalized.quantity <= 0) return prevCart;
           newItems = [...prevCart.items, normalized];
         }
 
@@ -233,9 +244,16 @@ export function useCart() {
           return { ...prevCart, ...calculateTotals(newItems) };
         }
 
-        const newItems = prevCart.items.map((i) =>
-          itemMatchesKey(i, key) ? { ...i, quantity } : i,
-        );
+        const newItems = prevCart.items.map((i) => {
+          if (itemMatchesKey(i, key)) {
+            let nextQuantity = quantity;
+            if (i.stock !== undefined && nextQuantity > i.stock) {
+                nextQuantity = i.stock;
+            }
+            return { ...i, quantity: nextQuantity };
+          }
+          return i;
+        });
         return { ...prevCart, ...calculateTotals(newItems) };
       });
     },
