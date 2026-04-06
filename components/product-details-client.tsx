@@ -15,6 +15,10 @@ interface Variation {
   price: number;
   discountPrice?: number;
   stock: number;
+  holdStock?: number;
+  deliveredCount?: number;
+  lostCount?: number;
+  damagedCount?: number;
   image?: string;
   isDefault?: boolean;
   isBulk?: boolean;
@@ -34,13 +38,17 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const router = useRouter();
   const { addItem } = useCart();
   
-  // Find default variation index
-  const defaultIdx = product.variations.findIndex((v: Variation) => v.isDefault);
-  const initialVarIndex = defaultIdx !== -1 ? defaultIdx : 0;
+  // Intelligent Default Selection: Skip out-of-stock SKUs
+  const defaultVar = product.variations.find((v: Variation) => v.isDefault);
+  const initialVarIndex = (defaultVar && defaultVar.stock > 0) 
+    ? product.variations.indexOf(defaultVar)
+    : (product.variations.findIndex((v: Variation) => v.stock > 0) !== -1 
+       ? product.variations.findIndex((v: Variation) => v.stock > 0) 
+       : 0);
 
   const [selectedVarIndex, setSelectedVarIndex] = useState<number>(initialVarIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(product.variations[initialVarIndex]?.stock > 0 ? 1 : 0);
   const [isFlying, setIsFlying] = useState(false);
 
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
