@@ -8,8 +8,7 @@ export interface GetProductsOptions {
   limit?: number;
 }
 
-export const getProducts = unstable_cache(
-  async (options: GetProductsOptions = {}) => {
+export async function getProducts(options: GetProductsOptions = {}) {
     await connectDB();
     const { query = {}, sort = { createdAt: -1 }, limit = 0 } = options;
     
@@ -22,20 +21,13 @@ export const getProducts = unstable_cache(
     
     const results = await databaseQuery.lean();
     return JSON.parse(JSON.stringify(results));
-  },
-  ["products-list"],
-  { revalidate: 300, tags: ["products"] }
-);
+}
 
-export const getProductBySlug = unstable_cache(
-  async (slug: string) => {
+export async function getProductBySlug(slug: string) {
     await connectDB();
     const result = await Product.findOne({ slug }).lean();
     return result ? JSON.parse(JSON.stringify(result)) : null;
-  },
-  ["product-by-slug"],
-  { revalidate: 3600, tags: ["products"] }
-);
+}
 
 export async function getCategoryBySlug(slug: string) {
   await connectDB();
