@@ -25,6 +25,7 @@ interface ApprovalRequest {
   ownerApproved: boolean
   createdAt: string
   comments: { user: string; text: string; date: string }[]
+  targetDetails?: any
 }
 
 export default function ProductApprovalsPage() {
@@ -198,6 +199,16 @@ export default function ProductApprovalsPage() {
                       <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
                         {request.weight || "N/A"} • {request.flavor || "N/A"}
                       </p>
+                      {request.targetDetails && (
+                        <>
+                          <p className="text-[9px] text-red-600 font-black uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                            {request.targetDetails.brand || "Parle"}
+                          </p>
+                          <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                            {request.targetDetails.category}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
 
