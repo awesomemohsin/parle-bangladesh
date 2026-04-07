@@ -21,15 +21,28 @@ export async function GET(request: NextRequest) {
     // Zero-Bother Identity Filtering
     const userName = (user.name || user.email || "Unknown").toLowerCase();
 
+    const isHistory = status === 'all' || status === 'approved' || status === 'declined';
+    
     if (user.role === ROLES.OWNER) {
-        // Owner only sees requests that PASSED superadmin verify stage AND he hasn't signed
-        query.stage = "owner";
-        query.ownerApproved = false;
+        if (!isHistory) {
+          // Owner daily view: requests that passed superadmin stage AND he hasn't signed
+          query.stage = "owner";
+          query.ownerApproved = false;
+          query.status = "pending";
+        } else {
+          // Historical view: anything that reached his level or finished
+          query.status = { $in: ["approved", "declined"] };
+        }
     } else if (user.role === ROLES.SUPER_ADMIN) {
-        // Superadmin only sees pending requests for his stage he hasn't signed yet
-        query.stage = "superadmin";
-        query.superadminApprovals = { $ne: userName };
-        query.status = "pending";
+        if (!isHistory) {
+          // Superadmin daily view: pending requests for his stage he hasn't signed yet
+          query.stage = "superadmin";
+          query.superadminApprovals = { $ne: userName };
+          query.status = "pending";
+        } else {
+          // Historical view: anything approved or declined
+          query.status = { $in: ["approved", "declined"] };
+        }
     } else {
         return NextResponse.json({ error: "Forbidden: Higher authorization required" }, { status: 403 });
     }
