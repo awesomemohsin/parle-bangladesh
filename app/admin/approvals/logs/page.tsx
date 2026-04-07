@@ -20,6 +20,7 @@ interface ApprovalRequest {
   flavor?: string
   variationIndex?: number
   status: string
+  declinedBy?: string
   ownerEmail?: string
   ownerComment?: string
   createdAt: string
@@ -118,7 +119,10 @@ export default function ApprovalLogsPage() {
                        {request.field}
                     </span>
                     <span className="text-[9px] font-black text-gray-300 uppercase tracking-tighter italic">
-                        Processed by {request.ownerEmail}
+                        {request.status === 'declined' 
+                          ? `Declined by ${request.declinedBy || 'Admin'}` 
+                          : `Approved by Consensus (Anindo & Saiful${request.field === 'price' || request.field === 'stock' ? ' & Razu' : ''})`
+                        }
                     </span>
                   </div>
 
