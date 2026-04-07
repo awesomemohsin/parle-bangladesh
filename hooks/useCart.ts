@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 export interface CartItem {
   productId: string;
@@ -147,28 +147,39 @@ export function useCart() {
       const newStr = JSON.stringify(cart);
       const prevStr = localStorage.getItem(CART_STORAGE_KEY);
       
-      if (prevStr === newStr) return; 
-      
-      localStorage.setItem(CART_STORAGE_KEY, newStr);
-      notifyGlobalListeners(cart);
+      if (prevStr !== newStr) {
+        localStorage.setItem(CART_STORAGE_KEY, newStr);
+        // Only notify others if we actually changed something meaningful
+        notifyGlobalListeners(cart);
+      }
       
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      if (token) {
-        fetch("/api/cart", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            items: cart.items,
-            promoCode: cart.promoCode,
-            discountAmount: cart.discountAmount
-          })
-        }).catch(err => console.error("Failed syncing cart to DB:", err));
+      if (token && prevStr !== newStr) {
+        // Debounce or at least delay slightly to avoid spamming
+        const timer = setTimeout(() => {
+          fetch("/api/cart", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              items: cart.items,
+              promoCode: cart.promoCode,
+              discountAmount: cart.discountAmount
+            })
+          }).catch(err => console.error("Failed syncing cart to DB:", err));
+        }, 800);
+        return () => clearTimeout(timer);
       }
     }
   }, [cart, isLoading]);
+
+  // Optimized: Use memoization for heavy calculations
+  const total = useMemo(() => cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart.items]);
+  const subtotal = useMemo(() => cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart.items]);
+  const itemCount = useMemo(() => cart.items.reduce((sum, item) => sum + item.quantity, 0), [cart.items]);
+  const finalTotal = useMemo(() => Math.max(0, subtotal - (cart.discountAmount || 0)), [subtotal, cart.discountAmount]);
 
   const calculateTotals = useCallback((items: CartItem[]): Cart => {
     const total = items.reduce(
@@ -275,8 +286,8 @@ export function useCart() {
   return {
     cart,
     items: cart.items,
-    total: cart.total,
-    itemCount: cart.itemCount,
+    total: finalTotal, // Use memoized final total
+    itemCount,
     promoCode: cart.promoCode,
     discountAmount: cart.discountAmount,
     isLoading,
