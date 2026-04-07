@@ -197,7 +197,8 @@ const ProductSchema = new Schema<IProduct>(
 
 // Indexes for faster loading
 ProductSchema.index({ category: 1 });
-ProductSchema.index({ name: "text", description: "text" }); // For search prioritization
+ProductSchema.index({ slug: 1 }, { unique: true });
+ProductSchema.index({ name: "text", description: "text" }); 
 
 export const Product = mongoose.models?.Product || mongoose.model<IProduct>("Product", ProductSchema, "products");
 
@@ -393,6 +394,8 @@ const ApprovalRequestSchema = new Schema<IApprovalRequest>(
 
 ApprovalRequestSchema.index({ status: 1 });
 ApprovalRequestSchema.index({ type: 1 });
+ApprovalRequestSchema.index({ stage: 1 });
+ApprovalRequestSchema.index({ targetId: 1 });
 ApprovalRequestSchema.index({ requesterEmail: 1 });
 ApprovalRequestSchema.index({ createdAt: -1 });
 
@@ -455,8 +458,36 @@ const PromoCodeSchema = new Schema<IPromoCode>(
   { timestamps: true }
 );
 
-PromoCodeSchema.index({ code: 1 });
 PromoCodeSchema.index({ isActive: 1 });
 PromoCodeSchema.index({ expiresAt: 1 });
 
 export const PromoCode = mongoose.models?.PromoCode || mongoose.model<IPromoCode>("PromoCode", PromoCodeSchema, "promo_codes"); 
+
+// --- CONTACT SUBMISSION MODEL ---
+export interface IContactSubmission extends Document {
+  name: string;
+  number: string;
+  email?: string;
+  message?: string;
+  type: "regular" | "corporate";
+  organizationName?: string; // only for corporate
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ContactSubmissionSchema = new Schema<IContactSubmission>(
+  {
+    name: { type: String, required: true },
+    number: { type: String, required: true },
+    email: { type: String },
+    message: { type: String },
+    type: { type: String, enum: ["regular", "corporate"], default: "regular" },
+    organizationName: { type: String },
+  },
+  { timestamps: true }
+);
+
+ContactSubmissionSchema.index({ type: 1 });
+ContactSubmissionSchema.index({ createdAt: -1 });
+
+export const ContactSubmission = mongoose.models?.ContactSubmission || mongoose.model<IContactSubmission>("ContactSubmission", ContactSubmissionSchema, "contact_submissions");
