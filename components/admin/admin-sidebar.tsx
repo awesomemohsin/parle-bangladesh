@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import NotificationCenter from '@/components/admin/notification-center'
+import { X } from 'lucide-react'
 
 interface User {
   id: string
@@ -13,10 +13,10 @@ interface User {
   role: 'super_admin' | 'admin' | 'moderator' | 'owner'
 }
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [pendingCount, setPendingCount] = useState<number>(0)
+  const [counts, setCounts] = useState({ pendingOrders: 0, processingOrders: 0, pendingApprovals: 0 })
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -26,22 +26,24 @@ export default function AdminSidebar() {
   }, [])
 
   useEffect(() => {
-    if (user && (user.role === 'super_admin' || user.role === 'owner')) {
-      fetchPendingCount()
-      const interval = setInterval(fetchPendingCount, 30000) // Update every 30s
+    if (user) {
+      fetchCounts()
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchCounts()
+      }, 60000)
       return () => clearInterval(interval)
     }
   }, [user])
 
-  const fetchPendingCount = async () => {
+  const fetchCounts = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/approvals?status=pending', {
+      const response = await fetch('/api/admin/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
         const data = await response.json()
-        setPendingCount(data.requests?.length || 0)
+        setCounts(data)
       }
     } catch (e) {}
   }
@@ -49,6 +51,7 @@ export default function AdminSidebar() {
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    sessionStorage.clear()
     router.push('/admin/login')
   }
 
@@ -58,150 +61,156 @@ export default function AdminSidebar() {
   const isModerator = user?.role === 'moderator' || isAdmin
 
   return (
-    <div className="w-64 bg-gray-900 text-white flex flex-col h-full">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-800">
-        <h2 className="text-2xl font-bold">Parle Admin</h2>
-        <p className="text-sm text-gray-400 mt-1">Control Panel</p>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140] lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      {/* User Info */}
-      <div className="p-4 bg-gray-800 mx-4 mt-4 rounded-lg flex items-center gap-4">
-        <NotificationCenter />
-        <div className="flex-1 overflow-hidden">
-          <p className="text-xs text-gray-400">Logged in as</p>
-          <p className="font-semibold text-sm truncate">{user?.name || user?.email}</p>
-          <p className="text-xs text-gray-400 mt-1 capitalize">
-            {user?.role.replace('_', ' ')}
-          </p>
+      <div className={`
+        fixed lg:static inset-y-0 left-0 w-64 bg-gray-900 text-white flex flex-col h-full z-[150]
+        transition-transform duration-300 ease-in-out transform
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Header */}
+        <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold italic tracking-tighter">Parle <span className="text-red-600">Admin</span></h2>
+            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mt-1">Control Panel</p>
+          </div>
+          <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-white">
+             <X className="w-6 h-6" />
+          </button>
         </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
-        <Link href="/admin/dashboard">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-          >
-            Dashboard
-          </Button>
-        </Link>
+        {/* User Info */}
+        <div className="p-4 bg-gray-800/50 mx-4 mt-6 rounded-2xl flex items-center gap-4 border border-white/5">
+          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-900/20">
+             <svg className="w-5 h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admin User</p>
+            <p className="font-black text-sm truncate uppercase tracking-tight italic">{user?.name || 'Authorized User'}</p>
+          </div>
+        </div>
 
-        {isAdmin && (
-          <>
-            <Link href="/admin/products">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-              >
-                Products
-              </Button>
-            </Link>
-
-            <Link href="/admin/categories">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-              >
-                Categories
-              </Button>
-            </Link>
-
-            <Link href="/admin/inventory">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-              >
-                Inventory
-              </Button>
-            </Link>
-          </>
-        )}
-
-        {isModerator && (
-          <Link href="/admin/orders">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-            >
-              Orders
-            </Button>
-          </Link>
-        )}
-
-        {isSuperAdmin && (
-          <>
-            <Link href="/admin/users">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-              >
-                Users
-              </Button>
-            </Link>
-
-            <Link href="/admin/promo-codes">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-              >
-                Promo Codes
-              </Button>
-            </Link>
-
-            <Link href="/admin/activities">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-              >
-                Activity Logs
-              </Button>
-            </Link>
-          </>
-        )}
-
-        {(isSuperAdmin || isOwner) && (
-          <div className="mt-8 pt-4 border-t border-gray-800">
-            <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em] mb-4 ml-4">Verification System</p>
-            <div className="space-y-1">
-              <Link href="/admin/approvals">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800 relative group"
-                >
-                  Approvals
-                  {pendingCount > 0 && (
-                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:bg-red-500">
-                      {pendingCount}
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar">
+          
+          {/* SECTION 1: APPROVAL CENTER (TOP PRIORITY) */}
+          {(isSuperAdmin || isOwner) && (
+            <div className="bg-red-950/20 rounded-[1.5rem] p-2 border border-red-500/10">
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] italic">Approval Center</p>
+              </div>
+              
+              <Link href="/admin/approvals" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
+                  Pending Approvals
+                  {counts.pendingApprovals > 0 && (
+                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
+                      {counts.pendingApprovals}
                     </span>
                   )}
                 </Button>
               </Link>
 
-              <Link href="/admin/approvals/logs">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
-                >
-                  Approval Logs
+              <Link href="/admin/approvals/logs" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Historical Logs
                 </Button>
               </Link>
             </div>
-          </div>
-        )}
-      </nav>
+          )}
 
-      {/* Logout */}
-      <div className="p-4 border-t border-gray-800">
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="w-full text-gray-300 border-gray-600 hover:bg-red-600 hover:text-white hover:border-red-600"
-        >
-          Logout
-        </Button>
+          {/* SECTION 2: DAILY OPERATIONS */}
+          <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+            <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Daily Tasks</p>
+            </div>
+            
+            <Link href="/admin/dashboard" onClick={onClose}>
+              <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                Dashboard
+              </Button>
+            </Link>
+
+            {isModerator && (
+              <Link href="/admin/orders" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
+                  Order Management
+                  {(counts.pendingOrders + counts.processingOrders) > 0 && (
+                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
+                      {counts.pendingOrders + counts.processingOrders}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link href="/admin/contacts" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Contact Inquiries
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          {/* SECTION 3: PRODUCT CATALOGUE */}
+          {isAdmin && (
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Product Catalogue</p>
+              </div>
+              
+              <Link href="/admin/inventory" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Inventory
+                </Button>
+              </Link>
+
+              <Link href="/admin/categories" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Categories
+                </Button>
+              </Link>
+
+              <Link href="/admin/products" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Products
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* SECTION 4: SYSTEM */}
+          {isSuperAdmin && (
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
+               </div>
+              <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Users</Button></Link>
+              <Link href="/admin/promo-codes" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Promo Codes</Button></Link>
+              <Link href="/admin/activities" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Action Logs</Button></Link>
+            </div>
+          )}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 border-t border-gray-800">
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full text-gray-400 border-gray-700 hover:bg-red-600 hover:text-white hover:border-red-600 rounded-xl font-black uppercase text-[10px] py-4 transition-all"
+          >
+            LOGOUT
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
