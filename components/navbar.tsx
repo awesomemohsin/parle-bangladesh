@@ -26,6 +26,7 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    sessionStorage.clear()
     setIsLoggedIn(false)
     window.location.href = '/'
   }
@@ -75,6 +76,14 @@ export default function Navbar() {
                 Orders
               </Link>
             )}
+
+            <Link href="/about" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all">
+              About
+            </Link>
+
+            <Link href="/contact" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all">
+              Contact
+            </Link>
           </div>
 
           {/* User Menu - Right Profile Hub */}
