@@ -12,11 +12,18 @@ export async function GET(request: NextRequest) {
 
     const results: any = { pendingOrders: 0, processingOrders: 0, pendingApprovals: 0 };
 
-    if (user.role === ROLES.ADMIN) {
-      results.pendingOrders = await Order.countDocuments({ status: ORDER_STATUS.PENDING });
-    } else if (user.role === ROLES.MODERATOR) {
-      results.processingOrders = await Order.countDocuments({ status: ORDER_STATUS.PROCESSING });
-    } else if (user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER) {
+    // Hierarchy based access
+    const isHighLevel = user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER;
+    const isStaff = user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR;
+
+    // Fetch order counts for everyone authorised to see them
+    if (isHighLevel || isStaff) {
+       results.pendingOrders = await Order.countDocuments({ status: ORDER_STATUS.PENDING });
+       results.processingOrders = await Order.countDocuments({ status: ORDER_STATUS.PROCESSING });
+    }
+
+    // Fetch approvals for high level users
+    if (isHighLevel) {
       const userName = (user.name || user.email || "Unknown").toLowerCase();
       const query: any = { status: "pending" };
       

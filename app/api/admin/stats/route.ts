@@ -16,20 +16,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const [totalProducts, totalOrders, regUsers, guestUsers, totalCategories, recentOrders] = await Promise.all([
+    const [totalProducts, totalOrders, regUsers, guestUsers, totalCategories, recentOrders, warehouseStats] = await Promise.all([
       Product.countDocuments(),
       Order.countDocuments(),
       User.countDocuments(),
       Customer.countDocuments(),
       Category.countDocuments(),
-      Order.find().sort({ createdAt: -1 }).limit(5).lean()
+      Order.find().sort({ createdAt: -1 }).limit(5).lean(),
+      Product.aggregate([
+        { $unwind: "$variations" },
+        {
+          $group: {
+            _id: null,
+            totalStock: { $sum: "$variations.stock" },
+            totalOnHold: { $sum: "$variations.holdStock" },
+            totalDelivered: { $sum: "$variations.deliveredCount" },
+            totalLost: { $sum: "$variations.lostCount" },
+            totalDamaged: { $sum: "$variations.damagedCount" }
+          }
+        }
+      ])
     ]);
+
+    const globalWarehouse = warehouseStats[0] || { totalStock: 0, totalOnHold: 0, totalDelivered: 0, totalLost: 0, totalDamaged: 0 };
 
     return NextResponse.json({
       totalProducts,
       totalOrders,
       totalUsers: regUsers + guestUsers,
       totalCategories,
+      warehouse: globalWarehouse,
       recentOrders: recentOrders.map((order) => ({
         id: order._id.toString(),
         customerName: order.customerName,

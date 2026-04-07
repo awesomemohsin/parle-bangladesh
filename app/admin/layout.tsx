@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin/admin-sidebar";
-import { ShieldAlert } from "lucide-react";
+import NotificationCenter from "@/components/admin/notification-center";
+import { ShieldAlert, Menu } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -15,9 +16,17 @@ export default function AdminLayout({
   const isLoginRoute = pathname === "/admin/login";
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Scroll to top on route change
+    window.scrollTo(0, 0);
+    setMobileSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const checkAuth = () => {
+      // ... same auth check ...
       if (isLoginRoute) {
         setIsLoading(false);
         setIsAuthed(false);
@@ -35,7 +44,6 @@ export default function AdminLayout({
 
       try {
         const user = JSON.parse(userStr);
-        // Only allow admins, moderators, super admins or owners
         const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner';
         
         if (!isAdmin) {
@@ -86,10 +94,26 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto bg-[#F9FAFB]">
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-full">
+    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+      <AdminSidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
+      
+      <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8">
+        {/* Floating Mobile Controls */}
+        <div className="fixed top-6 left-6 z-[160] lg:hidden">
+           <button 
+             onClick={() => setMobileSidebarOpen(true)}
+             className="p-3 bg-white/80 backdrop-blur-md shadow-2xl shadow-blue-900/10 rounded-2xl text-gray-900 hover:bg-white transition-all border border-slate-200/50"
+           >
+              <Menu className="w-6 h-6" />
+           </button>
+        </div>
+
+        {/* Global Notification Hub - Floating Top Right */}
+        <div className="fixed top-6 right-8 z-[100] flex items-center gap-4">
+           <NotificationCenter />
+        </div>
+
+        <div className="py-20 md:py-12 max-w-[1600px] mx-auto w-full min-h-full">
            {children}
         </div>
       </main>

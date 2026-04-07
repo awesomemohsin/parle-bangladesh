@@ -12,9 +12,13 @@ interface Variation {
   price: number
   discountPrice?: number
   stock: number
-  image?: string
-  isDefault?: boolean
-  isBulk?: boolean
+  holdStock?: number
+  deliveredCount?: number
+  lostCount?: number
+  damagedCount?: number
+  image?: string;
+  isDefault?: boolean;
+  isBulk?: boolean;
 }
 
 interface Product {

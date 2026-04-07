@@ -26,3 +26,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = getAuthUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const query: any = {
+      $or: [
+        { userId: user.id },
+        { role: user.role }
+      ],
+      isRead: false
+    };
+
+    await Notification.updateMany(query, { isRead: true });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Notifications PUT error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Cache control for public data
-    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=15');
+    // Disable cache for real-time stock integrity
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     
     return response;
   } catch (error) {
