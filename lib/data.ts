@@ -8,12 +8,16 @@ export interface GetProductsOptions {
   limit?: number;
 }
 
-export async function getProducts(options: GetProductsOptions = {}) {
+// Optimized fetching with projection and lean
+async function fetchProductsRaw(options: GetProductsOptions = {}) {
     await connectDB();
     const { query = {}, sort = { createdAt: -1 }, limit = 0 } = options;
     
-    // We only project the fields we need to reduce payload
-    let databaseQuery = Product.find(query, { description: 0 }).sort(sort);
+    // Explicitly select only necessary fields for shop cards
+    let databaseQuery = Product.find(query, { 
+      description: 0, 
+      "variations.stockHistory": 0 
+    }).sort(sort);
     
     if (limit > 0) {
       databaseQuery = databaseQuery.limit(limit);
@@ -21,6 +25,18 @@ export async function getProducts(options: GetProductsOptions = {}) {
     
     const results = await databaseQuery.lean();
     return JSON.parse(JSON.stringify(results));
+}
+
+export async function getProducts(options: GetProductsOptions = {}) {
+    // Only cache simple homepage/shop queries to avoid cache key collision issues with complex objects
+    if (!options.query && options.limit) {
+       return unstable_cache(
+         () => fetchProductsRaw(options),
+         [`products-list-limit-${options.limit}-${JSON.stringify(options.sort)}`],
+         { revalidate: 300, tags: ["products"] }
+       )();
+    }
+    return fetchProductsRaw(options);
 }
 
 export async function getProductBySlug(slug: string) {

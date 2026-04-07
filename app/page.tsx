@@ -13,8 +13,8 @@ export const metadata = {
 export default async function HomePage() {
   const [categories, recentProducts, bestSellers] = await Promise.all([
     getCategories(),
-    getProducts({ limit: 8 }),
-    getProducts({ sort: { ordersCount: -1 }, limit: 8 })
+    getProducts({ limit: 4 }), // Reduced from 8 for speed
+    getProducts({ sort: { ordersCount: -1 }, limit: 4 }) // Reduced from 8
   ]);
 
   return (
