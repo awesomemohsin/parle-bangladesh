@@ -388,8 +388,9 @@ export default function AdminProductFormPage() {
                           value={variation.discountPrice || ''}
                           disabled={!activeDiscounts[index] && (!variation.discountPrice || variation.discountPrice === 0)}
                           onChange={(e) => {
+                            const val = parseFloat(e.target.value);
                             const vars = [...product.variations];
-                            vars[index].discountPrice = e.target.value ? parseFloat(e.target.value) : 0;
+                            vars[index].discountPrice = isNaN(val) ? 0 : val;
                             setProduct({ ...product, variations: vars });
                           }}
                           className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg disabled:bg-gray-50 disabled:opacity-30 focus:border-red-600"
@@ -420,10 +421,11 @@ export default function AdminProductFormPage() {
                         <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Stock</label>
                         <Input
                           type="number"
-                          value={variation.stock}
+                          value={variation.stock ?? 0}
                           onChange={(e) => {
+                            const val = parseInt(e.target.value);
                             const vars = [...product.variations];
-                            vars[index].stock = parseInt(e.target.value);
+                            vars[index].stock = isNaN(val) ? 0 : val;
                             setProduct({ ...product, variations: vars });
                           }}
                           className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"

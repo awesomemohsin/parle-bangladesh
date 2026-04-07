@@ -31,21 +31,41 @@ export type AddCartItemInput = Partial<CartItem> & {
 const CART_STORAGE_KEY = "parle-cart";
 
 function normalizeItem(item: any): CartItem | null {
-  const productSlug = String(
-    item.productSlug || item.slug || item.productId || item.id || "",
+  if (!item) return null;
+
+  // Resilience: Try all possible ID and Slug fields
+  const productId = String(
+    item.productId || 
+    item._id || 
+    item.id || 
+    item.productSlug || 
+    item.slug || 
+    ""
   ).trim();
-  const productId = String(item.productId || item.id || productSlug).trim();
-  const productName = String(item.productName || item.name || "Product").trim();
+
+  const productSlug = String(
+    item.productSlug || 
+    item.slug || 
+    productId || 
+    ""
+  ).trim();
+
+  const productName = String(
+    item.productName || 
+    item.name || 
+    "Product"
+  ).trim();
+
   const price = Number(item.price);
-  const quantity = Number(item.quantity);
+  const quantity = Number(item.quantity || 1);
 
   if (
-    !productSlug ||
     !productId ||
     Number.isNaN(price) ||
     Number.isNaN(quantity) ||
-    quantity <= 0
+    quantity < 0
   ) {
+    console.error("Cart item normalization failed block:", { productId, price, quantity, item });
     return null;
   }
 
@@ -55,9 +75,9 @@ function normalizeItem(item: any): CartItem | null {
     productName,
     price,
     quantity,
-    image: item.image,
-    weight: item.weight,
-    flavor: item.flavor,
+    image: item.image || "",
+    weight: item.weight || "",
+    flavor: item.flavor || "",
     stock: item.stock !== undefined ? Number(item.stock) : undefined,
   };
 }
@@ -80,54 +100,69 @@ function notifyGlobalListeners(cart: Cart) {
   globalListeners.forEach((listener) => listener(cart));
 }
 
+let isFetchingDB = false;
+
 export function useCart() {
   const [cart, setCart] = useState<Cart>({ items: [], total: 0, itemCount: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const initCart = async () => {
-      let dbItems: CartItem[] | null = null;
-      let dbPromo: string | undefined;
-      let dbDiscount: number | undefined;
-
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      // 1. Load from LocalStorage immediately for instant UI
+      const savedCart = typeof window !== "undefined" ? localStorage.getItem(CART_STORAGE_KEY) : null;
+      let initialCart: Cart = { items: [], total: 0, itemCount: 0 };
       
-      if (token) {
+      if (savedCart) {
+        try {
+          const parsed = JSON.parse(savedCart);
+          const rawItems = Array.isArray(parsed?.items) ? parsed.items : [];
+          initialCart.items = rawItems
+            .map((item: any) => normalizeItem(item))
+            .filter((item: CartItem | null): item is CartItem => item !== null);
+          initialCart = { ...initialCart, ...calculateTotals(initialCart.items), promoCode: parsed.promoCode, discountAmount: parsed.discountAmount };
+          setCart(initialCart);
+        } catch (error) {
+          console.error("Failed to parse cart:", error);
+        }
+      }
+
+      // 2. If logged in and haven't synced with DB in this session, fetch and merge
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const alreadySynced = typeof window !== "undefined" ? sessionStorage.getItem("cart_synced") === "true" : false;
+
+      if (token && !alreadySynced && !isFetchingDB) {
+        isFetchingDB = true;
         try {
           const res = await fetch("/api/cart", {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.items && data.items.length > 0) {
-              dbItems = data.items;
-              dbPromo = data.promoCode;
-              dbDiscount = data.discountAmount;
-            }
+            const dbItems = (data.items || []).map((i: any) => normalizeItem(i)).filter((i: any): i is CartItem => i !== null);
+            
+            // Merge logic: Keep local items, add DB items that don't exist locally
+            setCart(prev => {
+              const localKeys = new Set(prev.items.map(i => getItemKey(i)));
+              const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
+              
+              if (uniqueDBItems.length === 0 && !data.promoCode) return prev; // No changes
+              
+              const mergedItems = [...prev.items, ...uniqueDBItems];
+              const mergedPromo = prev.promoCode || data.promoCode;
+              const mergedDiscount = prev.discountAmount || data.discountAmount;
+              
+              sessionStorage.setItem("cart_synced", "true");
+              return { 
+                ...calculateTotals(mergedItems), 
+                promoCode: mergedPromo, 
+                discountAmount: mergedDiscount 
+              };
+            });
           }
-        } catch (error) {
-          console.error("Failed to parse DB cart:", error);
-        }
-      }
-
-      if (dbItems) {
-        const items = dbItems
-          .map((item: any) => normalizeItem(item))
-          .filter((item: CartItem | null): item is CartItem => item !== null);
-        setCart({ ...calculateTotals(items), promoCode: dbPromo, discountAmount: dbDiscount });
-      } else {
-        const savedCart = typeof window !== "undefined" ? localStorage.getItem(CART_STORAGE_KEY) : null;
-        if (savedCart) {
-          try {
-            const parsed = JSON.parse(savedCart);
-            const rawItems = Array.isArray(parsed?.items) ? parsed.items : [];
-            const items = rawItems
-              .map((item: any) => normalizeItem(item))
-              .filter((item: CartItem | null): item is CartItem => item !== null);
-            setCart({ ...calculateTotals(items), promoCode: parsed.promoCode, discountAmount: parsed.discountAmount });
-          } catch (error) {
-            console.error("Failed to parse cart:", error);
-          }
+        } catch (e) {
+          console.error("DB Cart fetch failed:", e);
+        } finally {
+          isFetchingDB = false;
         }
       }
       setIsLoading(false);
@@ -192,42 +227,47 @@ export function useCart() {
 
   const addItem = useCallback(
     (item: AddCartItemInput, quantity: number = 1) => {
+      console.log("addItem triggered with:", { item, quantity });
       setCart((prevCart) => {
         const normalized = normalizeItem({
           ...item,
           quantity: item.quantity ?? quantity,
         });
 
-        if (!normalized) return prevCart;
-
-        const itemKey = getItemKey(normalized);
-        const existingItem = prevCart.items.find((i) =>
-          itemMatchesKey(i, itemKey),
-        );
-        let newItems: CartItem[];
- 
-        if (existingItem) {
-          newItems = prevCart.items.map((i) => {
-            if (itemMatchesKey(i, itemKey)) {
-              let nextQuantity = i.quantity + (item.quantity ?? quantity);
-              // Hard cap at available stock
-              if (i.stock !== undefined && nextQuantity > i.stock) {
-                nextQuantity = i.stock;
-              }
-              return { ...i, quantity: nextQuantity };
-            }
-            return i;
-          });
-        } else {
-          // Check stock before adding new item
-          if (normalized.stock !== undefined && normalized.quantity > normalized.stock) {
-            normalized.quantity = normalized.stock;
-          }
-          if (normalized.quantity <= 0) return prevCart;
-          newItems = [...prevCart.items, normalized];
+        if (!normalized) {
+          console.error("Item normalization failed - check price and ID");
+          return prevCart;
         }
 
-        return { ...prevCart, ...calculateTotals(newItems) };
+        const itemKey = getItemKey(normalized);
+        const existingIdx = prevCart.items.findIndex((i) => itemMatchesKey(i, itemKey));
+        
+        let newItems = [...prevCart.items];
+  
+        if (existingIdx > -1) {
+          const existing = newItems[existingIdx];
+          let nextQty = existing.quantity + normalized.quantity;
+          
+          // Use normalized stock if available
+          const stockCap = normalized.stock !== undefined ? normalized.stock : 999;
+          if (nextQty > stockCap) {
+            nextQty = stockCap;
+          }
+          
+          newItems[existingIdx] = { ...existing, quantity: nextQty };
+        } else {
+          const stockCap = normalized.stock !== undefined ? normalized.stock : 999;
+          if (normalized.quantity > stockCap) {
+            normalized.quantity = stockCap;
+          }
+          if (normalized.quantity > 0) {
+            newItems.push(normalized);
+          }
+        }
+
+        const updated = { ...prevCart, ...calculateTotals(newItems) };
+        console.log("Cart updated. New count:", updated.itemCount);
+        return updated;
       });
     },
     [calculateTotals],

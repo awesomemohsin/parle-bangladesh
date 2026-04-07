@@ -35,15 +35,15 @@ export function HomeHero() {
               Get your favorite freshly baked biscuits and premium cookies delivered directly to your home across Bangladesh.
             </p>
             
-            <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-              <Link href="/shop" className="w-full sm:w-auto">
-                <Button size="lg" className="h-14 w-full sm:w-auto px-10 rounded-xl bg-white text-black hover:bg-red-600 hover:text-white text-sm font-bold uppercase tracking-widest transition-all shadow-xl active:scale-95 group">
+            <div className="flex flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 overflow-x-hidden">
+              <Link href="/shop" className="shrink-0">
+                <Button size="lg" className="h-12 sm:h-14 px-6 sm:px-10 rounded-xl bg-white text-black hover:bg-red-600 hover:text-white text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 group">
                   Start Shopping
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link href="/shop/categories/biscuits" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="h-14 w-full sm:w-auto px-10 rounded-xl border-white/40 bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-black hover:border-white text-sm font-bold uppercase tracking-widest transition-all active:scale-95">
+              <Link href="/shop/categories/biscuits" className="shrink-0">
+                <Button size="lg" variant="outline" className="h-12 sm:h-14 px-6 sm:px-10 rounded-xl border-white/40 bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-black hover:border-white text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all active:scale-95">
                   Buy Biscuits
                 </Button>
               </Link>
@@ -89,13 +89,14 @@ export function HomeHero() {
   )
 }
 
-export function MotionDiv({ children, i = 0 }: { children: React.ReactNode, i?: number }) {
+export function MotionDiv({ children, i = 0, className = "" }: { children: React.ReactNode, i?: number, className?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ delay: i * 0.1 }}
       viewport={{ once: true }}
+      className={className}
     >
       {children}
     </motion.div>

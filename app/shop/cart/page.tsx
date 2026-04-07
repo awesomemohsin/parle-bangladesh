@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ArrowLeft, Truck, Zap, ArrowRight, Tag, CheckCircle2, X, AlertTriangle } from 'lucide-react';
+import { sanitizeProductImagePath } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -223,31 +224,31 @@ export default function CartPage() {
                     return (
                     <div
                       key={itemKey}
-                      className="p-6 flex flex-col md:flex-row gap-6 items-center group transition-all hover:bg-slate-50/30"
+                      className="p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start sm:items-center group transition-all hover:bg-slate-50/30"
                     >
-                      <div className="w-28 h-28 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-50 p-4 shadow-inner relative">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-50 rounded-xl sm:rounded-2xl overflow-hidden flex-shrink-0 border border-gray-50 p-2 sm:p-4 shadow-inner relative">
                         {item.image ? (
-                          <img src={item.image} alt={item.productName} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+                          <img src={sanitizeProductImagePath(item.image)} alt={item.productName} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                         ) : (
-                          <div className="w-full h-full bg-slate-100 flex items-center justify-center text-3xl">
+                          <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xl sm:text-3xl">
                             📦
                           </div>
                         )}
                       </div>
 
-                      <div className="flex-1 flex flex-col gap-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
+                      <div className="flex-1 flex flex-col gap-2 sm:gap-3 overflow-hidden">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 overflow-hidden">
                             <Link
                               href={`/shop/products/${item.productSlug}`}
-                              className="text-lg font-bold text-gray-900 hover:text-red-600 transition-colors uppercase tracking-tight leading-none block mb-2"
+                              className="text-sm sm:text-lg font-bold text-gray-900 hover:text-red-600 transition-colors uppercase tracking-tight leading-tight block mb-1 truncate"
                             >
                               {item.productName}
                             </Link>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(item.weight || (item as any).variationWeight) && (
-                                <span className="bg-red-600 text-white px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">
-                                  {item.weight || (item as any).variationWeight}
+                            <div className="flex flex-wrap gap-1">
+                              {item.weight && (
+                                <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest leading-none">
+                                  {item.weight}
                                 </span>
                               )}
                               {(item.flavor || (item as any).variationFlavor) && (

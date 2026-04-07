@@ -22,7 +22,7 @@ export default async function HomePage() {
       <HomeHero />
 
       {/* Promotional Offer Section */}
-      <section className="bg-slate-50 border-b">
+      <section className="bg-slate-50 border-b overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <MotionDiv>
             <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden">
@@ -60,7 +60,7 @@ export default async function HomePage() {
       </section>
 
       {/* Trust Badges */}
-      <div className="bg-white border-b relative z-30">
+      <div className="bg-white border-b relative z-30 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10">
             {[
@@ -132,7 +132,7 @@ export default async function HomePage() {
       </section>
 
       {/* Newly Arrived Products Section */}
-      <section className="py-20 bg-slate-50/50">
+      <section className="py-20 bg-slate-50/50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -146,7 +146,7 @@ export default async function HomePage() {
           </div>
 
           {recentProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-10 sm:gap-y-12">
               {recentProducts.map((product: any, i: number) => (
                 <MotionDiv key={product._id || i} i={i} className="relative">
                   <div className="absolute -top-2 -right-2 z-10">
@@ -154,7 +154,7 @@ export default async function HomePage() {
                       New
                     </span>
                   </div>
-                  <ProductCard {...product} />
+                  <ProductCard {...product} priority={i < 4} />
                 </MotionDiv>
               ))}
             </div>
@@ -170,7 +170,7 @@ export default async function HomePage() {
       </section>
 
       {/* Best Sellers Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -187,7 +187,7 @@ export default async function HomePage() {
           </div>
 
           {bestSellers.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-10 sm:gap-y-12">
               {bestSellers.map((product: any, i: number) => (
                 <MotionDiv key={product._id || i} i={i} className="relative">
                   <div className="absolute -top-2 -right-2 z-10">
@@ -195,7 +195,7 @@ export default async function HomePage() {
                       Best Seller
                     </span>
                   </div>
-                  <ProductCard {...product} />
+                  <ProductCard {...product} priority={i < 4} />
                 </MotionDiv>
               ))}
             </div>

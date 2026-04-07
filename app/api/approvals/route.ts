@@ -49,24 +49,26 @@ export async function GET(request: NextRequest) {
 
     const requests = await ApprovalRequest.find(query).sort({ updatedAt: -1 }).lean();
     
-    // Virtual Hydration: If old requests don't have targetDetails, fetch them now
+    // 5. Batch Hydration: Optimized fetch for missing targetDetails
+    const missingOrderIds = requests.filter(r => r.type === 'order' && !r.targetDetails).map(r => r.targetId).filter(Boolean);
+    const missingProductIds = requests.filter(r => r.type === 'product' && !r.targetDetails).map(r => r.targetId).filter(Boolean);
+
     const { Order, Product } = require("@/lib/models");
-    const hydratedRequests = await Promise.all(requests.map(async (req: any) => {
+    const [orders, products] = await Promise.all([
+        missingOrderIds.length > 0 ? Order.find({ _id: { $in: missingOrderIds } }).lean() : Promise.resolve([]),
+        missingProductIds.length > 0 ? Product.find({ _id: { $in: missingProductIds } }).lean() : Promise.resolve([])
+    ]);
+
+    const orderMap = Object.fromEntries(orders.map((o: any) => [o._id.toString(), o]));
+    const productMap = Object.fromEntries(products.map((p: any) => [p._id.toString(), p]));
+
+    const hydratedRequests = requests.map((req: any) => {
         if (!req.targetDetails) {
-            try {
-                if (req.type === 'order') {
-                    const order = await Order.findById(req.targetId).lean();
-                    if (order) req.targetDetails = order;
-                } else if (req.type === 'product') {
-                    const product = await Product.findById(req.targetId).lean();
-                    if (product) req.targetDetails = product;
-                }
-            } catch (e) {
-                console.error("Hydration error for request:", req._id, e);
-            }
+            if (req.type === 'order') req.targetDetails = orderMap[req.targetId];
+            else if (req.type === 'product') req.targetDetails = productMap[req.targetId];
         }
         return req;
-    }));
+    });
 
     return NextResponse.json({ requests: hydratedRequests });
   } catch (error) {

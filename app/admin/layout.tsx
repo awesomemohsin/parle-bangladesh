@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin/admin-sidebar";
 import NotificationCenter from "@/components/admin/notification-center";
+import Footer from "@/components/footer";
 import { ShieldAlert, Menu } from "lucide-react";
 
 export default function AdminLayout({
@@ -45,7 +46,7 @@ export default function AdminLayout({
       try {
         const user = JSON.parse(userStr);
         const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner';
-        
+
         if (!isAdmin) {
           alert('ACCESS DENIED: Unauthorized Entrance Identified. Establishing Terminal Redirection...');
           router.push("/");
@@ -84,11 +85,11 @@ export default function AdminLayout({
   if (!isAuthed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-6 px-4 text-center">
-         <ShieldAlert className="w-20 h-20 text-red-600 animate-bounce" />
-         <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter italic">SECURITY ALERT</h1>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Identifying authorization clearance...</p>
-         </div>
+        <ShieldAlert className="w-20 h-20 text-red-600 animate-bounce" />
+        <div className="flex flex-col gap-2">
+          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter italic">SECURITY ALERT</h1>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Identifying authorization clearance...</p>
+        </div>
       </div>
     );
   }
@@ -96,26 +97,12 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden relative">
       <AdminSidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
-      
-      <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8">
-        {/* Floating Mobile Controls */}
-        <div className="fixed top-6 left-6 z-[160] lg:hidden">
-           <button 
-             onClick={() => setMobileSidebarOpen(true)}
-             className="p-3 bg-white/80 backdrop-blur-md shadow-2xl shadow-blue-900/10 rounded-2xl text-gray-900 hover:bg-white transition-all border border-slate-200/50"
-           >
-              <Menu className="w-6 h-6" />
-           </button>
-        </div>
 
-        {/* Global Notification Hub - Floating Top Right */}
-        <div className="fixed top-6 right-8 z-[100] flex items-center gap-4">
-           <NotificationCenter />
+      <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8 pt-20">
+        <div className="py-12 max-w-[1600px] mx-auto w-full min-h-full">
+          {children}
         </div>
-
-        <div className="py-20 md:py-12 max-w-[1600px] mx-auto w-full min-h-full">
-           {children}
-        </div>
+        <Footer />
       </main>
     </div>
   );

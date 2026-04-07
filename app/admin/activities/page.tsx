@@ -77,6 +77,10 @@ export default function AdminActivitiesPage() {
   }
 
   const handleDelete = async (id: string) => {
+    if (user?.role !== 'owner') {
+      alert('Access Denied: Only the Owner (Razu) can delete audit records.')
+      return
+    }
     if (!confirm('Permanent delete this log entry?')) return
     try {
       const response = await fetch(`/api/admin/activities?id=${id}`, {
@@ -94,6 +98,10 @@ export default function AdminActivitiesPage() {
   }
 
   const handleClearAll = async () => {
+    if (user?.role !== 'owner') {
+      alert('Access Denied: Only the Owner (Razu) can clear the total audit log.')
+      return
+    }
     if (!confirm('EXTREME WARNING: This will permanently clear ALL activity logs. Proceed?')) return
     try {
       const response = await fetch(`/api/admin/activities?all=true`, {
@@ -123,15 +131,17 @@ export default function AdminActivitiesPage() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-0.5">
-          <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">System Audit Log</h1>
-          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Administrative Activity Monitoring</p>
+          <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter text-center sm:text-left">System Audit Log</h1>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px] text-center sm:text-left italic">Administrative Activity Monitoring Protocol</p>
         </div>
-        <Button 
-          onClick={handleClearAll}
-          className="bg-black hover:bg-red-700 text-white font-black uppercase tracking-widest text-[9px] px-4 py-2 h-8 rounded shadow-lg transition-all active:scale-95"
-        >
-          Clear All Logs
-        </Button>
+        {user?.role === 'owner' && (
+          <Button 
+            onClick={handleClearAll}
+            className="bg-black hover:bg-red-700 text-white font-black uppercase tracking-widest text-[9px] px-4 py-2 h-8 rounded shadow-lg transition-all active:scale-95"
+          >
+            Clear All Logs
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -229,13 +239,15 @@ export default function AdminActivitiesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => handleDelete(activity._id)}
-                        className="h-7 w-7 p-0 flex items-center justify-center font-black text-gray-200 hover:text-red-600 group-hover:text-gray-300 transition-all"
-                      >
-                        ×
-                      </Button>
+                      {user?.role === 'owner' && (
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => handleDelete(activity._id)}
+                          className="h-7 w-7 p-0 flex items-center justify-center font-black text-gray-200 hover:text-red-600 group-hover:text-gray-300 transition-all"
+                        >
+                          ×
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))

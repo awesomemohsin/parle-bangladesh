@@ -111,12 +111,12 @@ export default function InventoryPage() {
                   <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">SUPPLY LOG</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y-8 divide-red-50/50">
                 {filteredProducts.map((product) => (
-                  <tr key={product._id} className="bg-white hover:bg-slate-50/50 transition-colors group">
-                    <td className="p-8 min-w-[320px]">
+                  <tr key={product._id} className="bg-white hover:bg-red-50/10 transition-colors group">
+                    <td className="p-8 min-w-[320px] align-top border-r border-red-100/50">
                        <div className="flex items-center gap-5">
-                          <div className="w-20 h-20 bg-white rounded-2xl p-2 shadow-sm border border-gray-50 group-hover:scale-105 transition-transform overflow-hidden relative">
+                          <div className="w-20 h-20 bg-white rounded-2xl p-2 shadow-sm border border-red-50 group-hover:scale-105 transition-transform overflow-hidden relative">
                             <img 
                               src={product.variations?.[0]?.image || "/placeholder.svg"} 
                               className="w-full h-full object-contain"
@@ -139,13 +139,13 @@ export default function InventoryPage() {
                        </div>
                     </td>
                     <td colSpan={3} className="p-0">
-                       <table className="w-full">
+                       <table className="w-full border-collapse">
                           <tbody>
                             {product.variations?.map((v: any, vIdx: number) => (
-                              <tr key={vIdx} className="border-t first:border-t-0 border-gray-50 hover:bg-white transition-colors">
+                              <tr key={vIdx} className="border-t border-red-100/30 hover:bg-red-50/20 transition-colors">
                                 <td className="p-8 w-1/4">
                                    <div className="flex flex-col gap-1.5">
-                                      <span className="text-[10px] font-black text-gray-800 uppercase tracking-widest">
+                                      <span className="text-[10px] font-black text-gray-800 uppercase tracking-widest bg-red-50/50 w-fit px-2 py-0.5 rounded border border-red-100/50">
                                          {[v.weight, v.flavor].filter(Boolean).join(" ") || "STANDARD SKU"}
                                       </span>
                                       <div className="flex gap-3">
@@ -161,7 +161,7 @@ export default function InventoryPage() {
                                    </div>
                                 </td>
                                 
-                                <td className="p-8 text-center w-1/5 border-l border-gray-50/50">
+                                <td className="p-8 text-center w-1/5 border-l border-red-100/30">
                                    <div className="flex flex-col items-center">
                                       <div className={`text-2xl font-black tabular-nums transition-colors ${v.stock > 10 ? 'text-emerald-600' : (v.stock > 0 ? 'text-amber-600' : 'text-red-500')}`}>
                                          {v.stock}
@@ -169,8 +169,7 @@ export default function InventoryPage() {
                                       <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1 text-center leading-none">Ready for New Orders</div>
                                    </div>
                                 </td>
-
-                                <td className="p-8 w-1/5 border-l border-gray-50/50">
+                                <td className="p-8 w-1/5 border-l border-red-100/30">
                                    <div className="flex flex-col gap-2">
                                       <MetricRow label="Hold" value={v.holdStock} color="amber" />
                                       <MetricRow label="Delivered" value={v.deliveredCount} color="emerald" />
@@ -178,12 +177,11 @@ export default function InventoryPage() {
                                       <MetricRow label="Lost Item" value={v.lostCount} color="red" />
                                    </div>
                                 </td>
-
-                                <td className="p-8 w-1/5 border-l border-gray-50/50">
+                                <td className="p-8 w-1/5 border-l border-red-100/30">
                                    <div className="flex flex-col gap-2 max-h-24 overflow-y-auto pr-2 custom-scrollbar">
                                       {v.stockHistory && v.stockHistory.length > 0 ? (
                                         v.stockHistory.slice().reverse().map((log: any, lIdx: number) => (
-                                          <div key={lIdx} className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col gap-0.5">
+                                          <div key={lIdx} className="bg-slate-50 p-2 rounded-lg border border-red-100/20 flex flex-col gap-0.5 shadow-[0_2px_4px_rgba(220,38,38,0.02)]">
                                              <div className="flex justify-between items-center">
                                                 <span className="text-[9px] font-black text-emerald-600">+{log.amount} Units</span>
                                                 <span className="text-[7px] font-bold text-gray-400">{new Date(log.date).toLocaleDateString()}</span>

@@ -31,6 +31,7 @@ interface ProductCardProps {
   onAddToCart?: (variation: Variation) => void;
   price?: number;
   stock?: number;
+  priority?: boolean;
 }
 
 export default function ProductCard({
@@ -42,6 +43,7 @@ export default function ProductCard({
   onAddToCart,
   price = 0,
   stock = 0,
+  priority = false,
 }: ProductCardProps) {
   const { items } = useCart();
   const [isFlying, setIsFlying] = useState(false);
@@ -73,11 +75,15 @@ export default function ProductCard({
   const cartItemKey = getItemKey({ productId: id || slug, weight: defaultVariation.weight, flavor: defaultVariation.flavor });
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
   const cartQuantity = existingCartItem?.quantity || 0;
-  const isOutOfStock = defaultVariation.stock === 0;
-  const isAtMax = defaultVariation.stock > 0 && cartQuantity >= defaultVariation.stock;
+  
+  // Resilience: If stock is missing, assume it's available (or treat as out of stock? 
+  // Let's assume a large number if missing to avoid blocking)
+  const actualStock = defaultVariation.stock !== undefined ? defaultVariation.stock : 999;
+  const isOutOfStock = actualStock === 0;
+  const isAtMax = actualStock > 0 && cartQuantity >= actualStock;
 
   const handleAddToCart = () => {
-    if (onAddToCart && defaultVariation.stock > 0 && !isAtMax) {
+    if (onAddToCart && actualStock > 0 && !isAtMax) {
       onAddToCart(defaultVariation);
       setIsFlying(true);
       setTimeout(() => setIsFlying(false), 800);
@@ -98,6 +104,7 @@ export default function ProductCard({
             src={productImg}
             alt={name}
             fill
+            priority={priority}
             className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />

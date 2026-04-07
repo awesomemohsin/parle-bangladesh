@@ -42,27 +42,27 @@ export default function AdminContactsPage() {
       <div className="flex-1 overflow-visible">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex justify-between items-center mb-10">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-10">
             <div>
-              <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic">Contact Form <span className="text-red-600">Submissions</span></h1>
-              <p className="text-gray-500 mt-2">Manage customer and corporate inquiries.</p>
+              <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic leading-none mb-2">Contact Form <span className="text-red-600">Submissions</span></h1>
+              <p className="text-gray-500 text-sm font-medium">Manage customer and corporate inquiries.</p>
             </div>
-            <div className="flex gap-2 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-full md:w-auto overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filter === 'all' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === 'all' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
               >
                 All
               </button>
               <button
                 onClick={() => setFilter('regular')}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filter === 'regular' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === 'regular' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
               >
                 Regular
               </button>
               <button
                 onClick={() => setFilter('corporate')}
-                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filter === 'corporate' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === 'corporate' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
               >
                 Corporate
               </button>

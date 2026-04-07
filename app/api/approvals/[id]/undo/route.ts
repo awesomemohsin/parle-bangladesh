@@ -11,8 +11,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (user.role !== ROLES.OWNER) {
-      return NextResponse.json({ error: "Forbidden: Only owner can undo" }, { status: 403 });
+    if (user.role !== ROLES.OWNER && user.role !== ROLES.SUPER_ADMIN) {
+      return NextResponse.json({ error: "Forbidden: Higher authorization required to undo" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -79,10 +79,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         // We just move back to pending.
     }
 
-    // Move back to pending
+    // Move back to pending and RESET ALL SIGNATURES
     approvalRequest.status = 'pending';
+    approvalRequest.stage = 'superadmin';
+    approvalRequest.superadminApprovals = [];
+    approvalRequest.ownerApproved = false;
     approvalRequest.ownerEmail = undefined;
     approvalRequest.ownerComment = undefined;
+    approvalRequest.declinedBy = undefined;
+    
     await approvalRequest.save();
 
     // Log the undo action

@@ -20,10 +20,10 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      dbName: "parle",
-      maxPoolSize: 10, // Increase pool size for parallel API requests
-      serverSelectionTimeoutMS: 5000, 
+      maxPoolSize: 20, 
+      serverSelectionTimeoutMS: 10000, 
       socketTimeoutMS: 45000,
+      heartbeatFrequencyMS: 10000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

@@ -110,7 +110,7 @@ export default function ProductApprovalsPage() {
     const hasRazu = request.ownerApproved
 
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasAnindo ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
           Superadmin: Anindo {hasAnindo && '✓'}
         </div>
@@ -175,13 +175,13 @@ export default function ProductApprovalsPage() {
                {request.stage === 'owner' && <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>}
               <div className="flex flex-col md:flex-row justify-between gap-6">
                 <div className="flex-1 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className={`text-[9px] font-black text-white px-2 py-1 rounded uppercase tracking-wider ${request.field === 'price' ? 'bg-green-600' : 'bg-amber-500'}`}>
                         {request.field} change
                       </span>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        Requested by: {request.requesterEmail}
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
+                        By: {request.requesterEmail}
                       </span>
                     </div>
                     {getConsentStatus(request)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Check, ShoppingCart, ArrowLeft, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -85,8 +86,12 @@ export default function ProductDetailsClient({ product, images }: { product: any
     }
   };
 
+  const actualStock = selectedVariation?.stock !== undefined ? selectedVariation.stock : (product.stock !== undefined ? product.stock : 999);
+  const isOutOfStock = actualStock === 0;
+
   const handleAddToCart = () => {
     if (!product || !selectedVariation) return;
+    console.log("Adding to cart from details:", product.name);
     addItem({
       productId: product.id,
       productSlug: product.slug,
@@ -96,7 +101,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
       quantity: quantity,
       weight: selectedVariation?.weight || "",
       flavor: selectedVariation?.flavor || "",
-      stock: displayStock,
+      stock: actualStock,
     });
     setIsFlying(true);
     setTimeout(() => setIsFlying(false), 800);
@@ -116,13 +121,12 @@ export default function ProductDetailsClient({ product, images }: { product: any
       {/* Left Column: Image Gallery */}
       <div className="md:col-span-6 p-6 lg:p-10 bg-white border-b md:border-b-0 md:border-r border-gray-100">
         <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-white group border-2 border-gray-50 flex items-center justify-center p-6">
-          <img 
+          <Image 
             src={mainImageUrl} 
             alt={product.name} 
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder.svg";
-            }}
+            fill
+            priority
+            className="object-contain p-4 group-hover:scale-105 transition-transform duration-700 ease-out"
           />
           {displayStock === 0 && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
@@ -146,14 +150,14 @@ export default function ProductDetailsClient({ product, images }: { product: any
                     : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
-                <img 
-                  src={img} 
-                  alt={`View ${idx + 1}`} 
-                  className="w-full h-full object-contain p-3" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
-                  }}
-                />
+                <div className="relative w-full h-full p-3">
+                  <Image 
+                    src={img} 
+                    alt={`View ${idx + 1}`} 
+                    fill
+                    className="object-contain" 
+                  />
+                </div>
               </button>
             ))}
           </div>

@@ -61,8 +61,15 @@ export default function NotificationCenter() {
         
         if (!isInitial) {
            let newItems = [];
-           if (data.pendingOrders > prevCounts.current.pendingOrders) newItems.push('New Order Received');
-           if (data.pendingApprovals > prevCounts.current.pendingApprovals) newItems.push('New Approval Request');
+           const isOperational = user?.role === 'moderator' || user?.role === 'admin';
+           const isExecutive = user?.role === 'super_admin' || user?.role === 'owner';
+
+           if (isOperational && data.pendingOrders > prevCounts.current.pendingOrders) {
+             newItems.push('New Order Received');
+           }
+           if (isExecutive && data.pendingApprovals > prevCounts.current.pendingApprovals) {
+             newItems.push('New Approval Request');
+           }
            
            if (newItems.length > 0) {
               setRecentToast({ title: 'Attention Admin', msg: newItems[0] });
@@ -81,7 +88,7 @@ export default function NotificationCenter() {
           const totalOrders = (data.pendingOrders || 0) + (data.processingOrders || 0);
 
           if (user.role === 'super_admin' || user.role === 'owner') {
-             if (totalApprovals > 0 || totalOrders > 0) hasTasks = true;
+             if (totalApprovals > 0) hasTasks = true;
           } else if (user.role === 'moderator' || user.role === 'admin') {
              if (totalOrders > 0) hasTasks = true;
           }
@@ -331,8 +338,8 @@ export default function NotificationCenter() {
                           </Link>
                         )}
 
-                        {/* Order Task Link */}
-                        {(taskCounts.pendingOrders > 0 || taskCounts.processingOrders > 0) && (
+                        {/* Order Task Link - Restricted to Operational Staff */}
+                        {(user?.role === 'moderator' || user?.role === 'admin') && (taskCounts.pendingOrders > 0 || taskCounts.processingOrders > 0) && (
                           <Link href="/admin/orders" onClick={closeAlert} className="block group">
                             <div className="bg-slate-50 p-6 rounded-[2.2rem] border border-slate-100 flex items-center justify-between group-hover:bg-white group-hover:shadow-2xl group-hover:scale-[1.02] transition-all border-l-8 border-l-red-600">
                                <div className="flex items-center gap-6">

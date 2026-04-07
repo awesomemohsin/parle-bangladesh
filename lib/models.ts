@@ -195,9 +195,7 @@ const ProductSchema = new Schema<IProduct>(
   { timestamps: true }
 );
 
-// Indexes for faster loading
 ProductSchema.index({ category: 1 });
-ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ name: "text", description: "text" }); 
 
 export const Product = mongoose.models?.Product || mongoose.model<IProduct>("Product", ProductSchema, "products");

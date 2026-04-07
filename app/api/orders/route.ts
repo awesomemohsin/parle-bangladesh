@@ -14,13 +14,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("q") || "";
     const statusQuery = searchParams.get("status") || "all";
+    const adminContext = searchParams.get("adminContext") === "true"; // New flag
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    // 1. Initial Match (Security + Status)
+    // 1. Initial Match (Security + Context)
     let matchStage: any = {};
-    if (!hasAnyRole(user, [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR])) {
+    
+    // If not admin context OR not an admin role, force identity filter
+    const privilegedUser = hasAnyRole(user, [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR]);
+    
+    if (!adminContext || !privilegedUser) {
       matchStage = { 
         $or: [
           { userId: user.id },

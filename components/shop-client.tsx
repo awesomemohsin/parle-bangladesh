@@ -227,11 +227,12 @@ export default function ShopClient({
            </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-x-10 lg:gap-y-16">
-          {filteredProducts.map((product) => (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8 lg:gap-x-10 lg:gap-y-16">
+          {filteredProducts.map((product, index) => (
             <ProductCard
               key={product.id}
               {...product}
+              priority={index < 12}
               onAddToCart={(variation: Variation) =>
                 addItem({
                   productId: product.id,
