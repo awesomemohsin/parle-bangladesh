@@ -13,7 +13,7 @@ export function HomeHero() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-8">
           {/* Left Content */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -25,18 +25,18 @@ export function HomeHero() {
                 Official Parle Bangladesh Shop
               </span>
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight uppercase italic drop-shadow-md">
-              Bite into <br/>
+              Bite into <br />
               <span className="text-white">
                 Pure Joy
               </span>
             </h1>
-            
+
             <p className="text-sm md:text-lg text-white/95 font-medium mb-12 leading-relaxed max-w-lg uppercase tracking-tight mx-auto lg:mx-0">
               Get your favorite freshly baked biscuits and premium cookies delivered directly to your home across Bangladesh.
             </p>
-            
+
             <div className="flex flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 overflow-x-hidden">
               <Link href="/shop" className="shrink-0">
                 <Button size="lg" className="h-12 sm:h-14 px-6 sm:px-10 rounded-xl bg-white text-black hover:bg-red-600 hover:text-white text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 group">
@@ -75,12 +75,12 @@ export function HomeHero() {
           >
             <div className="relative w-full aspect-[4/3] max-w-[800px] lg:translate-x-10">
               <Image 
-                src="/images/parle-cover.webp" 
+                src="/images/parle-home-cover.webp" 
                 alt="Parle Premium Biscuits Collection" 
                 fill
                 priority={true}
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none pointer-events-none transform lg:scale-135"
+                sizes="(max-width: 1024px) 100vw, 60vw"
+                className="object-contain drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none pointer-events-none transform scale-[1.3] lg:origin-right"
               />
             </div>
           </motion.div>
