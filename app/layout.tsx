@@ -37,6 +37,22 @@ export default function RootLayout({
         </main>
         <Footer />
         <Analytics />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              document.addEventListener('contextmenu', function(e) {
+                if (e.target.tagName === 'IMG') {
+                  e.preventDefault();
+                }
+              }, false);
+              document.addEventListener('dragstart', function(e) {
+                if (e.target.tagName === 'IMG') {
+                  e.preventDefault();
+                }
+              }, false);
+            `
+          }}
+        />
       </body>
     </html>
   )
