@@ -27,13 +27,13 @@ export default async function HomePage() {
           <MotionDiv>
             <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden">
               <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-white rounded-xl flex items-center justify-center relative overflow-hidden group border border-slate-50 shadow-inner">
-                <img 
-                  src="/images/offers/free-delivery.png" 
-                  alt="Free Delivery" 
+                <img
+                  src="/images/offers/free-delivery.png"
+                  alt="Free Delivery"
                   className="w-full h-full object-contain relative z-10 scale-90 group-hover:scale-100 transition-transform duration-700"
                 />
               </div>
-              
+
               <div className="flex-1 md:pl-2 py-6 md:py-0 text-center md:text-left">
                 <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                   <span className="w-6 h-0.5 bg-red-600 rounded-full"></span>
@@ -43,7 +43,7 @@ export default async function HomePage() {
                   Free Delivery Today
                 </h2>
                 <p className="text-xs text-gray-400 font-bold tracking-tight uppercase mb-0 max-w-lg">
-                  Shop for <span className="text-gray-900 font-black">৳ 1000+</span> and get <span className="text-red-600 font-black italic">Free delivery</span> everywhere in Bangladesh. 
+                  Shop for <span className="text-gray-900 font-black">৳ 1000+</span> and get <span className="text-red-600 font-black italic">Free delivery</span> everywhere in Bangladesh.
                 </p>
               </div>
 
@@ -108,9 +108,9 @@ export default async function HomePage() {
                   href={`/shop?category=${cat.slug}`}
                   className="group relative block aspect-[16/10] rounded-[2.5rem] overflow-hidden bg-white border border-gray-100 shadow-2xl shadow-slate-200/50 transition-all hover:shadow-red-100 hover:-translate-y-1"
                 >
-                  <img 
-                    src={cat.image || `/images/categories/${cat.slug}.webp`} 
-                    alt={cat.name} 
+                  <img
+                    src={cat.image || ``}
+                    alt={cat.name}
                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-10 flex flex-col justify-end">
@@ -248,9 +248,9 @@ export default async function HomePage() {
             </div>
             <div className="lg:w-1/2 relative hidden lg:block">
               <div className="relative w-full group">
-                <img 
-                  src="/images/parle-website.webp" 
-                  alt="History" 
+                <img
+                  src="/images/parle-website.webp"
+                  alt="History"
                   className="w-full h-auto drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none transition-transform duration-1000 transform lg:scale-110 group-hover:scale-115"
                 />
               </div>

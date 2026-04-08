@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { Phone, Mail, Facebook, MessageCircle, Instagram, Building2 } from 'lucide-react';
 
 export default function Footer() {
@@ -84,8 +85,8 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="bg-slate-50 py-4 text-center">
-        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">&copy; 2026 Parle Bangladesh. All rights reserved.</p>
+      <div className="bg-slate-50 py-4 text-center border-t border-slate-100 flex flex-col items-center gap-1.5">
+        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">&copy; {new Date().getFullYear()} Parle Bangladesh. All rights reserved.</p>
       </div>
     </footer>
   );

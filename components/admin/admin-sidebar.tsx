@@ -45,7 +45,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
         const data = await response.json()
         setCounts(data)
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const handleLogout = () => {
@@ -64,7 +64,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
     <>
       {/* Mobile Backdrop */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140] lg:hidden"
           onClick={onClose}
         />
@@ -82,14 +82,14 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
             <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mt-1">Control Panel</p>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-white">
-             <X className="w-6 h-6" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* User Info */}
         <div className="p-4 bg-gray-800/50 mx-4 mt-6 rounded-2xl flex items-center gap-4 border border-white/5">
           <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-900/20">
-             <svg className="w-5 h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            <svg className="w-5 h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admin User</p>
@@ -99,14 +99,14 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar">
-          
+
           {/* SECTION 1: APPROVAL CENTER (TOP PRIORITY) */}
           {(isSuperAdmin || isOwner) && (
             <div className="bg-red-950/20 rounded-[1.5rem] p-2 border border-red-500/10">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] italic">Approval Center</p>
               </div>
-              
+
               <Link href="/admin/approvals" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
                   Pending Approvals
@@ -131,7 +131,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
             <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Daily Tasks</p>
             </div>
-            
+
             <Link href="/admin/dashboard" onClick={onClose}>
               <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
                 Dashboard
@@ -166,7 +166,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Product Catalogue</p>
               </div>
-              
+
               <Link href="/admin/inventory" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
                   Inventory
@@ -190,9 +190,9 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
           {/* SECTION 4: SYSTEM */}
           {isSuperAdmin && (
             <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
-               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
-               </div>
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
+              </div>
               <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Users</Button></Link>
               <Link href="/admin/promo-codes" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Promo Codes</Button></Link>
               <Link href="/admin/activities" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Action Logs</Button></Link>
