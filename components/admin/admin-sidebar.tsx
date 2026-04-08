@@ -26,6 +26,20 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
   }, [])
 
   useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('no-scroll')
+      document.documentElement.classList.add('no-scroll')
+    } else {
+      document.body.classList.remove('no-scroll')
+      document.documentElement.classList.remove('no-scroll')
+    }
+    return () => {
+      document.body.classList.remove('no-scroll')
+      document.documentElement.classList.remove('no-scroll')
+    }
+  }, [isOpen])
+
+  useEffect(() => {
     if (user) {
       fetchCounts()
       const interval = setInterval(() => {
@@ -70,11 +84,14 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
         />
       )}
 
-      <div className={`
-        fixed lg:static inset-y-0 left-0 w-64 bg-gray-900 text-white flex flex-col h-full z-[150]
-        transition-transform duration-300 ease-in-out transform
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      <div 
+        className={`
+          fixed lg:static inset-y-0 left-0 w-64 bg-gray-900 text-white flex flex-col h-full z-[150]
+          transition-transform duration-300 ease-in-out transform
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-6 border-b border-gray-800 flex items-center justify-between">
           <div>
