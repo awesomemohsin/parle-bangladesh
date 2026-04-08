@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import ProductCard from '@/components/product-card'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Star, Truck, ShieldCheck, Banknote, Zap } from 'lucide-react'
@@ -27,10 +28,12 @@ export default async function HomePage() {
           <MotionDiv>
             <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden">
               <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-white rounded-xl flex items-center justify-center relative overflow-hidden group border border-slate-50 shadow-inner">
-                <img
+                <Image
                   src="/images/offers/free-delivery.png"
                   alt="Free Delivery"
-                  className="w-full h-full object-contain relative z-10 scale-90 group-hover:scale-100 transition-transform duration-700"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-contain p-4 relative z-10 scale-90 group-hover:scale-100 transition-transform duration-700"
                 />
               </div>
 
@@ -69,7 +72,7 @@ export default async function HomePage() {
               { icon: Banknote, label: 'Best Prices', sub: 'Affordable snacks' },
               { icon: Star, label: 'Top Rated', sub: 'Customer favorite' },
             ].map((badge, i) => (
-              <div key={i} className="flex items-center gap-4 group">
+              <div key={i} className="flex flex-col items-center justify-center group text-center gap-2">
                 <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
                   <badge.icon className="w-5 h-5 text-red-600" />
                 </div>
@@ -101,27 +104,35 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full items-stretch">
             {categories.map((cat: any, i: number) => (
-              <MotionDiv key={cat._id || i} i={i}>
+              <MotionDiv key={cat._id || i} i={i} className="h-full">
                 <Link
                   href={`/shop?category=${cat.slug}`}
-                  className="group relative block aspect-[16/10] rounded-[2.5rem] overflow-hidden bg-white border border-gray-100 shadow-2xl shadow-slate-200/50 transition-all hover:shadow-red-100 hover:-translate-y-1"
+                  className="group flex flex-col h-full bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl shadow-slate-200/50 transition-all hover:shadow-2xl hover:shadow-red-200/40 hover:border-red-100 hover:-translate-y-2 relative"
                 >
-                  <img
-                    src={cat.image || ``}
-                    alt={cat.name}
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-10 flex flex-col justify-end">
-                    <div className="backdrop-blur-md bg-white/10 w-fit px-4 py-1.5 rounded-full border border-white/20 mb-4 transform -translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-                      <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Explore Collection</span>
+                  <div className="relative w-full aspect-[16/10] bg-slate-50 overflow-hidden">
+                    <Image
+                      src={`/images/${cat.slug}/${cat.slug}.webp`}
+                      alt={cat.name}
+                      fill
+                      priority={i < 2}
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover transition-opacity duration-700 group-hover:opacity-95"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
+                  </div>
+                  <div className="flex flex-col px-6 py-6 md:px-8 md:py-8 flex-grow justify-between bg-white relative">
+                    <div className="flex items-center justify-between mb-4">
+                       <h3 className="text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter italic leading-none group-hover:text-red-600 transition-colors duration-300">
+                         {cat.name}
+                       </h3>
+                       <div className="w-14 h-14 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-red-600 group-hover:shadow-lg group-hover:shadow-red-200 transition-all duration-300 transform group-hover:scale-110 shrink-0">
+                          <ArrowRight className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
+                       </div>
                     </div>
-                    <h3 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none mb-3">
-                      {cat.name}
-                    </h3>
-                    <p className="text-xs font-bold text-white/60 uppercase tracking-widest group-hover:text-red-400 transition-colors duration-300">
-                      {cat.description || `View All ${cat.name}`}
+                    <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest line-clamp-2 max-w-[85%] leading-relaxed mt-auto">
+                      {cat.description || `Explore our complete selection of freshly baked ${cat.name}.`}
                     </p>
                   </div>
                 </Link>
@@ -248,9 +259,11 @@ export default async function HomePage() {
             </div>
             <div className="lg:w-1/2 relative hidden lg:block">
               <div className="relative w-full group">
-                <img
+                <Image
                   src="/images/parle-website.webp"
                   alt="History"
+                  width={600}
+                  height={600}
                   className="w-full h-auto drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none transition-transform duration-1000 transform lg:scale-110 group-hover:scale-115"
                 />
               </div>

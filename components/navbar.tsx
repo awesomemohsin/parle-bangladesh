@@ -159,7 +159,7 @@ export default function Navbar() {
             {/* Left: Brand Identity */}
             <Link href="/" className="flex items-center gap-10 group shrink-0">
               <div className="flex flex-col -space-y-1">
-                <span className="text-3xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
+                <span className="text-4xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
                 <span className="text-xs font-bold text-gray-900 uppercase tracking-[0.25em] leading-none mt-1">Bangladesh</span>
               </div>
               <img src="/logo.png" alt="Logo" className="h-11 w-auto transition-transform group-hover:scale-105 duration-300" />
