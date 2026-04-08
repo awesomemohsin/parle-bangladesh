@@ -77,8 +77,8 @@ export default async function HomePage() {
                   <badge.icon className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-tight">{badge.label}</h4>
-                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">{badge.sub}</p>
+                  <h4 className="text-sm md:text-base font-black text-gray-900 uppercase tracking-tight">{badge.label}</h4>
+                  <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest">{badge.sub}</p>
                 </div>
               </div>
             ))}
@@ -257,14 +257,15 @@ export default async function HomePage() {
                 </Button>
               </Link>
             </div>
-            <div className="lg:w-1/2 relative hidden lg:block">
-              <div className="relative w-full group">
+            <div className="lg:w-1/2 relative hidden lg:block overflow-visible">
+              <div className="relative w-full h-full flex items-center justify-center">
                 <Image
                   src="/images/parle-website.webp"
-                  alt="History"
-                  width={600}
-                  height={600}
-                  className="w-full h-auto drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none transition-transform duration-1000 transform lg:scale-110 group-hover:scale-115"
+                  alt="Parle History"
+                  width={800}
+                  height={800}
+                  className="w-full h-auto max-h-[500px] object-contain drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none transition-transform duration-700 transform scale-[1.25] hover:scale-[1.3] cursor-zoom-in"
+                  priority
                 />
               </div>
             </div>
