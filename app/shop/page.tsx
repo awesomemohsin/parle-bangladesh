@@ -40,9 +40,9 @@ export default async function ShopPage({
 
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-red-100 selection:text-red-900">
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 pb-16 lg:pt-8 lg:pb-24">
         {/* Primary Header Layer */}
-        <div key={activeCategory?.slug || 'all'} className="relative w-full h-[180px] md:h-[220px] rounded-[2rem] overflow-hidden mb-12 flex bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
+        <div key={activeCategory?.slug || 'all'} className="relative w-full h-[180px] md:h-[220px] rounded-[2rem] overflow-hidden mb-6 flex bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
           {/* Right Image Container - Expanded to 2/3 width */}
           <div className="absolute inset-y-0 right-0 w-2/3 md:w-[65%] flex items-center justify-end pr-3 md:pr-8 pointer-events-none">
             {/* The scaling wrapper with right-side origin to push growth inward */}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/hooks/useCart";
-import { Search, ShoppingCart, Filter } from "lucide-react";
+import { Search, ShoppingCart, Filter, ArrowUpDown } from "lucide-react";
 
 interface Variation {
   weight?: string;
@@ -47,6 +47,7 @@ export default function ShopClient({
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "best-match");
 
   // Get unique brands for the selected category or all
   const availableBrands = useMemo(() => {
@@ -63,9 +64,11 @@ export default function ShopClient({
   useEffect(() => {
     const category = searchParams.get("category");
     const brand = searchParams.get("brand");
+    const sort = searchParams.get("sort");
     
     setSelectedCategory(category || "all");
     setSelectedBrand(brand || "all");
+    setSortBy(sort || "best-match");
   }, [searchParams]);
 
   const handleCategoryChange = (category: string) => {
@@ -89,8 +92,18 @@ export default function ShopClient({
     router.push(`/shop?${params.toString()}`, { scroll: false });
   };
 
+  const handleSortChange = (sort: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (sort === "best-match") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sort);
+    }
+    router.push(`/shop?${params.toString()}`, { scroll: false });
+  };
+
   const filteredProducts = useMemo(() => {
-    return initialProducts.filter((product) => {
+    let result = initialProducts.filter((product) => {
       const isBulkMatch = selectedCategory === "bulk" && product.isBulk;
       const byCategory =
         selectedCategory === "all" || 
@@ -109,13 +122,25 @@ export default function ShopClient({
 
       return byCategory && byBrand && bySearch;
     });
-  }, [initialProducts, selectedCategory, selectedBrand, search]);
+
+    if (sortBy === "name-asc") {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "name-desc") {
+      result.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sortBy === "price-low") {
+      result.sort((a, b) => (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0));
+    } else if (sortBy === "price-high") {
+      result.sort((a, b) => (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0));
+    }
+
+    return result;
+  }, [initialProducts, selectedCategory, selectedBrand, search, sortBy]);
 
   return (
     <>
       {/* Search & Filters Interface */}
-      <div className="bg-white border-2 border-gray-100 rounded-2xl p-6 mb-12 grid grid-cols-1 md:grid-cols-4 gap-6 shadow-xl shadow-gray-200/40">
-        <div className="md:col-span-2 flex flex-col gap-2">
+      <div className="bg-white border-2 border-gray-100 rounded-2xl p-4 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 shadow-xl shadow-gray-200/40">
+        <div className="md:col-span-2 flex flex-col gap-1.5">
           <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
              <Search className="w-3 h-3" /> Search
           </label>
@@ -125,7 +150,7 @@ export default function ShopClient({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products..."
-              className="w-full px-5 py-3 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all placeholder:text-gray-300 font-bold text-gray-900 group-hover:border-gray-100"
+              className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all placeholder:text-gray-300 font-bold text-gray-900 group-hover:border-gray-100"
             />
           </div>
         </div>
@@ -137,22 +162,39 @@ export default function ShopClient({
           <select
             value={selectedCategory}
             onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full px-5 py-3 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
+            className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
           >
             <option value="all">All Categories</option>
-            <option value="bulk" className="text-red-600 font-black">🎁 BULK / FAMILY PACKS</option>
             {categories.map((category) => (
               <option key={category.id} value={category.slug}>
                 {category.name.toUpperCase()}
               </option>
             ))}
+            <option value="bulk" className="text-red-600 font-black">🎁 BULK / FAMILY PACKS</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
+             <ArrowUpDown className="w-3 h-3" /> Sort By
+          </label>
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
+          >
+            <option value="best-match">Best Match</option>
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+            <option value="price-low">Price (Low to High)</option>
+            <option value="price-high">Price (High to Low)</option>
           </select>
         </div>
 
         <div className="flex items-end">
           <Link
             href="/shop/cart"
-            className="w-full flex items-center justify-center gap-3 h-[52px] rounded-xl bg-red-600 text-white font-bold uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 text-xs group"
+            className="w-full flex items-center justify-center gap-2.5 h-[46px] rounded-xl bg-red-600 text-white font-bold uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 text-[11px] group"
           >
             <ShoppingCart className="w-4 h-4 group-hover:rotate-12 transition-transform" />
             View Cart
