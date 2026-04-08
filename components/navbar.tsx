@@ -58,15 +58,31 @@ export default function Navbar() {
   }, [])
 
   useEffect(() => {
+    const scrollHandler = () => setIsScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', scrollHandler)
     syncAuth()
     window.addEventListener('storage', syncAuth)
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
+    
     return () => {
+      window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('storage', syncAuth)
-      window.removeEventListener('scroll', handleScroll)
     }
   }, [syncAuth])
+
+  // Simplified Scroll Lock
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.classList.add('no-scroll')
+      document.documentElement.classList.add('no-scroll')
+    } else {
+      document.body.classList.remove('no-scroll')
+      document.documentElement.classList.remove('no-scroll')
+    }
+    return () => {
+      document.body.classList.remove('no-scroll')
+      document.documentElement.classList.remove('no-scroll')
+    }
+  }, [isMobileMenuOpen])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -109,11 +125,12 @@ export default function Navbar() {
   const currentLinks = isAdminRoute ? adminLinks : userLinks
 
   return (
-    <nav className={`
-      fixed top-0 left-0 right-0 z-[200] transition-all duration-300
-      ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg py-2' : 'bg-white py-2'}
-      border-b border-gray-100
-    `}>
+    <>
+      <nav className={`
+        fixed top-0 left-0 right-0 z-[200] transition-all duration-300
+        ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg py-2' : 'bg-white py-2'}
+        border-b border-gray-100
+      `}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-16">
 
@@ -220,178 +237,180 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+    </nav>
 
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <div className="lg:hidden fixed inset-0 z-[10000] flex justify-end">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
+    <AnimatePresence>
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[10000] flex justify-end">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
 
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.3, ease: 'easeOut' }}
-              className="relative w-80 bg-white h-full shadow-2xl flex flex-col border-l border-gray-100"
-            >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                <span className="text-xs font-black text-gray-900 uppercase tracking-[0.3em]">
-                  {isAdminRoute ? 'Admin Engine' : 'Menu Navigation'}
-                </span>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'tween', duration: 0.3, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-80 bg-white h-full shadow-2xl flex flex-col border-l border-gray-100"
+          >
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <span className="text-xs font-black text-gray-900 uppercase tracking-[0.3em]">
+                {isAdminRoute ? 'Admin Engine' : 'Menu Navigation'}
+              </span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
 
-              <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-6 bg-white">
-                {isAdminRoute ? (
-                  <>
-                    {(isSuperAdmin || isOwner) && (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-3 ml-1 italic">Approval Center</p>
-                        <div className="flex flex-col gap-2">
-                          <Link href="/admin/approvals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100 group shadow-sm transition-all">
-                            <Shield className="w-4 h-4 text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Pending Approvals</span>
-                          </Link>
-                          <Link href="/admin/approvals/logs" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Clock className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Historical Logs</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-
+            <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-6 bg-white">
+              {isAdminRoute ? (
+                <>
+                  {(isSuperAdmin || isOwner) && (
                     <div className="space-y-2">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Daily Operations</p>
+                      <p className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-3 ml-1 italic">Approval Center</p>
                       <div className="flex flex-col gap-2">
-                        <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <LayoutDashboard className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Dashboard</span>
+                        <Link href="/admin/approvals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100 group shadow-sm transition-all">
+                          <Shield className="w-4 h-4 text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Pending Approvals</span>
                         </Link>
-                        {isModerator && (
-                          <Link href="/admin/orders" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Package className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Order Management</span>
-                          </Link>
-                        )}
-                        {isAdmin && (
-                          <Link href="/admin/contacts" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Mail className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Contact Inquiries</span>
-                          </Link>
-                        )}
+                        <Link href="/admin/approvals/logs" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Historical Logs</span>
+                        </Link>
                       </div>
-                    </div>
-
-                    {isAdmin && (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Catalogue</p>
-                        <div className="flex flex-col gap-2">
-                          <Link href="/admin/inventory" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <ShoppingCart className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Inventory Management</span>
-                          </Link>
-                          <Link href="/admin/products" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Products List</span>
-                          </Link>
-                          <Link href="/admin/categories" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <ListFilter className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Categories</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-
-                    {isSuperAdmin && (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">System Control</p>
-                        <div className="flex flex-col gap-2">
-                          <Link href="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Users className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Manage Users</span>
-                          </Link>
-                          <Link href="/admin/promo-codes" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Promo Codes</span>
-                          </Link>
-                          <Link href="/admin/activities" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                            <Shield className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">System Logs</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-4">
-                      <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-5 bg-red-600 text-white rounded-2xl shadow-xl shadow-red-100/50 group active:scale-95 transition-all">
-                        <ShoppingBag className="w-5 h-5 text-white" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em]">Return to Main Site</span>
-                      </Link>
-                    </div>
-                  </>
-                ) : (
-                  currentLinks.map((item) => (
-                    !item.hide && (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center gap-4 p-5 rounded-2xl transition-all border group shadow-sm ${item.isSpecial ? 'bg-red-600 border-red-500 text-white shadow-red-100' : 'bg-gray-50 hover:bg-gray-100 border-gray-100'}`}
-                      >
-                        <div className={`${item.isSpecial ? 'text-white' : 'text-gray-400 group-hover:text-red-600'} transition-colors`}>
-                          {item.icon}
-                        </div>
-                        <span className={`text-[11px] font-black uppercase tracking-widest ${item.isSpecial ? 'text-white' : 'text-gray-900'}`}>
-                          {item.label}
-                        </span>
-                      </Link>
-                    )
-                  ))
-                )}
-
-                <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
-                  {isLoggedIn ? (
-                    <div className="flex flex-col gap-3">
-                      <div className="p-5 bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden relative group">
-                        <div className="relative z-10">
-                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic opacity-60">Connected Account</p>
-                          <p className="text-xs font-black text-white truncate font-sans">{user?.email}</p>
-
-                          {isAdmin && !isAdminRoute && (
-                            <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="mt-4 block">
-                              <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
-                                Admin Control Panel
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-[60px] pointer-events-none" />
-                      </div>
-                      <Button onClick={handleLogout} variant="ghost" className="w-full text-red-600 font-black uppercase text-[10px] h-14 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white transition-all tracking-widest">Logout System</Button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3">
-                      <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Establish Account</Button>
-                      </Link>
-                      <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login Terminal</Button>
-                      </Link>
                     </div>
                   )}
-                </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Daily Operations</p>
+                    <div className="flex flex-col gap-2">
+                      <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                        <LayoutDashboard className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Dashboard</span>
+                      </Link>
+                      {isModerator && (
+                        <Link href="/admin/orders" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Package className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Order Management</span>
+                        </Link>
+                      )}
+                      {isAdmin && (
+                        <Link href="/admin/contacts" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Mail className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Contact Inquiries</span>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="space-y-2">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Catalogue</p>
+                      <div className="flex flex-col gap-2">
+                        <Link href="/admin/inventory" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <ShoppingCart className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Inventory Management</span>
+                        </Link>
+                        <Link href="/admin/products" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Products List</span>
+                        </Link>
+                        <Link href="/admin/categories" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <ListFilter className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Categories</span>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {isSuperAdmin && (
+                    <div className="space-y-2">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">System Control</p>
+                      <div className="flex flex-col gap-2">
+                        <Link href="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Users className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Manage Users</span>
+                        </Link>
+                        <Link href="/admin/promo-codes" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Promo Codes</span>
+                        </Link>
+                        <Link href="/admin/activities" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                          <Shield className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">System Logs</span>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-4">
+                    <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-5 bg-red-600 text-white rounded-2xl shadow-xl shadow-red-100/50 group active:scale-95 transition-all">
+                      <ShoppingBag className="w-5 h-5 text-white" />
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Return to Main Site</span>
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                currentLinks.map((item) => (
+                  !item.hide && (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-4 p-5 rounded-2xl transition-all border group shadow-sm ${item.isSpecial ? 'bg-red-600 border-red-500 text-white shadow-red-100' : 'bg-gray-50 hover:bg-gray-100 border-gray-100'}`}
+                    >
+                      <div className={`${item.isSpecial ? 'text-white' : 'text-gray-400 group-hover:text-red-600'} transition-colors`}>
+                        {item.icon}
+                      </div>
+                      <span className={`text-[11px] font-black uppercase tracking-widest ${item.isSpecial ? 'text-white' : 'text-gray-900'}`}>
+                        {item.label}
+                      </span>
+                    </Link>
+                  )
+                ))
+              )}
+
+              <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
+                {isLoggedIn ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="p-5 bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden relative group">
+                      <div className="relative z-10">
+                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic opacity-60">Connected Account</p>
+                        <p className="text-xs font-black text-white truncate font-sans">{user?.email}</p>
+
+                        {isAdmin && !isAdminRoute && (
+                          <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="mt-4 block">
+                            <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
+                              Admin Control Panel
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-[60px] pointer-events-none" />
+                    </div>
+                    <Button onClick={handleLogout} variant="ghost" className="w-full text-red-600 font-black uppercase text-[10px] h-14 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white transition-all tracking-widest">Logout System</Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Establish Account</Button>
+                    </Link>
+                    <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login Terminal</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </nav>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+    </>
   )
 }
