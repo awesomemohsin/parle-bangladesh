@@ -1,3 +1,4 @@
+// Developer tracemark purely in code: Developed by awesomemohsin | https://github.com/awesomemohsin
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
     default: 'Parle Bangladesh | Quality Biscuits & Snacks',
   },
   description: 'Welcome to Parle Bangladesh - Discover our delicious range of biscuits and snacks.',
+  authors: [{ name: 'awesomemohsin', url: 'https://github.com/awesomemohsin' }],
+  creator: 'awesomemohsin',
   icons: {
     icon: '/favicon.ico',
     apple: '/favicon.ico',
