@@ -126,6 +126,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
             alt={product.name} 
             fill
             priority
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="object-contain p-4 group-hover:scale-105 transition-transform duration-700 ease-out"
           />
           {displayStock === 0 && (
@@ -155,6 +156,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                     src={img} 
                     alt={`View ${idx + 1}`} 
                     fill
+                    sizes="100px"
                     className="object-contain" 
                   />
                 </div>

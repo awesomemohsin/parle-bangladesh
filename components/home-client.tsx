@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -71,14 +73,14 @@ export function HomeHero() {
             viewport={{ once: true }}
             className="w-full lg:w-1/2 flex items-center justify-center lg:justify-end py-10 lg:py-0"
           >
-            <div className="relative w-full max-w-[800px] lg:translate-x-10">
-              <img 
+            <div className="relative w-full aspect-[4/3] max-w-[800px] lg:translate-x-10">
+              <Image 
                 src="/images/parle-cover.webp" 
                 alt="Parle Premium Biscuits Collection" 
-                className="w-full h-auto drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none pointer-events-none transform lg:scale-135"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1558961359-61f0c17086fb?q=80&w=2000&auto=format&fit=crop';
-                }}
+                fill
+                priority={true}
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-contain drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none pointer-events-none transform lg:scale-135"
               />
             </div>
           </motion.div>
