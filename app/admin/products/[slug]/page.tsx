@@ -143,7 +143,7 @@ export default function AdminProductFormPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.pendingApproval) {
-          alert("Some changes (price/stock) require OWNER approval and have been queued.");
+          alert("✓ Sync Initiated: Sensitive updates (Price/Stock) have been queued for authoritative verification and will be live shortly.");
           // Refresh data to show pending status
           const prodResponse = await fetch(`/api/products/${slug}`)
           if (prodResponse.ok) {
@@ -294,7 +294,7 @@ export default function AdminProductFormPage() {
                     <div className="absolute inset-0 z-10 bg-white/40 flex items-center justify-center backdrop-blur-[1px]">
                        <div className="bg-amber-600 text-white text-[10px] font-black uppercase px-4 py-2 rounded-full shadow-xl animate-pulse flex items-center gap-2">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                          Waiting for Owner Approval
+                          Pending Verification
                        </div>
                     </div>
                   )}

@@ -47,6 +47,7 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 500)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('newest')
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -59,11 +60,11 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, statusFilter])
+  }, [debouncedSearch, statusFilter, sortBy])
 
   useEffect(() => {
     fetchOrders()
-  }, [debouncedSearch, statusFilter, page])
+  }, [debouncedSearch, statusFilter, page, sortBy])
 
   const fetchOrders = async () => {
     setIsLoading(true)
@@ -71,6 +72,7 @@ export default function AdminOrdersPage() {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('q', debouncedSearch)
       if (statusFilter !== 'all') params.append('status', statusFilter)
+      params.append('sort', sortBy)
       params.append('page', page.toString())
       params.append('limit', limit.toString())
       params.append('adminContext', 'true')
@@ -125,7 +127,7 @@ export default function AdminOrdersPage() {
       if (response.ok) {
         const data = await response.json()
         if (data.pendingApproval) {
-          alert("This status change requires OWNER approval and has been queued.");
+          alert("✓ Sync Initiated: This status change has been queued for authoritative verification.");
         }
         setOrders(
           orders.map((o) => (o.id === orderId ? { ...data.order, pendingApproval: data.pendingApproval } : o))
@@ -173,14 +175,14 @@ export default function AdminOrdersPage() {
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
           />
         </div>
-        <div className="w-full md:w-64 relative">
+        <div className="w-full md:w-48 relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
           >
-            <option value="all">All Statuses</option>
+            <option value="all">Statuses</option>
             <option value="pending">Pending</option>
             <option value="cancelled">Cancelled</option>
             <option value="processing">Processing</option>
@@ -189,6 +191,19 @@ export default function AdminOrdersPage() {
             <option value="damaged">Damaged</option>
             <option value="lost">Lost</option>
           </select>
+        </div>
+        <div className="w-full md:w-48 relative">
+           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+           <select
+             value={sortBy}
+             onChange={(e) => setSortBy(e.target.value)}
+             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
+           >
+             <option value="newest">Newest First</option>
+             <option value="oldest">Oldest First</option>
+             <option value="total-high">Price: High to Low</option>
+             <option value="total-low">Price: Low to High</option>
+           </select>
         </div>
       </div>
 
@@ -220,7 +235,7 @@ export default function AdminOrdersPage() {
                     )}
                     {order.pendingApproval && (
                       <div className="bg-amber-100 text-amber-700 text-[9px] font-black uppercase px-3 py-1.5 rounded shadow-sm animate-pulse border border-amber-300 mt-2 flex items-center gap-2 justify-center italic">
-                        Waiting for Owner Approval
+                        Pending Final Verification
                       </div>
                     )}
                     <div className="flex flex-col items-start sm:items-end gap-2 mt-3">

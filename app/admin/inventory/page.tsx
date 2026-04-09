@@ -8,6 +8,7 @@ import {
   Trash2, 
   ChevronRight, 
   Search,
+  Filter,
   ArrowUpRight,
   RefreshCw,
   Box,
@@ -18,6 +19,7 @@ export default function InventoryPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -36,10 +38,24 @@ export default function InventoryPage() {
     fetchInventory();
   }, []);
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const getProductStock = (p: any) => {
+    return p.variations ? p.variations.reduce((acc: number, v: any) => acc + (v.stock || 0), 0) : 0;
+  };
+
+  const filteredProducts = products
+    .filter(p => 
+      p.name.toLowerCase().includes(search.toLowerCase()) || 
+      p.category.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === "newest") return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      if (sortBy === "oldest") return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      if (sortBy === "name-asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name-desc") return b.name.localeCompare(a.name);
+      if (sortBy === "stock-high") return getProductStock(b) - getProductStock(a);
+      if (sortBy === "stock-low") return getProductStock(a) - getProductStock(b);
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-slate-50/10 font-sans p-6 lg:p-12">
@@ -55,24 +71,41 @@ export default function InventoryPage() {
             <p className="text-gray-500 font-medium max-w-xl">View real-time physical stock and hold logs. <span className="text-red-600 font-black">Stock updates must be requested via the Product Engine.</span></p>
           </div>
           
-          <div className="flex items-center gap-3">
-             <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="SEARCH PRODUCTS..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-12 pr-6 h-14 bg-white border-2 border-transparent focus:border-red-600 rounded-2xl shadow-sm outline-none text-[11px] font-bold uppercase transition-all w-64 lg:w-96"
-                />
+             <div className="flex items-center gap-3">
+               <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    type="text" 
+                    placeholder="SEARCH PRODUCTS..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-12 pr-6 h-14 bg-white border-2 border-transparent focus:border-red-600 rounded-2xl shadow-sm outline-none text-[11px] font-bold uppercase transition-all w-48 lg:w-64"
+                  />
+               </div>
+               
+               <div className="relative group">
+                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="pl-12 pr-6 h-14 bg-white border-2 border-transparent focus:border-red-600 rounded-2xl shadow-sm outline-none text-[10px] font-black uppercase transition-all w-48 lg:w-56 appearance-none cursor-pointer"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="name-asc">A to Z</option>
+                    <option value="name-desc">Z to A</option>
+                    <option value="stock-high">Stock: High to Low</option>
+                    <option value="stock-low">Stock: Low to High</option>
+                  </select>
+               </div>
+
+               <button 
+                 onClick={fetchInventory}
+                 className="p-4 bg-white shadow-sm rounded-2xl border-2 border-transparent hover:border-red-600 transition-all text-gray-400 hover:text-red-600 group"
+               >
+                 <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : "group-active:rotate-180 transition-transform duration-500"}`} />
+               </button>
              </div>
-             <button 
-               onClick={fetchInventory}
-               className="p-4 bg-white shadow-sm rounded-2xl border-2 border-transparent hover:border-red-600 transition-all text-gray-400 hover:text-red-600 group"
-             >
-               <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : "group-active:rotate-180 transition-transform duration-500"}`} />
-             </button>
-          </div>
         </div>
 
         {/* Global Stats Summary Bar */}
