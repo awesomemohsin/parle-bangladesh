@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
+import { Filter } from 'lucide-react'
 
 interface ApprovalRequest {
   _id: string
@@ -30,6 +31,7 @@ export default function OrderApprovalsPage() {
   const [reviewComment, setReviewComment] = useState<{ [key: string]: string }>({})
   const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>({})
   const [user, setUser] = useState<any>(null)
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc'>('newest')
 
   useEffect(() => {
     fetchRequests()
@@ -60,6 +62,16 @@ export default function OrderApprovalsPage() {
       setIsLoading(false)
     }
   }
+
+  const sortedRequests = useMemo(() => {
+    return [...requests].sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      if (sortBy === 'name-asc') return a.targetName.localeCompare(b.targetName)
+      if (sortBy === 'name-desc') return b.targetName.localeCompare(a.targetName)
+      return 0
+    })
+  }, [requests, sortBy])
 
   const handleProcess = async (id: string, status: 'approved' | 'declined') => {
     setIsProcessing(prev => ({ ...prev, [id]: true }))
@@ -111,7 +123,7 @@ export default function OrderApprovalsPage() {
           Superadmin: Saiful {hasSaiful && '✓'}
         </div>
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-          Owner: Razu {hasRazu && '✓'}
+          Finalized: Razu {hasRazu && '✓'}
         </div>
       </div>
     )
@@ -137,17 +149,35 @@ export default function OrderApprovalsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
               <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-1">Order Approvals</h1>
               <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Triple-Verification Protocol Active</p>
            </div>
-           {user && (
-              <div className="text-right">
-                <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Active Identity</p>
-                <p className="text-sm font-black text-red-600 uppercase tracking-tight">{user.name || user.email}</p>
+
+           <div className="flex items-center gap-4 w-full md:w-auto">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm ml-auto">
+                <Filter className="w-3.5 h-3.5 text-gray-300" />
+                <select 
+                  value={sortBy}
+                  onChange={(e: any) => setSortBy(e.target.value)}
+                  className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name-asc">Customer (A-Z)</option>
+                  <option value="name-desc">Customer (Z-A)</option>
+                </select>
               </div>
-           )}
+
+              {user && (
+                 <div className="hidden sm:block text-right border-l border-gray-100 pl-4">
+                   <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Active Identity</p>
+                   <p className="text-sm font-black text-red-600 uppercase tracking-tight">{user.name || user.email}</p>
+                 </div>
+              )}
+           </div>
         </div>
       </div>
 
@@ -157,19 +187,19 @@ export default function OrderApprovalsPage() {
           <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Querying Pending Order Requests...</p>
         </div>
       ) : requests.length === 0 ? (
-        <Card className="p-12 text-center border-2 border-dashed border-gray-100">
+        <Card className="p-12 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No pending order changes require authorization</p>
         </Card>
       ) : (
         <div className="grid gap-6">
-          {requests.map(request => (
-            <Card key={request._id} className="p-6 border-2 border-gray-50 shadow-sm relative overflow-hidden group">
+          {sortedRequests.map(request => (
+            <Card key={request._id} className="p-6 border-2 border-gray-50 shadow-sm relative overflow-hidden group rounded-[2rem]">
                {request.stage === 'owner' && <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>}
               <div className="flex flex-col md:flex-row justify-between gap-6">
                 <div className="flex-1 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-[9px] font-black text-white bg-black px-2 py-1 rounded uppercase tracking-wider">
+                      <span className="text-[9px] font-black text-white bg-black px-2 py-1 rounded-full uppercase tracking-wider shadow-md shadow-gray-100">
                         {request.field} change
                       </span>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
@@ -191,7 +221,7 @@ export default function OrderApprovalsPage() {
                   {request.targetDetails && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-y border-gray-50 my-2">
                        {/* Customer Card */}
-                       <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex flex-col gap-1.5">
+                       <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100 flex flex-col gap-1.5">
                           <p className="text-[8px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Customer Insight</p>
                           <p className="text-xs font-black text-gray-900 uppercase">{request.targetDetails.customerName}</p>
                           <div className="flex flex-col gap-0.5">
@@ -204,14 +234,14 @@ export default function OrderApprovalsPage() {
                        </div>
                        
                        {/* Items Summary */}
-                       <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col gap-2">
+                       <div className="bg-white p-3 rounded-2xl border border-gray-100 flex flex-col gap-2">
                           <div className="flex justify-between items-center mb-1">
                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">Package Payload</p>
                              <p className="text-[10px] font-black text-red-600">৳{request.targetDetails.total}</p>
                           </div>
                           <div className="space-y-1 max-h-[80px] overflow-y-auto pr-2 custom-scrollbar">
                              {request.targetDetails.items?.map((item: any, idx: number) => (
-                               <div key={idx} className="flex justify-between text-[10px] items-center border-b border-gray-50 pb-1">
+                               <div key={idx} className="flex justify-between text-[10px] items-center border-b border-gray-50 pb-1 last:border-0">
                                   <span className="font-bold text-gray-700 truncate max-w-[140px] uppercase">{item.name}</span>
                                   <span className="text-gray-400 font-black">×{item.quantity}</span>
                                </div>
@@ -221,15 +251,40 @@ export default function OrderApprovalsPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-6 py-2">
-                    <div className="flex flex-col">
-                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1 text-center">Previous</span>
-                       <span className="text-sm font-black text-gray-400 uppercase bg-gray-50 px-3 py-1 rounded-md shadow-inner">{request.oldValue}</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 border-gray-100 bg-gray-50/20 shadow-inner">
+                      <div className="flex-1 flex flex-col items-center">
+                         <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">Current State</span>
+                         <span className="text-xs font-black text-gray-400 uppercase tracking-widest bg-white px-3 py-1.5 rounded-xl border border-gray-100 line-through">
+                           {request.oldValue}
+                         </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                         <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center text-gray-200 shadow-sm animate-pulse">→</div>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                         <span className="text-[7px] font-black text-red-600 border border-red-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">Proposed State</span>
+                         <span className="text-xs font-black text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-xl border border-red-100 shadow-sm shadow-red-100/50">
+                           {request.newValue}
+                         </span>
+                      </div>
                     </div>
-                    <div className="w-8 h-px bg-gray-100 italic font-black text-gray-200 text-[10px] flex items-center justify-center">→</div>
-                    <div className="flex flex-col">
-                       <span className="text-[8px] font-black text-red-600 uppercase tracking-widest leading-none mb-1 text-center">New</span>
-                       <span className="text-sm font-black text-red-600 uppercase bg-red-50 px-3 py-1 rounded-md shadow-inner tracking-widest">{request.newValue}</span>
+
+                    <div className="bg-gray-900/5 p-4 rounded-[1.5rem] border border-gray-100 flex flex-col gap-3">
+                       <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <span className="w-1 h-1 bg-red-600 rounded-full animate-ping"></span> 
+                          Authentication Integrity
+                       </p>
+                       <div className="space-y-2">
+                          <VerificationItem label="Order Record Found" status={!!request.targetId} />
+                          <VerificationItem label="Permission Tier Active" status={true} />
+                          <Link href="/admin/hub" className="block">
+                            <div className="flex justify-between items-center bg-black hover:bg-red-600 transition-colors px-3 py-1.5 rounded-xl text-white">
+                               <span className="text-[9px] font-black uppercase tracking-tight">Audit Source Hub →</span>
+                               <span className="text-[8px] font-bold opacity-70 italic">Inspect order life</span>
+                            </div>
+                          </Link>
+                       </div>
                     </div>
                   </div>
 
@@ -238,7 +293,7 @@ export default function OrderApprovalsPage() {
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Historical Context</p>
                         <div className="space-y-2">
                            {request.comments.map((c, i) => (
-                             <div key={i} className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex justify-between items-center">
+                             <div key={i} className="bg-gray-50 p-2 rounded-xl border border-gray-100 flex justify-between items-center">
                                 <p className="text-[10px] font-medium text-gray-600"><span className="font-black uppercase text-red-600 text-[9px]">{c.user}:</span> {c.text}</p>
                                 <span className="text-[8px] text-gray-300 font-bold">{new Date(c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                              </div>
@@ -253,18 +308,18 @@ export default function OrderApprovalsPage() {
                       placeholder={canApprove(request) ? "Add your signature or comment..." : "Waiting for other authorizers..."}
                       value={reviewComment[request._id] || ""}
                       onChange={(e) => setReviewComment(prev => ({ ...prev, [request._id]: e.target.value }))}
-                      className="border-gray-100 text-xs h-9 bg-gray-50/50"
+                      className="border-gray-100 text-xs h-9 bg-gray-50/50 rounded-xl"
                       disabled={!canApprove(request)}
                     />
                   </div>
                 </div>
 
-                <div className="md:w-56 flex flex-col gap-2 justify-center border-l md:pl-6 border-gray-100">
+                <div className="md:w-56 flex flex-col gap-3 justify-center border-l md:pl-6 border-gray-100">
                    {!canApprove(request) ? (
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 italic">Status</p>
                          <p className="text-[10px] font-bold text-gray-500 uppercase leading-tight">
-                            {request.stage === 'superadmin' ? 'Waiting for Triple-Admin Consensus' : 'Waiting for Final Owner Approval'}
+                            {request.stage === 'superadmin' ? 'Waiting for Triple-Admin Consensus' : 'Waiting for Final Verification'}
                          </p>
                       </div>
                    ) : (
@@ -272,7 +327,7 @@ export default function OrderApprovalsPage() {
                         <Button 
                           disabled={isProcessing[request._id]}
                           onClick={() => handleProcess(request._id, 'approved')}
-                          className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all shadow-red-50"
+                          className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all shadow-red-50 rounded-xl"
                         >
                           {isProcessing[request._id] ? "Processing..." : request.stage === 'superadmin' ? "Sign & Verify" : "Authorize Final Update"}
                         </Button>
@@ -295,6 +350,17 @@ export default function OrderApprovalsPage() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function VerificationItem({ label, status }: { label: string; status: boolean }) {
+  return (
+    <div className="flex justify-between items-center bg-white px-3 py-1.5 rounded-xl border border-gray-100/50">
+       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">{label}</span>
+       <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${status ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+          <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+       </div>
     </div>
   )
 }

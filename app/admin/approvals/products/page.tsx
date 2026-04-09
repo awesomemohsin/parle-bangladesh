@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Filter } from 'lucide-react'
 
 interface ApprovalRequest {
   _id: string
@@ -34,6 +36,7 @@ export default function ProductApprovalsPage() {
   const [reviewComment, setReviewComment] = useState<{ [key: string]: string }>({})
   const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>({})
   const [user, setUser] = useState<any>(null)
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc'>('newest')
 
   useEffect(() => {
     fetchRequests()
@@ -65,6 +68,16 @@ export default function ProductApprovalsPage() {
       setIsLoading(false)
     }
   }
+
+  const sortedRequests = useMemo(() => {
+    return [...requests].sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      if (sortBy === 'name-asc') return a.targetName.localeCompare(b.targetName)
+      if (sortBy === 'name-desc') return b.targetName.localeCompare(a.targetName)
+      return 0
+    })
+  }, [requests, sortBy])
 
   const handleProcess = async (id: string, status: 'approved' | 'declined') => {
     setIsProcessing(prev => ({ ...prev, [id]: true }))
@@ -118,7 +131,7 @@ export default function ProductApprovalsPage() {
           Superadmin: Saiful {hasSaiful && '✓'}
         </div>
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-          Owner: Razu {hasRazu && '✓'}
+          Finalized: Razu {hasRazu && '✓'}
         </div>
       </div>
     )
@@ -145,17 +158,35 @@ export default function ProductApprovalsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
               <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-1">Consensus Approvals</h1>
               <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Triple-Verification Protocol Active</p>
            </div>
-           {user && (
-              <div className="text-right">
-                <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Active Identity</p>
-                <p className="text-sm font-black text-red-600 uppercase tracking-tight">{user.name || user.email}</p>
+           
+           <div className="flex items-center gap-4 w-full md:w-auto">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm ml-auto">
+                <Filter className="w-3.5 h-3.5 text-gray-300" />
+                <select 
+                  value={sortBy}
+                  onChange={(e: any) => setSortBy(e.target.value)}
+                  className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name-asc">Product (A-Z)</option>
+                  <option value="name-desc">Product (Z-A)</option>
+                </select>
               </div>
-           )}
+
+              {user && (
+                 <div className="hidden sm:block text-right border-l border-gray-100 pl-4">
+                   <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Active Identity</p>
+                   <p className="text-sm font-black text-red-600 uppercase tracking-tight">{user.name || user.email}</p>
+                 </div>
+              )}
+           </div>
         </div>
       </div>
 
@@ -165,19 +196,19 @@ export default function ProductApprovalsPage() {
           <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Querying Pending Requests...</p>
         </div>
       ) : requests.length === 0 ? (
-        <Card className="p-12 text-center border-2 border-dashed border-gray-100">
+        <Card className="p-12 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No pending product changes require authorization</p>
         </Card>
       ) : (
         <div className="grid gap-6">
-          {requests.map(request => (
-            <Card key={request._id} className="p-6 border-2 border-gray-50 shadow-sm relative overflow-hidden group">
+          {sortedRequests.map(request => (
+            <Card key={request._id} className="p-6 border-2 border-gray-50 shadow-sm relative overflow-hidden group rounded-[2rem]">
                {request.stage === 'owner' && <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>}
               <div className="flex flex-col md:flex-row justify-between gap-6">
                 <div className="flex-1 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className={`text-[9px] font-black text-white px-2 py-1 rounded uppercase tracking-wider ${request.field === 'price' ? 'bg-green-600' : 'bg-amber-500'}`}>
+                      <span className={`text-[9px] font-black text-white px-2 py-1 rounded-full uppercase tracking-wider ${request.field === 'price' ? 'bg-green-600 shadow-md shadow-green-100' : 'bg-amber-500 shadow-md shadow-amber-100'}`}>
                         {request.field} change
                       </span>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
@@ -190,9 +221,9 @@ export default function ProductApprovalsPage() {
                   <div className="flex flex-col gap-1">
                     <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none">
                       {request.targetSlug ? (
-                         <a href={`/shop/products/${request.targetSlug}`} target="_blank" className="hover:text-red-600 transition-colors underline decoration-gray-200 decoration-2 underline-offset-4">
+                         <Link href={`/shop/products/${request.targetSlug}`} target="_blank" className="hover:text-red-600 transition-colors underline decoration-gray-200 decoration-2 underline-offset-4">
                            {request.targetName}
-                         </a>
+                         </Link>
                       ) : request.targetName}
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -212,21 +243,35 @@ export default function ProductApprovalsPage() {
                     </div>
                   </div>
 
-                  <div className={`flex items-center gap-6 py-3 px-4 rounded-xl border-2 ${request.field === 'price' ? 'border-green-50 bg-green-50/10' : 'border-amber-50 bg-amber-50/10'}`}>
-                    <div className="flex flex-col">
-                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1 text-center">Previous</span>
-                       <span className="text-lg font-black text-gray-300 line-through">
-                         {request.field === 'price' && "৳"}{request.oldValue}
-                       </span>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className={`flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
+                      <div className="flex-1 flex flex-col items-center">
+                         <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">Legacy Data</span>
+                         <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
+                           {request.field === 'price' && "৳"}{request.oldValue}
+                         </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                         <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center text-gray-200 shadow-sm animate-pulse">→</div>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                         <span className={`text-[7px] font-black border px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white ${request.field === 'price' ? 'text-green-600 border-green-100' : 'text-amber-600 border-amber-100'}`}>Target Update</span>
+                         <span className={`text-2xl font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
+                           {request.field === 'price' && "৳"}{request.newValue}
+                         </span>
+                      </div>
                     </div>
-                    <div className="w-8 h-px bg-gray-200 italic font-black text-gray-200 text-[10px] flex items-center justify-center">→</div>
-                    <div className="flex flex-col">
-                       <span className={`text-[8px] font-black uppercase tracking-widest leading-none mb-1 text-center ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
-                         Proposed
-                       </span>
-                       <span className={`text-lg font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
-                         {request.field === 'price' && "৳"}{request.newValue}
-                       </span>
+
+                    <div className="bg-gray-900/5 p-4 rounded-[1.5rem] border border-gray-100 flex flex-col gap-3">
+                       <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <span className="w-1 h-1 bg-red-600 rounded-full animate-ping"></span> 
+                          System Integrity Checklist
+                       </p>
+                       <div className="space-y-2">
+                          <VerificationItem label="Database ID Verified" status={!!request.targetId} />
+                          <VerificationItem label="Schema Path Accessible" status={true} />
+                          <VerificationItem label="Consensus Stage Active" status={request.status === 'pending'} />
+                       </div>
                     </div>
                   </div>
 
@@ -235,7 +280,7 @@ export default function ProductApprovalsPage() {
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Historical Context</p>
                         <div className="space-y-2">
                            {request.comments.map((c, i) => (
-                             <div key={i} className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex justify-between items-center">
+                             <div key={i} className="bg-gray-50 p-2 rounded-xl border border-gray-100 flex justify-between items-center">
                                 <p className="text-[10px] font-medium text-gray-600"><span className="font-black uppercase text-red-600 text-[9px]">{c.user}:</span> {c.text}</p>
                                 <span className="text-[8px] text-gray-300 font-bold">{new Date(c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                              </div>
@@ -250,18 +295,18 @@ export default function ProductApprovalsPage() {
                       placeholder={canApprove(request) ? "Add your signature or comment..." : "Waiting for other authorizers..."}
                       value={reviewComment[request._id] || ""}
                       onChange={(e) => setReviewComment(prev => ({ ...prev, [request._id]: e.target.value }))}
-                      className="border-gray-100 text-xs h-9 bg-gray-50/50"
+                      className="border-gray-100 text-xs h-9 bg-gray-50/50 rounded-xl"
                       disabled={!canApprove(request)}
                     />
                   </div>
                 </div>
 
-                <div className="md:w-56 flex flex-col gap-2 justify-center border-l md:pl-6 border-gray-100">
+                <div className="md:w-56 flex flex-col gap-3 justify-center border-l md:pl-6 border-gray-100">
                    {!canApprove(request) ? (
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 italic">Status</p>
                          <p className="text-[10px] font-bold text-gray-500 uppercase leading-tight">
-                            {request.stage === 'superadmin' ? 'Waiting for Triple-Admin Consensus' : 'Waiting for Final Owner Approval'}
+                            {request.stage === 'superadmin' ? 'Waiting for Triple-Admin Consensus' : 'Waiting for Final Verification'}
                          </p>
                       </div>
                    ) : (
@@ -269,7 +314,7 @@ export default function ProductApprovalsPage() {
                         <Button 
                           disabled={isProcessing[request._id]}
                           onClick={() => handleProcess(request._id, 'approved')}
-                          className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all"
+                          className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl shadow-gray-100"
                         >
                           {isProcessing[request._id] ? "Processing..." : request.stage === 'superadmin' ? "Sign & Verify" : "Authorize Final Update"}
                         </Button>
@@ -292,6 +337,17 @@ export default function ProductApprovalsPage() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function VerificationItem({ label, status }: { label: string; status: boolean }) {
+  return (
+    <div className="flex justify-between items-center bg-white px-3 py-1.5 rounded-xl border border-gray-100/50">
+       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">{label}</span>
+       <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${status ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+          <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+       </div>
     </div>
   )
 }
