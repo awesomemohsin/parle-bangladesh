@@ -78,8 +78,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== ROLES.ADMIN) {
-        return NextResponse.json({ error: "Restricted: Only Admins can propose changes. All changes require consensus approval." }, { status: 403 });
+    
+    const isAllowed = user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER;
+    if (!isAllowed) {
+        return NextResponse.json({ error: "Restricted: Insufficient permissions to propose changes." }, { status: 403 });
     }
 
     const { slug } = await params;
@@ -93,9 +95,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
     let changeLog = [];
     
     // 1. CHECK MAIN PRODUCT FIELDS
-    const mainFields = ['name', 'category', 'brand', 'description'];
+    const mainFields = ['name', 'category', 'brand', 'description', 'isBulk'];
     for (const field of mainFields) {
-        if (body[field] !== undefined && body[field] !== (existing as any)[field]) {
+        const newVal = body[field];
+        const oldVal = (existing as any)[field];
+        
+        const isEquivalent = 
+          (newVal === oldVal) || 
+          (!newVal && !oldVal);
+
+        if (!isEquivalent && newVal !== undefined) {
             const approvalRequest = new ApprovalRequest({
                 requesterEmail: user.email,
                 type: "product",
@@ -118,9 +127,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
                 targetLink: `/admin/approvals`
             });
             changeLog.push(`Proposing ${field} change (PENDING)`);
-            pendingApproval = true;
-            // Revert field to old value for this immediate save
+            // Revert field for this immediate save
             body[field] = (existing as any)[field];
+            pendingApproval = true;
         }
     }
 
@@ -131,12 +140,19 @@ export async function PUT(request: NextRequest, { params }: Params) {
         const oldVar = existing.variations[i];
         
         if (oldVar) {
-          const varFields = ['price', 'stock', 'weight', 'flavor'];
+          const varFields = ['price', 'stock', 'weight', 'flavor', 'discountPrice', 'isBulk'];
           for (const field of varFields) {
-              const newVal = field === 'price' || field === 'stock' ? Number(newVar[field]) : newVar[field];
-              const oldVal = (oldVar as any)[field];
+              const isAdminAction = field === 'price' || field === 'stock' || field === 'discountPrice';
+              let newVal = isAdminAction ? Number(newVar[field]) : newVar[field];
+              let oldVal = (oldVar as any)[field];
 
-              if (newVal !== undefined && newVal !== oldVal) {
+              // Robust Comparison Logic: Handle null, undefined, and type mismatches
+              const isEquivalent = 
+                (newVal === oldVal) || 
+                (!newVal && !oldVal) || 
+                (isAdminAction && Number(newVal || 0) === Number(oldVal || 0));
+
+              if (!isEquivalent && newVal !== undefined) {
                 const approvalRequest = new ApprovalRequest({
                     requesterEmail: user.email,
                     type: "product",
@@ -205,8 +221,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== ROLES.ADMIN) {
-        return NextResponse.json({ error: "Restricted: Only Admins can delete products." }, { status: 403 });
+    
+    const isAllowed = user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER;
+    if (!isAllowed) {
+        return NextResponse.json({ error: "Restricted: Only privileged roles can delete products." }, { status: 403 });
     }
 
     const { slug } = await params;

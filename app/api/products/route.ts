@@ -84,8 +84,9 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== ROLES.ADMIN) {
-        return NextResponse.json({ error: "Restricted: Only Admins can create or update products directly. Superadmins/Owners must use the Approvals system." }, { status: 403 });
+    const isAllowed = user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER;
+    if (!isAllowed) {
+        return NextResponse.json({ error: "Restricted: Insufficient permissions to manage products." }, { status: 403 });
     }
 
     const body = await request.json();
