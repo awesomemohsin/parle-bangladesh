@@ -243,8 +243,7 @@ export default function ProductApprovalsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className={`flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
+                    <div className={`col-span-1 lg:col-span-2 flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
                       <div className="flex-1 flex flex-col items-center">
                          <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">Legacy Data</span>
                          <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
@@ -261,19 +260,6 @@ export default function ProductApprovalsPage() {
                          </span>
                       </div>
                     </div>
-
-                    <div className="bg-gray-900/5 p-4 rounded-[1.5rem] border border-gray-100 flex flex-col gap-3">
-                       <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-1 h-1 bg-red-600 rounded-full animate-ping"></span> 
-                          System Integrity Checklist
-                       </p>
-                       <div className="space-y-2">
-                          <VerificationItem label="Database ID Verified" status={!!request.targetId} />
-                          <VerificationItem label="Schema Path Accessible" status={true} />
-                          <VerificationItem label="Consensus Stage Active" status={request.status === 'pending'} />
-                       </div>
-                    </div>
-                  </div>
 
                   {request.comments && request.comments.length > 0 && (
                      <div className="space-y-2 py-2 border-t border-gray-50">

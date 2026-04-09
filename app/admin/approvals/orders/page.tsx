@@ -252,8 +252,7 @@ export default function OrderApprovalsPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 border-gray-100 bg-gray-50/20 shadow-inner">
+                    <div className="col-span-1 lg:col-span-2 flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 border-gray-100 bg-gray-50/20 shadow-inner">
                       <div className="flex-1 flex flex-col items-center">
                          <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">Current State</span>
                          <span className="text-xs font-black text-gray-400 uppercase tracking-widest bg-white px-3 py-1.5 rounded-xl border border-gray-100 line-through">
@@ -270,24 +269,6 @@ export default function OrderApprovalsPage() {
                          </span>
                       </div>
                     </div>
-
-                    <div className="bg-gray-900/5 p-4 rounded-[1.5rem] border border-gray-100 flex flex-col gap-3">
-                       <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-1 h-1 bg-red-600 rounded-full animate-ping"></span> 
-                          Authentication Integrity
-                       </p>
-                       <div className="space-y-2">
-                          <VerificationItem label="Order Record Found" status={!!request.targetId} />
-                          <VerificationItem label="Permission Tier Active" status={true} />
-                          <Link href="/admin/hub" className="block">
-                            <div className="flex justify-between items-center bg-black hover:bg-red-600 transition-colors px-3 py-1.5 rounded-xl text-white">
-                               <span className="text-[9px] font-black uppercase tracking-tight">Audit Source Hub →</span>
-                               <span className="text-[8px] font-bold opacity-70 italic">Inspect order life</span>
-                            </div>
-                          </Link>
-                       </div>
-                    </div>
-                  </div>
 
                   {request.comments && request.comments.length > 0 && (
                      <div className="space-y-2 py-2 border-t border-gray-50">
