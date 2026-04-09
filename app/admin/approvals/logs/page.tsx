@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
+import { Filter } from 'lucide-react'
 
  interface ApprovalRequest {
   _id: string
@@ -34,9 +35,25 @@ export default function ApprovalLogsPage() {
   const [requests, setRequests] = useState<ApprovalRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>({})
+  const [canManage, setCanManage] = useState(false)
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc'>('newest')
 
   useEffect(() => {
     fetchRequests()
+    
+    // Robust User Identity Verification
+    const userData = localStorage.getItem('user')
+    const token = localStorage.getItem('token')
+    
+    if (userData) {
+      const user = JSON.parse(userData)
+      setCanManage(user.role === 'super_admin' || user.role === 'owner')
+    } else if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        setCanManage(payload.role === 'super_admin' || payload.role === 'owner')
+      } catch (e) {}
+    }
   }, [])
 
   const fetchRequests = async () => {
@@ -49,7 +66,7 @@ export default function ApprovalLogsPage() {
       })
       if (response.ok) {
         const data = await response.json()
-        setRequests(data.requests.filter((r: ApprovalRequest) => r.status !== 'pending') || [])
+        setRequests(data.requests || [])
       }
     } catch (err) {
       console.error('Fetch requests error:', err)
@@ -57,6 +74,16 @@ export default function ApprovalLogsPage() {
       setIsLoading(false)
     }
   }
+
+  const sortedRequests = useMemo(() => {
+    return [...requests].sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      if (sortBy === 'oldest') return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+      if (sortBy === 'name-asc') return a.targetName.localeCompare(b.targetName)
+      if (sortBy === 'name-desc') return b.targetName.localeCompare(a.targetName)
+      return 0
+    })
+  }, [requests, sortBy])
 
   const handleUndo = async (id: string) => {
     if (!confirm("Are you sure you want to REVERT this action? Data will be restored and request returned to pending.")) return;
@@ -86,9 +113,25 @@ export default function ApprovalLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Auth <span className="text-red-600">Audit Logs</span></h1>
-        <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[9px]">Historical Authorization & Consent Trail</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Approval <span className="text-red-600">History Log</span></h1>
+          <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[9px]">Historical Authorization & Consent Trail</p>
+        </div>
+
+        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm w-full md:w-auto">
+          <Filter className="w-3.5 h-3.5 text-gray-300" />
+          <select 
+            value={sortBy}
+            onChange={(e: any) => setSortBy(e.target.value)}
+            className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-500 focus:outline-none cursor-pointer"
+          >
+            <option value="newest">Newest Log</option>
+            <option value="oldest">Oldest Log</option>
+            <option value="name-asc">A-Z (Name)</option>
+            <option value="name-desc">Z-A (Name)</option>
+          </select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -102,14 +145,15 @@ export default function ApprovalLogsPage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {requests.map(request => (
+          {sortedRequests.map(request => (
             <Card key={request._id} className={`p-6 border-2 shadow-xl relative overflow-hidden group transition-all rounded-[2rem] ${request.status === 'approved' ? 'border-emerald-50 bg-white' : 'border-rose-50 bg-rose-50/5'}`}>
               <div className="flex flex-col lg:flex-row justify-between gap-8">
                 <div className="flex-1 space-y-5">
-                  
-                  {/* Badge & Status Meta */}
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className={`text-[9px] font-black text-white px-3 py-1 rounded-full uppercase tracking-widest ${request.status === 'approved' ? 'bg-emerald-600 shadow-lg shadow-emerald-200' : 'bg-rose-600 shadow-lg shadow-rose-200'}`}>
+                    <span className={`text-[9px] font-black text-white px-3 py-1 rounded-full uppercase tracking-widest ${
+                      request.status === 'approved' ? 'bg-emerald-600 shadow-lg shadow-emerald-200' : 
+                      request.status === 'pending' ? 'bg-amber-500 shadow-lg shadow-amber-200 animate-pulse' : 
+                      'bg-rose-600 shadow-lg shadow-rose-200'}`}>
                       {request.status}
                     </span>
                     <span className={`text-[9px] font-black text-white px-3 py-1 rounded-full uppercase tracking-widest ${request.type === 'order' ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : (request.field === 'price' ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-amber-500 shadow-lg shadow-amber-200')}`}>
@@ -121,7 +165,6 @@ export default function ApprovalLogsPage() {
                     </span>
                   </div>
 
-                  {/* Header: Name and Primary Context */}
                   <div className="flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shrink-0 ${request.type === 'order' ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
                        <span className="text-lg font-black">{request.type === 'order' ? 'O' : 'P'}</span>
@@ -157,8 +200,10 @@ export default function ApprovalLogsPage() {
                     </div>
                   </div>
 
-                  {/* Detail Context Area (Order Items or Transition) */}
-                  <div className={`rounded-[1.5rem] border overflow-hidden ${request.status === 'approved' ? 'border-emerald-100 bg-emerald-50/5' : 'border-rose-100 bg-rose-50/5'}`}>
+                  <div className={`rounded-[1.5rem] border overflow-hidden ${
+                    request.status === 'approved' ? 'border-emerald-100 bg-emerald-50/5' : 
+                    request.status === 'pending' ? 'border-amber-100 bg-amber-50/5' : 
+                    'border-rose-100 bg-rose-50/5'}`}>
                     {request.type === 'order' && request.targetDetails?.items ? (
                       <div className="p-4 space-y-3">
                          <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Order Compilation</div>
@@ -193,21 +238,25 @@ export default function ApprovalLogsPage() {
                             <div className="text-gray-200 font-transparent shrink-0">→</div>
                             <div className="flex flex-col">
                               <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">Live</span>
-                              <span className={`text-base font-black tracking-tighter italic ${request.status === 'approved' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              <span className={`text-base font-black tracking-tighter italic ${
+                                request.status === 'approved' ? 'text-emerald-600' : 
+                                request.status === 'pending' ? 'text-amber-600' : 
+                                'text-rose-600'}`}>
                                 {request.field === 'price' && "৳"}{request.newValue}
                               </span>
                             </div>
                         </div>
-                        
-                        <div className="flex flex-wrap gap-2 items-center border-t sm:border-t-0 sm:border-l border-white md:pl-4 pt-4 sm:pt-0">
-                           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mr-2">Authorization:</span>
-                           <SignatureBadge name="Anindo" status={request.status === 'approved' || request.superadminApprovals?.includes('anindo')} />
-                           <SignatureBadge name="Saiful" status={request.status === 'approved' || request.superadminApprovals?.includes('saiful')} />
-                           {['price', 'stock'].includes(request.field) && <SignatureBadge name="Razu" status={request.status === 'approved' || request.superadminApprovals?.includes('razu')} />}
-                           <SignatureBadge name="Owner" status={request.ownerApproved} />
-                        </div>
                       </div>
                     )}
+                    
+                    {/* Common Consensus Footer */}
+                    <div className="p-4 border-t border-white/40 bg-white/20 flex flex-wrap gap-2 items-center">
+                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mr-2">Authorization Trace:</span>
+                       <SignatureBadge name="Anindo" status={request.status === 'approved' || request.superadminApprovals?.some(a => a.toLowerCase().includes('anindo'))} />
+                       <SignatureBadge name="Saiful" status={request.status === 'approved' || request.superadminApprovals?.some(a => a.toLowerCase().includes('saiful'))} />
+                       <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                       <SignatureBadge name="Razu" status={request.ownerApproved} />
+                    </div>
                   </div>
 
                   {request.declinedBy && (
@@ -244,7 +293,7 @@ export default function ApprovalLogsPage() {
                       </p>
                    </div>
 
-                   {isUndoable(request.updatedAt) && request.status === 'approved' && (
+                   {canManage && isUndoable(request.updatedAt) && request.status === 'approved' && (
                      <Button 
                        disabled={isProcessing[request._id]}
                        onClick={() => handleUndo(request._id)}
@@ -252,6 +301,11 @@ export default function ApprovalLogsPage() {
                      >
                        {isProcessing[request._id] ? "Processing..." : "Revert Action"}
                      </Button>
+                   )}
+                   {!canManage && (
+                     <div className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 italic text-center">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">View Only Mode</p>
+                     </div>
                    )}
                 </div>
               </div>
