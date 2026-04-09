@@ -23,26 +23,28 @@ export async function GET(request: NextRequest) {
 
     const isHistory = status === 'all' || status === 'approved' || status === 'declined';
     
-    if (user.role === ROLES.OWNER) {
+    if (user.role === ROLES.OWNER || user.role === ROLES.SUPER_ADMIN) {
         if (!isHistory) {
-          // Owner daily view: requests that passed superadmin stage AND he hasn't signed
-          query.stage = "owner";
-          query.ownerApproved = false;
+          // Task View: pending requests for their stage
           query.status = "pending";
+          if (user.role === ROLES.OWNER) {
+            query.stage = "owner";
+            query.ownerApproved = false;
+          } else {
+            query.stage = "superadmin";
+            query.superadminApprovals = { $ne: userName };
+          }
         } else {
-          // Historical view: anything that reached his level or finished
+          // Historical View: anything approved or declined
           query.status = { $in: ["approved", "declined"] };
         }
-    } else if (user.role === ROLES.SUPER_ADMIN) {
-        if (!isHistory) {
-          // Superadmin daily view: pending requests for his stage he hasn't signed yet
-          query.stage = "superadmin";
-          query.superadminApprovals = { $ne: userName };
-          query.status = "pending";
-        } else {
-          // Historical view: anything approved or declined
-          query.status = { $in: ["approved", "declined"] };
-        }
+    } else if (user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR) {
+        // Regular admins and moderators see ALL finalized history
+        // PLUS their own pending requests
+        query.$or = [
+          { status: { $in: ["approved", "declined"] } },
+          { requesterEmail: user.email, status: "pending" }
+        ];
     } else {
         return NextResponse.json({ error: "Forbidden: Higher authorization required" }, { status: 403 });
     }
