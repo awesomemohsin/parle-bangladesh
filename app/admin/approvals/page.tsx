@@ -41,7 +41,7 @@ export default function ApprovalDashboardPage() {
                  </div>
                  <div>
                     <h2 className="text-2xl font-black text-gray-900 uppercase">Product Changes</h2>
-                    <p className="text-gray-400 text-xs font-medium leading-relaxed italic">Requires Anindo, Saiful, and Razu's triple consensus for Price & Stock adjustments.</p>
+                    <p className="text-gray-400 text-xs font-medium leading-relaxed italic">Requires Authoritative Triple-Consensus for Price & Stock adjustments.</p>
                  </div>
                  <div className="flex items-center gap-2 text-gray-300 group-hover:text-black transition-colors font-black text-[9px] uppercase tracking-widest pt-4">
                     Enter Verification Terminal →
@@ -75,7 +75,7 @@ export default function ApprovalDashboardPage() {
             <div className="w-16 h-16 rounded-full bg-black text-white flex items-center justify-center font-black text-2xl shadow-xl">!</div>
             <div className="space-y-1">
                <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Security Protocol Enforcement</h3>
-               <p className="text-gray-500 text-xs leading-relaxed max-w-2xl">All product modifications regarding pricing or stock levels initiated by general admins are held in temporary storage. No changes are applied to the live database until Anindo, Saiful (Superadmins), and Razu (Owner) have provided individual digital signatures.</p>
+               <p className="text-gray-500 text-xs leading-relaxed max-w-2xl">All product modifications regarding pricing or stock levels initiated by general admins are held in temporary storage. No changes are applied to the live database until authorized entities have provided individual digital signatures.</p>
             </div>
          </div>
       </Card>

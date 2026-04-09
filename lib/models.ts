@@ -467,8 +467,10 @@ export interface IContactSubmission extends Document {
   number: string;
   email?: string;
   message?: string;
-  type: "regular" | "corporate";
+  type: "regular" | "corporate" | "dealer";
   organizationName?: string; // only for corporate
+  location?: string; // especially for dealers
+  isSeen: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -479,8 +481,10 @@ const ContactSubmissionSchema = new Schema<IContactSubmission>(
     number: { type: String, required: true },
     email: { type: String },
     message: { type: String },
-    type: { type: String, enum: ["regular", "corporate"], default: "regular" },
+    type: { type: String, enum: ["regular", "corporate", "dealer"], default: "regular" },
     organizationName: { type: String },
+    location: { type: String },
+    isSeen: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

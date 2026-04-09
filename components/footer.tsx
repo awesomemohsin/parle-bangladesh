@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { Phone, Mail, Facebook, MessageCircle, Instagram, Building2 } from 'lucide-react';
+import { Phone, Mail, Facebook, MessageCircle, Instagram, Building2, MapPin } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -69,18 +69,34 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-slate-50">
-          <div className="bg-slate-100/50 p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-200 group overflow-hidden">
-            <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-              <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><Building2 className="w-6 h-6 text-red-600" /></div>
-              <div>
-                <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Corporate <span className="text-red-600">Inquiry Hub</span></h5>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Bulk orders & Distribution queries</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Corporate HUB */}
+            <div className="bg-slate-100/50 p-6 rounded-3xl flex flex-col xl:flex-row items-center justify-between gap-6 border border-slate-200 group overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><Building2 className="w-6 h-6 text-blue-600" /></div>
+                <div>
+                  <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Corporate <span className="text-blue-600">Inquiry Hub</span></h5>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Bulk orders & institutional queries</p>
+                </div>
               </div>
+              <Link href="/contact?type=corporate#contact-form" className="w-full xl:w-auto bg-black hover:bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
+                Contact Corporate
+              </Link>
             </div>
-            <Link href="/contact?type=corporate#contact-form" className="w-full md:w-auto bg-black hover:bg-red-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
-              Contact Corporate
-              <svg className="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-            </Link>
+
+            {/* Dealer HUB */}
+            <div className="bg-slate-100/50 p-6 rounded-3xl flex flex-col xl:flex-row items-center justify-between gap-6 border border-slate-200 group overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><MapPin className="w-6 h-6 text-red-600" /></div>
+                <div>
+                  <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Become <span className="text-red-600">An Official Dealer</span></h5>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Partner with us in your location</p>
+                </div>
+              </div>
+              <Link href="/contact?type=dealer#contact-form" className="w-full xl:w-auto bg-black hover:bg-red-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
+                Apply for Dealership
+              </Link>
+            </div>
           </div>
         </div>
       </div>

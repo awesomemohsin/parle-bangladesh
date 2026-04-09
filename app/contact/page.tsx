@@ -19,7 +19,7 @@ import { CheckCircle2 } from 'lucide-react'
 
 function ContactContent() {
   const searchParams = useSearchParams()
-  const [type, setType] = useState<'regular' | 'corporate'>('regular')
+  const [type, setType] = useState<'regular' | 'corporate' | 'dealer'>('regular')
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [formData, setFormData] = useState({
@@ -27,6 +27,7 @@ function ContactContent() {
     number: '',
     email: '',
     organizationName: '',
+    location: '',
     message: ''
   })
 
@@ -34,6 +35,9 @@ function ContactContent() {
     const queryType = searchParams.get('type')
     if (queryType === 'corporate') {
       setType('corporate')
+      document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })
+    } else if (queryType === 'dealer') {
+      setType('dealer')
       document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })
     } else if (queryType === 'regular') {
       setType('regular')
@@ -44,8 +48,10 @@ function ContactContent() {
   const isFormValid = () => {
     if (type === 'regular') {
       return formData.name.trim() !== '' && formData.number.trim() !== '';
-    } else {
+    } else if (type === 'corporate') {
       return formData.name.trim() !== '' && formData.number.trim() !== '' && formData.organizationName.trim() !== '';
+    } else {
+      return formData.name.trim() !== '' && formData.number.trim() !== '' && formData.location.trim() !== '';
     }
   }
 
@@ -66,7 +72,7 @@ function ContactContent() {
 
       if (response.ok) {
         setShowSuccess(true)
-        setFormData({ name: '', number: '', email: '', organizationName: '', message: '' })
+        setFormData({ name: '', number: '', email: '', organizationName: '', location: '', message: '' })
       } else {
         toast.error('Something went wrong. Please try again.')
       }
@@ -131,6 +137,13 @@ function ContactContent() {
                   <Building2 className="w-4 h-4" />
                   Corporate
                 </button>
+                <button
+                  onClick={() => setType('dealer')}
+                  className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${type === 'dealer' ? 'bg-red-600 text-white shadow-xl shadow-red-100' : 'text-gray-400 hover:bg-white'}`}
+                >
+                  <MapPin className="w-4 h-4" />
+                  Dealer
+                </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -176,7 +189,7 @@ function ContactContent() {
             <div id="contact-form" className="scroll-mt-32 bg-white p-8 lg:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-100">
                <div className="mb-10">
                  <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none italic mb-4">
-                   {type === 'regular' ? 'Regular' : 'Corporate'} <span className="text-red-600">Inquiry</span>
+                   {type === 'regular' ? 'Regular' : type === 'corporate' ? 'Corporate' : 'Dealer'} <span className="text-red-600">Inquiry</span>
                  </h3>
                  <p className="text-gray-500 font-medium">Please fill in your details below.</p>
                </div>
@@ -229,6 +242,21 @@ function ContactContent() {
                             required 
                             className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-red-600/20 focus:bg-white transition-all text-sm font-bold" 
                             placeholder="Your Company Name" 
+                          />
+                        </div>
+                      )}
+
+                      {type === 'dealer' && (
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Preferred Location *</label>
+                          <input 
+                            name="location"
+                            value={formData.location}
+                            onChange={handleChange}
+                            type="text" 
+                            required 
+                            className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-red-600/20 focus:bg-white transition-all text-sm font-bold" 
+                            placeholder="Area / City / District" 
                           />
                         </div>
                       )}
@@ -308,32 +336,59 @@ function ContactContent() {
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-md bg-white rounded-[2rem] border-none shadow-2xl">
-          <DialogHeader className="flex flex-col items-center justify-center pt-6">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4">
-               <motion.div
-                 initial={{ scale: 0 }}
-                 animate={{ scale: 1 }}
-                 transition={{ type: "spring", damping: 10, stiffness: 100 }}
-               >
-                 <CheckCircle2 className="w-12 h-12 text-green-600" />
-               </motion.div>
-            </div>
-            <DialogTitle className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic leading-none text-center">
-              Request <span className="text-red-600">Submitted</span>
-            </DialogTitle>
-            <DialogDescription className="text-sm font-medium text-gray-500 text-center mt-4 px-4 leading-relaxed">
-              Thank you for contacting <span className="text-red-600 font-bold">Parle Bangladesh</span>. 
-              Our team will get back to you shortly at the number provided.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center pb-8 mt-4">
-            <Button 
-               onClick={() => setShowSuccess(false)}
-               className="bg-red-600 hover:bg-black text-white px-10 py-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-red-100 transition-all active:scale-95"
+        <DialogContent className="sm:max-w-[400px] bg-white rounded-[2.5rem] border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.15)] p-0 overflow-hidden">
+          <div className="relative p-10 flex flex-col items-center text-center">
+            {/* Success Animation Background */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-gradient-to-b from-green-50/50 to-transparent -z-0" />
+            
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", damping: 15, stiffness: 200 }}
+              className="relative z-10 mb-8"
             >
-              Close
-            </Button>
+              <div className="w-20 h-20 bg-white rounded-3xl shadow-2xl shadow-green-100 flex items-center justify-center border border-green-50">
+                 <div className="w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center shadow-lg shadow-green-200">
+                    <CheckCircle2 className="w-8 h-8 text-white" />
+                 </div>
+              </div>
+              
+              {/* Decorative dots */}
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -top-2 -right-2 w-4 h-4 bg-green-100 rounded-full" 
+              />
+              <motion.div 
+                animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.8, 0.3] }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+                className="absolute -bottom-1 -left-3 w-6 h-6 bg-green-50 rounded-full" 
+              />
+            </motion.div>
+
+            <div className="relative z-10 space-y-3">
+              <DialogTitle className="text-2xl font-black text-gray-900 tracking-tighter uppercase italic leading-tight">
+                Inquiry <span className="text-green-600">Received</span>
+              </DialogTitle>
+              <p className="text-[13px] font-bold text-gray-500 leading-relaxed px-4">
+                Thank you! We have received your information. <br />
+                <span className="text-gray-400 font-medium">Our team will get back to you as soon as possible.</span>
+              </p>
+            </div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="relative z-10 w-full mt-10"
+            >
+              <Button 
+                onClick={() => setShowSuccess(false)}
+                className="w-full bg-slate-900 hover:bg-black text-white h-14 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95 shadow-xl shadow-slate-200"
+              >
+                Continue Browsing
+              </Button>
+            </motion.div>
           </div>
         </DialogContent>
       </Dialog>

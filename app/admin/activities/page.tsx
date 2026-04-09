@@ -35,7 +35,7 @@ export default function AdminActivitiesPage() {
       const parsed = JSON.parse(userData)
       setUser(parsed)
       if (parsed.role !== 'super_admin' && parsed.role !== 'owner') {
-        setError('Forbidden: Authorization Level 4 (Super Admin/Owner) Access Required.')
+        setError('Forbidden: Authorization Level 4 (Highest Oversight) Access Required.')
         setIsLoading(false)
         return
       }
@@ -78,7 +78,7 @@ export default function AdminActivitiesPage() {
 
   const handleDelete = async (id: string) => {
     if (user?.role !== 'owner') {
-      alert('Access Denied: Only the Owner (Razu) can delete audit records.')
+      alert('Access Denied: Only the Head Authorizer (Razu) can delete audit records.')
       return
     }
     if (!confirm('Permanent delete this log entry?')) return
@@ -99,7 +99,7 @@ export default function AdminActivitiesPage() {
 
   const handleClearAll = async () => {
     if (user?.role !== 'owner') {
-      alert('Access Denied: Only the Owner (Razu) can clear the total audit log.')
+      alert('Access Denied: Only the Head Authorizer (Razu) can clear the total audit log.')
       return
     }
     if (!confirm('EXTREME WARNING: This will permanently clear ALL activity logs. Proceed?')) return
@@ -170,9 +170,9 @@ export default function AdminActivitiesPage() {
             <option value="update_order_status">Update Order Status</option>
             <option value="create_admin">Create Admin (User MGMT)</option>
             <option value="delete_admin">Delete Admin (User MGMT)</option>
-            <option value="approved_request">Owner Approved</option>
-            <option value="declined_request">Owner Declined</option>
-            <option value="undo_approval">Owner Undo</option>
+            <option value="approved_request">Finalized Approval</option>
+            <option value="declined_request">Finalized Decline</option>
+            <option value="undo_approval">Action Undo</option>
           </select>
         </div>
         <div className="space-y-1">
