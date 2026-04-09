@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { ApprovalRequest, Product, Order, Category } from "@/lib/models";
+import { ApprovalRequest, Product, Order, Category, Notification } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,11 +44,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       await approvalRequest.save();
 
       // Notify Requester (Admin) of the decline
-      const { Notification } = require("@/lib/models");
       await Notification.create({
         userId: approvalRequest.requesterEmail,
         title: "Request Declined",
-        message: `Your change request for ${approvalRequest.targetName} was declined by Stage ${approvalRequest.stage.toUpperCase()}${comment ? `. Reason: ${comment}` : ""}.`,
+        message: `Your change request for ${approvalRequest.targetName} was declined during the ${approvalRequest.stage === 'superadmin' ? 'Initial' : 'Final'} Verification Phase${comment ? `. Reason: ${comment}` : ""}.`,
         type: "alert",
         targetLink: `/admin/products`
       });
@@ -59,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         action: `decline_request`,
         targetId: approvalRequest.targetId,
         targetName: approvalRequest.targetName,
-        details: `Stage ${approvalRequest.stage.toUpperCase()}: ${approvalRequest.type} ${approvalRequest.field} change from ${approvalRequest.oldValue} to ${approvalRequest.newValue} was DECLINED by ${userName}.`
+        details: `${approvalRequest.type} ${approvalRequest.field} change from ${approvalRequest.oldValue} to ${approvalRequest.newValue} was DECLINED during ${approvalRequest.stage === 'superadmin' ? 'Superadmin' : 'Final Authorized'} review by ${userName}.`
       });
 
       return NextResponse.json({ message: "Request declined successfully", request: approvalRequest });
@@ -79,12 +78,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         approvalRequest.superadminApprovals.push(userName);
         
-        const hasAnindo = approvalRequest.superadminApprovals.some((a: string) => a.includes("anindo"));
-        const hasSaiful = approvalRequest.superadminApprovals.some((a: string) => a.includes("saiful"));
+        const superApprovals = approvalRequest.superadminApprovals.map((a: string) => a.toLowerCase());
+        const hasAnindo = superApprovals.some(a => a.includes("anindo"));
+        const hasSaiful = superApprovals.some(a => a.includes("saiful"));
         
         if (hasAnindo && hasSaiful) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          const isFinancialOrStock = approvalRequest.field === 'price' || approvalRequest.field === 'stock';
+          const isFinancialOrStock = approvalRequest.field === 'price' || approvalRequest.field === 'stock' || approvalRequest.field === 'discountPrice';
           const isSensitiveType = approvalRequest.type === 'product' || approvalRequest.type === 'category';
           
           if (isSensitiveType && !isFinancialOrStock) {
@@ -92,7 +92,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             approvalRequest.status = 'approved';
             
             // Notify Requester (Admin)
-            const { Notification } = require("@/lib/models");
             await Notification.create({
               userId: approvalRequest.requesterEmail,
               title: "Update Approved (Live)",
@@ -105,7 +104,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           } else {
             // PRICE, STOCK, OR ORDERS: 3-STAGE (Needs Owner)
             approvalRequest.stage = "owner";
-            const { Notification } = require("@/lib/models");
             await Notification.create({
               role: ROLES.OWNER,
               title: "Authorization Required",
@@ -135,7 +133,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         // Notify Requester (Admin)
-        const { Notification } = require("@/lib/models");
         await Notification.create({
           userId: approvalRequest.requesterEmail,
           title: "Request Approved (Final)",
@@ -157,7 +154,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         action: `approve_request_stage`,
         targetId: approvalRequest.targetId,
         targetName: approvalRequest.targetName,
-        details: `Stage ${approvalRequest.stage.toUpperCase()}: ${approvalRequest.type} ${approvalRequest.field} change approved by ${userName}. Status: ${approvalRequest.status}`
+        details: `${approvalRequest.type} ${approvalRequest.field} update approved during ${approvalRequest.stage === 'superadmin' ? 'Initial' : 'Final Authoritative'} review by ${userName}. Status: ${approvalRequest.status}`
       });
 
       return NextResponse.json({ message: "Approval recorded successfully", request: approvalRequest });
@@ -173,40 +170,51 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 async function applyApprovedChanges(approvalRequest: any, userName: string, comment?: string) {
   if (approvalRequest.type === 'product') {
     const product = await Product.findById(approvalRequest.targetId);
-    if (!product) return;
+    if (!product) {
+      console.error(`ApplyChanges: Product ${approvalRequest.targetId} not found`);
+      return;
+    }
 
-    if (approvalRequest.field === 'price' || approvalRequest.field === 'stock') {
-      if (approvalRequest.variationIndex !== undefined) {
-        const varIndex = Number(approvalRequest.variationIndex);
-        if (product.variations[varIndex]) {
-          if (approvalRequest.field === 'price') {
-            product.variations[varIndex].price = Number(approvalRequest.newValue);
-          }
-          if (approvalRequest.field === 'stock') {
-            const oldVal = Number(approvalRequest.oldValue || 0);
-            const newVal = Number(approvalRequest.newValue);
-            if (newVal > oldVal) {
-              if (!product.variations[varIndex].stockHistory) product.variations[varIndex].stockHistory = [];
-              product.variations[varIndex].stockHistory.push({
-                amount: newVal - oldVal,
-                date: new Date(),
-                reason: "Inventory Replenishment (Approved)"
-              });
-            }
-            product.variations[varIndex].stock = newVal;
+    const field = approvalRequest.field;
+    const newValue = approvalRequest.newValue;
+    const isNumeric = field === 'price' || field === 'stock' || field === 'discountPrice';
+
+    if (approvalRequest.variationIndex !== undefined && approvalRequest.variationIndex !== null) {
+      const varIndex = Number(approvalRequest.variationIndex);
+      const variation = product.variations[varIndex];
+      
+      if (variation) {
+        // Special logic for stock history
+        if (field === 'stock') {
+          const oldVal = Number(approvalRequest.oldValue || 0);
+          const newValNumeric = Number(newValue);
+          if (newValNumeric > oldVal) {
+            if (!variation.stockHistory) variation.stockHistory = [];
+            variation.stockHistory.push({
+              amount: newValNumeric - oldVal,
+              date: new Date(),
+              reason: "Inventory Replenishment (Approved)"
+            });
           }
         }
-      } else {
-        (product as any)[approvalRequest.field] = Number(approvalRequest.newValue);
+        
+        // Use Mongoose .set() for deep path reliability
+        const typedVal = isNumeric ? Number(newValue) : newValue;
+        variation.set(field, typedVal);
+        product.markModified('variations');
       }
     } else {
-      (product as any)[approvalRequest.field] = approvalRequest.newValue;
+      // Apply change to product level
+      const typedVal = isNumeric ? Number(newValue) : newValue;
+      product.set(field, typedVal);
     }
+    
     await product.save();
+    console.log(`ApplyChanges: Successfully updated ${approvalRequest.type} ${approvalRequest.targetId} field ${field}`);
   } else if (approvalRequest.type === 'category') {
     const category = await Category.findById(approvalRequest.targetId);
     if (category) {
-      (category as any)[approvalRequest.field] = approvalRequest.newValue;
+      category.set(approvalRequest.field, approvalRequest.newValue);
       await category.save();
     }
   } else if (approvalRequest.type === 'order') {
