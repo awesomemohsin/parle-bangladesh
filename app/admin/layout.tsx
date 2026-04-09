@@ -98,11 +98,10 @@ export default function AdminLayout({
     <div className="flex h-screen bg-gray-50 overflow-hidden relative">
       <AdminSidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
 
-      <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8 pt-20">
-        <div className="py-12 max-w-[1600px] mx-auto w-full min-h-full">
+      <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8 pt-8">
+        <div className="pb-12 max-w-[1600px] mx-auto w-full min-h-full">
           {children}
         </div>
-        <Footer />
       </main>
     </div>
   );

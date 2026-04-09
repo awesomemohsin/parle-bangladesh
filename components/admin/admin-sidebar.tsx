@@ -16,7 +16,7 @@ interface User {
 export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [counts, setCounts] = useState({ pendingOrders: 0, processingOrders: 0, pendingApprovals: 0 })
+  const [counts, setCounts] = useState({ pendingOrders: 0, processingOrders: 0, pendingApprovals: 0, unseenContacts: 0 })
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -42,10 +42,18 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
   useEffect(() => {
     if (user) {
       fetchCounts()
+
+      const refreshListener = () => fetchCounts();
+      window.addEventListener('refreshAdminCounts', refreshListener);
+
       const interval = setInterval(() => {
         if (document.visibilityState === 'visible') fetchCounts()
       }, 60000)
-      return () => clearInterval(interval)
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('refreshAdminCounts', refreshListener);
+      }
     }
   }, [user])
 
@@ -84,7 +92,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
         />
       )}
 
-      <div 
+      <div
         className={`
           fixed lg:static inset-y-0 left-0 w-64 bg-gray-900 text-white flex flex-col h-full z-[150]
           transition-transform duration-300 ease-in-out transform
@@ -117,27 +125,29 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
         {/* Navigation */}
         <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar">
 
-          {/* SECTION 1: APPROVAL CENTER (TOP PRIORITY) */}
-          {(isSuperAdmin || isOwner) && (
+          {/* SECTION 1: APPROVAL CENTER */}
+          {isAdmin && (
             <div className="bg-red-950/20 rounded-[1.5rem] p-2 border border-red-500/10">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] italic">Approval Center</p>
               </div>
 
-              <Link href="/admin/approvals" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
-                  Pending Approvals
-                  {counts.pendingApprovals > 0 && (
-                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
-                      {counts.pendingApprovals}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+              {(isSuperAdmin || isOwner) && (
+                <Link href="/admin/approvals" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
+                    Pending Approvals
+                    {counts.pendingApprovals > 0 && (
+                      <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
+                        {counts.pendingApprovals}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              )}
 
               <Link href="/admin/approvals/logs" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Historical Logs
+                  Approval History
                 </Button>
               </Link>
             </div>
@@ -158,7 +168,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
             {isModerator && (
               <Link href="/admin/orders" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
-                  Order Management
+                  Order Hub
                   {(counts.pendingOrders + counts.processingOrders) > 0 && (
                     <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
                       {counts.pendingOrders + counts.processingOrders}
@@ -170,8 +180,13 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
 
             {isAdmin && (
               <Link href="/admin/contacts" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
                   Contact Inquiries
+                  {counts.unseenContacts > 0 && (
+                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
+                      {counts.unseenContacts}
+                    </span>
+                  )}
                 </Button>
               </Link>
             )}
