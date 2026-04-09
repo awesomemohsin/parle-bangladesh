@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/api-auth";
 import { ROLES, ORDER_STATUS } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, ApprovalRequest } from "@/lib/models";
+import { Order, ApprovalRequest, ContactSubmission } from "@/lib/models";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const results: any = { pendingOrders: 0, processingOrders: 0, pendingApprovals: 0 };
+    const results: any = { pendingOrders: 0, processingOrders: 0, pendingApprovals: 0, unseenContacts: 0 };
 
     // Hierarchy based access
     const isHighLevel = user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER;
@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
     if (isHighLevel || isStaff) {
        results.pendingOrders = await Order.countDocuments({ status: ORDER_STATUS.PENDING });
        results.processingOrders = await Order.countDocuments({ status: ORDER_STATUS.PROCESSING });
+    }
+
+    // Fetch unseen contact count for authorized roles
+    if (isHighLevel || user.role === ROLES.ADMIN) {
+      results.unseenContacts = await ContactSubmission.countDocuments({ isSeen: false });
     }
 
     // Fetch approvals for high level users

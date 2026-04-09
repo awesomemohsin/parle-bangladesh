@@ -21,6 +21,9 @@ export async function GET(req: any) {
 
     const contacts = await ContactSubmission.find(query).sort({ createdAt: -1 });
 
+    // Mark all unseen contacts as seen when the list is opened
+    await ContactSubmission.updateMany({ isSeen: false }, { isSeen: true });
+
     return NextResponse.json({ contacts }, { status: 200 });
   } catch (error) {
     console.error("Admin contacts error:", error);

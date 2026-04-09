@@ -68,8 +68,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const sortQuery = searchParams.get("sort") || "newest";
+
     // 3. Sort & Pagination Stage
-    pipeline.push({ $sort: { createdAt: -1 } });
+    let sortStage: any = { createdAt: -1 };
+    if (sortQuery === "oldest") sortStage = { createdAt: 1 };
+    else if (sortQuery === "total-high") sortStage = { total: -1 };
+    else if (sortQuery === "total-low") sortStage = { total: 1 };
+
+    pipeline.push({ $sort: sortStage });
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: limit });
 

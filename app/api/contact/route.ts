@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
-    const { name, number, email, message, type, organizationName } = body;
+    const { name, number, email, message, type, organizationName, location } = body;
 
     // Server-side validation
     if (!name || !number) {
@@ -23,6 +23,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (type === "dealer" && !location) {
+      return NextResponse.json(
+        { message: "Location is required for dealer inquiries" },
+        { status: 400 }
+      );
+    }
+
     const newSubmission = await ContactSubmission.create({
       name,
       number,
@@ -30,6 +37,7 @@ export async function POST(req: Request) {
       message,
       type,
       organizationName,
+      location,
     });
 
     return NextResponse.json(
