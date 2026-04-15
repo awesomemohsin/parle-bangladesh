@@ -258,12 +258,19 @@ export default function CartPage() {
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
-                             <div className="flex items-center justify-end gap-1 text-gray-900">
+                          <div className="text-right flex flex-col items-end shrink-0">
+                             {item.quantity > 1 && (
+                               <div className="flex items-center gap-1 text-gray-400 mb-1 leading-none">
+                                  <span className="text-[9px] font-bold uppercase tracking-tight">৳{Math.round(item.price)} × {item.quantity}</span>
+                               </div>
+                             )}
+                             <div className="flex items-center justify-end gap-1 text-gray-900 leading-none">
                                 <span className="text-[10px] font-black text-red-600">৳</span>
-                                <span className="text-xl font-black tracking-tight">{Math.round(item.price)}</span>
+                                <span className="text-xl font-black tracking-tight leading-none">{Math.round(item.price * item.quantity)}</span>
                              </div>
-                             <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Price</p>
+                             <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest mt-1 leading-none">
+                               {item.quantity > 1 ? 'Line Total' : 'Price'}
+                             </p>
                           </div>
                         </div>
 
