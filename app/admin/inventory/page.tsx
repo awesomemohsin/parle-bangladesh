@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { 
   Package, 
   Truck, 
@@ -16,19 +18,39 @@ import {
 } from "lucide-react";
 
 export default function InventoryPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
 
   const fetchInventory = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/admin/inventory");
+      const res = await fetch("/api/admin/inventory", {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        router.push('/admin/login');
+        toast.error('Session expired. Please login again.');
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error("Failed to load inventory from server");
+      }
       const data = await res.json();
       setProducts(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      setError(error.message || "Connection interrupted. Could not load ledger.");
     } finally {
       setLoading(false);
     }
@@ -132,8 +154,25 @@ export default function InventoryPage() {
            ))}
         </div>
 
-        {/* Main Stock Table */}
+          {/* Main Stock Table */}
         <div className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-xl shadow-gray-100/40">
+          {error ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-6 text-center">
+               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+                  <AlertTriangle className="w-8 h-8" />
+               </div>
+               <div>
+                  <h3 className="text-xl font-black text-gray-900 uppercase">Ledger Sync Error</h3>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{error}</p>
+               </div>
+               <button 
+                 onClick={fetchInventory}
+                 className="bg-black hover:bg-red-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+               >
+                 Re-establish Connection
+               </button>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -239,6 +278,7 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
       <style jsx global>{`

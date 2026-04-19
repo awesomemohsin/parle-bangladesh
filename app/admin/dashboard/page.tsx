@@ -23,34 +23,68 @@ export default function AdminDashboard() {
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchStats = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/admin/stats', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data)
+      } else if (response.status === 401) {
+        // Force logout if unauthorized
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        router.push('/admin/login')
+        toast.error('Session expired. Please login again.')
+      } else {
+        const errData = await response.json()
+        setError(errData.error || 'Failed to connect to server')
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+      setError('Connection failed. Please check your internet or retry.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/admin/stats', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch stats:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchStats()
   }, [router])
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-gray-600 font-bold uppercase tracking-widest text-xs animate-pulse">Syncing Data...</div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-gray-400 font-black uppercase tracking-[0.2em] text-[10px] animate-pulse">Establishing Secure Sync...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">
+        <div className="p-4 bg-red-50 rounded-3xl text-red-600">
+           <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter italic">Sync Interrupted</h2>
+          <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-1">{error}</p>
+        </div>
+        <button 
+          onClick={fetchStats}
+          className="bg-black hover:bg-red-600 text-white px-10 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95 shadow-xl shadow-gray-200"
+        >
+          Force Manual Sync
+        </button>
       </div>
     )
   }

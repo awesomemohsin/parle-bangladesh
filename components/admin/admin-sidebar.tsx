@@ -245,6 +245,11 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
           )}
         </nav>
 
+        {/* System Health Status */}
+        <div className="px-6 py-4 border-t border-gray-800 bg-black/20">
+           <SystemStatusIndicator />
+        </div>
+
         {/* Logout */}
         <div className="p-4 border-t border-gray-800">
           <Button
@@ -259,3 +264,44 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
     </>
   )
 }
+
+function SystemStatusIndicator() {
+  const [status, setStatus] = useState({ online: true, database: 'Connected', latency: '...' });
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          const data = await res.json();
+          setStatus({ online: true, database: data.database, latency: data.latency });
+        } else {
+          setStatus(s => ({ ...s, online: false, database: 'Error' }));
+        }
+      } catch {
+        setStatus(s => ({ ...s, online: false }));
+      }
+    };
+
+    checkHealth();
+    const timer = setInterval(checkHealth, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-3">
+       <div className={`w-2 h-2 rounded-full ${status.online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'} shadow-[0_0_8px_rgba(16,185,129,0.5)]`}></div>
+       <div className="flex flex-col">
+          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest italic">System Status</span>
+          <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">
+            {status.online ? 'Cloud Synchronized' : 'Sync Interrupted'}
+          </span>
+       </div>
+       <div className="ml-auto flex flex-col items-end">
+          <span className="text-[7px] font-black text-gray-600 uppercase italic">Ping</span>
+          <span className="text-[9px] font-black text-gray-400 italic leading-none">{status.latency}</span>
+       </div>
+    </div>
+  );
+}
+

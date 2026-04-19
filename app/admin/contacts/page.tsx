@@ -27,6 +27,12 @@ export default function AdminContactsPage() {
         setContacts(fetchedContacts)
         // Trigger sidebar update to clear the badge
         window.dispatchEvent(new CustomEvent('refreshAdminCounts'))
+      } else if (response.status === 401) {
+        // Force logout on auth failure
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/admin/login'
+        toast.error('Session expired. Please login again.')
       } else {
         toast.error('Failed to fetch contacts')
       }
