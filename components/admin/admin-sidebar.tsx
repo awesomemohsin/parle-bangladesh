@@ -16,7 +16,7 @@ interface User {
 export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [counts, setCounts] = useState({ pendingOrders: 0, processingOrders: 0, pendingApprovals: 0, unseenContacts: 0 })
+  const [counts, setCounts] = useState({ pendingOrders: 0, processingOrders: 0, pendingApprovals: 0, unseenContacts: 0, pendingApplications: 0 })
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -185,6 +185,19 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                   {counts.unseenContacts > 0 && (
                     <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
                       {counts.unseenContacts}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link href="/admin/careers" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
+                  Career Applications
+                  {counts.pendingApplications > 0 && (
+                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
+                      {counts.pendingApplications}
                     </span>
                   )}
                 </Button>

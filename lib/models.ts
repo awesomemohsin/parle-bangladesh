@@ -493,3 +493,68 @@ ContactSubmissionSchema.index({ type: 1 });
 ContactSubmissionSchema.index({ createdAt: -1 });
 
 export const ContactSubmission = mongoose.models?.ContactSubmission || mongoose.model<IContactSubmission>("ContactSubmission", ContactSubmissionSchema, "contact_submissions");
+
+// --- JOB CIRCULAR MODEL ---
+export interface IJobCircular extends Document {
+  title: string;
+  description: string;
+  requirements: string[];
+  location: string;
+  type: "Full-time" | "Part-time" | "Contract" | "Internship";
+  salaryRange?: string;
+  deadline: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const JobCircularSchema = new Schema<IJobCircular>(
+  {
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    requirements: [{ type: String }],
+    location: { type: String, required: true },
+    type: { type: String, enum: ["Full-time", "Part-time", "Contract", "Internship"], default: "Full-time" },
+    salaryRange: { type: String },
+    deadline: { type: Date, required: true },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+export const JobCircular = mongoose.models?.JobCircular || mongoose.model<IJobCircular>("JobCircular", JobCircularSchema, "job_circulars");
+
+// --- CAREER APPLICATION MODEL ---
+export interface ICareerApplication extends Document {
+  fullname: string;
+  email: string;
+  phone: string;
+  position: string;
+  experience?: string;
+  resumeUrl?: string;
+  message?: string;
+  status: "pending" | "reviewed" | "shortlisted" | "rejected";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const CareerApplicationSchema = new Schema<ICareerApplication>(
+  {
+    fullname: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String, required: true },
+    position: { type: String, required: true },
+    experience: { type: String },
+    resumeUrl: { type: String },
+    message: { type: String },
+    status: { type: String, enum: ["pending", "reviewed", "shortlisted", "rejected"], default: "pending" },
+    isSeen: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+CareerApplicationSchema.index({ position: 1 });
+CareerApplicationSchema.index({ createdAt: -1 });
+
+export const CareerApplication = mongoose.models?.CareerApplication || mongoose.model<ICareerApplication>("CareerApplication", CareerApplicationSchema, "career_applications");
+

@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
+import CareerCTA from '@/components/career-cta'
 import { CartProvider } from '@/lib/contexts/CartContext'
 
 export default function RootLayout({
@@ -37,6 +38,7 @@ export default function RootLayout({
           <main className="flex-grow pt-20">
             {children}
           </main>
+          <CareerCTA />
           <Footer />
         </CartProvider>
         <Analytics />
