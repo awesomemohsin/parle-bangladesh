@@ -182,31 +182,33 @@ export default function Navbar() {
               <img src="/logo.png" alt="Logo" className="h-11 w-auto transition-transform group-hover:scale-105 duration-300" />
             </Link>
 
-            {/* Center: Essential Links (Absolutely Centered) */}
-            <div className="flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
-              <Link href="/shop" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                <ShoppingBag className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Shop
-              </Link>
-              <Link href="/shop/cart" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] relative hover:text-red-600 transition-all font-sans">
-                <ShoppingCart className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Cart
-                {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-5 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-10 shadow-lg shadow-red-200">
-                    {itemCount}
-                  </span>
-                )}
-              </Link>
-              {isLoggedIn && (
-                <Link href="/orders" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                  <Clock className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Orders
+            {/* Center: Essential Links (Absolutely Centered) - Hidden on Admin Routes */}
+            {!isAdminRoute && (
+              <div className="flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
+                <Link href="/shop" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
+                  <ShoppingBag className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Shop
                 </Link>
-              )}
-              <Link href="/about" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                <Info className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> About
-              </Link>
-              <Link href="/contact" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                <Mail className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Contact
-              </Link>
-            </div>
+                <Link href="/shop/cart" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] relative hover:text-red-600 transition-all font-sans">
+                  <ShoppingCart className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Cart
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-5 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-10 shadow-lg shadow-red-200">
+                      {itemCount}
+                    </span>
+                  )}
+                </Link>
+                {isLoggedIn && (
+                  <Link href="/orders" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
+                    <Clock className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Orders
+                  </Link>
+                )}
+                <Link href="/about" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
+                  <Info className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> About
+                </Link>
+                <Link href="/contact" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
+                  <Mail className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Contact
+                </Link>
+              </div>
+            )}
 
             {/* Right: Action Hub (Admin, Notifs, Auth) */}
             <div className="flex items-center gap-6 shrink-0">

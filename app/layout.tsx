@@ -24,6 +24,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import CareerCTA from '@/components/career-cta'
 import { CartProvider } from '@/lib/contexts/CartContext'
+import { Toaster } from 'sonner'
 
 export default function RootLayout({
   children,
@@ -34,6 +35,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} antialiased min-h-screen flex flex-col overflow-x-hidden`}>
         <CartProvider>
+          <Toaster position="top-center" richColors />
           <Navbar />
           <main className="flex-grow pt-20">
             {children}

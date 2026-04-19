@@ -24,8 +24,7 @@ export async function POST(req: Request) {
       ApprovalRequest.deleteMany({})
     ]);
 
-    console.log('System Operational Data Reset:', results);
-
+    // Track this reset as an activity if needed, but avoid large logs
     return NextResponse.json({ 
       success: true, 
       message: 'All operational data (Orders, Carts, Notifications, Activities, Contacts, and Approvals) has been permanently cleared from the database.',

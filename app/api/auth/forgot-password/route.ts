@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
 import { Customer, Admin } from "@/lib/models";
+import { transporter, getResetPasswordTemplate, SMTP_FROM } from "@/lib/mail";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,18 +34,26 @@ export async function POST(request: NextRequest) {
     user.resetPasswordExpires = new Date(Date.now() + 3600000);
     await user.save();
 
-    // In a real application, you would send an email here using nodemailer, sendgrid, etc.
-    // For this demonstration, we'll log it to console or return it in development
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password?token=${resetToken}`;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`;
     
-    console.log(`[PASSWORD RESET LOG]: URL -> ${resetUrl}`);
+    // Send Email if transporter is configured
+    if (transporter && SMTP_FROM) {
+      await transporter.sendMail({
+        from: `"Parle Security" <${SMTP_FROM}>`,
+        to: user.email,
+        subject: "Security Protocol: Password Reset Request",
+        html: getResetPasswordTemplate(resetUrl, user.name),
+      });
+    } else {
+      console.warn("SMTP not configured. Reset Link (dev only):", resetUrl);
+    }
 
     return NextResponse.json({ 
-      message: "If an account exists, a password reset link has been created.",
-      // Adding for easy testing without email setup:
-      debug_url: process.env.NODE_ENV !== "production" ? resetUrl : undefined
+      message: "If an account exists, a password reset link has been created."
     }, { status: 200 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Forgot password error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

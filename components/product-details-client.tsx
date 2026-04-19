@@ -91,7 +91,6 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   const handleAddToCart = () => {
     if (!product || !selectedVariation) return;
-    console.log("Adding to cart from details:", product.name);
     addItem({
       productId: product.id,
       productSlug: product.slug,
