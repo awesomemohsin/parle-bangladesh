@@ -173,6 +173,11 @@ export default function ProductDetailsClient({ product, images }: { product: any
           </div>
           <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight tracking-tight">
             {product.name}
+            {selectedVariation?.flavor && (
+              <span className="block text-red-600 text-xl lg:text-2xl mt-1 font-medium italic opacity-80">
+                {selectedVariation.flavor}
+              </span>
+            )}
           </h1>
         </div>
 
@@ -272,7 +277,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
         </div>
 
         {/* Buy Now Buttons */}
-        <div className="flex flex-col gap-4 mt-auto pt-8 relative">
+        <div className="flex flex-col gap-4 mt-auto pt-8 relative border-t-2 border-gray-100">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={handleBuyNow}
@@ -312,6 +317,53 @@ export default function ProductDetailsClient({ product, images }: { product: any
                 )}
               </AnimatePresence>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Product Info Section */}
+      <div className="md:col-span-12 bg-white p-8 lg:p-12 border-t border-gray-100">
+        <div className="flex flex-col md:flex-row gap-12 items-start">
+          <div className="md:w-1/3">
+            <h2 className="text-xl font-bold text-gray-900 leading-none mb-4 flex items-center gap-2">
+              <span className="w-6 h-1 bg-black rounded-full"></span> 
+              PRODUCT INFO
+            </h2>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-6">Details & Specifications</p>
+            
+            <div className="grid grid-cols-1 gap-4">
+              <div className="p-4 bg-slate-50/50 rounded-xl border border-gray-50">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Product Code</span>
+                <span className="text-sm font-bold text-gray-900">{product.slug.toUpperCase()}</span>
+              </div>
+              <div className="p-4 bg-slate-50/50 rounded-xl border border-gray-50">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Weight</span>
+                <span className="text-sm font-bold text-gray-900">{selectedVariation?.weight || "Standard"}</span>
+              </div>
+              {selectedVariation?.flavor && (
+                <div className="p-4 bg-red-50/30 rounded-xl border border-red-50/50">
+                  <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest block mb-1">Flavor</span>
+                  <span className="text-sm font-bold text-red-600">{selectedVariation?.flavor}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="md:w-2/3 md:pl-10">
+            <div className="prose prose-slate max-w-none">
+              <p className="text-gray-600 font-medium leading-relaxed text-base">
+                {product.description || "High quality Parle product. Guaranteed fresh and delicious for your enjoyment."}
+              </p>
+            </div>
+            
+            {/* Additional Variation Context if any */}
+            {(selectedVariation?.weight || selectedVariation?.flavor) && (
+              <div className="mt-6 flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-slate-100 text-[10px] font-bold text-slate-500 rounded-md uppercase tracking-wider">
+                  Selected Variant: {[selectedVariation?.weight, selectedVariation?.flavor].filter(Boolean).join(" - ")}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

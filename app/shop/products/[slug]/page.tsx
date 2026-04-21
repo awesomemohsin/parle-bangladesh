@@ -91,42 +91,6 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
         </div>
 
         <ProductDetailsClient product={serializedProduct} images={images} />
-
-        {/* Product Details Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-12 mt-12 relative overflow-hidden border border-gray-100">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50 flex items-center justify-center rounded-bl-3xl">
-             <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">info</span>
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-12 items-start">
-            <div className="md:w-1/3">
-               <h2 className="text-xl font-bold text-gray-900 leading-none mb-4 flex items-center gap-2">
-                 <span className="w-6 h-1 bg-black rounded-full"></span> 
-                 PRODUCT INFO
-               </h2>
-               <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-6">Details & Specifications</p>
-               
-               <div className="grid grid-cols-1 gap-4">
-                 <div className="p-4 bg-slate-50/50 rounded-xl border border-gray-50">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Product Code</span>
-                    <span className="text-sm font-bold text-gray-900">{product.slug.toUpperCase()}</span>
-                 </div>
-                 <div className="p-4 bg-slate-50/50 rounded-xl border border-gray-50">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Weight</span>
-                    <span className="text-sm font-bold text-gray-900">{product.variations?.[0]?.weight || "N/A"}</span>
-                 </div>
-               </div>
-            </div>
-
-            <div className="md:w-2/3 md:pl-10">
-               <div className="prose prose-slate max-w-none">
-                 <p className="text-gray-600 font-medium leading-relaxed text-base">
-                   {product.description || "High quality Parle product. Guaranteed fresh and delicious for your enjoyment."}
-                 </p>
-               </div>
-            </div>
-          </div>
-        </div>
       </main>
     </div>
   );
