@@ -22,10 +22,39 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // 1. Save to Database
+    const emailLower = email.toLowerCase().trim();
+
+    // 1. Rate Limit: 2 applications per day per email
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const dailyCount = await CareerApplication.countDocuments({
+      email: emailLower,
+      createdAt: { $gte: oneDayAgo }
+    });
+
+    if (dailyCount >= 2) {
+      return NextResponse.json({ 
+        message: "Security Protocol: You have reached the maximum of 2 applications per 24 hours. Please try again tomorrow." 
+      }, { status: 429 });
+    }
+
+    // 2. Duplicate Check: Same position within 48 hours
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const existingSamePosition = await CareerApplication.findOne({
+      email: emailLower,
+      position,
+      createdAt: { $gte: fortyEightHoursAgo }
+    });
+
+    if (existingSamePosition) {
+      return NextResponse.json({ 
+        message: `You have already applied for the "${position}" position. To re-apply or update your CV, please wait 48 hours.` 
+      }, { status: 400 });
+    }
+
+    // 3. Save to Database
     const application = await CareerApplication.create({
       fullname,
-      email,
+      email: emailLower,
       phone,
       experience,
       message,
@@ -39,12 +68,25 @@ export async function POST(req: Request) {
         const arrayBuffer = await resume.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // A. Send to Admin (Matches Delta Subject/Logic)
-        await transporter.sendMail({
-          from: `"Parle BD Careers" <${SMTP_FROM}>`,
+        // A. Send Confirmation to Applicant First
+        const applicantMail = await transporter.sendMail({
+          from: `"Parle Bangladesh" <${SMTP_FROM}>`,
+          to: email,
+          subject: "Application Received - Parle Bangladesh",
+          html: `
+            <h3>Hello ${fullname}</h3>
+            <p>We've received your application for the <strong>${position}</strong> position.</p>
+            <p>Our team will review your CV and get back to you soon.</p>
+          `,
+        });
+        console.log('Applicant confirmation sent:', applicantMail.messageId);
+
+        // B. Send to Admin (Notification)
+        const adminMail = await transporter.sendMail({
+          from: `"Parle Bangladesh Careers" <${SMTP_FROM}>`,
           replyTo: email,
           to: SMTP_TO,
-          subject: `Parle BD Website Carrer - ${position} - ${fullname}`,
+          subject: `Career Application: ${position} - ${fullname}`,
           html: `
             <h3>New Career Application</h3>
             <p><strong>Position:</strong> ${position}</p>
@@ -58,18 +100,7 @@ export async function POST(req: Request) {
           `,
           attachments: [{ filename: resume.name, content: buffer }],
         });
-
-        // B. Send Confirmation to Applicant
-        await transporter.sendMail({
-          from: `"Parle Bangladesh" <${SMTP_FROM}>`,
-          to: email,
-          subject: "Application Received - Parle Bangladesh",
-          html: `
-            <h3>Hello ${fullname}</h3>
-            <p>We've received your application for the <strong>${position}</strong> position.</p>
-            <p>Our team will review your CV and get back to you soon.</p>
-          `,
-        });
+        console.log('Admin notification sent:', adminMail.messageId);
       } catch (error) {
         console.error('Error sending career emails:', error);
       }

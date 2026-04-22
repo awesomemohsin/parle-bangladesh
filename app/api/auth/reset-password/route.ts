@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
-import { Customer, Admin } from "@/lib/models";
+import { User, Admin } from "@/lib/models";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     await connectDB();
-    let user = await Customer.findOne({
+    let user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() },
     });

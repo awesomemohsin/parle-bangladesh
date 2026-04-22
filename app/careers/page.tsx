@@ -84,6 +84,12 @@ export default function CareersPage() {
     message: "",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("parle_applied_jobs");
+    if (saved) setAppliedJobs(JSON.parse(saved));
+  }, []);
 
   useEffect(() => {
     const fetchCirculars = async () => {
@@ -148,6 +154,14 @@ export default function CareersPage() {
 
       if (response.ok) {
         toast.success("Application submitted successfully!");
+        
+        // Track locally
+        if (selectedJob) {
+          const newApplied = [...appliedJobs, selectedJob.title];
+          setAppliedJobs(newApplied);
+          localStorage.setItem("parle_applied_jobs", JSON.stringify(newApplied));
+        }
+
         setIsFormOpen(false);
         setFormData({ fullname: "", email: "", phone: "", experience: "", message: "" });
         setFile(null);
@@ -236,10 +250,23 @@ export default function CareersPage() {
 
                 <Button 
                   onClick={() => handleApplyClick(job)}
-                  className="w-full bg-black hover:bg-red-600 text-white rounded-2xl py-6 font-black uppercase tracking-widest text-[11px] group active:scale-95"
+                  disabled={appliedJobs.includes(job.title)}
+                  className={`w-full rounded-2xl py-6 font-black uppercase tracking-widest text-[11px] group active:scale-95 transition-all ${
+                    appliedJobs.includes(job.title) 
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                    : "bg-black hover:bg-red-600 text-white"
+                  }`}
                 >
-                  Apply Now
-                  <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  {appliedJobs.includes(job.title) ? (
+                    <>
+                      Applied <CheckCircle2 className="w-4 h-4 ml-2" />
+                    </>
+                  ) : (
+                    <>
+                      Apply Now
+                      <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </Button>
               </motion.div>
             ))}

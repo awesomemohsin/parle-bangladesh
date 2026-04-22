@@ -10,6 +10,8 @@ export interface IUser extends Document {
   status: "active" | "disabled";
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  resetRequestCount?: number;
+  lastResetRequest?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,8 @@ const UserSchema = new Schema<IUser>(
     status: { type: String, enum: ["active", "disabled"], default: "active" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    resetRequestCount: { type: Number, default: 0 },
+    lastResetRequest: { type: Date },
   },
   { timestamps: true }
 );
