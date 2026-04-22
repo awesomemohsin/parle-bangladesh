@@ -39,21 +39,7 @@ const MOCK_CIRCULARS = [
       "Ability to meet sales targets",
       "Familiarity with local retail markets"
     ],
-    salaryRange: "40,000 - 60,000 BDT"
-  },
-  {
-    id: "2",
-    title: "Logistics Coordinator",
-    location: "Savar, Dhaka",
-    type: "Full-time",
-    deadline: "2026-05-20",
-    description: "Responsible for managing supply chain operations, coordinating with distributors, and ensuring timely delivery of goods.",
-    requirements: [
-      "Bachelor's degree in Supply Chain or related field",
-      "Strong analytical and problem-solving skills",
-      "Proficient in Excel and inventory management software"
-    ],
-    salaryRange: "30,000 - 45,000 BDT"
+    salaryRange: "Attractive Salary"
   },
   {
     id: "3",
