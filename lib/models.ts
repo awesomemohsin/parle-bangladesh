@@ -540,6 +540,7 @@ export interface ICareerApplication extends Document {
   resumeUrl?: string;
   message?: string;
   status: "pending" | "reviewed" | "shortlisted" | "rejected";
+  isSeen?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

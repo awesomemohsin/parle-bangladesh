@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
 if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  throw new Error("Please define the Database URI environment variable inside .env.local");
 }
 
 let cached = (global as any).mongoose;
@@ -26,9 +26,9 @@ async function connectDB() {
       heartbeatFrequencyMS: 10000,
     };
 
-    console.log("Connecting to MongoDB...");
+    console.log("Connecting to Database...");
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log("MongoDB Connected Successfully");
+      console.log("Database Connected Successfully");
       return mongoose;
     });
   }
@@ -36,14 +36,14 @@ async function connectDB() {
   try {
     cached.conn = await cached.promise;
   } catch (e) {
-    console.error("MongoDB Connection Error:", e);
+    console.error("Database Connection Error:", e);
     cached.promise = null; // Reset promise on error to allow retry
     throw e;
   }
 
   // Verify readyState
   if (mongoose.connection.readyState !== 1) {
-    console.warn("MongoDB readyState is not 1 yet. State:", mongoose.connection.readyState);
+    console.warn("Database readyState is not 1 yet. State:", mongoose.connection.readyState);
     // Wait for a short bit if it's connecting
     if (mongoose.connection.readyState === 2) {
        await new Promise(resolve => setTimeout(resolve, 500));

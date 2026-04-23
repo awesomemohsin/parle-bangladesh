@@ -1,18 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { Order, Cart, Notification, AdminActivity, ContactSubmission, ApprovalRequest, User } from '@/lib/models';
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
+import { ROLES } from "@/lib/constants";
 
-    const token = authHeader.split(' ')[1];
-    // Simple validation (assuming we have a secret or can verify)
-    // For now, we trust the caller if we are in this specific admin/system terminal
-    // In a real app, we'd verify the JWT and check role === 'owner'
-    
+export async function POST(req: NextRequest) {
+  try {
     await connectDB();
+    const user = getAuthUserFromRequest(req);
+    
+    // Only OWNER can perform a full system reset
+    if (!user || !hasAnyRole(user, [ROLES.OWNER])) {
+      return NextResponse.json({ error: 'Forbidden. Owner Authorization Level 5 Required.' }, { status: 403 });
+    }
 
     // ⚠️ CRITICAL OPERATION: Wiping operational data
     const results = await Promise.allSettled([

@@ -62,7 +62,6 @@ export async function POST(req: Request) {
             <p>${message.replace(/\n/g, '<br/>')}</p>
           `,
         });
-        console.log('Contact notification email sent to admin');
       } catch (error) {
         console.error('Error sending contact notification:', error);
       }

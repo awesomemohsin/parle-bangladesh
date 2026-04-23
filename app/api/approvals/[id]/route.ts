@@ -79,8 +79,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         approvalRequest.superadminApprovals.push(userName);
         
         const superApprovals = approvalRequest.superadminApprovals.map((a: string) => a.toLowerCase());
-        const hasAnindo = superApprovals.some(a => a.includes("anindo"));
-        const hasSaiful = superApprovals.some(a => a.includes("saiful"));
+        const hasAnindo = superApprovals.some((a: string) => a.includes("anindo"));
+        const hasSaiful = superApprovals.some((a: string) => a.includes("saiful"));
         
         if (hasAnindo && hasSaiful) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
@@ -198,7 +198,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
           }
         }
         
-        // Use Mongoose .set() for deep path reliability
+        // Use Database .set() for deep path reliability
         const typedVal = isNumeric ? Number(newValue) : newValue;
         variation.set(field, typedVal);
         product.markModified('variations');
@@ -210,7 +210,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
     }
     
     await product.save();
-    console.log(`ApplyChanges: Successfully updated ${approvalRequest.type} ${approvalRequest.targetId} field ${field}`);
+    // Changes applied successfully
   } else if (approvalRequest.type === 'category') {
     const category = await Category.findById(approvalRequest.targetId);
     if (category) {

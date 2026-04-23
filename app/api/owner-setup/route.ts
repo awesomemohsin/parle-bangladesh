@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const password = "owner123";
     const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
     
-    // UPSERT directly using collection to bypass Mongoose enums
+    // UPSERT directly using collection to bypass Database enums
     await adminCollection.updateOne(
         { email: ownerEmail },
         { 

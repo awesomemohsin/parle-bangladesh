@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const rawItems = Array.isArray(body.items) ? body.items : [];
     
-    // Normalize resolving missing price/name from MongoDB
+    // Normalize resolving missing price/name from Database
     const items = [];
     for (const item of rawItems) {
       const quantity = Number(item.quantity || 0);

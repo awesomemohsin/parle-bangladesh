@@ -79,7 +79,6 @@ export async function POST(req: Request) {
             <p>Our team will review your CV and get back to you soon.</p>
           `,
         });
-        console.log('Applicant confirmation sent:', applicantMail.messageId);
 
         // B. Send to Admin (Notification)
         const adminMail = await transporter.sendMail({
@@ -100,7 +99,6 @@ export async function POST(req: Request) {
           `,
           attachments: [{ filename: resume.name, content: buffer }],
         });
-        console.log('Admin notification sent:', adminMail.messageId);
       } catch (error) {
         console.error('Error sending career emails:', error);
       }

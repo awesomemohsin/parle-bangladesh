@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'parle-ecommerce-secret-key-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is not defined');
+}
 
 export interface JWTPayload {
   id: string
@@ -33,9 +37,11 @@ export function getTokenFromCookie(cookieHeader: string | null): string | null {
 }
 
 export function setAuthCookie(token: string): string {
-  return `auth_token=${token}; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax`
+  const isProd = process.env.NODE_ENV === 'production';
+  return `auth_token=${token}; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
 }
 
 export function clearAuthCookie(): string {
-  return 'auth_token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax'
+  const isProd = process.env.NODE_ENV === 'production';
+  return `auth_token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
 }
