@@ -12,6 +12,10 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   resetRequestCount?: number;
   lastResetRequest?: Date;
+  otpCode?: string;
+  otpExpires?: Date;
+  failedLoginAttempts?: number;
+  lockUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +32,10 @@ const UserSchema = new Schema<IUser>(
     resetPasswordExpires: { type: Date },
     resetRequestCount: { type: Number, default: 0 },
     lastResetRequest: { type: Date },
+    otpCode: { type: String },
+    otpExpires: { type: Date },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
   },
   { timestamps: true }
 );
@@ -35,6 +43,32 @@ const UserSchema = new Schema<IUser>(
 export const User = mongoose.models?.User || mongoose.model<IUser>("User", UserSchema, "users");
 export const Customer = mongoose.models?.Customer || mongoose.model<IUser>("Customer", UserSchema, "customers");
 export const Admin = mongoose.models?.Admin || mongoose.model<IUser>("Admin", UserSchema, "admins");
+
+// --- LOGIN HISTORY MODEL ---
+export interface ILoginHistory extends Document {
+  email: string;
+  role: string;
+  ipAddress: string;
+  userAgent: string;
+  deviceInfo?: string;
+  status: "success" | "failed" | "otp_requested";
+  createdAt: Date;
+}
+
+const LoginHistorySchema = new Schema<ILoginHistory>(
+  {
+    email: { type: String, required: true },
+    role: { type: String, required: true },
+    ipAddress: { type: String, required: true },
+    userAgent: { type: String, required: true },
+    deviceInfo: { type: String },
+    status: { type: String, enum: ["success", "failed", "otp_requested"], required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
+
+export const LoginHistory = mongoose.models?.LoginHistory || mongoose.model<ILoginHistory>("LoginHistory", LoginHistorySchema, "login_histories");
+
 
 // --- CART MODEL ---
 export interface ICartItem {

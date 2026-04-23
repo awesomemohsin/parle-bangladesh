@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
     const password = "owner123";
     const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
     
+    // New Super Admin Setup
+    const superAdminEmail = "mdmohsin.work@gmail.com";
+    const superAdminPassword = "SuperAdmin@Parle2026!";
+    const superAdminPasswordHash = crypto.createHash("sha256").update(superAdminPassword).digest("hex");
+    
     // UPSERT directly using collection to bypass Database enums
     await adminCollection.updateOne(
         { email: ownerEmail },
@@ -28,18 +33,38 @@ export async function GET(request: NextRequest) {
                 mobile: "01700000000",
                 password: passwordHash,
                 role: "owner",
-                status: "active"
-            }
+                status: "active",
+                updatedAt: new Date()
+            },
+            $setOnInsert: { createdAt: new Date() }
+        },
+        { upsert: true }
+    );
+
+    await adminCollection.updateOne(
+        { email: superAdminEmail },
+        { 
+            $set: {
+                name: "Mohsin",
+                email: superAdminEmail,
+                mobile: "01800000000",
+                password: superAdminPasswordHash,
+                role: "super_admin",
+                status: "active",
+                updatedAt: new Date()
+            },
+            $setOnInsert: { createdAt: new Date() }
         },
         { upsert: true }
     );
 
     return NextResponse.json({ 
-        message: "Owner account successfully forced into Database collection via raw query", 
-        email: ownerEmail,
-        pass: password,
-        role: "owner",
-        info: "Try logging in now. If it still fails, restart 'npm run dev' to refresh models."
+        message: "Accounts successfully forced into Database collection via raw query", 
+        accounts: [
+           { email: ownerEmail, pass: password, role: "owner" },
+           { email: superAdminEmail, pass: superAdminPassword, role: "super_admin" }
+        ],
+        info: "Try logging in now."
     });
   } catch (error: any) {
     console.error("Owner setup error:", error);
