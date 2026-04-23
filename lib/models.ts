@@ -506,6 +506,7 @@ export interface IJobCircular extends Document {
   location: string;
   type: "Full-time" | "Part-time" | "Contract" | "Internship";
   salaryRange?: string;
+  benefits?: string[];
   deadline: Date;
   isActive: boolean;
   createdAt: Date;
@@ -517,6 +518,7 @@ const JobCircularSchema = new Schema<IJobCircular>(
     title: { type: String, required: true },
     description: { type: String, required: true },
     requirements: [{ type: String }],
+    benefits: [{ type: String }],
     location: { type: String, required: true },
     type: { type: String, enum: ["Full-time", "Part-time", "Contract", "Internship"], default: "Full-time" },
     salaryRange: { type: String },

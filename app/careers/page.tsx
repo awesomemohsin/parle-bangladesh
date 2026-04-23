@@ -39,7 +39,12 @@ const MOCK_CIRCULARS = [
       "Ability to meet sales targets",
       "Familiarity with local retail markets"
     ],
-    salaryRange: "Attractive Salary"
+    salaryRange: "Negotiable",
+    benefits: [
+      "T/A, D/A, Mobile bill",
+      "Salary Review: Yearly",
+      "Festival Bonus: 2"
+    ]
   },
   {
     id: "3",
@@ -53,7 +58,12 @@ const MOCK_CIRCULARS = [
       "Creative mindset with strong execution capability",
       "Knowledge of digital marketing is a plus"
     ],
-    salaryRange: "Negotiable"
+    salaryRange: "Negotiable",
+    benefits: [
+      "Mobile bill",
+      "Salary Review: Yearly",
+      "Festival Bonus: 2"
+    ]
   }
 ];
 
@@ -80,7 +90,7 @@ export default function CareersPage() {
   useEffect(() => {
     const fetchCirculars = async () => {
       try {
-        const res = await fetch("/api/careers/circulars");
+        const res = await fetch(`/api/careers/circulars?t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
@@ -227,11 +237,41 @@ export default function CareersPage() {
                         {job.salaryRange}
                       </div>
                     )}
+                    {(job as any).benefits && (job as any).benefits.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {(job as any).benefits.map((benefit: string, i: number) => (
+                          <span key={i} className="text-[9px] font-black uppercase tracking-widest bg-red-50/50 text-red-600 px-3 py-1.5 rounded-xl border border-red-100/50 shadow-sm transition-all hover:bg-red-600 hover:text-white">
+                            {benefit}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <p className="text-gray-500 text-sm leading-relaxed mb-6 line-clamp-3">
                     {job.description}
                   </p>
+
+                  {job.requirements && job.requirements.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+                        <CheckCircle2 className="w-3 h-3 text-red-600" /> Requirements
+                      </h4>
+                      <ul className="space-y-2">
+                        {job.requirements.slice(0, 3).map((req, i) => (
+                          <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                            <span className="w-1 h-1 rounded-full bg-red-600 mt-1.5 flex-shrink-0" />
+                            {req}
+                          </li>
+                        ))}
+                        {job.requirements.length > 3 && (
+                          <li className="text-[10px] font-bold text-red-600 uppercase tracking-widest pt-1 italic">
+                            + {job.requirements.length - 3} more requirements
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <Button 

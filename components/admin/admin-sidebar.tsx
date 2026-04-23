@@ -239,6 +239,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
               </div>
               <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Users</Button></Link>
+              <Link href="/admin/careers/circulars" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Circulars</Button></Link>
               <Link href="/admin/promo-codes" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Promo Codes</Button></Link>
               <Link href="/admin/activities" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Action Logs</Button></Link>
             </div>
