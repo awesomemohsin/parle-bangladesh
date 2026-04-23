@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Briefcase, 
-  MapPin, 
-  Clock, 
-  ChevronRight, 
-  Upload, 
-  Send, 
-  CheckCircle2, 
+import {
+  Briefcase,
+  MapPin,
+  Clock,
+  ChevronRight,
+  Upload,
+  Send,
+  CheckCircle2,
   AlertCircle,
   X,
   FileText,
@@ -132,7 +132,7 @@ export default function CareersPage() {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const data = new FormData();
       data.append("fullname", formData.fullname);
@@ -150,7 +150,7 @@ export default function CareersPage() {
 
       if (response.ok) {
         toast.success("Application submitted successfully!");
-        
+
         // Track locally
         if (selectedJob) {
           const newApplied = [...appliedJobs, selectedJob.title];
@@ -175,19 +175,19 @@ export default function CareersPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Navbar />
-      
+
       <main className="flex-grow pt-24 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter"
             >
               Build Your Career with <span className="text-red-600">Parle Bangladesh</span>
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -217,11 +217,11 @@ export default function CareersPage() {
                       {job.type}
                     </span>
                   </div>
-                  
+
                   <h3 className="text-xl font-black text-gray-900 mb-2 truncate group-hover:text-red-600 transition-colors">
                     {job.title}
                   </h3>
-                  
+
                   <div className="flex flex-col gap-2 mb-6">
                     <div className="flex items-center gap-2 text-gray-500 text-sm font-bold uppercase tracking-tight">
                       <MapPin className="w-3.5 h-3.5" />
@@ -274,14 +274,13 @@ export default function CareersPage() {
                   )}
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => handleApplyClick(job)}
                   disabled={appliedJobs.includes(job.title)}
-                  className={`w-full rounded-2xl py-6 font-black uppercase tracking-widest text-[11px] group active:scale-95 transition-all ${
-                    appliedJobs.includes(job.title) 
-                    ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
-                    : "bg-black hover:bg-red-600 text-white"
-                  }`}
+                  className={`w-full rounded-2xl py-6 font-black uppercase tracking-widest text-[11px] group active:scale-95 transition-all ${appliedJobs.includes(job.title)
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-black hover:bg-red-600 text-white"
+                    }`}
                 >
                   {appliedJobs.includes(job.title) ? (
                     <>
@@ -299,7 +298,7 @@ export default function CareersPage() {
           </div>
 
           {/* General Application CTA */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             className="mt-16 bg-gradient-to-br from-gray-900 to-black rounded-[3rem] p-8 md:p-12 text-center text-white"
@@ -310,27 +309,28 @@ export default function CareersPage() {
             <p className="text-gray-400 font-medium mb-8 max-w-xl mx-auto">
               Submit a general application and we'll keep your profile in our database for future opportunities.
             </p>
-            <Button 
-              onClick={() => handleApplyClick({ 
-                id: "general", 
-                title: "General Application", 
-                location: "Bangladesh", 
-                type: "Full-time", 
-                deadline: "", 
-                description: "", 
-                requirements: [], 
-                salaryRange: "" 
+            <Button
+              onClick={() => handleApplyClick({
+                id: "general",
+                title: "General Application",
+                location: "Bangladesh",
+                type: "Full-time",
+                deadline: "",
+                description: "",
+                requirements: [],
+                salaryRange: "",
+                benefits: []
               })}
-              variant="outline" 
+              variant="outline"
               className="bg-white text-black hover:bg-red-600 hover:text-white border-none rounded-2xl px-10 py-6 font-black uppercase tracking-widest text-[11px]"
             >
               Submit CV/Resume
             </Button>
-            
+
             <div className="mt-8 pt-8 border-t border-white/10">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-4">Or reach out via</p>
-              <a 
-                href="mailto:cfb@circlenetworkbd.net" 
+              <a
+                href="mailto:cfb@circlenetworkbd.net"
                 className="inline-flex items-center gap-2 text-white hover:text-red-600 transition-colors group"
               >
                 <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center group-hover:bg-red-600 transition-all">
@@ -347,15 +347,15 @@ export default function CareersPage() {
       <AnimatePresence>
         {isFormOpen && selectedJob && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsFormOpen(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            
-            <motion.div 
+
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -369,7 +369,7 @@ export default function CareersPage() {
                       Apply for {selectedJob.title}
                     </h2>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setIsFormOpen(false)}
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                   >
@@ -381,7 +381,7 @@ export default function CareersPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Full Name</Label>
-                      <Input 
+                      <Input
                         name="fullname"
                         required
                         placeholder="John Doe"
@@ -392,7 +392,7 @@ export default function CareersPage() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Email Address</Label>
-                      <Input 
+                      <Input
                         name="email"
                         type="email"
                         required
@@ -407,7 +407,7 @@ export default function CareersPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Phone Number</Label>
-                      <Input 
+                      <Input
                         name="phone"
                         required
                         placeholder="+880123456789"
@@ -418,7 +418,7 @@ export default function CareersPage() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Experience (Years)</Label>
-                      <Input 
+                      <Input
                         name="experience"
                         placeholder="e.g. 2+ years"
                         value={formData.experience}
@@ -430,7 +430,7 @@ export default function CareersPage() {
 
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Why should we hire you?</Label>
-                    <Textarea 
+                    <Textarea
                       name="message"
                       rows={3}
                       placeholder="Briefly describe your fit for this role..."
@@ -444,14 +444,14 @@ export default function CareersPage() {
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400">Resume / CV (PDF or Word)</Label>
                     <div className="relative">
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         accept=".pdf,.doc,.docx"
                         onChange={handleFileChange}
                         className="hidden"
                         id="resume-upload"
                       />
-                      <label 
+                      <label
                         htmlFor="resume-upload"
                         className="flex items-center justify-center gap-3 w-full border-2 border-dashed border-slate-200 rounded-2xl p-6 cursor-pointer hover:border-red-600 hover:bg-red-50/30 transition-all"
                       >
@@ -470,7 +470,7 @@ export default function CareersPage() {
                     </div>
                   </div>
 
-                  <Button 
+                  <Button
                     type="submit"
                     disabled={isSubmitting}
                     className="w-full bg-red-600 hover:bg-black text-white rounded-2xl py-7 font-black uppercase tracking-[0.2em] text-[11px] group mt-4 active:scale-95"
