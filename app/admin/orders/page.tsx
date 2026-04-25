@@ -36,6 +36,7 @@ interface Order {
   pendingApproval?: boolean
   promoCode?: string
   discountAmount?: number
+  deliveryMethod?: string
 }
 
 export default function AdminOrdersPage() {
@@ -290,19 +291,33 @@ export default function AdminOrdersPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-dashed border-gray-100">
                   <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Shipping Address</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                      {order.deliveryMethod === 'pickup' ? 'Delivery Method (Pickup)' : 'Shipping Address'}
+                    </p>
                     <p className="text-sm font-bold text-gray-600 leading-tight">
-                      {order.shippingAddress || order.address}, {order.shippingCity || order.city} - {order.shippingPostalCode || order.postalCode}
+                      {order.deliveryMethod === 'pickup' 
+                        ? 'Collection Point Pickup' 
+                        : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city} - ${order.shippingPostalCode || order.postalCode}`}
                     </p>
                   </div>
-                  {order.instruction && (
-                    <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100">
-                      <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Staff Instructions</p>
-                      <p className="text-xs font-bold text-amber-800 leading-tight">
-                        {order.instruction}
-                      </p>
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-2">
+                    {order.instruction && (
+                      <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100">
+                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Staff Instructions</p>
+                        <p className="text-xs font-bold text-amber-800 leading-tight">
+                          {order.instruction}
+                        </p>
+                      </div>
+                    )}
+                    {order.statusReason && (
+                      <div className="bg-red-50/50 p-3 rounded-xl border border-red-100">
+                        <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Status Reason</p>
+                        <p className="text-xs font-bold text-red-800 leading-tight">
+                          {order.statusReason}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
