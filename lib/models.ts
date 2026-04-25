@@ -282,6 +282,7 @@ export interface IOrder extends Document {
   shippingAddress?: string;
   shippingCity?: string;
   shippingPostalCode?: string;
+  deliveryMethod?: string;
   orderLogs?: IOrderLog[];
   createdAt: Date;
   updatedAt: Date;
@@ -330,6 +331,7 @@ const OrderSchema = new Schema<IOrder>(
     shippingAddress: { type: String },
     shippingCity: { type: String },
     shippingPostalCode: { type: String },
+    deliveryMethod: { type: String, enum: ["shipping", "pickup"], default: "shipping" },
     orderLogs: [OrderLogSchema],
   },
   { timestamps: true }

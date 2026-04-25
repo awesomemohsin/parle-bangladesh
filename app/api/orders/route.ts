@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
     const billingAddress = body.billingAddress || {};
     const shippingAddress = body.shippingAddress || {};
     const instruction = body.instruction || "";
+    const deliveryMethod = body.deliveryMethod || "shipping";
 
     const customerName = body.customerName || billingAddress.name;
     const customerEmail = (body.customerEmail || body.email || billingAddress.email || "").toLowerCase().trim();
@@ -170,9 +171,9 @@ export async function POST(request: NextRequest) {
     const city = body.city || billingAddress.city;
     const postalCode = body.postalCode || billingAddress.postalCode;
 
-    const reqShippingAddress = shippingAddress.address || address;
-    const reqShippingCity = shippingAddress.city || city;
-    const reqShippingPostalCode = shippingAddress.postalCode || postalCode;
+    const reqShippingAddress = deliveryMethod === "pickup" ? "Collection Point Pickup" : (shippingAddress.address || address);
+    const reqShippingCity = deliveryMethod === "pickup" ? "N/A" : (shippingAddress.city || city);
+    const reqShippingPostalCode = deliveryMethod === "pickup" ? "N/A" : (shippingAddress.postalCode || postalCode);
 
     const missing = [];
     if (!customerName) missing.push("Name");
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const shippingCost = subtotal >= 1000 ? 0 : 80;
+    const shippingCost = deliveryMethod === "pickup" ? 0 : (subtotal >= 1000 ? 0 : 80);
     const tax = 0;
     const discountAmount = Number(body.discountAmount || 0);
     const total = subtotal + shippingCost - discountAmount;
@@ -224,6 +225,7 @@ export async function POST(request: NextRequest) {
       shippingAddress: reqShippingAddress,
       shippingCity: reqShippingCity,
       shippingPostalCode: reqShippingPostalCode,
+      deliveryMethod,
       instruction,
       paymentMethod: body.paymentMethod || "cash_on_delivery",
       items,

@@ -423,7 +423,12 @@ export default function CartPage() {
                    <p className="text-[8px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest px-2">
                     {isFreeDelivery 
                       ? "You've unlocked free delivery for this order!" 
-                      : "Standard delivery charge is ৳ 80."}
+                      : (
+                        <>
+                          Standard delivery charge is ৳ 80.<br/>
+                          Pickup at checkout is FREE!
+                        </>
+                      )}
                   </p>
                 </div>
               </div>

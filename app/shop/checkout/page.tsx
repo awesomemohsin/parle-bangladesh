@@ -10,6 +10,7 @@ interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
   orderId?: string;
   finalSubtotal?: number;
+  finalDeliveryMethod?: 'shipping' | 'pickup';
   error?: string;
 }
 
@@ -29,6 +30,7 @@ export default function CheckoutPage() {
     instruction: '',
     paymentMethod: 'cash_on_delivery',
   });
+  const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const [sameAsBilling, setSameAsBilling] = useState(false);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
 
@@ -49,7 +51,7 @@ export default function CheckoutPage() {
           email: !!user.email,
           phone: !!user.mobile
         });
-      } catch (e) {}
+      } catch (e) { }
     }
   }, []);
 
@@ -76,7 +78,7 @@ export default function CheckoutPage() {
   }
 
   const isFreeDelivery = total >= 1000;
-  const shippingCost = isFreeDelivery ? 0 : 80;
+  const shippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : 80);
   const grandTotal = total + shippingCost - (discountAmount || 0);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -118,7 +120,7 @@ export default function CheckoutPage() {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -139,6 +141,7 @@ export default function CheckoutPage() {
           },
           instruction: formData.instruction,
           paymentMethod: formData.paymentMethod,
+          deliveryMethod,
           promoCode,
           discountAmount,
         }),
@@ -154,7 +157,8 @@ export default function CheckoutPage() {
       setOrderState({
         status: 'success',
         orderId: order.id,
-        finalSubtotal: currentSubtotal
+        finalSubtotal: currentSubtotal,
+        finalDeliveryMethod: deliveryMethod
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
@@ -169,7 +173,7 @@ export default function CheckoutPage() {
   if (orderState.status === 'success') {
     const displaySubtotal = orderState.finalSubtotal || 0;
     const isFree = displaySubtotal >= 1000;
-    const displayShipping = isFree ? 0 : 80;
+    const displayShipping = orderState.finalDeliveryMethod === 'pickup' ? 0 : (isFree ? 0 : 80);
     const displayTotal = displaySubtotal + displayShipping - (discountAmount || 0);
 
     return (
@@ -184,7 +188,7 @@ export default function CheckoutPage() {
                 </div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Received!</h1>
                 <p className="text-gray-500 mb-8">Your order has been placed successfully.</p>
-                
+
                 <div className="bg-gray-50 px-4 py-2 rounded-lg mb-10 w-full flex justify-between items-center">
                   <span className="text-sm text-gray-500">Order ID:</span>
                   <span className="text-base font-bold text-red-600">{orderState.orderId}</span>
@@ -400,67 +404,102 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Shipping Information */}
+            {/* Delivery Method Selection */}
             <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-2 pb-2 border-b">
-                <h2 className="text-xl font-bold text-gray-900">Shipping Information</h2>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={sameAsBilling}
-                    onChange={handleSameAsBillingChange}
-                    className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-600"
-                  />
-                  <span className="text-sm text-gray-600">Same as billing address</span>
+              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Delivery Method</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${deliveryMethod === 'shipping' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <input type="radio" className="hidden" checked={deliveryMethod === 'shipping'} onChange={() => setDeliveryMethod('shipping')} />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-900">Home Delivery</span>
+                    <span className="text-sm text-gray-500">Regular shipping rates apply</span>
+                  </div>
+                </label>
+                <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${deliveryMethod === 'pickup' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <input type="radio" className="hidden" checked={deliveryMethod === 'pickup'} onChange={() => setDeliveryMethod('pickup')} />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-900">Collection Point Pickup</span>
+                    <span className="text-sm text-gray-500">Free pickup from our location</span>
+                  </div>
                 </label>
               </div>
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
-                    <input
-                      type="text"
-                      name="shippingAddress"
-                      value={sameAsBilling ? formData.address : formData.shippingAddress}
-                      onChange={handleInputChange}
-                      required
-                      readOnly={sameAsBilling}
-                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      placeholder="House #, Road #"
-                    />
-                  </div>
+              {deliveryMethod === 'pickup' && (
+                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-sm font-bold text-amber-800 mb-2">Pickup Location:</p>
+                  <p className="text-sm text-amber-900 font-medium mb-1">
+                    Yassin Tower, Savar Palli Bidyut Bazar Road, Dendabor, Ashulia, Savar, Dhaka 1344.
+                  </p>
+                  <p className="text-sm text-amber-700">Please collect your order from our official collection point.</p>
+                  <a href="https://maps.app.goo.gl/pp3pwo3hyPm87ST79" target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-red-600 hover:text-red-700 font-bold text-sm underline">
+                    View on Google Maps
+                  </a>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City *</label>
+              )}
+            </div>
+
+            {/* Shipping Information */}
+            {deliveryMethod === 'shipping' && (
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                  <h2 className="text-xl font-bold text-gray-900">Shipping Information</h2>
+                  <label className="flex items-center space-x-2 cursor-pointer">
                     <input
-                      type="text"
-                      name="shippingCity"
-                      value={sameAsBilling ? formData.city : formData.shippingCity}
-                      onChange={handleInputChange}
-                      required
-                      readOnly={sameAsBilling}
-                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      placeholder="Dhaka"
+                      type="checkbox"
+                      checked={sameAsBilling}
+                      onChange={handleSameAsBillingChange}
+                      className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-600"
                     />
+                    <span className="text-sm text-gray-600">Same as billing address</span>
+                  </label>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
+                      <input
+                        type="text"
+                        name="shippingAddress"
+                        value={sameAsBilling ? formData.address : formData.shippingAddress}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                        placeholder="House #, Road #"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
-                    <input
-                      type="text"
-                      name="shippingPostalCode"
-                      value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
-                      onChange={handleInputChange}
-                      required
-                      readOnly={sameAsBilling}
-                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      placeholder="1000"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City *</label>
+                      <input
+                        type="text"
+                        name="shippingCity"
+                        value={sameAsBilling ? formData.city : formData.shippingCity}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                        placeholder="Dhaka"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
+                      <input
+                        type="text"
+                        name="shippingPostalCode"
+                        value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
+                        onChange={handleInputChange}
+                        required
+                        readOnly={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                        placeholder="1000"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Column (Sticky Container) */}
