@@ -37,6 +37,8 @@ interface Order {
   promoCode?: string
   discountAmount?: number
   deliveryMethod?: string
+  subtotal?: number
+  shippingCost?: number
 }
 
 export default function AdminOrdersPage() {
@@ -58,6 +60,21 @@ export default function AdminOrdersPage() {
   // Unsaved status changes
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({})
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({})
+
+  const [userRole, setUserRole] = useState<string>('')
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr)
+        setUserRole(u.role)
+        if (u.role === 'moderator') {
+          setStatusFilter('processing')
+        }
+      } catch (e) {}
+    }
+  }, [])
 
   useEffect(() => {
     setPage(1)
@@ -130,9 +147,13 @@ export default function AdminOrdersPage() {
         if (data.pendingApproval) {
           alert("✓ Sync Initiated: This status change has been queued for authoritative verification.");
         }
-        setOrders(
-          orders.map((o) => (o.id === orderId ? { ...data.order, pendingApproval: data.pendingApproval } : o))
-        )
+        if (userRole === 'moderator' && newStatus !== 'processing') {
+          setOrders(orders.filter(o => o.id !== orderId));
+        } else {
+          setOrders(
+            orders.map((o) => (o.id === orderId ? { ...data.order, pendingApproval: data.pendingApproval } : o))
+          )
+        }
         const newPending = { ...pendingChanges }
         delete newPending[orderId]
         setPendingChanges(newPending)
@@ -181,7 +202,8 @@ export default function AdminOrdersPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
+            disabled={userRole === 'moderator'}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="all">Statuses</option>
             <option value="pending">Pending</option>
@@ -194,17 +216,17 @@ export default function AdminOrdersPage() {
           </select>
         </div>
         <div className="w-full md:w-48 relative">
-           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-           <select
-             value={sortBy}
-             onChange={(e) => setSortBy(e.target.value)}
-             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
-           >
-             <option value="newest">Newest First</option>
-             <option value="oldest">Oldest First</option>
-             <option value="total-high">Price: High to Low</option>
-             <option value="total-low">Price: Low to High</option>
-           </select>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="total-high">Price: High to Low</option>
+            <option value="total-low">Price: Low to High</option>
+          </select>
         </div>
       </div>
 
@@ -215,7 +237,7 @@ export default function AdminOrdersPage() {
             const hasChange = !!pendingChanges[order.id];
             return (
               <Card key={order.id} className="p-4 shadow-sm border-gray-100/60 hover:shadow-md transition-shadow">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">
                       Order ID: {order.id.slice(-8).toUpperCase()}
@@ -229,6 +251,9 @@ export default function AdminOrdersPage() {
                     <p className="text-2xl font-black text-gray-900 tracking-tighter">
                       ৳{order.total.toFixed(0)}
                     </p>
+                    <div className="text-[10px] font-black text-gray-500 mt-0.5 uppercase tracking-tighter">
+                      Incl. Delivery: ৳{(order.shippingCost || 0).toFixed(0)}
+                    </div>
                     {(order.discountAmount || 0) > 0 && (
                       <div className="text-[10px] font-black text-green-600 mt-1 uppercase tracking-tighter italic">
                         Promo Applied (-৳{(order.discountAmount || 0).toFixed(0)})
@@ -271,7 +296,7 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8 pt-4 border-t border-gray-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8 pt-2.5 border-t border-gray-50">
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Customer Details</p>
                     <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
@@ -289,21 +314,21 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-dashed border-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2.5 pt-2.5 border-t border-dashed border-gray-100">
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
                       {order.deliveryMethod === 'pickup' ? 'Delivery Method (Pickup)' : 'Shipping Address'}
                     </p>
                     <p className="text-sm font-bold text-gray-600 leading-tight">
-                      {order.deliveryMethod === 'pickup' 
-                        ? 'Collection Point Pickup' 
+                      {order.deliveryMethod === 'pickup'
+                        ? 'Collection Point Pickup'
                         : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city} - ${order.shippingPostalCode || order.postalCode}`}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
                     {order.instruction && (
                       <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100">
-                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Staff Instructions</p>
+                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Order Instructions</p>
                         <p className="text-xs font-bold text-amber-800 leading-tight">
                           {order.instruction}
                         </p>
@@ -311,7 +336,7 @@ export default function AdminOrdersPage() {
                     )}
                     {order.statusReason && (
                       <div className="bg-red-50/50 p-3 rounded-xl border border-red-100">
-                        <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Status Reason</p>
+                        <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">{order.status} Reason</p>
                         <p className="text-xs font-bold text-red-800 leading-tight">
                           {order.statusReason}
                         </p>
@@ -320,7 +345,7 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+                <div className="mt-2.5 pt-2.5 border-t border-gray-50 flex items-center justify-between">
                   <button
                     onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
                     className="text-blue-600 hover:text-blue-700 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
@@ -332,6 +357,7 @@ export default function AdminOrdersPage() {
 
                 {expandedOrder === order.id && (
                   <div className="mt-4 pt-4 border-t border-gray-100 bg-slate-50/50 p-4 rounded-xl space-y-3">
+                    <div className="max-w-xl space-y-3">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex justify-between items-center text-sm border-b border-white/50 pb-2 last:border-0 last:pb-0">
                         <div>
@@ -344,6 +370,27 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
                     ))}
+
+                    <div className="mt-4 pt-4 border-t border-white space-y-1.5">
+                      <div className="flex justify-between items-center text-[11px] text-gray-600">
+                        <span className="font-bold uppercase tracking-wider">Subtotal</span>
+                        <span className="font-bold text-gray-900">৳{order.subtotal?.toFixed(0) || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0)).toFixed(0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-gray-600">
+                        <span className="font-bold uppercase tracking-wider">Delivery Charge</span>
+                        <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
+                      </div>
+                      {(order.discountAmount || 0) > 0 && (
+                        <div className="flex justify-between items-center text-[11px] text-green-600">
+                          <span className="font-bold uppercase tracking-wider">Promo Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
+                          <span className="font-bold">- ৳{(order.discountAmount || 0).toFixed(0)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center border-t border-white/50 pt-2 mt-1">
+                        <span className="font-black text-xs text-gray-900 uppercase tracking-widest">Grand Total</span>
+                        <span className="font-black text-sm text-red-600">৳{order.total.toFixed(0)}</span>
+                      </div>
+                    </div>
 
                     {order.orderLogs && order.orderLogs.length > 0 && (
                       <div className="mt-6 pt-6 border-t border-white">
@@ -358,6 +405,7 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
                     )}
+                    </div>
                   </div>
                 )}
               </Card>

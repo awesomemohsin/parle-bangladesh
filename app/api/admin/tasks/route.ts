@@ -18,7 +18,11 @@ export async function GET(request: NextRequest) {
 
     // Fetch order counts for everyone authorised to see them
     if (isHighLevel || isStaff) {
-       results.pendingOrders = await Order.countDocuments({ status: ORDER_STATUS.PENDING });
+       if (user.role === ROLES.MODERATOR) {
+         results.pendingOrders = 0; // Moderators restricted to processing only
+       } else {
+         results.pendingOrders = await Order.countDocuments({ status: ORDER_STATUS.PENDING });
+       }
        results.processingOrders = await Order.countDocuments({ status: ORDER_STATUS.PROCESSING });
     }
 
