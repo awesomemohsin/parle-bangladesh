@@ -32,9 +32,12 @@ export async function GET(request: NextRequest) {
           { customerEmail: user.email }
         ]
       };
+    } else if (user.role === ROLES.MODERATOR) {
+      // Moderators can only see processing orders
+      matchStage.status = "processing";
     }
 
-    if (statusQuery !== "all") {
+    if (statusQuery !== "all" && user.role !== ROLES.MODERATOR) {
       matchStage.status = statusQuery;
     }
 
@@ -188,7 +191,8 @@ export async function POST(request: NextRequest) {
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const shippingCost = deliveryMethod === "pickup" ? 0 : (subtotal >= 1000 ? 0 : 80);
+    const baseShippingCharge = reqShippingCity === "Dhaka" ? 80 : 130;
+    const shippingCost = deliveryMethod === "pickup" ? 0 : (subtotal >= 1000 ? 0 : baseShippingCharge);
     const tax = 0;
     const discountAmount = Number(body.discountAmount || 0);
     const total = subtotal + shippingCost - discountAmount;

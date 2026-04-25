@@ -425,8 +425,9 @@ export default function CartPage() {
                       ? "You've unlocked free delivery for this order!" 
                       : (
                         <>
-                          Standard delivery charge is ৳ 80.<br/>
-                          Pickup at checkout is FREE!
+                          Pickup at checkout is FREE!<br/>
+                          Inside Dhaka: ৳ 80<br/>
+                          Outside Dhaka: ৳ 130
                         </>
                       )}
                   </p>

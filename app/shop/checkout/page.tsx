@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { ArrowLeft, Check, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
+import { BD_DISTRICTS } from '@/lib/constants';
 
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
   orderId?: string;
   finalSubtotal?: number;
+  finalShippingCost?: number;
   finalDeliveryMethod?: 'shipping' | 'pickup';
   error?: string;
 }
@@ -22,16 +24,16 @@ export default function CheckoutPage() {
     email: '',
     phone: '',
     address: '',
-    city: '',
+    city: 'Dhaka',
     postalCode: '',
     shippingAddress: '',
-    shippingCity: '',
+    shippingCity: 'Dhaka',
     shippingPostalCode: '',
     instruction: '',
     paymentMethod: 'cash_on_delivery',
   });
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
-  const [sameAsBilling, setSameAsBilling] = useState(false);
+  const [sameAsBilling, setSameAsBilling] = useState(true);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
 
   useEffect(() => {
@@ -78,7 +80,9 @@ export default function CheckoutPage() {
   }
 
   const isFreeDelivery = total >= 1000;
-  const shippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : 80);
+  const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
+  const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
+  const shippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
   const grandTotal = total + shippingCost - (discountAmount || 0);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -87,16 +91,7 @@ export default function CheckoutPage() {
   };
 
   const handleSameAsBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = e.target.checked;
-    if (isChecked) {
-      if (!formData.address || !formData.city || !formData.postalCode) {
-        alert("Please fill up the billing address first.");
-        return;
-      }
-      setSameAsBilling(true);
-    } else {
-      setSameAsBilling(false);
-    }
+    setSameAsBilling(e.target.checked);
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -158,6 +153,7 @@ export default function CheckoutPage() {
         status: 'success',
         orderId: order.id,
         finalSubtotal: currentSubtotal,
+        finalShippingCost: shippingCost,
         finalDeliveryMethod: deliveryMethod
       });
     } catch (error) {
@@ -172,8 +168,7 @@ export default function CheckoutPage() {
   // Success State
   if (orderState.status === 'success') {
     const displaySubtotal = orderState.finalSubtotal || 0;
-    const isFree = displaySubtotal >= 1000;
-    const displayShipping = orderState.finalDeliveryMethod === 'pickup' ? 0 : (isFree ? 0 : 80);
+    const displayShipping = orderState.finalShippingCost || 0;
     const displayTotal = displaySubtotal + displayShipping - (discountAmount || 0);
 
     return (
@@ -377,16 +372,18 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City *</label>
-                    <input
-                      type="text"
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City / District *</label>
+                    <select
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
-                      placeholder="Dhaka"
-                    />
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none"
+                    >
+                      {BD_DISTRICTS.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
@@ -412,7 +409,7 @@ export default function CheckoutPage() {
                   <input type="radio" className="hidden" checked={deliveryMethod === 'shipping'} onChange={() => setDeliveryMethod('shipping')} />
                   <div className="flex flex-col">
                     <span className="font-bold text-gray-900">Home Delivery</span>
-                    <span className="text-sm text-gray-500">Regular shipping rates apply</span>
+                    <span className="text-[11px] text-gray-500 mt-1">Inside Dhaka: ৳ 80 | Outside Dhaka: ৳ 130</span>
                   </div>
                 </label>
                 <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${deliveryMethod === 'pickup' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
@@ -471,17 +468,19 @@ export default function CheckoutPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City *</label>
-                      <input
-                        type="text"
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City / District *</label>
+                      <select
                         name="shippingCity"
                         value={sameAsBilling ? formData.city : formData.shippingCity}
                         onChange={handleInputChange}
                         required
-                        readOnly={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                        placeholder="Dhaka"
-                      />
+                        disabled={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      >
+                        {BD_DISTRICTS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
