@@ -2,7 +2,6 @@
 
 import { CheckCircle2, Target, Users, Award } from 'lucide-react'
 import { motion } from 'framer-motion'
-import Image from 'next/image'
 
 export default function AboutPage() {
   return (
@@ -17,12 +16,12 @@ export default function AboutPage() {
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="max-w-4xl mx-auto">
             <motion.div 
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
+              className="text-center"
             >
               <h1 className="text-4xl lg:text-6xl font-black text-gray-900 tracking-tighter uppercase italic leading-none mb-6">
                 Welcome to <span className="text-red-600">Parle Bangladesh</span>
@@ -38,40 +37,6 @@ export default function AboutPage() {
                   M/S CIRCLE ENTERPRISE IS THE EXCLUSIVE AUTHORISED DISTRIBUTOR OF PARLE BISCUITS PVT. LTD- (INDIA) IN BANGLADESH FOR THE DISTRIBUTION OF PARLE BISCUITS, WAFERS.
                 </h2>
               </div>
-
-              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                <motion.div 
-                  whileHover={{ y: -5 }}
-                  className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100"
-                >
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Our Role</p>
-                  <p className="text-xl font-black text-gray-900">Official Distributor</p>
-                </motion.div>
-                <motion.div 
-                  whileHover={{ y: -5 }}
-                  className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100"
-                >
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Service</p>
-                  <p className="text-xl font-black text-gray-900">Nationwide Delivery</p>
-                </motion.div>
-              </div>
-            </motion.div>
-
-            {/* Right Image Container */}
-            <motion.div
-              initial={{ opacity: 0, x: 30, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative aspect-square w-full max-w-[700px] mx-auto lg:ml-auto"
-            >
-              <Image
-                src="/images/parle-girl.webp"
-                alt="Parle Girl"
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain drop-shadow-2xl"
-                priority
-              />
             </motion.div>
           </div>
         </div>
