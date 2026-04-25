@@ -42,8 +42,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const loginType = body.loginType;
+
     if (!user) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+      return NextResponse.json({ error: "Incorrect email or password" }, { status: 401 });
+    }
+
+    if (loginType === "customer" && user.role !== "customer") {
+      return NextResponse.json({ error: "Incorrect email or password" }, { status: 401 });
     }
 
     // Check if account is temporarily locked (Brute-Force Protection)
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest) {
       await LoginHistory.create({ email: user.email, role: user.role, ipAddress, userAgent, status: "failed" });
 
       return NextResponse.json(
-        { error: user.status === "disabled" ? "Account disabled" : "Invalid email or password" },
+        { error: user.status === "disabled" ? "Account disabled" : "Incorrect email or password" },
         { status: 401 }
       );
     }
