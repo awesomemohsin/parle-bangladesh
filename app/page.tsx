@@ -165,7 +165,7 @@ export default async function HomePage() {
                       New
                     </span>
                   </div>
-                  <ProductCard {...product} priority={i < 4} />
+                  <ProductCard id={product._id} {...product} priority={i < 4} />
                 </MotionDiv>
               ))}
             </div>
@@ -206,7 +206,7 @@ export default async function HomePage() {
                       Best Seller
                     </span>
                   </div>
-                  <ProductCard {...product} priority={i < 4} />
+                  <ProductCard id={product._id} {...product} priority={i < 4} />
                 </MotionDiv>
               ))}
             </div>

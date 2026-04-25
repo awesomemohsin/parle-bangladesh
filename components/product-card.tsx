@@ -45,7 +45,7 @@ export default function ProductCard({
   stock = 0,
   priority = false,
 }: ProductCardProps) {
-  const { items } = useCart();
+  const { items, addItem } = useCart();
   const [isFlying, setIsFlying] = useState(false);
 
   // Intelligent Default Selection: Skip out-of-stock items for the main display
@@ -82,9 +82,27 @@ export default function ProductCard({
   const isOutOfStock = actualStock === 0;
   const isAtMax = actualStock > 0 && cartQuantity >= actualStock;
 
-  const handleAddToCart = () => {
-    if (onAddToCart && actualStock > 0 && !isAtMax) {
-      onAddToCart(defaultVariation);
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (actualStock > 0 && !isAtMax) {
+      if (onAddToCart) {
+        onAddToCart(defaultVariation);
+      } else {
+        // Fallback to direct cart add if no custom handler is provided
+        addItem({
+          productId: id,
+          productName: name,
+          productSlug: slug,
+          price: currentPrice,
+          image: defaultVariation.image,
+          weight: defaultVariation.weight,
+          flavor: defaultVariation.flavor,
+          stock: actualStock,
+        });
+      }
+      
       setIsFlying(true);
       setTimeout(() => setIsFlying(false), 800);
     }
