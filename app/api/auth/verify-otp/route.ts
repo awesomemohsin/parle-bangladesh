@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
     });
 
-    response.headers.set("Set-Cookie", setAuthCookie(token));
+    response.headers.set("Set-Cookie", setAuthCookie(token, 'token', 86400 * 7));
     return response;
 
   } catch (error) {

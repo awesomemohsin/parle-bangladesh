@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 export interface User {
   id: string
   email: string
   name: string
-  role: 'customer' | 'admin' | 'moderator' | 'super_admin'
+  role: 'customer' | 'admin' | 'moderator' | 'super_admin' | 'owner'
 }
 
 export interface AuthState {
@@ -17,10 +18,11 @@ export interface AuthState {
   error: string | null
 }
 
-const AUTH_STORAGE_KEY = 'parle-auth-token'
-const USER_STORAGE_KEY = 'parle-user'
+const AUTH_STORAGE_KEY = 'token'
+const USER_STORAGE_KEY = 'user'
 
 export function useAuth() {
+  const router = useRouter()
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     token: null,
@@ -94,54 +96,7 @@ export function useAuth() {
     }
   }, [])
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
-
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Registration failed')
-      }
-
-      const data = await response.json()
-      const { token, user } = data
-
-      localStorage.setItem(AUTH_STORAGE_KEY, token)
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
-
-      setAuthState({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      })
-
-      return { success: true, user }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed'
-      setAuthState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage,
-      }))
-      return { success: false, error: errorMessage }
-    }
-  }, [])
-
-  const logout = useCallback(async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-
+  const logout = useCallback(() => {
     localStorage.removeItem(AUTH_STORAGE_KEY)
     localStorage.removeItem(USER_STORAGE_KEY)
 
@@ -152,7 +107,9 @@ export function useAuth() {
       isLoading: false,
       error: null,
     })
-  }, [])
+    
+    router.push("/admin/login")
+  }, [router])
 
   const hasRole = useCallback(
     (roles: string | string[]) => {
@@ -166,7 +123,6 @@ export function useAuth() {
   return {
     ...authState,
     login,
-    register,
     logout,
     hasRole,
   }

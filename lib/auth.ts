@@ -28,20 +28,20 @@ export function verifyToken(token: string): JWTPayload | null {
   }
 }
 
-export function getTokenFromCookie(cookieHeader: string | null): string | null {
+export function getTokenFromCookie(cookieHeader: string | null, name: string = 'token'): string | null {
   if (!cookieHeader) return null
   const cookies = cookieHeader.split(';').map(c => c.trim())
-  const authCookie = cookies.find(c => c.startsWith('auth_token='))
+  const authCookie = cookies.find(c => c.startsWith(`${name}=`))
   if (!authCookie) return null
-  return authCookie.substring('auth_token='.length)
+  return authCookie.substring(`${name}=`.length)
 }
 
-export function setAuthCookie(token: string): string {
+export function setAuthCookie(token: string, name: string = 'token', maxAge: number = 604800): string {
   const isProd = process.env.NODE_ENV === 'production';
-  return `auth_token=${token}; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
+  return `${name}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
 }
 
-export function clearAuthCookie(): string {
+export function clearAuthCookie(name: string = 'token'): string {
   const isProd = process.env.NODE_ENV === 'production';
-  return `auth_token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
+  return `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
 }

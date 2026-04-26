@@ -83,44 +83,7 @@ export async function POST(request: NextRequest) {
     user.failedLoginAttempts = 0;
     user.lockUntil = undefined;
     
-    // If user is Admin, trigger 2FA OTP (Only for Super Admin and Owner)
-    const adminRoles = ["super_admin", "owner"];
-    if (adminRoles.includes(user.role)) {
-      // Generate 6-digit OTP
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      user.otpCode = otpCode;
-      user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 mins
-      await user.save();
-
-      // Log OTP request
-      const { LoginHistory } = await import("@/lib/models");
-      await LoginHistory.create({ email: user.email, role: user.role, ipAddress, userAgent, status: "otp_requested" });
-
-      // Send OTP Email
-      const { transporter, SMTP_FROM } = await import("@/lib/mail");
-      if (transporter && SMTP_FROM) {
-        await transporter.sendMail({
-          from: `"Parle Security" <${SMTP_FROM}>`,
-          to: user.email,
-          subject: "Your Admin Login OTP",
-          html: `
-            <h3>Admin Login Attempt</h3>
-            <p>Your authorization code is: <strong style="font-size: 24px;">${otpCode}</strong></p>
-            <p>This code expires in 10 minutes.</p>
-            <br/>
-            <p style="font-size: 12px; color: gray;"><strong>Security Info:</strong><br/>IP: ${ipAddress}<br/>Device: ${userAgent}</p>
-          `,
-        });
-      }
-
-      return NextResponse.json({ 
-        status: "otp_required", 
-        email: user.email,
-        message: "Authorization code sent to your email" 
-      });
-    }
-
-    // Normal customer login (No OTP required)
+    // Login Success
     await user.save();
     
     const { LoginHistory } = await import("@/lib/models");
@@ -143,7 +106,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.headers.set("Set-Cookie", setAuthCookie(token));
+    response.headers.set("Set-Cookie", setAuthCookie(token, 'token', 86400 * 7));
     return response;
   } catch (error) {
     console.error("Login error:", error);
