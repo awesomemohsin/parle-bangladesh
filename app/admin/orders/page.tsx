@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail } from 'lucide-react'
 
 interface OrderLog {
   fromStatus: string
@@ -300,11 +300,38 @@ export default function AdminOrdersPage() {
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Customer Details</p>
                     <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
-                    <p className="text-[11px] font-medium text-gray-500">{order.customerEmail}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[11px] font-medium text-gray-500">{order.customerEmail}</p>
+                      <a 
+                        href={`mailto:${order.customerEmail}`}
+                        className="bg-slate-600 hover:bg-slate-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Mail className="w-2.5 h-2.5" />
+                        Send Email
+                      </a>
+                    </div>
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Link</p>
-                    <p className="text-sm font-bold text-gray-900 font-mono tracking-tighter">{order.customerPhone}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-gray-900 font-mono tracking-tighter">{order.customerPhone}</p>
+                      <a 
+                        href={`tel:${order.customerPhone}`}
+                        className="bg-blue-900 hover:bg-blue-950 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <PhoneCall className="w-2.5 h-2.5" />
+                        Call now
+                      </a>
+                      <a 
+                        href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '').startsWith('0') ? '88' + order.customerPhone.replace(/[^0-9]/g, '') : order.customerPhone.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-green-600 hover:bg-green-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <MessageCircle className="w-2.5 h-2.5" />
+                        Send Message
+                      </a>
+                    </div>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Billing Destination</p>
