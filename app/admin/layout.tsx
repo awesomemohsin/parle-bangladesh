@@ -49,28 +49,16 @@ export default function AdminLayout({
         const payload = JSON.parse(atob(token.split('.')[1]));
         const isExpired = payload.exp * 1000 < Date.now();
         
-        // Audience Check (Security Layer)
-        if (payload.aud !== 'admin') {
-          throw new Error("Invalid audience");
-        }
-
         if (isExpired) {
-          // Attempt silent refresh
-          const refreshResponse = await fetch('/api/auth/refresh', { method: 'POST' });
-          if (refreshResponse.ok) {
-            const data = await refreshResponse.json();
-            if (data.token) {
-              token = data.token;
-              localStorage.setItem("token", token as string);
-            } else {
-              throw new Error("No token returned");
-            }
-          } else {
-            throw new Error("Session expired");
-          }
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/admin/login");
+          return;
         }
 
+        // Role-based Security Layer
         const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner';
+
 
         if (!isAdmin) {
           alert('ACCESS DENIED: Unauthorized Entrance Identified.');

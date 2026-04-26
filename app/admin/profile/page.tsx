@@ -164,7 +164,7 @@ export default function AdminProfilePage() {
           <div className="p-6 bg-amber-50 border border-amber-100 rounded-3xl flex gap-4">
              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
              <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                Important: You need your old password and the email code to change your password. This will also log you out of all other devices.
+                Important: You need your current password and the email verification code to update your credentials. This ensures only the authorized owner can change security settings.
              </p>
           </div>
         </div>

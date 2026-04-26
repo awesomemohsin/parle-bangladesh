@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/api-auth";
 import connectDB from "@/lib/db";
-import { Admin, User, RefreshToken, LoginHistory } from "@/lib/models";
+import { Admin, User, LoginHistory } from "@/lib/models";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -66,9 +66,7 @@ export async function POST(request: NextRequest) {
       status: "password_changed"
     });
 
-    // SECURITY ACTION: Revoke all other active sessions immediately
-    // This forces all other logged-in devices to re-authenticate with the new password
-    await RefreshToken.deleteMany({ userId: user.id });
+
 
     return NextResponse.json({ 
       success: true, 
