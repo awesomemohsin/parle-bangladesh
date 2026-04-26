@@ -69,15 +69,12 @@ export async function POST(req: Request) {
         const buffer = Buffer.from(arrayBuffer);
 
         // A. Send Confirmation to Applicant First
+        const { getApplicationReceivedTemplate } = await import("@/lib/mail");
         const applicantMail = await transporter.sendMail({
           from: `"Parle Bangladesh" <${SMTP_FROM}>`,
           to: email,
           subject: "Application Received - Parle Bangladesh",
-          html: `
-            <h3>Hello ${fullname}</h3>
-            <p>We've received your application for the <strong>${position}</strong> position.</p>
-            <p>Our team will review your CV and get back to you soon.</p>
-          `,
+          html: getApplicationReceivedTemplate(fullname, position),
         });
 
         // B. Send to Admin (Notification)

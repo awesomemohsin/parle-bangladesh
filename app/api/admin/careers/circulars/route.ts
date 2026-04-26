@@ -5,7 +5,7 @@ import { getAuthUserFromRequest } from "@/lib/api-auth";
 
 export async function GET(req: any) {
   try {
-    const auth = await getAuthUserFromRequest(req);
+    const auth = getAuthUserFromRequest(req);
     if (!auth || !["admin", "super_admin", "owner"].includes(auth.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -21,7 +21,7 @@ export async function GET(req: any) {
 
 export async function POST(req: any) {
   try {
-    const auth = await getAuthUserFromRequest(req);
+    const auth = getAuthUserFromRequest(req);
     if (!auth || !["super_admin", "owner"].includes(auth.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

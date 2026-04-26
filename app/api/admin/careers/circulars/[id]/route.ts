@@ -5,7 +5,7 @@ import { getAuthUserFromRequest } from "@/lib/api-auth";
 
 export async function PUT(req: any, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthUserFromRequest(req);
+    const auth = getAuthUserFromRequest(req);
     if (!auth || !["super_admin", "owner"].includes(auth.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -29,7 +29,7 @@ export async function PUT(req: any, { params }: { params: Promise<{ id: string }
 
 export async function DELETE(req: any, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await getAuthUserFromRequest(req);
+    const auth = getAuthUserFromRequest(req);
     if (!auth || !["super_admin", "owner"].includes(auth.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
