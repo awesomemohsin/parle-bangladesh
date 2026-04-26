@@ -53,6 +53,55 @@ export function useAuth() {
     }
   }, [])
 
+  const logout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    localStorage.removeItem(USER_STORAGE_KEY)
+
+    setAuthState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    })
+  }, [])
+
+  // Proactive Session Refresh Logic
+  useEffect(() => {
+    if (!authState.token || !authState.isAuthenticated) return;
+
+    const checkAndRefresh = async () => {
+      try {
+        const payload = JSON.parse(atob(authState.token!.split('.')[1]));
+        const timeUntilExp = payload.exp * 1000 - Date.now();
+
+        // Refresh if less than 5 minutes remaining
+        if (timeUntilExp < 5 * 60 * 1000) {
+          const res = await fetch('/api/auth/refresh', { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem(AUTH_STORAGE_KEY, data.token);
+            setAuthState(prev => ({ ...prev, token: data.token }));
+          } else if (res.status === 401) {
+            // Revoked or expired refresh token
+            logout();
+          }
+        }
+      } catch (e) {
+        console.error("Session refresh check failed:", e);
+      }
+    };
+
+    const interval = setInterval(checkAndRefresh, 60 * 1000); // Check every minute
+    return () => clearInterval(interval);
+  }, [authState.token, authState.isAuthenticated, logout]);
+
   const login = useCallback(async (email: string, password: string) => {
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
 
@@ -135,24 +184,7 @@ export function useAuth() {
     }
   }, [])
 
-  const logout = useCallback(async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
 
-    localStorage.removeItem(AUTH_STORAGE_KEY)
-    localStorage.removeItem(USER_STORAGE_KEY)
-
-    setAuthState({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-    })
-  }, [])
 
   const hasRole = useCallback(
     (roles: string | string[]) => {

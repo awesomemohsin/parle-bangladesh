@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateToken, setAuthCookie } from "@/lib/auth";
+import { generateToken, generateRefreshToken, setAuthCookies } from "@/lib/auth";
 import connectDB from "@/lib/db";
-import { User, Admin, LoginHistory } from "@/lib/models";
+import { User, Admin, LoginHistory, RefreshToken } from "@/lib/models";
 import { transporter, SMTP_FROM } from "@/lib/mail";
 
 export async function POST(request: NextRequest) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Check last successful login to see if this is a new IP/Device
     const lastLogin = await LoginHistory.findOne({ email: user.email, status: "success" }).sort({ createdAt: -1 });
-    
+
     await LoginHistory.create({ email: user.email, role: user.role, ipAddress, userAgent, status: "success" });
 
     // Send New Login Notification if it's a new IP or Device
@@ -73,19 +73,37 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const isAdmin = ["admin", "moderator", "super_admin", "owner"].includes(user.role);
+
     const token = generateToken({
       id: user._id.toString(),
       email: user.email,
       name: user.name,
       role: user.role,
+    }, isAdmin);
+
+    const refreshToken = generateRefreshToken({
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    }, isAdmin);
+
+    // Save refresh token in DB for tracking and revocation
+    await RefreshToken.create({
+      userId: user._id.toString(),
+      token: refreshToken,
+      role: user.role,
+      expiresAt: new Date(Date.now() + (isAdmin ? 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000))
     });
 
     const response = NextResponse.json({
       token,
+      refreshToken,
       user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role },
     });
 
-    response.headers.set("Set-Cookie", setAuthCookie(token));
+    setAuthCookies(token, refreshToken, response, isAdmin);
     return response;
 
   } catch (error) {

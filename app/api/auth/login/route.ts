@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { LoginSchema } from "@/lib/schemas";
-import { generateToken, setAuthCookie } from "@/lib/auth";
+import { generateToken, generateRefreshToken, setAuthCookies } from "@/lib/auth";
 import connectDB from "@/lib/db";
-import { User, Admin } from "@/lib/models";
+import { User, Admin, RefreshToken } from "@/lib/models";
 // Keep hashPassword imported if someone wants to use old data-store, but we can do it locally:
 import crypto from "crypto";
 
@@ -97,19 +97,13 @@ export async function POST(request: NextRequest) {
       await LoginHistory.create({ email: user.email, role: user.role, ipAddress, userAgent, status: "otp_requested" });
 
       // Send OTP Email
-      const { transporter, SMTP_FROM } = await import("@/lib/mail");
+      const { transporter, SMTP_FROM, getLoginOTPTemplate } = await import("@/lib/mail");
       if (transporter && SMTP_FROM) {
         await transporter.sendMail({
           from: `"Parle Security" <${SMTP_FROM}>`,
           to: user.email,
-          subject: "Your Admin Login OTP",
-          html: `
-            <h3>Admin Login Attempt</h3>
-            <p>Your authorization code is: <strong style="font-size: 24px;">${otpCode}</strong></p>
-            <p>This code expires in 10 minutes.</p>
-            <br/>
-            <p style="font-size: 12px; color: gray;"><strong>Security Info:</strong><br/>IP: ${ipAddress}<br/>Device: ${userAgent}</p>
-          `,
+          subject: "Security: Your Login Authorization Code",
+          html: getLoginOTPTemplate(otpCode, user.name, ipAddress, userAgent),
         });
       }
 
@@ -126,15 +120,33 @@ export async function POST(request: NextRequest) {
     const { LoginHistory } = await import("@/lib/models");
     await LoginHistory.create({ email: user.email, role: user.role, ipAddress, userAgent, status: "success" });
 
+    const isAdmin = ["admin", "moderator", "super_admin", "owner"].includes(user.role);
+    
     const token = generateToken({
       id: user._id.toString(),
       email: user.email,
       name: user.name,
       role: user.role,
+    }, isAdmin);
+
+    const refreshToken = generateRefreshToken({
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    }, isAdmin);
+
+    // Save refresh token in DB for tracking and revocation
+    await RefreshToken.create({
+      userId: user._id.toString(),
+      token: refreshToken,
+      role: user.role,
+      expiresAt: new Date(Date.now() + (isAdmin ? 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000))
     });
 
     const response = NextResponse.json({
       token,
+      refreshToken,
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -143,7 +155,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.headers.set("Set-Cookie", setAuthCookie(token));
+    setAuthCookies(token, refreshToken, response, isAdmin);
     return response;
   } catch (error) {
     console.error("Login error:", error);

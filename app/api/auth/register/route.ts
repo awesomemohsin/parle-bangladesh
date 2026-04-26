@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RegisterSchema } from "@/lib/schemas";
-import { generateToken, setAuthCookie } from "@/lib/auth";
+import { generateToken, generateRefreshToken, setAuthCookies } from "@/lib/auth";
 import connectDB from "@/lib/db";
-import { User } from "@/lib/models";
+import { User, RefreshToken } from "@/lib/models";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -45,11 +45,28 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       id: user._id.toString(),
       email: user.email,
-      role: user.role as any,
+      name: user.name,
+      role: user.role,
+    }, false);
+
+    const refreshToken = generateRefreshToken({
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    }, false);
+
+    // Save refresh token in DB
+    await RefreshToken.create({
+      userId: user._id.toString(),
+      token: refreshToken,
+      role: user.role,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30d for customers
     });
 
     const response = NextResponse.json({
       token,
+      refreshToken,
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -58,7 +75,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.headers.set("Set-Cookie", setAuthCookie(token));
+    setAuthCookies(token, refreshToken, response, false);
     return response;
   } catch (error) {
     console.error("Register error:", error);
