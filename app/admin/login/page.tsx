@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
 
           {otpRequested && (
              <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-100">
-               An authorization code has been sent to your email.
+               An authorization code has been sent to your email. Please check your <strong>Inbox</strong> or <strong>Spam</strong> folder if not found.
              </div>
           )}
 

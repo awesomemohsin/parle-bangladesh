@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
             
             {message && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="mb-6 p-4 rounded-2xl bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest border-none text-center">
-                Protocol Initiated. Check your email.
+                Protocol Initiated. Check your inbox or spam folder.
               </motion.div>
             )}
 
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
               </form>
             ) : (
                 <div className="bg-white/5 p-6 rounded-3xl border border-white/10 text-center">
-                   <p className="text-xs text-gray-300 font-medium mb-4">A secure link has been dispatched to your mailbox. Please follow the link within 60 minutes to finalize the reset.</p>
+                   <p className="text-xs text-gray-300 font-medium mb-4">A secure link has been dispatched to your mailbox. Please check your Inbox or Spam folder. Follow the link within 60 minutes to finalize the reset.</p>
                    <Button 
                       onClick={() => setMessage("")}
                       variant="ghost" 

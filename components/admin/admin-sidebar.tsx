@@ -102,32 +102,32 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
       >
         {/* Header */}
         <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-          <div>
+          <Link href="/admin/dashboard" onClick={onClose} className="hover:opacity-80 transition-opacity">
             <h2 className="text-2xl font-bold italic tracking-tighter">Parle <span className="text-red-600">Admin</span></h2>
             <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mt-1">Control Panel</p>
-          </div>
+          </Link>
           <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-white">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* User Info */}
-        <div className="p-4 bg-gray-800/50 mx-4 mt-6 rounded-2xl flex items-center gap-4 border border-white/5">
-          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-900/20">
+        <Link href="/admin/profile" onClick={onClose} className="p-4 bg-gray-800/50 mx-4 mt-6 rounded-2xl flex items-center gap-4 border border-white/5 hover:bg-gray-800 transition-colors group cursor-pointer">
+          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-900/20 group-hover:scale-105 transition-transform">
             <svg className="w-5 h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Admin User</p>
-            <p className="font-black text-sm truncate uppercase tracking-tight italic">{user?.name || 'Authorized User'}</p>
+            <p className="font-black text-sm truncate uppercase tracking-tight italic group-hover:text-red-500 transition-colors">{user?.name || 'Authorized User'}</p>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar">
 
           {/* SECTION 1: APPROVAL CENTER */}
           {isAdmin && (
-            <div className="bg-red-950/20 rounded-[1.5rem] p-2 border border-red-500/10">
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] italic">Approval Center</p>
               </div>

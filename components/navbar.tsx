@@ -16,7 +16,8 @@ import {
   Shield,
   Tag,
   ListFilter,
-  Users
+  Users,
+  Lock
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -111,6 +112,7 @@ export default function Navbar() {
     { label: 'Manage Users', href: '/admin/users', icon: <Users className="w-4 h-4" />, hide: !isSuperAdmin, isSpecial: false },
     { label: 'Promo Codes', href: '/admin/promo-codes', icon: <Tag className="w-4 h-4" />, hide: !isSuperAdmin, isSpecial: false },
     { label: 'Action Logs', href: '/admin/activities', icon: <Shield className="w-4 h-4" />, hide: !isSuperAdmin, isSpecial: false },
+    { label: 'Profile & Security', href: '/admin/profile', icon: <Lock className="w-4 h-4" />, isSpecial: false },
     { label: 'Back to Site', href: '/', icon: <ShoppingBag className="w-4 h-4" />, isSpecial: true }
   ]
 
@@ -230,9 +232,17 @@ export default function Navbar() {
                   </Link>
                 </div>
               ) : (
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate max-w-[180px] font-sans">{user?.email}</span>
-                  <button onClick={handleLogout} className="text-[10px] font-black text-red-600 uppercase hover:underline transition-all font-sans leading-none mt-0.5">Logout</button>
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-end">
+                    {isAdmin ? (
+                      <Link href="/admin/profile" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate max-w-[180px] font-sans hover:text-red-600 transition-colors">
+                        {user?.email}
+                      </Link>
+                    ) : (
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate max-w-[180px] font-sans">{user?.email}</span>
+                    )}
+                    <button onClick={handleLogout} className="text-[10px] font-black text-red-600 uppercase hover:underline transition-all font-sans leading-none mt-0.5">Logout</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -353,7 +363,7 @@ export default function Navbar() {
                   <div className="pt-4">
                     <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-5 bg-red-600 text-white rounded-2xl shadow-xl shadow-red-100/50 group active:scale-95 transition-all">
                       <ShoppingBag className="w-5 h-5 text-white" />
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Return to Main Site</span>
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Back to Site</span>
                     </Link>
                   </div>
                 </>
@@ -383,27 +393,36 @@ export default function Navbar() {
                     <div className="p-5 bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden relative group">
                       <div className="relative z-10">
                         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic opacity-60">Connected Account</p>
-                        <p className="text-xs font-black text-white truncate font-sans">{user?.email}</p>
+                        <p className="text-xs font-black text-white truncate font-sans mb-4">{user?.name || user?.email}</p>
 
-                        {isAdmin && !isAdminRoute && (
-                          <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="mt-4 block">
-                            <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
-                              Admin Control Panel
-                            </Button>
-                          </Link>
-                        )}
+                        <div className="grid grid-cols-1 gap-2">
+                          {isAdmin && (
+                            <Link href="/admin/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                              <Button className="w-full h-11 bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border border-white/10">
+                                My Profile & Security
+                              </Button>
+                            </Link>
+                          )}
+                          {isAdmin && !isAdminRoute && (
+                            <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                              <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
+                                Admin Panel
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </div>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-[60px] pointer-events-none" />
                     </div>
-                    <Button onClick={handleLogout} variant="ghost" className="w-full text-red-600 font-black uppercase text-[10px] h-14 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white transition-all tracking-widest">Logout System</Button>
+                    <Button onClick={handleLogout} variant="ghost" className="w-full text-red-600 font-black uppercase text-[10px] h-14 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white transition-all tracking-widest">Logout</Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
                     <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Establish Account</Button>
+                      <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Sign Up</Button>
                     </Link>
                     <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login Terminal</Button>
+                      <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login</Button>
                     </Link>
                   </div>
                 )}

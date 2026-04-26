@@ -2,6 +2,7 @@
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import Script from 'next/script'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"] });
@@ -44,22 +45,20 @@ export default function RootLayout({
           <Footer />
         </CartProvider>
         <Analytics />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              document.addEventListener('contextmenu', function(e) {
-                if (e.target.tagName === 'IMG') {
-                  e.preventDefault();
-                }
-              }, false);
-              document.addEventListener('dragstart', function(e) {
-                if (e.target.tagName === 'IMG') {
-                  e.preventDefault();
-                }
-              }, false);
-            `
-          }}
-        />
+        <Script id="disable-img-interaction">
+          {`
+            document.addEventListener('contextmenu', function(e) {
+              if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+              }
+            }, false);
+            document.addEventListener('dragstart', function(e) {
+              if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+              }
+            }, false);
+          `}
+        </Script>
       </body>
     </html>
   )
