@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Filter } from 'lucide-react'
+import { Filter, PhoneCall, MessageCircle, Mail } from 'lucide-react'
 
 interface ApprovalRequest {
   _id: string
@@ -226,8 +226,35 @@ export default function OrderApprovalsPage() {
                           <p className="text-[8px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Customer Insight</p>
                           <p className="text-xs font-black text-gray-900 uppercase">{request.targetDetails.customerName}</p>
                           <div className="flex flex-col gap-0.5">
-                             <p className="text-[9px] text-gray-400 font-bold uppercase">{request.targetDetails.customerPhone}</p>
-                             <p className="text-[9px] text-gray-400 font-bold uppercase">{request.targetDetails.customerEmail}</p>
+                             <div className="flex items-center gap-2">
+                               <p className="text-[9px] text-gray-400 font-bold uppercase">{request.targetDetails.customerPhone}</p>
+                               <a 
+                                 href={`tel:${request.targetDetails.customerPhone}`}
+                                 className="bg-blue-900 hover:bg-blue-950 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                               >
+                                 <PhoneCall className="w-2 h-2" />
+                                 Call now
+                               </a>
+                               <a 
+                                 href={`https://wa.me/${request.targetDetails.customerPhone.replace(/[^0-9]/g, '').startsWith('0') ? '88' + request.targetDetails.customerPhone.replace(/[^0-9]/g, '') : request.targetDetails.customerPhone.replace(/[^0-9]/g, '')}`}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="bg-green-600 hover:bg-green-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                               >
+                                 <MessageCircle className="w-2 h-2" />
+                                 Send Message
+                               </a>
+                             </div>
+                             <div className="flex items-center gap-2 mt-1">
+                               <p className="text-[9px] text-gray-400 font-bold uppercase">{request.targetDetails.customerEmail}</p>
+                               <a 
+                                 href={`mailto:${request.targetDetails.customerEmail}`}
+                                 className="bg-slate-600 hover:bg-slate-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                               >
+                                 <Mail className="w-2 h-2" />
+                                 Send Email
+                               </a>
+                             </div>
                              <p className="text-[8px] text-gray-500 font-medium leading-tight mt-1 line-clamp-2">
                                {request.targetDetails.address}, {request.targetDetails.city}
                              </p>
