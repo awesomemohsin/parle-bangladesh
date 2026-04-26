@@ -51,7 +51,7 @@ export interface ILoginHistory extends Document {
   ipAddress: string;
   userAgent: string;
   deviceInfo?: string;
-  status: "success" | "failed" | "otp_requested" | "password_changed";
+  status: "success" | "failed" | "otp_requested";
   createdAt: Date;
 }
 
@@ -62,7 +62,7 @@ const LoginHistorySchema = new Schema<ILoginHistory>(
     ipAddress: { type: String, required: true },
     userAgent: { type: String, required: true },
     deviceInfo: { type: String },
-    status: { type: String, enum: ["success", "failed", "otp_requested", "password_changed"], required: true },
+    status: { type: String, enum: ["success", "failed", "otp_requested"], required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
@@ -600,30 +600,4 @@ CareerApplicationSchema.index({ position: 1 });
 CareerApplicationSchema.index({ createdAt: -1 });
 
 export const CareerApplication = mongoose.models?.CareerApplication || mongoose.model<ICareerApplication>("CareerApplication", CareerApplicationSchema, "career_applications");
-
-// --- REFRESH TOKEN MODEL ---
-export interface IRefreshToken extends Document {
-  userId: string;
-  email: string;
-  token: string;
-  role: string;
-  expiresAt: Date;
-  createdAt: Date;
-}
-
-const RefreshTokenSchema = new Schema<IRefreshToken>(
-  {
-    userId: { type: String, required: true },
-    email: { type: String, required: true },
-    token: { type: String, required: true, unique: true },
-    role: { type: String, required: true },
-    expiresAt: { type: Date, required: true },
-  },
-  { timestamps: { createdAt: true, updatedAt: false } }
-);
-
-RefreshTokenSchema.index({ userId: 1 });
-RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Auto-delete expired tokens
-
-export const RefreshToken = mongoose.models?.RefreshToken || mongoose.model<IRefreshToken>("RefreshToken", RefreshTokenSchema, "refresh_tokens");
 
