@@ -13,6 +13,7 @@ export interface JWTPayload {
   email: string
   name?: string
   role: 'customer' | 'admin' | 'moderator' | 'super_admin' | 'owner'
+  sid?: string
   iat?: number
   exp?: number
   aud?: string

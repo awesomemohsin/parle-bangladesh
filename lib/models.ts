@@ -604,6 +604,7 @@ export const CareerApplication = mongoose.models?.CareerApplication || mongoose.
 // --- REFRESH TOKEN MODEL ---
 export interface IRefreshToken extends Document {
   userId: string;
+  email: string;
   token: string;
   role: string;
   expiresAt: Date;
@@ -613,6 +614,7 @@ export interface IRefreshToken extends Document {
 const RefreshTokenSchema = new Schema<IRefreshToken>(
   {
     userId: { type: String, required: true },
+    email: { type: String, required: true },
     token: { type: String, required: true, unique: true },
     role: { type: String, required: true },
     expiresAt: { type: Date, required: true },

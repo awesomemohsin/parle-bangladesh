@@ -6,7 +6,8 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'customer' | 'admin' | 'moderator' | 'super_admin'
+  role: 'customer' | 'admin' | 'moderator' | 'super_admin' | 'owner'
+  sid?: string
 }
 
 export interface AuthState {
@@ -99,7 +100,26 @@ export function useAuth() {
     };
 
     const interval = setInterval(checkAndRefresh, 60 * 1000); // Check every minute
-    return () => clearInterval(interval);
+    
+    // High-Frequency Session Validation (Every 30s)
+    const validateSession = async () => {
+       try {
+         const res = await fetch('/api/auth/validate');
+         if (res.status === 401) logout();
+       } catch (e) {
+         // Network error or server down, don't logout immediately
+       }
+    };
+    const validatorInterval = setInterval(validateSession, 30 * 1000);
+
+    // Immediate Check on Tab Focus (Detects revocation from other windows instantly)
+    window.addEventListener('focus', validateSession);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(validatorInterval);
+      window.removeEventListener('focus', validateSession);
+    };
   }, [authState.token, authState.isAuthenticated, logout]);
 
   const login = useCallback(async (email: string, password: string) => {

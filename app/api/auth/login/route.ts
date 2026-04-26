@@ -122,11 +122,21 @@ export async function POST(request: NextRequest) {
 
     const isAdmin = ["admin", "moderator", "super_admin", "owner"].includes(user.role);
     
+    // Save refresh token in DB for tracking and revocation
+    const refreshTokenRecord = await RefreshToken.create({
+      userId: user._id.toString(),
+      email: user.email,
+      token: "pending", // Placeholder
+      role: user.role,
+      expiresAt: new Date(Date.now() + (isAdmin ? 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000))
+    });
+
     const token = generateToken({
       id: user._id.toString(),
       email: user.email,
       name: user.name,
       role: user.role,
+      sid: refreshTokenRecord._id.toString()
     }, isAdmin);
 
     const refreshToken = generateRefreshToken({
@@ -134,15 +144,12 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
+      sid: refreshTokenRecord._id.toString()
     }, isAdmin);
 
-    // Save refresh token in DB for tracking and revocation
-    await RefreshToken.create({
-      userId: user._id.toString(),
-      token: refreshToken,
-      role: user.role,
-      expiresAt: new Date(Date.now() + (isAdmin ? 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000))
-    });
+    // Update with real token
+    refreshTokenRecord.token = refreshToken;
+    await refreshTokenRecord.save();
 
     const response = NextResponse.json({
       token,
