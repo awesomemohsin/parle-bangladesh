@@ -6,18 +6,21 @@ import { Button } from '@/components/ui/button'
 import { formatDistanceToNow } from 'date-fns'
 import { Shield, LogOut, History, Activity } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Session {
   _id: string
   ipAddress?: string
   userAgent?: string
-  status?: 'success' | 'failed' | 'otp_requested'
+  status?: 'success' | 'failed' | 'otp_requested' | 'password_changed'
   createdAt: string
   role?: string
   userId?: string
+  email?: string
 }
 
 export default function AdminSessionsPage() {
+  const { logout, user } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessions, setActiveSessions] = useState<Session[]>([])
   const [mode, setMode] = useState<'history' | 'active'>('active')
@@ -26,11 +29,7 @@ export default function AdminSessionsPage() {
   const fetchSessions = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/sessions?mode=${mode}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
+      const res = await fetch(`/api/admin/sessions?mode=${mode}`)
       if (res.ok) {
         const data = await res.json()
         if (mode === 'active') setActiveSessions(data)
@@ -49,16 +48,24 @@ export default function AdminSessionsPage() {
   }, [fetchSessions])
 
   const revokeSession = async (id: string) => {
-    if (!confirm('Are you sure you want to revoke this session? The user will be forced to log out.')) return;
+    const isCurrent = activeSessions.find(s => s._id === id)?.userId === user?.id && id === user?.sid;
+    const confirmMsg = isCurrent 
+      ? 'WARNING: You are revoking your CURRENT session. You will be logged out immediately. Continue?'
+      : 'Are you sure you want to revoke this session? The device will be forced to log out.';
+
+    if (!confirm(confirmMsg)) return;
     
     try {
       const res = await fetch(`/api/admin/sessions?id=${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
       })
       if (res.ok) {
+        const data = await res.json();
+        if (data.isSelf) {
+          toast.success('Your session was revoked. Logging out...')
+          setTimeout(() => logout(), 1500)
+          return;
+        }
         toast.success('Session revoked successfully')
         fetchSessions()
       } else {
@@ -109,7 +116,7 @@ export default function AdminSessionsPage() {
                   {mode === 'active' ? (
                     <>
                       <th className="px-6 py-4 text-left font-black text-gray-400 text-[10px] uppercase tracking-widest">Role</th>
-                      <th className="px-6 py-4 text-left font-black text-gray-400 text-[10px] uppercase tracking-widest">User ID</th>
+                      <th className="px-6 py-4 text-left font-black text-gray-400 text-[10px] uppercase tracking-widest">Email Address</th>
                       <th className="px-6 py-4 text-left font-black text-gray-400 text-[10px] uppercase tracking-widest">Created</th>
                       <th className="px-6 py-4 text-right font-black text-gray-400 text-[10px] uppercase tracking-widest">Actions</th>
                     </>
@@ -132,8 +139,13 @@ export default function AdminSessionsPage() {
                           <span className="bg-gray-900 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-tighter shadow-sm">
                             {session.role}
                           </span>
+                          {session._id === user?.sid && (
+                            <span className="ml-2 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-tighter shadow-sm">
+                              CURRENT SESSION
+                            </span>
+                          )}
                         </td>
-                        <td className="px-6 py-5 font-mono text-[11px] text-gray-500">{session.userId}</td>
+                        <td className="px-6 py-5 font-mono text-[11px] text-gray-500">{session.email || 'N/A'}</td>
                         <td className="px-6 py-5 text-gray-400 font-bold text-[10px] italic">
                           {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
                         </td>
@@ -155,9 +167,10 @@ export default function AdminSessionsPage() {
                           <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm ${
                             session.status === 'success' ? 'bg-green-50 text-green-600' :
                             session.status === 'failed' ? 'bg-red-50 text-red-600' :
-                            'bg-blue-50 text-blue-600'
+                            session.status === 'otp_requested' ? 'bg-blue-50 text-blue-600' :
+                            'bg-amber-50 text-amber-600'
                           }`}>
-                            {session.status}
+                            {session.status?.replace('_', ' ')}
                           </span>
                         </td>
                         <td className="px-6 py-5 font-mono text-[11px] text-gray-600">{session.ipAddress || 'Unknown'}</td>
@@ -187,7 +200,7 @@ export default function AdminSessionsPage() {
          <div className="flex flex-col gap-1">
             <h4 className="text-xs font-black text-amber-900 uppercase tracking-widest">Security Advisory</h4>
             <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-               Active sessions represent authenticated devices with valid refresh tokens. Revoking a session will force that device to logout the next time it attempts to refresh its 30-minute access token. For immediate lockout, consider disabling the user account in the Staff Management section.
+               Active sessions represent authenticated devices with valid refresh tokens. Revoking a session or logging out will force that device to logout immediately. For maximum security, we recommend periodic password changes.
             </p>
          </div>
       </div>

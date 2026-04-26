@@ -60,8 +60,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Session ID required" }, { status: 400 });
     }
 
+    const revokedSession = await RefreshToken.findById(sessionId);
+    if (!revokedSession) return NextResponse.json({ success: true });
+
+    const currentToken = getTokenFromCookie(request.headers.get('cookie'), 'refresh_token');
+    const isSelf = revokedSession.token === currentToken;
+
     await RefreshToken.findByIdAndDelete(sessionId);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, isSelf });
   } catch (error) {
     console.error("Sessions DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
