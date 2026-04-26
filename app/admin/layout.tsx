@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/admin/admin-sidebar";
 import NotificationCenter from "@/components/admin/notification-center";
 import Footer from "@/components/footer";
 import { ShieldAlert, Menu } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLayout({
   children,
@@ -15,8 +16,7 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isLoginRoute = pathname === "/admin/login";
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthed, setIsAuthed] = useState(false);
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -26,72 +26,17 @@ export default function AdminLayout({
   }, [pathname]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (isLoginRoute) {
-        setIsLoading(false);
-        setIsAuthed(false);
-        return;
+    if (!isLoading && !isLoginRoute && !isAuthenticated) {
+      router.push("/admin/login");
+    }
+    
+    if (!isLoading && isAuthenticated && user) {
+      const isAdmin = user.role === 'admin' || user.role === 'moderator' || user.role === 'super_admin' || user.role === 'owner';
+      if (!isAdmin) {
+        router.push("/");
       }
-
-      let token = localStorage.getItem("token");
-      const userStr = localStorage.getItem("user");
-
-      if (!token || !userStr) {
-        router.push("/admin/login");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const user = JSON.parse(userStr);
-        
-        // Decode and verify token properties locally
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const isExpired = payload.exp * 1000 < Date.now();
-        
-        // Audience Check (Security Layer)
-        if (payload.aud !== 'admin') {
-          throw new Error("Invalid audience");
-        }
-
-        if (isExpired) {
-          // Attempt silent refresh
-          const refreshResponse = await fetch('/api/auth/refresh', { method: 'POST' });
-          if (refreshResponse.ok) {
-            const data = await refreshResponse.json();
-            if (data.token) {
-              token = data.token;
-              localStorage.setItem("token", token as string);
-            } else {
-              throw new Error("No token returned");
-            }
-          } else {
-            throw new Error("Session expired");
-          }
-        }
-
-        const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner';
-
-        if (!isAdmin) {
-          alert('ACCESS DENIED: Unauthorized Entrance Identified.');
-          router.push("/");
-          setIsLoading(false);
-          return;
-        }
-
-        setIsAuthed(true);
-      } catch (e) {
-        console.error("Auth check failed:", e);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        router.push("/admin/login");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [isLoginRoute, router]);
+    }
+  }, [isLoading, isAuthenticated, isLoginRoute, router, user]);
 
   if (isLoginRoute) {
     return <>{children}</>;
@@ -100,7 +45,7 @@ export default function AdminLayout({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
-        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
         <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">
           Initializing Admin Systems...
         </div>
@@ -108,12 +53,12 @@ export default function AdminLayout({
     );
   }
 
-  if (!isAuthed) {
+  if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-6 px-4 text-center">
-        <ShieldAlert className="w-20 h-20 text-red-600 animate-bounce" />
+        <ShieldAlert className="w-20 h-20 text-gray-900 animate-bounce" />
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter italic">SECURITY ALERT</h1>
+          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter italic">SECURITY CHECK</h1>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Identifying authorization clearance...</p>
         </div>
       </div>
