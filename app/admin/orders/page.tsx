@@ -72,7 +72,7 @@ export default function AdminOrdersPage() {
         if (u.role === 'moderator') {
           setStatusFilter('processing')
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [])
 
@@ -285,15 +285,17 @@ export default function AdminOrdersPage() {
                           <option value="damaged">Damaged</option>
                           <option value="lost">Lost</option>
                         </select>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handlePrint(order.id)}
-                          className="border-gray-200 text-gray-600 hover:bg-gray-50 font-black text-[10px] h-9 px-4 rounded-lg flex items-center gap-2"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          PRINT INVOICE
-                        </Button>
+                        {!['pending', 'cancelled'].includes(currentStatus) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePrint(order.id)}
+                            className="border-gray-200 text-gray-600 hover:bg-gray-50 font-black text-[10px] h-9 px-4 rounded-lg flex items-center gap-2"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            PRINT INVOICE
+                          </Button>
+                        )}
                         {hasChange && (
                           <Button
                             size="sm"
@@ -315,7 +317,7 @@ export default function AdminOrdersPage() {
                     <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-[11px] font-medium text-gray-500">{order.customerEmail}</p>
-                      <a 
+                      <a
                         href={`mailto:${order.customerEmail}`}
                         className="bg-slate-600 hover:bg-slate-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
                       >
@@ -328,14 +330,14 @@ export default function AdminOrdersPage() {
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Link</p>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold text-gray-900 font-mono tracking-tighter">{order.customerPhone}</p>
-                      <a 
+                      <a
                         href={`tel:${order.customerPhone}`}
                         className="bg-blue-900 hover:bg-blue-950 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <PhoneCall className="w-2.5 h-2.5" />
                         Call now
                       </a>
-                      <a 
+                      <a
                         href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '').startsWith('0') ? '88' + order.customerPhone.replace(/[^0-9]/g, '') : order.customerPhone.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -398,53 +400,53 @@ export default function AdminOrdersPage() {
                 {expandedOrder === order.id && (
                   <div className="mt-4 pt-4 border-t border-gray-100 bg-slate-50/50 p-4 rounded-xl space-y-3">
                     <div className="max-w-xl space-y-3">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm border-b border-white/50 pb-2 last:border-0 last:pb-0">
-                        <div>
-                          <p className="font-bold text-gray-900">{item.name}</p>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase">{item.weight || 'Std Unit'} • {item.flavor || 'Original'}</p>
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-sm border-b border-white/50 pb-2 last:border-0 last:pb-0">
+                          <div>
+                            <p className="font-bold text-gray-900">{item.name}</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase">{item.weight || 'Std Unit'} • {item.flavor || 'Original'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-gray-900 italic">৳{(item.price * item.quantity).toFixed(0)}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase">Qty: {item.quantity}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900 italic">৳{(item.price * item.quantity).toFixed(0)}</p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase">Qty: {item.quantity}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
 
-                    <div className="mt-4 pt-4 border-t border-white space-y-1.5">
-                      <div className="flex justify-between items-center text-[11px] text-gray-600">
-                        <span className="font-bold uppercase tracking-wider">Subtotal</span>
-                        <span className="font-bold text-gray-900">৳{order.subtotal?.toFixed(0) || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0)).toFixed(0)}</span>
+                      <div className="mt-4 pt-4 border-t border-white space-y-1.5">
+                        <div className="flex justify-between items-center text-[11px] text-gray-600">
+                          <span className="font-bold uppercase tracking-wider">Subtotal</span>
+                          <span className="font-bold text-gray-900">৳{order.subtotal?.toFixed(0) || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0)).toFixed(0)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] text-gray-600">
+                          <span className="font-bold uppercase tracking-wider">Delivery Charge</span>
+                          <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
+                        </div>
+                        {(order.discountAmount || 0) > 0 && (
+                          <div className="flex justify-between items-center text-[11px] text-green-600">
+                            <span className="font-bold uppercase tracking-wider">Promo Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
+                            <span className="font-bold">- ৳{(order.discountAmount || 0).toFixed(0)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-white/50 pt-2 mt-1">
+                          <span className="font-black text-xs text-gray-900 uppercase tracking-widest">Grand Total</span>
+                          <span className="font-black text-sm text-red-600">৳{order.total.toFixed(0)}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center text-[11px] text-gray-600">
-                        <span className="font-bold uppercase tracking-wider">Delivery Charge</span>
-                        <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
-                      </div>
-                      {(order.discountAmount || 0) > 0 && (
-                        <div className="flex justify-between items-center text-[11px] text-green-600">
-                          <span className="font-bold uppercase tracking-wider">Promo Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
-                          <span className="font-bold">- ৳{(order.discountAmount || 0).toFixed(0)}</span>
+
+                      {order.orderLogs && order.orderLogs.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-white">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Status History</p>
+                          <div className="space-y-2">
+                            {order.orderLogs.slice().reverse().map((log, idx) => (
+                              <div key={idx} className="text-[10px] bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center">
+                                <span className="text-gray-600">From <span className="font-bold">{log.fromStatus}</span> → <span className="font-bold text-red-600">{log.toStatus}</span> by {log.changedBy}</span>
+                                <span className="text-gray-400 italic">12:30 PM</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                      <div className="flex justify-between items-center border-t border-white/50 pt-2 mt-1">
-                        <span className="font-black text-xs text-gray-900 uppercase tracking-widest">Grand Total</span>
-                        <span className="font-black text-sm text-red-600">৳{order.total.toFixed(0)}</span>
-                      </div>
-                    </div>
-
-                    {order.orderLogs && order.orderLogs.length > 0 && (
-                      <div className="mt-6 pt-6 border-t border-white">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Status History</p>
-                        <div className="space-y-2">
-                          {order.orderLogs.slice().reverse().map((log, idx) => (
-                            <div key={idx} className="text-[10px] bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center">
-                              <span className="text-gray-600">From <span className="font-bold">{log.fromStatus}</span> → <span className="font-bold text-red-600">{log.toStatus}</span> by {log.changedBy}</span>
-                              <span className="text-gray-400 italic">12:30 PM</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                     </div>
                   </div>
                 )}
