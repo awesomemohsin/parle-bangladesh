@@ -4,6 +4,12 @@ import connectDB from "@/lib/db";
 import { Admin, User } from "@/lib/models";
 import { transporter, SMTP_FROM, getOTPTemplate } from "@/lib/mail";
 
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
@@ -14,7 +20,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized access: Admin session required" }, { status: 401 });
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const body = await request.json();
+    const { oldPassword } = body;
+
+    if (!oldPassword) {
+      return NextResponse.json({ error: "Your current password is required to initiate this request." }, { status: 400 });
+    }
     
     // Find in either Admin or User collection based on the token ID
     let dbUser = await Admin.findById(user.id) || await User.findById(user.id);
@@ -22,6 +33,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Identity not found in database" }, { status: 404 });
     }
 
+    // VERIFY OLD PASSWORD BEFORE SENDING OTP
+    const oldPasswordHash = hashPassword(oldPassword);
+    if (dbUser.password !== oldPasswordHash) {
+      return NextResponse.json({ error: "Verification failed: Incorrect current password" }, { status: 400 });
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     dbUser.otpCode = otpCode;
     dbUser.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minute window
     await dbUser.save();
@@ -37,13 +55,12 @@ export async function POST(request: NextRequest) {
         });
       } catch (mailError) {
         console.error("Mail dispatch failed:", mailError);
-        // We continue because the OTP is saved in DB, but user might be frustrated
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: "Authorization code dispatched to your registered email" 
+      message: "Security code dispatched to your registered email" 
     });
   } catch (error) {
     console.error("Change password request error:", error);

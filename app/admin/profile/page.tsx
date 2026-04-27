@@ -66,8 +66,10 @@ export default function AdminProfilePage() {
       const res = await fetch('/api/admin/change-password/request', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
+        body: JSON.stringify({ oldPassword }),
       })
       const data = await res.json()
       if (res.ok) {
