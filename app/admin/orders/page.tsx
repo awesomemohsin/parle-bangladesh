@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer } from 'lucide-react'
+import { OrderInvoice } from '@/components/admin/order-invoice'
 
 interface OrderLog {
   fromStatus: string
@@ -60,7 +61,6 @@ export default function AdminOrdersPage() {
   // Unsaved status changes
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({})
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({})
-
   const [userRole, setUserRole] = useState<string>('')
 
   useEffect(() => {
@@ -83,6 +83,10 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetchOrders()
   }, [debouncedSearch, statusFilter, page, sortBy])
+
+  const handlePrint = (id: string) => {
+    window.open(`/admin/orders/${id}/invoice`, '_blank');
+  };
 
   const fetchOrders = async () => {
     setIsLoading(true)
@@ -281,6 +285,15 @@ export default function AdminOrdersPage() {
                           <option value="damaged">Damaged</option>
                           <option value="lost">Lost</option>
                         </select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePrint(order.id)}
+                          className="border-gray-200 text-gray-600 hover:bg-gray-50 font-black text-[10px] h-9 px-4 rounded-lg flex items-center gap-2"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          PRINT INVOICE
+                        </Button>
                         {hasChange && (
                           <Button
                             size="sm"
@@ -435,12 +448,13 @@ export default function AdminOrdersPage() {
                     </div>
                   </div>
                 )}
+                {/* Removed OrderInvoice from here to move it outside the loop */}
               </Card>
             )
           })
         ) : (
-          <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
-            <p className="text-gray-400 font-bold uppercase tracking-widest text-[11px]">No orders matching the current filter identified</p>
+          <div className="p-12 text-center text-gray-500 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
+            No orders match your current filters.
           </div>
         )}
       </div>
