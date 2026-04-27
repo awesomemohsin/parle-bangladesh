@@ -120,7 +120,7 @@ export default function Navbar() {
   const userLinks = [
     { label: 'Shop', href: '/shop', icon: <ShoppingBag className="w-4 h-4" />, isSpecial: false },
     { label: 'Cart', href: '/shop/cart', icon: <ShoppingCart className="w-4 h-4" />, isSpecial: false },
-    { label: 'Track Order', href: '/shop/track', icon: <Truck className="w-4 h-4" />, isSpecial: false },
+    { label: 'Track Order', href: '/shop/track', icon: <Truck className="w-4 h-4" />, hide: isLoggedIn, isSpecial: false },
     { label: 'Orders', href: '/orders', icon: <Clock className="w-4 h-4" />, hide: !isLoggedIn, isSpecial: false },
     { label: 'About', href: '/about', icon: <Info className="w-4 h-4" />, isSpecial: false },
     { label: 'Contact', href: '/contact', icon: <Mail className="w-4 h-4" />, isSpecial: false }
@@ -200,10 +200,11 @@ export default function Navbar() {
                     </span>
                   )}
                 </Link>
-                <Link href="/shop/track" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                  <Truck className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Track
-                </Link>
-                {isLoggedIn && (
+                {!isLoggedIn ? (
+                  <Link href="/shop/track" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
+                    <Truck className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Track
+                  </Link>
+                ) : (
                   <Link href="/orders" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
                     <Clock className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Orders
                   </Link>
