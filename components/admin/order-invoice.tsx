@@ -9,6 +9,24 @@ interface InvoiceProps {
 export const OrderInvoice = ({ order }: InvoiceProps) => {
   if (!order) return null;
 
+  const numberToWords = (amount: number) => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const numStr = Math.round(amount).toString();
+    if (numStr.length > 9) return 'Amount too large';
+    
+    const n = ('000000000' + numStr).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    str += n[1] != '00' ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+    str += n[2] != '00' ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+    str += n[3] != '00' ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+    str += n[4] != '0' ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+    str += n[5] != '00' ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    return str + 'Taka Only';
+  };
+
   return (
     <div id={`invoice-${order.id}`} className="hidden print:block bg-white w-full max-w-[190mm] mx-auto font-sans text-gray-800 p-0 box-border overflow-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       <style jsx>{`
@@ -103,7 +121,13 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
         </div>
 
         {/* Totals Section */}
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-between items-end gap-4">
+          <div className="flex-1 pb-1">
+            <h4 className="text-[7px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Amount in Words:</h4>
+            <p className="text-[10px] font-black text-gray-900 uppercase italic leading-none border-l-2 border-red-600 pl-2">
+              {numberToWords(Math.round(order.total))}
+            </p>
+          </div>
           <div className="w-56 text-[9px]">
             <div className="flex justify-between py-1 px-1">
               <span className="font-black text-red-600 uppercase tracking-widest">SUBTOTAL :</span>
@@ -138,7 +162,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
         <div className="mt-auto">
           {order.instruction && (
             <div className="mt-3 text-[8px]">
-              <h4 className="font-black uppercase tracking-widest text-gray-900 mb-0.5">Instructions:</h4>
+              <h4 className="font-black uppercase tracking-widest text-gray-900 mb-0.5">Order Instructions:</h4>
               <p className="max-w-md text-gray-500 italic border-l border-gray-100 pl-3 leading-tight">
                 {order.instruction}
               </p>
