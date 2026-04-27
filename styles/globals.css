@@ -143,3 +143,35 @@
     animation: slow-zoom 20s linear infinite alternate;
   }
 }
+
+@media print {
+  /* Hide EVERYTHING by default */
+  body * {
+    display: none !important;
+  }
+  
+  /* Show ONLY the invoice and its children */
+  [id^="invoice-"], [id^="invoice-"] * {
+    display: block !important;
+  }
+
+  /* Specific resets for the invoice container */
+  [id^="invoice-"] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    min-height: 100% !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 99999 !important;
+  }
+
+  /* Ensure background colors and images are printed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
