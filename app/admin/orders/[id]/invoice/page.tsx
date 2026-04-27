@@ -55,7 +55,7 @@ export default function OrderInvoicePage() {
       */}
       <style jsx global>{`
         main {
-          padding-top: 10 !important;
+          padding-top: 0 !important;
           padding-bottom: 0 !important;
         }
         #invoice-${order.id} {
@@ -91,6 +91,10 @@ export default function OrderInvoicePage() {
             padding: 0 !important;
           }
           #invoice-${order.id} {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
             page-break-after: avoid;
             page-break-before: avoid;
             -webkit-print-color-adjust: exact !important;
