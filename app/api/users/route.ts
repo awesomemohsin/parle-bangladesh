@@ -40,6 +40,46 @@ export async function POST(request: NextRequest) {
     const password = String(body.password || "");
     const role = body.role === "moderator" ? "moderator" : "admin";
     const name = String(body.name || email.split("@")[0] || "Admin User");
+    const otpCode = body.otpCode;
+
+    // --- OTP VERIFICATION LOGIC ---
+    const { Admin: AdminModel } = require("@/lib/models");
+    const creator = await AdminModel.findById(currentUser.id);
+    if (!creator) return NextResponse.json({ error: "Creator identity not found" }, { status: 404 });
+
+    if (!otpCode) {
+      // Step 1: Generate and send OTP
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      creator.otpCode = generatedOtp;
+      creator.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await creator.save();
+
+      const { transporter, getOTPTemplate, SMTP_FROM } = require("@/lib/mail");
+      if (transporter && SMTP_FROM) {
+        await transporter.sendMail({
+          from: `"Parle Security" <${SMTP_FROM}>`,
+          to: creator.email,
+          subject: "Security Authorization: New Admin Creation",
+          html: getOTPTemplate(generatedOtp, creator.name || creator.email),
+        });
+      }
+
+      return NextResponse.json({ 
+        requireOtp: true, 
+        message: "A security code has been sent to your email to authorize this action." 
+      }, { status: 200 });
+    }
+
+    // Step 2: Verify OTP
+    if (creator.otpCode !== otpCode || !creator.otpExpires || creator.otpExpires < new Date()) {
+      return NextResponse.json({ error: "Invalid or expired authorization code" }, { status: 401 });
+    }
+
+    // OTP is valid, clear it and proceed
+    creator.otpCode = undefined;
+    creator.otpExpires = undefined;
+    await creator.save();
+    // --- END OTP LOGIC ---
 
     if (!validateEmail(email)) return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     if (password.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });

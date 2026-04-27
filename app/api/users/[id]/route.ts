@@ -27,8 +27,35 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     if (body.role) {
-      if (!["admin", "customer", "moderator", "super_admin", "owner"].includes(body.role)) {
-        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+      // 1. IMMUTABILITY: If the target user is already an OWNER, their role cannot be changed.
+      if (user.role === ROLES.OWNER && body.role !== ROLES.OWNER) {
+        return NextResponse.json({ 
+          error: "Forbidden: The OWNER role is immutable and cannot be demoted." 
+        }, { status: 403 });
+      }
+
+      const allowedRoles = ["admin", "customer", "moderator"];
+      
+      // Only an OWNER can promote someone to SUPER_ADMIN
+      if (currentUser.role === ROLES.OWNER) {
+        allowedRoles.push(ROLES.SUPER_ADMIN);
+
+        // 2. UNIQUENESS: Only allow setting OWNER if no other owner exists (or if it's the same person)
+        if (body.role === ROLES.OWNER) {
+          const existingOwner = await Admin.findOne({ role: ROLES.OWNER });
+          if (existingOwner && existingOwner._id.toString() !== id) {
+            return NextResponse.json({ 
+              error: "Forbidden: A system OWNER already exists. Only one OWNER is permitted." 
+            }, { status: 403 });
+          }
+          allowedRoles.push(ROLES.OWNER);
+        }
+      }
+
+      if (!allowedRoles.includes(body.role)) {
+        return NextResponse.json({ 
+          error: `Forbidden: You do not have authority to assign the '${body.role}' role.` 
+        }, { status: 403 });
       }
       user.role = body.role;
     }
@@ -87,6 +114,48 @@ export async function DELETE(
     if (user.role === ROLES.OWNER && currentUser.role !== ROLES.OWNER) {
       return NextResponse.json({ error: "Cannot delete Owner account." }, { status: 403 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const otpCode = searchParams.get("otp");
+
+    // --- OTP VERIFICATION LOGIC ---
+    const { Admin: AdminModel } = require("@/lib/models");
+    const creator = await AdminModel.findById(currentUser.id);
+    if (!creator) return NextResponse.json({ error: "Requester identity not found" }, { status: 404 });
+
+    if (!otpCode) {
+      // Step 1: Generate and send OTP
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      creator.otpCode = generatedOtp;
+      creator.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await creator.save();
+
+      const { transporter, getOTPTemplate, SMTP_FROM } = require("@/lib/mail");
+      if (transporter && SMTP_FROM) {
+        await transporter.sendMail({
+          from: `"Parle Security" <${SMTP_FROM}>`,
+          to: creator.email,
+          subject: "Security Authorization: Admin Account Deletion",
+          html: getOTPTemplate(generatedOtp, creator.name || creator.email),
+        });
+      }
+
+      return NextResponse.json({ 
+        requireOtp: true, 
+        message: "A security code has been sent to your email to authorize this deletion." 
+      }, { status: 200 });
+    }
+
+    // Step 2: Verify OTP
+    if (creator.otpCode !== otpCode || !creator.otpExpires || creator.otpExpires < new Date()) {
+      return NextResponse.json({ error: "Invalid or expired authorization code" }, { status: 401 });
+    }
+
+    // OTP is valid, clear it and proceed
+    creator.otpCode = undefined;
+    creator.otpExpires = undefined;
+    await creator.save();
+    // --- END OTP LOGIC ---
 
     await Admin.findByIdAndDelete(id);
 
