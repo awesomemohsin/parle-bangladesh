@@ -28,6 +28,11 @@ export default function AdminUsersPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteOtp, setDeleteOtp] = useState("");
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -67,6 +72,7 @@ export default function AdminUsersPage() {
     if (!newUser.email || !newUser.password) return;
 
     setIsAdding(true);
+    setMessage(null);
 
     try {
       const response = await fetch("/api/users", {
@@ -75,16 +81,24 @@ export default function AdminUsersPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify({ ...newUser, otpCode }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        setUsers([...users, data.user]);
-        setNewUser({ email: "", password: "", role: "admin" });
+        if (data.requireOtp) {
+          setShowOtpInput(true);
+          setMessage(data.message);
+        } else {
+          setUsers([...users, data.user]);
+          setNewUser({ email: "", password: "", role: "admin" });
+          setShowOtpInput(false);
+          setOtpCode("");
+          alert("User created successfully!");
+        }
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.error}`);
+        alert(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error("Failed to add user:", error);
@@ -93,22 +107,36 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
+  const handleDelete = async (id: string, otpCode?: string) => {
+    if (!otpCode && !confirm("Are you sure you want to permanently delete this administrative account?")) return;
+    
     try {
-      const response = await fetch(`/api/users/${id}`, {
+      const url = `/api/users/${id}${otpCode ? `?otp=${otpCode}` : ''}`;
+      const response = await fetch(url, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        setUsers(users.filter((u) => u.id !== id));
+        if (data.requireOtp) {
+          setDeletingUserId(id);
+          setMessage(data.message);
+        } else {
+          setUsers(users.filter((u) => u.id !== id));
+          setDeletingUserId(null);
+          setDeleteOtp("");
+          alert("Account deleted successfully.");
+        }
+      } else {
+        alert(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error("Failed to delete user:", error);
+      alert("An unexpected error occurred during deletion.");
     }
   };
 
@@ -182,6 +210,33 @@ export default function AdminUsersPage() {
               </div>
             </div>
 
+            {showOtpInput && (
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 animate-in fade-in slide-in-from-top-2">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-3 italic">
+                  {message || "Security Verification Required"}
+                </p>
+                <div className="flex gap-4">
+                  <Input
+                    type="text"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="ENTER 6-DIGIT CODE"
+                    className="max-w-[200px] font-black tracking-[0.3em] uppercase"
+                    maxLength={6}
+                    required
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => { setShowOtpInput(false); setOtpCode(""); }}
+                    className="text-[10px] font-black uppercase tracking-widest"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <Button type="submit" disabled={isAdding}>
               {isAdding ? "Adding..." : "Add User"}
             </Button>
@@ -226,14 +281,47 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       {(currentUserRole === "super_admin" || currentUserRole === "owner") && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(user.id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          Delete
-                        </Button>
+                        <div className="flex flex-col items-end gap-2">
+                          {deletingUserId === user.id ? (
+                            <div className="flex flex-col items-end gap-2 bg-red-50 p-3 rounded-2xl border border-red-100 animate-in fade-in zoom-in duration-300">
+                              <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1 italic">Verification Required</p>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  placeholder="CODE"
+                                  value={deleteOtp}
+                                  onChange={(e) => setDeleteOtp(e.target.value)}
+                                  className="w-24 h-9 text-center font-black tracking-widest text-xs"
+                                  maxLength={6}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleDelete(user.id, deleteOtp)}
+                                  className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase h-9 px-4"
+                                >
+                                  Verify
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { setDeletingUserId(null); setDeleteOtp(""); }}
+                                  className="text-gray-400 hover:text-gray-600 text-[10px] font-black uppercase h-9"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(user.id)}
+                              className="text-red-600 border-red-200 hover:bg-red-50 text-[10px] font-black uppercase tracking-widest"
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
