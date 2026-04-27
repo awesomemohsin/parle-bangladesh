@@ -8,7 +8,7 @@ const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
 const MAX_REQUESTS = 100 // 100 requests per minute
 
 export function middleware(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') || request.ip || '127.0.0.1'
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
   const path = request.nextUrl.pathname
 
   // Security Headers
