@@ -15,7 +15,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
 
     const numStr = Math.round(amount).toString();
     if (numStr.length > 9) return 'Amount too large';
-    
+
     const n = ('000000000' + numStr).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
     if (!n) return '';
     let str = '';
@@ -170,7 +170,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
           )}
 
           <p className="mt-4 text-[10px] font-black text-red-600 uppercase italic tracking-tighter">
-            Thank you for your Business
+            Thank you for your Purchase
           </p>
 
           <div className="mt-4 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
