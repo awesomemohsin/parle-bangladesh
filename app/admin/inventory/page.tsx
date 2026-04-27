@@ -38,7 +38,7 @@ export default function InventoryPage() {
       if (res.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        router.push('/admin/login');
+        router.push('/auth/login');
         toast.error('Session expired. Please login again.');
         return;
       }

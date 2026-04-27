@@ -17,7 +17,8 @@ import {
   Tag,
   ListFilter,
   Users,
-  Lock
+  Lock,
+  Truck
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -91,7 +92,7 @@ export default function Navbar() {
     sessionStorage.clear()
     syncAuth()
     setIsMobileMenuOpen(false)
-    router.push(isAdminRoute ? '/admin/login' : '/auth/login')
+    router.push('/auth/login')
   }
 
   const userRole = user?.role || 'user'
@@ -119,6 +120,7 @@ export default function Navbar() {
   const userLinks = [
     { label: 'Shop', href: '/shop', icon: <ShoppingBag className="w-4 h-4" />, isSpecial: false },
     { label: 'Cart', href: '/shop/cart', icon: <ShoppingCart className="w-4 h-4" />, isSpecial: false },
+    { label: 'Track Order', href: '/shop/track', icon: <Truck className="w-4 h-4" />, isSpecial: false },
     { label: 'Orders', href: '/orders', icon: <Clock className="w-4 h-4" />, hide: !isLoggedIn, isSpecial: false },
     { label: 'About', href: '/about', icon: <Info className="w-4 h-4" />, isSpecial: false },
     { label: 'Contact', href: '/contact', icon: <Mail className="w-4 h-4" />, isSpecial: false }
@@ -198,6 +200,9 @@ export default function Navbar() {
                     </span>
                   )}
                 </Link>
+                <Link href="/shop/track" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
+                  <Truck className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Track
+                </Link>
                 {isLoggedIn && (
                   <Link href="/orders" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
                     <Clock className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Orders
@@ -214,10 +219,10 @@ export default function Navbar() {
 
             {/* Right: Action Hub (Admin, Notifs, Auth) */}
             <div className="flex items-center gap-6 shrink-0">
-              {isAdminRoute && isLoggedIn && pathname !== '/admin/login' ? (
+              {isAdminRoute && isLoggedIn && pathname !== '/auth/login' ? (
                 <NotificationCenter />
               ) : (
-                isAdmin && (
+                isModerator && (
                   <Link href="/admin/dashboard">
                     <Button size="sm" className="bg-gray-900 text-white font-black uppercase text-[9px] tracking-widest h-10 px-4 rounded-xl border-2 border-gray-900 hover:bg-white hover:text-gray-900 transition-all">Admin Panel</Button>
                   </Link>
@@ -226,7 +231,7 @@ export default function Navbar() {
 
               {!isLoggedIn ? (
                 <div className="flex items-center gap-6">
-                  <Link href="/auth/login" className="text-[11px] font-black text-gray-900 uppercase tracking-widest hover:text-red-600 transition-colors font-sans">Login</Link>
+                  <Link href={`/auth/login?callbackUrl=${pathname}`} className="text-[11px] font-black text-gray-900 uppercase tracking-widest hover:text-red-600 transition-colors font-sans">Login</Link>
                   <Link href="/auth/signup">
                     <Button size="sm" className="bg-red-600 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] px-6 h-11 rounded-xl shadow-xl shadow-red-100">Sign Up</Button>
                   </Link>
@@ -234,7 +239,7 @@ export default function Navbar() {
               ) : (
                 <div className="flex items-center gap-4">
                   <div className="flex flex-col items-end">
-                    {isAdmin ? (
+                    {isModerator ? (
                       <Link href="/admin/profile" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate max-w-[180px] font-sans hover:text-red-600 transition-colors">
                         {user?.email}
                       </Link>
@@ -396,14 +401,14 @@ export default function Navbar() {
                         <p className="text-xs font-black text-white truncate font-sans mb-4">{user?.name || user?.email}</p>
 
                         <div className="grid grid-cols-1 gap-2">
-                          {isAdmin && (
+                          {isModerator && (
                             <Link href="/admin/profile" onClick={() => setIsMobileMenuOpen(false)}>
                               <Button className="w-full h-11 bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border border-white/10">
                                 My Profile & Security
                               </Button>
                             </Link>
                           )}
-                          {isAdmin && !isAdminRoute && (
+                          {isModerator && !isAdminRoute && (
                             <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                               <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
                                 Admin Panel
@@ -421,7 +426,7 @@ export default function Navbar() {
                     <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Sign Up</Button>
                     </Link>
-                    <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link href={`/auth/login?callbackUrl=${pathname}`} onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login</Button>
                     </Link>
                   </div>

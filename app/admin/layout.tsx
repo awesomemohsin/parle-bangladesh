@@ -14,7 +14,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const isLoginRoute = pathname === "/admin/login";
+  const isLoginRoute = pathname === "/auth/login";
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -37,7 +37,7 @@ export default function AdminLayout({
       const userStr = localStorage.getItem("user");
 
       if (!token || !userStr) {
-        router.push("/admin/login");
+        router.push("/auth/login");
         setIsLoading(false);
         return;
       }
@@ -52,7 +52,7 @@ export default function AdminLayout({
         if (isExpired) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          router.push("/admin/login");
+          router.push("/auth/login");
           return;
         }
 
@@ -72,7 +72,7 @@ export default function AdminLayout({
         console.error("Auth check failed:", e);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        router.push("/admin/login");
+        router.push("/auth/login");
       } finally {
         setIsLoading(false);
       }

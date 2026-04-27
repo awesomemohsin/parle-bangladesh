@@ -74,7 +74,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     sessionStorage.clear()
-    router.push('/admin/login')
+    router.push('/auth/login')
   }
 
   const isOwner = user?.role === 'owner'

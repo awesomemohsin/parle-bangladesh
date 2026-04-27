@@ -42,13 +42,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const loginType = body.loginType;
-
+    // Allow any user to login regardless of loginType
     if (!user) {
-      return NextResponse.json({ error: "Incorrect email or password" }, { status: 401 });
-    }
-
-    if (loginType === "customer" && user.role !== "customer") {
       return NextResponse.json({ error: "Incorrect email or password" }, { status: 401 });
     }
 

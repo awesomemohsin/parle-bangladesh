@@ -28,7 +28,7 @@ export default function AdminCareersPage() {
       } else if (response.status === 401) {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        window.location.href = '/admin/login'
+        window.location.href = '/auth/login'
         toast.error('Session expired. Please login again.')
       } else {
         toast.error('Failed to fetch applications')

@@ -108,7 +108,7 @@ export function useAuth() {
       error: null,
     })
     
-    router.push("/admin/login")
+    router.push("/auth/login")
   }, [router])
 
   const hasRole = useCallback(

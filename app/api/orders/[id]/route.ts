@@ -129,7 +129,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
          requesterEmail: user.email,
          type: "order",
          targetId: order._id.toString(),
-         targetName: `Order #${order._id.toString().slice(-6)}`,
+         targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
          field: "status",
          oldValue: oldStatus,
          newValue: newStatus,
@@ -143,7 +143,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
        await Notification.create({
          role: ROLES.SUPER_ADMIN,
          title: "New Order Approval Req",
-         message: `Approval required for Order #${order._id.toString().slice(-6)} status change to ${newStatus}`,
+         message: `Approval required for Order #${order._id.toString().slice(-8).toUpperCase()} status change to ${newStatus}`,
          type: "approval",
          targetLink: `/admin/approvals/orders`
        });
@@ -271,7 +271,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       await Notification.create({
         role: ROLES.MODERATOR,
         title: "Order Ready for Dispatch",
-        message: `Order #${order._id.toString().slice(-6)} has been processed and is ready for status management.`,
+        message: `Order #${order._id.toString().slice(-8).toUpperCase()} has been processed and is ready for status management.`,
         type: "order",
         targetLink: `/admin/orders`
       });
@@ -280,7 +280,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       await Notification.create({
         role: ROLES.ADMIN,
         title: "Order Status Updated",
-        message: `Order #${order._id.toString().slice(-6)} status changed from ${oldStatus} to ${newStatus}.`,
+        message: `Order #${order._id.toString().slice(-8).toUpperCase()} status changed from ${oldStatus} to ${newStatus}.`,
         type: "order",
         targetLink: `/admin/orders`
       });
@@ -291,7 +291,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       adminEmail: user.email,
       action: "update_order_status",
       targetId: order._id.toString(),
-      targetName: `Order #${order._id.toString().slice(-6)}`,
+      targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
       details: `Updated order ${order._id} status from ${oldStatus} to ${newStatus}${statusReason ? ` (Reason: ${statusReason})` : ''}`
     });
 

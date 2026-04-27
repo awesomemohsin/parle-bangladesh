@@ -1,23 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-export default function LoginPage() {
-  useState(() => {
-    if (typeof window !== 'undefined') {
-      document.title = 'Login | Parle Bangladesh';
-    }
-  });
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      document.title = 'Login | Parle Bangladesh';
+    }
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +32,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, loginType: "customer" }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -40,12 +44,30 @@ export default function LoginPage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      if (
-        data.user?.role === "admin" ||
-        data.user?.role === "super_admin" ||
-        data.user?.role === "moderator"
-      ) {
+      // Check role for redirection
+      const isAdmin = [
+        "admin",
+        "super_admin",
+        "moderator",
+        "owner"
+      ].includes(data.user?.role);
+
+      if (isAdmin) {
         window.location.href = "/admin/dashboard";
+        return;
+      }
+
+      // Customer redirection
+      const callbackUrl = searchParams.get("callbackUrl");
+      if (callbackUrl) {
+        window.location.href = callbackUrl;
+        return;
+      }
+
+      // Fallback to referrer if same origin
+      const referrer = typeof document !== 'undefined' ? document.referrer : '';
+      if (referrer && referrer.startsWith(window.location.origin) && !referrer.includes('/auth/login')) {
+        window.location.href = referrer;
         return;
       }
 
@@ -110,17 +132,16 @@ export default function LoginPage() {
               Sign up
             </Link>
           </div>
-          <div>
-            <span>Admin user? </span>
-            <Link
-              href="/admin/login"
-              className="text-red-600 hover:underline"
-            >
-              Use admin login
-            </Link>
-          </div>
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

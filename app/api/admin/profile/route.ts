@@ -6,7 +6,7 @@ import { Admin, User } from "@/lib/models";
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request, true);
+    const user = getAuthUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }

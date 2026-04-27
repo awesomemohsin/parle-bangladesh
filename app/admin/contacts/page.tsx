@@ -31,7 +31,7 @@ export default function AdminContactsPage() {
         // Force logout on auth failure
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        window.location.href = '/admin/login'
+        window.location.href = '/auth/login'
         toast.error('Session expired. Please login again.')
       } else {
         toast.error('Failed to fetch contacts')

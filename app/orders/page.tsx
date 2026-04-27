@@ -140,7 +140,7 @@ export default function MyOrdersPage() {
               <div className="bg-slate-50/80 border-b border-gray-100 px-5 py-2 flex flex-wrap justify-between items-center gap-4">
                  <div className="flex items-center gap-2">
                     <span className="text-[11px] font-black text-gray-900 uppercase tracking-tight">
-                       ORDER ID: <span className="text-red-600 ml-1 select-all">{order.id.toUpperCase()}</span>
+                       ORDER ID: <span className="text-red-600 ml-1 select-all">{order.id.slice(-8).toUpperCase()}</span>
                     </span>
                  </div>
                  

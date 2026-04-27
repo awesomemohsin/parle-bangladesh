@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     // Explicitly check for admin session
-    const user = getAuthUserFromRequest(request, true);
+    const user = getAuthUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized access: Admin session required" }, { status: 401 });
     }

@@ -186,7 +186,7 @@ export default function CheckoutPage() {
 
                 <div className="bg-gray-50 px-4 py-2 rounded-lg mb-10 w-full flex justify-between items-center">
                   <span className="text-sm text-gray-500">Order ID:</span>
-                  <span className="text-base font-bold text-red-600">{orderState.orderId}</span>
+                  <span className="text-base font-bold text-red-600">{orderState.orderId?.slice(-8).toUpperCase()}</span>
                 </div>
 
                 <div className="w-full">

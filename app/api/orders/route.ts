@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
     await Notification.create({
       role: ROLES.ADMIN,
       title: "New Order Received",
-      message: `A new order #${order._id.toString().slice(-6)} has been placed by ${customerName}.`,
+      message: `A new order #${order._id.toString().slice(-8).toUpperCase()} has been placed by ${customerName}.`,
       type: "order",
       targetLink: `/admin/orders`
     });

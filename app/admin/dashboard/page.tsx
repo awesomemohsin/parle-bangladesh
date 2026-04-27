@@ -43,7 +43,7 @@ export default function AdminDashboard() {
         // Force logout if unauthorized
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        router.push('/admin/login')
+        router.push('/auth/login')
         toast.error('Session expired. Please login again.')
       } else {
         const errData = await response.json()
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
               {stats?.recentOrders.map((order: any) => (
                 <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-4 font-black text-gray-900 uppercase italic">
-                    #{order.id.slice(-6).toUpperCase()}
+                    #{order.id.slice(-8).toUpperCase()}
                   </td>
                   <td className="px-4 py-4 font-bold text-gray-600">{order.customerName}</td>
                   <td className="px-4 py-4 font-black text-gray-900 tabular-nums text-lg italic">

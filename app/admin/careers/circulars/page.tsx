@@ -59,7 +59,7 @@ export default function JobCircularsAdmin() {
         const data = await res.json();
         setCirculars(data);
       } else if (res.status === 401) {
-        window.location.href = '/admin/login';
+        window.location.href = '/auth/login';
       }
     } catch (err) {
       console.error('Failed to fetch circulars', err);
