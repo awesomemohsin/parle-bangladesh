@@ -25,7 +25,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
               PARLE <br /> <span className="text-gray-900 font-black">BANGLADESH</span>
             </h1>
             <p className="text-[8px] font-black text-gray-900 uppercase tracking-widest mt-0.5 max-w-[400px] leading-tight">
-              M/S CIRCLE ENTERPRISE IS THE EXCLUSIVE AUTHORISED DISTRIBUTOR OF PARLE BISCUITS PVT. LTD- (INDIA) IN BANGLADESH FOR THE DISTRIBUTION OF PARLE BISCUITS, WAFERS.
+              M/S CIRCLE ENTERPRISE IS THE EXCLUSIVE AUTHORISED DISTRIBUTOR OF PARLE BISCUITS PVT. LTD- (INDIA) IN BANGLADESH.
             </p>
           </div>
 
@@ -113,12 +113,15 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
               <span className="font-bold text-gray-500 uppercase tracking-widest">Delivery Fee :</span>
               <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
             </div>
-            {order.discountAmount > 0 && (
-              <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                <span className="font-bold text-green-600 uppercase tracking-widest italic">Discount :</span>
-                <span className="font-bold text-green-600">-৳{order.discountAmount.toFixed(0)}</span>
+            <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+              <div className="flex flex-col">
+                <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Discount :</span>
+                {order.promoCode && (
+                  <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
+                )}
               </div>
-            )}
+              <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
+            </div>
             <div className="flex justify-between py-1 px-1 border-t border-gray-100">
               <span className="font-bold text-gray-500 uppercase tracking-widest">Payment :</span>
               <span className="font-black text-gray-900 uppercase italic text-[8px]">{order.paymentMethod || 'Cash on Delivery'}</span>
@@ -170,7 +173,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
           </div>
         </div>
       </div>
-      
+
       {/* Visual Indicator for Screen Mode */}
       <div className="print:hidden h-10 bg-gray-50 flex items-center justify-center border-t border-gray-200">
         <p className="text-[8px] font-black text-red-600 uppercase tracking-[0.4em] animate-pulse">Generated Secure Invoice Preview</p>
