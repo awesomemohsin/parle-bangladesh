@@ -130,7 +130,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
 
               {/* Row aligning with Delivery Fee - Delivery Info */}
               <div className="mt-1">
-                <h4 className="text-[13px] font-black uppercase tracking-widest text-red-600 leading-none mb-1.5 underline decoration-red-600/30 underline-offset-2">
+                <h4 className="text-[12px] font-black uppercase tracking-widest text-red-600 leading-none mb-1.5 underline decoration-red-600/30 underline-offset-2">
                   {order.deliveryMethod === 'pickup' ? 'Delivery Method (Pickup):' : 'Shipping Address:'}
                 </h4>
                 <div className="bg-gray-50 border-l-2 border-red-600 p-2 max-w-[320px]">
@@ -140,7 +140,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                       <p className="text-[10px] text-red-600 font-black italic mt-0.5">Yassin Tower, Savar, Dhaka</p>
                     </>
                   ) : (
-                    <p className="text-[12px] font-black text-gray-900 uppercase leading-tight">
+                    <p className="text-[10px] font-black text-gray-900 uppercase leading-tight">
                       {order.address}, {order.city} {order.postalCode}
                     </p>
                   )}
