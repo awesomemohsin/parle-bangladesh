@@ -72,7 +72,8 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
           <div>
             <h3 className="font-black text-[8px] uppercase tracking-widest text-gray-900 mb-0.5">Invoice To:</h3>
             <p className="font-black text-gray-900 uppercase leading-none">{order.customerName}</p>
-            <p className="text-gray-600 leading-tight mt-0.5">
+            <p className="text-gray-600 leading-tight mt-1 text-[9px]">
+              <span className="font-bold text-gray-900 uppercase mr-1">Billing Address:</span>
               {order.address}, {order.city} {order.postalCode}
             </p>
             <p className="mt-1 font-bold text-gray-900 leading-none">{order.customerPhone}</p>
@@ -121,12 +122,38 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
         </div>
 
         {/* Totals Section */}
-        <div className="mt-4 flex justify-between items-end gap-4">
-          <div className="flex-1 pb-1">
-            <h4 className="text-[7px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Amount in Words:</h4>
-            <p className="text-[10px] font-black text-gray-900 uppercase italic leading-none border-l-2 border-red-600 pl-2">
-              {numberToWords(Math.round(order.total))}
-            </p>
+        <div className="mt-4 flex justify-between items-stretch gap-4">
+          <div className="flex-1 flex flex-col justify-between pb-0.5">
+            <div>
+              {/* Row aligning with Subtotal - Empty */}
+              <div className="h-[14px]"></div>
+
+              {/* Row aligning with Delivery Fee - Delivery Info */}
+              <div className="mt-1">
+                <h4 className="text-[13px] font-black uppercase tracking-widest text-red-600 leading-none mb-1.5 underline decoration-red-600/30 underline-offset-2">
+                  {order.deliveryMethod === 'pickup' ? 'Delivery Method (Pickup):' : 'Shipping Address:'}
+                </h4>
+                <div className="bg-gray-50 border-l-2 border-red-600 p-2 max-w-[320px]">
+                  {order.deliveryMethod === 'pickup' ? (
+                    <>
+                      <p className="text-[10px] font-black text-gray-900 uppercase tracking-tight">Collection Point Pickup</p>
+                      <p className="text-[10px] text-red-600 font-black italic mt-0.5">Yassin Tower, Savar, Dhaka</p>
+                    </>
+                  ) : (
+                    <p className="text-[12px] font-black text-gray-900 uppercase leading-tight">
+                      {order.address}, {order.city} {order.postalCode}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-auto">
+              <h4 className="text-[8px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Amount in Words:</h4>
+              <p className="text-[10px] font-black text-gray-900 uppercase italic leading-none border-l-2 border-red-600 pl-2">
+                {numberToWords(Math.round(order.total))}
+              </p>
+            </div>
           </div>
           <div className="w-56 text-[9px]">
             <div className="flex justify-between py-1 px-1">
