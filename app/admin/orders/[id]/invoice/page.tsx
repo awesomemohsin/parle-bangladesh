@@ -54,6 +54,10 @@ export default function OrderInvoicePage() {
           We use a special class to force visibility 
       */}
       <style jsx global>{`
+        main {
+          padding-top: 10 !important;
+          padding-bottom: 0 !important;
+        }
         #invoice-${order.id} {
           display: block !important;
           visibility: visible !important;
@@ -61,7 +65,7 @@ export default function OrderInvoicePage() {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 5mm;
+            margin: 0;
           }
           html, body {
              background: white !important;
@@ -96,7 +100,7 @@ export default function OrderInvoicePage() {
       `}</style>
 
       <div className="print:hidden fixed top-6 right-6 z-[100]">
-        <button 
+        <button
           onClick={() => window.print()}
           className="print-btn bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all active:scale-95 uppercase tracking-widest text-xs"
         >
@@ -105,7 +109,7 @@ export default function OrderInvoicePage() {
         </button>
       </div>
 
-      <div className="py-10">
+      <div className="p-0">
         <OrderInvoice order={order} />
       </div>
     </div>

@@ -14,7 +14,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
       <style jsx>{`
         div::-webkit-scrollbar { display: none; }
       `}</style>
-      <div className="mx-auto w-full bg-white p-[5mm] text-gray-800 border-t-[8px] border-b-[8px] border-red-600">
+      <div className="mx-auto w-full bg-white p-[5mm] text-gray-800 border-t-[8px] border-b-[8px] border-red-600 min-h-[275mm] flex flex-col justify-start">
         {/* Header */}
         <div className="flex justify-between items-start" style={{ breakInside: 'avoid' }}>
           <div>
@@ -131,45 +131,46 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
           </div>
         </div>
 
-        {/* Instructions */}
-        {order.instruction && (
-          <div className="mt-3 text-[8px]">
-            <h4 className="font-black uppercase tracking-widest text-gray-900 mb-0.5">Instructions:</h4>
-            <p className="max-w-md text-gray-500 italic border-l border-gray-100 pl-3 leading-tight">
-              {order.instruction}
-            </p>
-          </div>
-        )}
+        {/* Footer - Pushed to Bottom */}
+        <div className="mt-auto">
+          {order.instruction && (
+            <div className="mt-3 text-[8px]">
+              <h4 className="font-black uppercase tracking-widest text-gray-900 mb-0.5">Instructions:</h4>
+              <p className="max-w-md text-gray-500 italic border-l border-gray-100 pl-3 leading-tight">
+                {order.instruction}
+              </p>
+            </div>
+          )}
 
-        <p className="mt-4 text-[10px] font-black text-red-600 uppercase italic tracking-tighter">
-          Thank you for your Business
-        </p>
+          <p className="mt-4 text-[10px] font-black text-red-600 uppercase italic tracking-tighter">
+            Thank you for your Business
+          </p>
 
-        {/* Footer */}
-        <div className="mt-4 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
-          <div>
-            <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">Questions?</h4>
-            <p className="font-bold text-gray-900 leading-tight">Email: cfb@circlenetworkbd.net</p>
-            <p className="font-bold text-gray-900 mt-0.5 leading-tight">Support: +8801958113002</p>
-          </div>
+          <div className="mt-4 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
+            <div>
+              <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">Questions?</h4>
+              <p className="font-bold text-gray-900 leading-tight">Email: cfb@circlenetworkbd.net</p>
+              <p className="font-bold text-gray-900 mt-0.5 leading-tight">Support: +8801958113002</p>
+            </div>
 
-          <div>
-            <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">Distributor Details:</h4>
-            <p className="font-bold text-gray-900 uppercase leading-tight">Circle Enterprise Hub</p>
-            <p className="text-gray-900 mt-0.5 leading-tight uppercase text-[7px] font-bold">Official Distribution Network for Parle Products</p>
-          </div>
+            <div>
+              <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">Distributor Details:</h4>
+              <p className="font-bold text-gray-900 uppercase leading-tight">Circle Enterprise Hub</p>
+              <p className="text-gray-900 mt-0.5 leading-tight uppercase text-[7px] font-bold">Official Distribution Network for Parle Products</p>
+            </div>
 
-          <div>
-            <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">
-              Terms & Note:
-            </h4>
-            <p className="text-gray-500 leading-tight">
-              Goods once sold are not returnable. This is a system-generated invoice for the verified distributor network.
-            </p>
+            <div>
+              <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">
+                Terms & Note:
+              </h4>
+              <p className="text-gray-500 leading-tight">
+                Goods once sold are not returnable. This is a system-generated invoice for the verified distributor network.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
+      
       {/* Visual Indicator for Screen Mode */}
       <div className="print:hidden h-10 bg-gray-50 flex items-center justify-center border-t border-gray-200">
         <p className="text-[8px] font-black text-red-600 uppercase tracking-[0.4em] animate-pulse">Generated Secure Invoice Preview</p>
