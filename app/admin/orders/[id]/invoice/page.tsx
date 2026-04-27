@@ -55,7 +55,7 @@ export default function OrderInvoicePage() {
       */}
       <style jsx global>{`
         main {
-          padding-top: 0 !important;
+          padding-top: 10 !important;
           padding-bottom: 0 !important;
         }
         #invoice-${order.id} {
@@ -87,16 +87,12 @@ export default function OrderInvoicePage() {
           nav, footer, .no-print, .print-btn {
             display: none !important;
           }
-          .py-10 {
-            padding: 0 !important;
-          }
           #invoice-${order.id} {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
+            position: relative !important;
+            margin: 0 !important;
+            padding: 0 !important;
             width: 100% !important;
-            page-break-after: avoid;
-            page-break-before: avoid;
+            max-width: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }

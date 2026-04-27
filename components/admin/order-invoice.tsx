@@ -170,7 +170,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
           )}
 
           <p className="mt-4 text-[10px] font-black text-red-600 uppercase italic tracking-tighter">
-            Thank you for your Purchase
+            Thank you for your Purchase!
           </p>
 
           <div className="mt-4 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
