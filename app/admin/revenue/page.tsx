@@ -155,11 +155,11 @@ export default function RevenuePage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="w-12 h-1 bg-red-600 rounded-full"></span>
-            <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Financial Intelligence</span>
+            <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Sales Reports</span>
           </div>
-          <h1 className="text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Revenue Engine</h1>
+          <h1 className="text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Sales Overview</h1>
           <p className="text-gray-500 font-medium max-w-xl">
-            Real-time sales performance and historical price integrity logs. <span className="text-red-600 font-black italic underline decoration-2">Verified Price at Time of Sale active.</span>
+            Track your daily sales and see how much money you made. <span className="text-red-600 font-black italic underline decoration-2">Shows actual price at the time of sale.</span>
           </p>
         </div>
 
@@ -206,6 +206,7 @@ export default function RevenuePage() {
 
           <button 
             onClick={fetchData}
+            title="Refresh Data"
             className="p-4 bg-black text-white rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all group"
           >
             <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-500"}`} />
@@ -216,10 +217,10 @@ export default function RevenuePage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: "Lifetime Revenue", value: `৳${data?.lifetime?.totalRevenue.toLocaleString()}`, sub: `${data?.lifetime?.totalOrders} Orders Total`, icon: TrendingUp, color: "text-red-600", bg: "bg-red-50" },
-          { label: "Today's Intake", value: `৳${data?.daily?.totalRevenue.toLocaleString()}`, sub: `${data?.daily?.totalOrders} Orders Today`, icon: Clock, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Range Revenue", value: `৳${data?.range?.totalRevenue.toLocaleString()}`, sub: `${data?.range?.totalOrders} Orders in Range`, icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Avg Order Value", value: `৳${Math.round(data?.range?.totalRevenue / (data?.range?.totalOrders || 1)).toLocaleString()}`, sub: "Selected Period", icon: BarChart3, color: "text-amber-600", bg: "bg-amber-50" }
+          { label: "Today's Sales", value: `৳${data?.daily?.totalRevenue.toLocaleString()}`, sub: `${data?.daily?.totalOrders} Orders Today`, icon: Clock, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Selected Period Sales", value: `৳${data?.range?.totalRevenue.toLocaleString()}`, sub: `${data?.range?.totalOrders} Orders in Selection`, icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Avg per Order", value: `৳${Math.round(data?.range?.totalRevenue / (data?.range?.totalOrders || 1)).toLocaleString()}`, sub: "For Selected Period", icon: BarChart3, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Lifetime Total Sale", value: `৳${data?.lifetime?.totalRevenue.toLocaleString()}`, sub: `${data?.lifetime?.totalOrders} Total Orders`, icon: TrendingUp, color: "text-red-600", bg: "bg-red-50" },
         ].map((stat, i) => (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -252,13 +253,13 @@ export default function RevenuePage() {
             <div className="absolute top-0 left-0 w-2 h-full bg-red-600"></div>
             <div className="flex items-center justify-between mb-12">
                <div>
-                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Performance Velocity</h3>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Revenue Flow per Cycle</p>
+                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Sales Chart</h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Money made over time</p>
                </div>
                <div className="flex gap-2">
                   <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
                      <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-                     <span className="text-[9px] font-black text-gray-900 uppercase tracking-widest">Live Feed</span>
+                     <span className="text-[9px] font-black text-gray-900 uppercase tracking-widest">Live Data</span>
                   </div>
                </div>
             </div>
@@ -307,8 +308,8 @@ export default function RevenuePage() {
 
          <Card className="p-8 border-2 border-gray-50 shadow-2xl shadow-gray-200/30 rounded-[3rem] space-y-8">
             <div>
-               <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Top Performers</h3>
-               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Itemized Contribution</p>
+               <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Top Products</h3>
+               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Sales by product</p>
             </div>
             
             <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
@@ -335,8 +336,8 @@ export default function RevenuePage() {
       <Card className="border-2 border-gray-50 shadow-2xl shadow-gray-200/30 rounded-[3rem] overflow-hidden">
          <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-               <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Sales Ledger Audit</h3>
-               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Immutable Transaction History with Historical Price Integrity</p>
+               <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Sales List</h3>
+               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Shows actual price when sold</p>
             </div>
             <div className="flex gap-2">
                <Button 
@@ -355,10 +356,10 @@ export default function RevenuePage() {
                   <tr className="bg-gray-50/50">
                      <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
                      <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date & Time</th>
-                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Entity</th>
-                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Unit Price (At Sale)</th>
+                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Name</th>
+                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Sold Price</th>
                      <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Qty</th>
-                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Total Revenue</th>
+                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Total Money</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
