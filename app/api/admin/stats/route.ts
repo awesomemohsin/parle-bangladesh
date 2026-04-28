@@ -16,9 +16,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const [totalProducts, totalOrders, regUsers, guestUsers, totalCategories, recentOrders, warehouseStats] = await Promise.all([
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [totalProducts, totalOrders, todaysOrders, regUsers, guestUsers, totalCategories, recentOrders, warehouseStats, revenueStats] = await Promise.all([
       Product.countDocuments(),
       Order.countDocuments(),
+      Order.countDocuments({ createdAt: { $gte: today } }),
       User.countDocuments(),
       Customer.countDocuments(),
       Category.countDocuments(),
@@ -35,14 +39,33 @@ export async function GET(request: NextRequest) {
             totalDamaged: { $sum: "$variations.damagedCount" }
           }
         }
+      ]),
+      Order.aggregate([
+        {
+          $facet: {
+            lifetime: [
+              { $match: { status: { $ne: 'cancelled' } } },
+              { $group: { _id: null, total: { $sum: "$total" } } }
+            ],
+            today: [
+              { $match: { status: { $ne: 'cancelled' }, createdAt: { $gte: today } } },
+              { $group: { _id: null, total: { $sum: "$total" } } }
+            ]
+          }
+        }
       ])
     ]);
 
     const globalWarehouse = warehouseStats[0] || { totalStock: 0, totalOnHold: 0, totalDelivered: 0, totalLost: 0, totalDamaged: 0 };
+    const lifetimeRevenue = revenueStats[0]?.lifetime[0]?.total || 0;
+    const todaysRevenue = revenueStats[0]?.today[0]?.total || 0;
 
     return NextResponse.json({
       totalProducts,
       totalOrders,
+      todaysOrders,
+      todaysRevenue,
+      lifetimeRevenue,
       totalUsers: regUsers + guestUsers,
       totalCategories,
       warehouse: globalWarehouse,

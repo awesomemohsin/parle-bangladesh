@@ -8,6 +8,9 @@ import { toast } from 'sonner'
 interface DashboardStats {
   totalProducts: number
   totalOrders: number
+  todaysOrders: number
+  todaysRevenue: number
+  lifetimeRevenue: number
   totalUsers: number
   totalCategories: number
   warehouse: {
@@ -97,34 +100,51 @@ export default function AdminDashboard() {
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Main Stats • Recent Activity</p>
       </div>
 
-      {/* Main Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Products</div>
-          <div className="text-4xl font-black text-gray-900 tabular-nums">
-            {stats?.totalProducts || 0}
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Today's Stats */}
+        <Card className="p-6 border-none shadow-sm bg-black text-white rounded-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Today's Sales</div>
+          <div className="text-3xl font-black tabular-nums">
+            ৳{(stats?.todaysRevenue || 0).toLocaleString()}
           </div>
+          <div className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">{stats?.todaysOrders || 0} Orders Today</div>
         </Card>
 
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Orders</div>
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl group hover:shadow-md transition-shadow">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Lifetime Sales</div>
+          <div className="text-3xl font-black text-red-600 tabular-nums tracking-tighter">
+            ৳{(stats?.lifetimeRevenue || 0).toLocaleString()}
+          </div>
+          <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">All-time Verified Intake</p>
+        </Card>
+
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl group hover:shadow-md transition-shadow">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Orders</div>
           <div className="text-4xl font-black text-gray-900 tabular-nums">
             {stats?.totalOrders || 0}
           </div>
+          <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">Current Database Capacity</p>
         </Card>
 
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Categories</div>
-          <div className="text-4xl font-black text-gray-900 tabular-nums">
-            {stats?.totalCategories || 0}
-          </div>
-        </Card>
-
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Users</div>
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl group hover:shadow-md transition-shadow">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Users</div>
           <div className="text-4xl font-black text-gray-900 tabular-nums">
             {stats?.totalUsers || 0}
           </div>
+          <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">Active Database Entities</p>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4 border-none shadow-sm bg-gray-50/50 rounded-xl">
+          <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Products</div>
+          <div className="text-xl font-black text-gray-900">{stats?.totalProducts || 0}</div>
+        </Card>
+        <Card className="p-4 border-none shadow-sm bg-gray-50/50 rounded-xl">
+          <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Categories</div>
+          <div className="text-xl font-black text-gray-900">{stats?.totalCategories || 0}</div>
         </Card>
       </div>
 
