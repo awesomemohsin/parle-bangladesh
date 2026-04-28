@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [totalProducts, totalOrders, todaysOrders, regUsers, guestUsers, totalCategories, recentOrders, warehouseStats, revenueStats] = await Promise.all([
+    const [totalProducts, totalOrders, todaysOrders, regUsers, guestUsers, totalCategories, recentOrders, warehouseStats, orderStatusStats] = await Promise.all([
       Product.countDocuments(),
       Order.countDocuments(),
       Order.countDocuments({ createdAt: { $gte: today } }),
@@ -42,30 +42,33 @@ export async function GET(request: NextRequest) {
       ]),
       Order.aggregate([
         {
-          $facet: {
-            lifetime: [
-              { $match: { status: { $ne: 'cancelled' } } },
-              { $group: { _id: null, total: { $sum: "$total" } } }
-            ],
-            today: [
-              { $match: { status: { $ne: 'cancelled' }, createdAt: { $gte: today } } },
-              { $group: { _id: null, total: { $sum: "$total" } } }
-            ]
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 }
           }
         }
       ])
     ]);
 
     const globalWarehouse = warehouseStats[0] || { totalStock: 0, totalOnHold: 0, totalDelivered: 0, totalLost: 0, totalDamaged: 0 };
-    const lifetimeRevenue = revenueStats[0]?.lifetime[0]?.total || 0;
-    const todaysRevenue = revenueStats[0]?.today[0]?.total || 0;
+    
+    // Map order statuses to a clean object
+    const orderStatuses: any = {
+      pending: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0
+    };
+    orderStatusStats.forEach((stat: any) => {
+      if (stat._id) orderStatuses[stat._id] = stat.count;
+    });
 
     return NextResponse.json({
       totalProducts,
       totalOrders,
       todaysOrders,
-      todaysRevenue,
-      lifetimeRevenue,
+      orderStatuses,
       totalUsers: regUsers + guestUsers,
       totalCategories,
       warehouse: globalWarehouse,

@@ -9,8 +9,13 @@ interface DashboardStats {
   totalProducts: number
   totalOrders: number
   todaysOrders: number
-  todaysRevenue: number
-  lifetimeRevenue: number
+  orderStatuses: {
+    pending: number
+    processing: number
+    shipped: number
+    delivered: number
+    cancelled: number
+  }
   totalUsers: number
   totalCategories: number
   warehouse: {
@@ -77,13 +82,13 @@ export default function AdminDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">
         <div className="p-4 bg-red-50 rounded-3xl text-red-600">
-           <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
         </div>
         <div>
           <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter italic">Sync Interrupted</h2>
           <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-1">{error}</p>
         </div>
-        <button 
+        <button
           onClick={fetchStats}
           className="bg-black hover:bg-red-600 text-white px-10 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95 shadow-xl shadow-gray-200"
         >
@@ -100,78 +105,92 @@ export default function AdminDashboard() {
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Main Stats • Recent Activity</p>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Today's Stats */}
-        <Card className="p-6 border-none shadow-sm bg-black text-white rounded-xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500"></div>
-          <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Today's Sales</div>
-          <div className="text-3xl font-black tabular-nums">
-            ৳{(stats?.todaysRevenue || 0).toLocaleString()}
+      {/* Main Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Products</div>
+          <div className="text-4xl font-black text-gray-900 tabular-nums">
+            {stats?.totalProducts || 0}
           </div>
-          <div className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">{stats?.todaysOrders || 0} Orders Today</div>
         </Card>
 
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl group hover:shadow-md transition-shadow">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Lifetime Sales</div>
-          <div className="text-3xl font-black text-red-600 tabular-nums tracking-tighter">
-            ৳{(stats?.lifetimeRevenue || 0).toLocaleString()}
-          </div>
-          <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">All-time Verified Intake</p>
-        </Card>
-
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl group hover:shadow-md transition-shadow">
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
           <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Orders</div>
           <div className="text-4xl font-black text-gray-900 tabular-nums">
             {stats?.totalOrders || 0}
           </div>
-          <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">Current Database Capacity</p>
         </Card>
 
-        <Card className="p-6 border-none shadow-sm bg-white rounded-xl group hover:shadow-md transition-shadow">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Users</div>
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Categories</div>
+          <div className="text-4xl font-black text-gray-900 tabular-nums">
+            {stats?.totalCategories || 0}
+          </div>
+        </Card>
+
+        <Card className="p-6 border-none shadow-sm bg-white rounded-xl">
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Users</div>
           <div className="text-4xl font-black text-gray-900 tabular-nums">
             {stats?.totalUsers || 0}
           </div>
-          <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest italic">Active Database Entities</p>
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 border-none shadow-sm bg-gray-50/50 rounded-xl">
-          <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Products</div>
-          <div className="text-xl font-black text-gray-900">{stats?.totalProducts || 0}</div>
-        </Card>
-        <Card className="p-4 border-none shadow-sm bg-gray-50/50 rounded-xl">
-          <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Categories</div>
-          <div className="text-xl font-black text-gray-900">{stats?.totalCategories || 0}</div>
-        </Card>
+      {/* Order Lifecycle Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight italic">Order Lifecycle</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Card className="bg-white/80 p-6 rounded-xl border-none shadow-lg transform hover:scale-[1.02] transition-all">
+            <div className="text-black-500 text-[10px] font-black uppercase tracking-widest mb-1">Today's Orders</div>
+            <div className="text-4xl font-black tabular-nums">{stats?.todaysOrders || 0}</div>
+          </Card>
+
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm border-l-4 border-l-amber-500">
+            <div className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Pending</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.orderStatuses?.pending || 0}</div>
+          </Card>
+
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm border-l-4 border-l-blue-500">
+            <div className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Processing</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.orderStatuses?.processing || 0}</div>
+          </Card>
+
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm border-l-4 border-l-indigo-500">
+            <div className="text-indigo-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Shipped</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.orderStatuses?.shipped || 0}</div>
+          </Card>
+
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm border-l-4 border-l-emerald-500">
+            <div className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Delivered</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.orderStatuses?.delivered || 0}</div>
+          </Card>
+        </div>
       </div>
 
       {/* Warehouse Section */}
       <div className="space-y-4">
-         <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight italic">Warehouse Status</h2>
-         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-6 bg-slate-900 text-white rounded-xl border-none shadow-md">
-               <div className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Units In Stock</div>
-               <div className="text-4xl font-black tabular-nums">{stats?.warehouse?.totalStock || 0}</div>
-            </Card>
+        <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight italic">Warehouse Status</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-6 bg-slate-900 text-white rounded-xl border-none shadow-md">
+            <div className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Units In Stock</div>
+            <div className="text-4xl font-black tabular-nums">{stats?.warehouse?.totalStock || 0}</div>
+          </Card>
 
-            <Card className="p-6 bg-white rounded-xl border-none shadow-sm">
-               <div className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">On Hold/Pending</div>
-               <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.warehouse?.totalOnHold || 0}</div>
-            </Card>
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm">
+            <div className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">On Hold/Pending</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.warehouse?.totalOnHold || 0}</div>
+          </Card>
 
-            <Card className="p-6 bg-white rounded-xl border-none shadow-sm">
-               <div className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-1">Lost Units</div>
-               <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.warehouse?.totalLost || 0}</div>
-            </Card>
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm">
+            <div className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-1">Lost Units</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.warehouse?.totalLost || 0}</div>
+          </Card>
 
-            <Card className="p-6 bg-white rounded-xl border-none shadow-sm">
-               <div className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-1">Damaged</div>
-               <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.warehouse?.totalDamaged || 0}</div>
-            </Card>
-         </div>
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm">
+            <div className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-1">Damaged</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.warehouse?.totalDamaged || 0}</div>
+          </Card>
+        </div>
       </div>
 
       {/* Recent Orders */}
@@ -199,10 +218,9 @@ export default function AdminDashboard() {
                     ৳{order.total.toFixed(0)}
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
-                      order.status === 'delivered' ? 'bg-green-50 text-green-600' :
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${order.status === 'delivered' ? 'bg-green-50 text-green-600' :
                       'bg-amber-50 text-amber-600'
-                    }`}>
+                      }`}>
                       {order.status}
                     </span>
                   </td>
@@ -214,7 +232,7 @@ export default function AdminDashboard() {
             </tbody>
           </table>
           {(!stats?.recentOrders || stats.recentOrders.length === 0) && (
-             <div className="py-10 text-center text-gray-300 font-bold uppercase tracking-widest text-[10px]">No recent activity logged</div>
+            <div className="py-10 text-center text-gray-300 font-bold uppercase tracking-widest text-[10px]">No recent activity logged</div>
           )}
         </div>
       </Card>
