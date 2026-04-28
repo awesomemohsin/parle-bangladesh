@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
-    const isAllowed = user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER;
+    const isAllowed = user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER || user.role === ROLES.MODERATOR;
     if (!isAllowed) {
         return NextResponse.json({ error: "Restricted: Insufficient permissions to propose changes." }, { status: 403 });
     }
@@ -153,6 +153,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
                 (isAdminAction && Number(newVal || 0) === Number(oldVal || 0));
 
               if (!isEquivalent && newVal !== undefined) {
+                // RESTRICTION: Stock can only be increased via this route
+                if (field === 'stock' && Number(newVal) < Number(oldVal)) {
+                    return NextResponse.json({ 
+                        error: "Restricted: Stock levels can only be increased here. For adjustments or losses, use the Dedicated Order Loss Engine." 
+                    }, { status: 403 });
+                }
+
                 const approvalRequest = new ApprovalRequest({
                     requesterEmail: user.email,
                     type: "product",

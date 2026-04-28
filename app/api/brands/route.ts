@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Brand } from "@/lib/models";
+import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
+import { ROLES } from "@/lib/constants";
 
 export async function GET(req: Request) {
   try {
@@ -32,6 +34,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     await connectDB();
+    const user = getAuthUserFromRequest(req as any);
+    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MODERATOR])) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { name, category, description, image } = await req.json();
 
     if (!name || !category) {

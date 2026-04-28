@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     const user = getAuthUserFromRequest(request);
-    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR])) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

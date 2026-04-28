@@ -206,7 +206,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
           </div>
 
           {/* SECTION 3: PRODUCT CATALOGUE */}
-          {isAdmin && (
+          {isModerator && (
             <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Product Catalogue</p>

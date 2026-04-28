@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MODERATOR])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
     const parsed = CategorySchema.safeParse(body);

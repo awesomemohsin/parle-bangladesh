@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MODERATOR])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { slug } = await params;
     const existing = await Category.findOne({ slug });
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     await connectDB();
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MODERATOR])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { slug } = await params;
     const deleted = await Category.findOneAndDelete({ slug });

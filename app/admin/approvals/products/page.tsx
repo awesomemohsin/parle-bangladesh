@@ -243,22 +243,40 @@ export default function ProductApprovalsPage() {
                     </div>
                   </div>
 
-                    <div className={`col-span-1 lg:col-span-2 flex items-center gap-6 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
-                      <div className="flex-1 flex flex-col items-center">
-                         <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">Legacy Data</span>
-                         <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
-                           {request.field === 'price' && "৳"}{request.oldValue}
-                         </span>
+                    <div className={`col-span-1 lg:col-span-2 flex flex-col gap-4 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
+                      <div className="flex items-center gap-6">
+                        <div className="flex-1 flex flex-col items-center">
+                           <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">
+                             {request.field === 'stock' ? 'Current Stock' : 'Legacy Data'}
+                           </span>
+                           <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
+                             {request.field === 'price' && "৳"}{request.oldValue}
+                           </span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                           <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center text-gray-200 shadow-sm animate-pulse">→</div>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                           <span className={`text-[7px] font-black border px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white ${request.field === 'price' ? 'text-green-600 border-green-100' : 'text-amber-600 border-amber-100'}`}>
+                             {request.field === 'stock' ? 'Stock Amount Requested' : 'Target Update'}
+                           </span>
+                           <span className={`text-2xl font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
+                             {request.field === 'stock' 
+                               ? `+${Number(request.newValue) - Number(request.oldValue)}`
+                               : (request.field === 'price' ? `৳${request.newValue}` : request.newValue)
+                             }
+                           </span>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-center gap-1">
-                         <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center text-gray-200 shadow-sm animate-pulse">→</div>
-                      </div>
-                      <div className="flex-1 flex flex-col items-center">
-                         <span className={`text-[7px] font-black border px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white ${request.field === 'price' ? 'text-green-600 border-green-100' : 'text-amber-600 border-amber-100'}`}>Target Update</span>
-                         <span className={`text-2xl font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
-                           {request.field === 'price' && "৳"}{request.newValue}
-                         </span>
-                      </div>
+                      
+                      {request.field === 'stock' && (
+                        <div className="flex justify-center border-t border-amber-100/30 pt-3">
+                           <div className="flex items-center gap-2">
+                              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">New Stock will be:</span>
+                              <span className="text-sm font-black text-amber-600 uppercase tracking-tight">{request.newValue} Total Units</span>
+                           </div>
+                        </div>
+                      )}
                     </div>
 
                   {request.comments && request.comments.length > 0 && (

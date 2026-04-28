@@ -58,6 +58,7 @@ export default function AdminProductFormPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [activeDiscounts, setActiveDiscounts] = useState<Record<number, boolean>>({})
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
+  const [stockAdditions, setStockAdditions] = useState<Record<number, number>>({})
 
   useEffect(() => {
     const loadData = async () => {
@@ -137,7 +138,13 @@ export default function AdminProductFormPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(product),
+        body: JSON.stringify({
+          ...product,
+          variations: product.variations.map((v, i) => ({
+            ...v,
+            stock: (v.stock || 0) + (stockAdditions[i] || 0)
+          }))
+        }),
       })
 
       if (response.ok) {
@@ -418,17 +425,24 @@ export default function AdminProductFormPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Stock</label>
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Current Stock</label>
+                        <div className="h-10 px-3 flex items-center bg-gray-50 border-2 border-gray-50 rounded-lg text-xs font-bold text-gray-400">
+                          {variation.stock ?? 0}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-red-600 tracking-[0.2em] ml-1">Add New Stock</label>
                         <Input
                           type="number"
-                          value={variation.stock ?? 0}
+                          min="0"
+                          placeholder="+0"
+                          value={stockAdditions[index] || ''}
                           onChange={(e) => {
                             const val = parseInt(e.target.value);
-                            const vars = [...product.variations];
-                            vars[index].stock = isNaN(val) ? 0 : val;
-                            setProduct({ ...product, variations: vars });
+                            setStockAdditions({ ...stockAdditions, [index]: isNaN(val) ? 0 : Math.max(0, val) });
                           }}
-                          className="h-10 px-3 text-xs font-bold border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          className="h-10 px-3 text-xs font-bold border-2 border-red-50 rounded-lg focus:border-red-600"
                           disabled={isPending}
                         />
                         {pendingApprovals.some(p => p.field === 'stock' && p.variationIndex === index) && (
