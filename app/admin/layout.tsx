@@ -108,15 +108,54 @@ export default function AdminLayout({
     );
   }
 
+  if (pathname.includes('/invoice')) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+    <div className="fixed inset-0 flex bg-gray-50 overflow-hidden z-[100] print:hidden">
       <AdminSidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
 
-      <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8 pt-8">
-        <div className="pb-12 max-w-[1600px] mx-auto w-full min-h-full">
-          {children}
-        </div>
-      </main>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Admin Header - Visible on all screens */}
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 shrink-0 z-40 print:hidden">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setMobileSidebarOpen(true)}
+              className="lg:hidden p-2 text-gray-900 border-2 border-gray-100 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            
+            <div className="hidden lg:flex flex-col">
+              <h1 className="text-xl font-black text-gray-900 uppercase tracking-tighter italic leading-none">Management Console</h1>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">System Administration Hub</p>
+            </div>
+
+            <div className="lg:hidden flex flex-col">
+              <h3 className="text-[16px] font-black text-red-600 uppercase tracking-tighter italic leading-none">Parle Admin</h3>
+              <p className="text-[8px] font-bold text-gray-900 uppercase tracking-widest mt-0.5">Control Panel</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <NotificationCenter />
+            <div className="hidden md:flex flex-col items-end border-l border-gray-100 pl-4">
+               <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest italic">System Status</span>
+               <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-[10px] font-bold text-gray-900 uppercase tracking-tighter">Encrypted Link Active</span>
+               </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto bg-[#F9FAFB] relative px-4 md:px-8 pt-8 print:p-0 print:bg-white">
+          <div className="pb-12 max-w-[1600px] mx-auto w-full min-h-full print:pb-0">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

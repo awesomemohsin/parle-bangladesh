@@ -128,6 +128,8 @@ export default function Navbar() {
 
   const currentLinks = isAdminRoute ? adminLinks : userLinks
 
+  if (isAdminRoute) return null;
+
   return (
     <>
       <nav className={`

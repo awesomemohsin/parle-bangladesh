@@ -253,6 +253,15 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
               <Link href="/admin/sessions" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Session Audit</Button></Link>
             </div>
           )}
+
+          {/* SECTION 5: EXTERNAL */}
+          <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+            <Link href="/" onClick={onClose}>
+              <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-white hover:bg-red-600/20 rounded-xl font-black uppercase text-[11px] tracking-widest py-3 italic">
+                Back to Site
+              </Button>
+            </Link>
+          </div>
         </nav>
 
         {/* System Health Status */}
