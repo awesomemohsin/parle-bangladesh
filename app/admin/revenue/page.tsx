@@ -5,29 +5,22 @@ import {
   TrendingUp,
   Calendar,
   Package,
-  ArrowUpRight,
-  ArrowDownRight,
   BarChart3,
   DollarSign,
   Clock,
   Filter,
   RefreshCw,
-  Search,
   FileText,
   RotateCcw
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   AreaChart,
   Area
 } from "recharts";
@@ -70,15 +63,16 @@ export default function RevenuePage() {
   const handleExportCSV = () => {
     if (!data?.logs || data.logs.length === 0) return;
 
-    const headers = ["Order ID", "Date", "Product", "SKU", "Unit Price", "Quantity", "Total"];
+    const headers = ["Order ID", "Sale Date", "Product", "SKU", "Unit Price", "Quantity", "Total Money", "Status"];
     const rows = data.logs.map((log: any) => [
       `#${log.orderId.slice(-6)}`,
-      new Date(log.date).toLocaleDateString(),
+      new Date(log.date).toLocaleString('en-GB'),
       log.productName,
       log.productSlug,
       log.price,
       log.quantity,
-      log.total
+      log.total,
+      log.status
     ]);
 
     const csvContent = [
@@ -152,97 +146,161 @@ export default function RevenuePage() {
     <div className="min-h-screen bg-white/50 p-6 lg:p-12 space-y-12">
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div className="flex items-center gap-2">
-            <span className="w-12 h-1 bg-red-600 rounded-full"></span>
-            <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Sales Reports</span>
+            <span className="w-8 md:w-12 h-1 bg-red-600 rounded-full"></span>
+            <span className="text-[9px] md:text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Sales Reports</span>
           </div>
-          <h1 className="text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Sales Overview</h1>
-          <p className="text-gray-500 font-medium max-w-xl">
+          <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Sales Overview</h1>
+          <p className="text-xs md:text-gray-500 font-medium max-w-xl">
             Track your daily sales and see how much money you made. <span className="text-red-600 font-black italic underline decoration-2">Shows actual price at the time of sale.</span>
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3">
-              <Calendar className="w-3.5 h-3.5 text-gray-400" />
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-1 md:gap-2">
+            <div className="flex items-center gap-1.5 px-2 md:px-3">
+              <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
               <input
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none"
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none w-24 md:w-auto"
               />
             </div>
-            <div className="text-gray-300">to</div>
-            <div className="flex items-center gap-1.5 px-3">
+            <div className="text-gray-300 text-[10px]">to</div>
+            <div className="flex items-center gap-1.5 px-2 md:px-3">
               <input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none"
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none w-24 md:w-auto"
               />
             </div>
             <button
               onClick={handleReset}
               title="Reset Dates"
-              className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 hover:text-red-600 transition-colors"
+              className="p-1.5 md:p-2 hover:bg-gray-50 rounded-xl text-gray-400 hover:text-red-600 transition-colors"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3 h-3 md:w-3.5 md:h-3.5" />
             </button>
           </div>
 
-          <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 px-4">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <select
-              value={filters.productSlug}
-              onChange={(e) => setFilters({ ...filters, productSlug: e.target.value })}
-              className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer pr-4"
-            >
-              <option value="all">ALL PRODUCTS</option>
-              {products.map(p => <option key={p.slug} value={p.slug}>{p.name.toUpperCase()}</option>)}
-            </select>
+          <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 px-3 md:px-4 flex-1 md:flex-none justify-between md:justify-start">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+              <select
+                value={filters.productSlug}
+                onChange={(e) => setFilters({ ...filters, productSlug: e.target.value })}
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer pr-2 md:pr-4"
+              >
+                <option value="all">ALL PRODUCTS</option>
+                {products.map(p => <option key={p.slug} value={p.slug}>{p.name.toUpperCase()}</option>)}
+              </select>
+            </div>
           </div>
 
           <button
             onClick={fetchData}
             title="Refresh Data"
-            className="p-4 bg-black text-white rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all group"
+            className="p-3 md:p-4 bg-black text-white rounded-xl md:rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all group"
           >
-            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-500"}`} />
+            <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-500"}`} />
           </button>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         {[
-          { label: "Today's Sales", value: `৳${data?.daily?.totalRevenue.toLocaleString()}`, sub: `${data?.daily?.totalOrders} Orders Today`, icon: Clock, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Selected Period Sales", value: `৳${data?.range?.totalRevenue.toLocaleString()}`, sub: `${data?.range?.totalOrders} Orders in Selection`, icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Avg per Order", value: `৳${Math.round(data?.range?.totalRevenue / (data?.range?.totalOrders || 1)).toLocaleString()}`, sub: "For Selected Period", icon: BarChart3, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Lifetime Total Sale", value: `৳${data?.lifetime?.totalRevenue.toLocaleString()}`, sub: `${data?.lifetime?.totalOrders} Total Orders`, icon: TrendingUp, color: "text-red-600", bg: "bg-red-50" },
+          { 
+            label: "Pending Sales", 
+            value: `৳${(data?.pending?.totalRevenue || 0).toLocaleString()}`, 
+            sub: `${data?.pending?.totalOrders || 0} Orders in Pipeline`, 
+            icon: RefreshCw, 
+            color: "text-amber-600", 
+            bg: "bg-amber-50",
+            tag: "In Progress"
+          },
+          { 
+            label: "Today's Sales", 
+            value: `৳${(data?.daily?.totalRevenue || 0).toLocaleString()}`, 
+            sub: `${data?.daily?.totalOrders || 0} Delivered Today`, 
+            icon: Clock, 
+            color: "text-emerald-600", 
+            bg: "bg-emerald-50",
+            tag: "Delivered Only"
+          },
+          { 
+            label: "Selected Period", 
+            value: `৳${(data?.range?.totalRevenue || 0).toLocaleString()}`, 
+            sub: `${data?.range?.totalOrders || 0} Delivered in Range`, 
+            icon: DollarSign, 
+            color: "text-blue-600", 
+            bg: "bg-blue-50",
+            tag: "Delivered Only"
+          },
+          { 
+            label: "Avg Order Value", 
+            value: `৳${Math.round((data?.range?.totalRevenue || 0) / (data?.range?.totalOrders || 1)).toLocaleString()}`, 
+            sub: "Delivered Orders Avg", 
+            icon: BarChart3, 
+            color: "text-indigo-600", 
+            bg: "bg-indigo-50",
+            tag: "Analytics"
+          },
+          { 
+            label: "Lost & Damaged", 
+            value: `৳${(data?.loss?.totalRevenue || 0).toLocaleString()}`, 
+            sub: `${data?.loss?.totalOrders || 0} Reported Incidents`, 
+            icon: Package, 
+            color: "text-gray-600", 
+            bg: "bg-gray-100",
+            tag: "System Loss"
+          },
+          { 
+            label: "Lifetime Sale", 
+            value: `৳${(data?.lifetime?.totalRevenue || 0).toLocaleString()}`, 
+            sub: `${data?.lifetime?.totalOrders || 0} Lifetime Delivered`, 
+            icon: TrendingUp, 
+            color: "text-red-600", 
+            bg: "bg-red-50",
+            tag: "Delivered Only"
+          },
         ].map((stat, i) => (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             key={i}
-            className="p-8 bg-white shadow-xl shadow-gray-200/40 rounded-[2.5rem] border border-gray-100 flex flex-col gap-6"
+            className="p-4 md:p-8 bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-100 flex flex-col gap-4 md:gap-6 relative overflow-hidden group"
           >
-            <div className="flex justify-between items-start">
-              <div className={`p-3.5 ${stat.bg} ${stat.color} rounded-2xl`}>
-                <stat.icon className="w-6 h-6" />
+            <div className="flex justify-between items-start relative z-10">
+              <div className={`p-2.5 md:p-4 ${stat.bg} ${stat.color} rounded-xl md:rounded-2xl group-hover:scale-110 transition-transform`}>
+                <stat.icon className="w-4 h-4 md:w-6 md:h-6" />
               </div>
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">Growth</span>
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter bg-emerald-50 px-2 py-0.5 rounded-full">+12.5%</span>
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-none mb-2">Security</span>
+                <span className={`text-[9px] font-black uppercase tracking-tighter px-3 py-1 rounded-full border ${
+                  stat.tag === 'Delivered Only' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                  stat.tag === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                  stat.tag === 'System Loss' ? 'bg-red-50 text-red-600 border-red-100' :
+                  'bg-gray-50 text-gray-500 border-gray-200'
+                }`}>
+                  {stat.tag}
+                </span>
               </div>
             </div>
-            <div>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block italic">{stat.label}</span>
-              <p className="text-3xl font-black text-gray-900 tracking-tighter tabular-nums">{stat.value}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{stat.sub}</p>
+            <div className="relative z-10">
+              <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block italic">{stat.label}</span>
+              <p className="text-xl md:text-4xl font-black text-gray-900 tracking-tighter tabular-nums">{stat.value}</p>
+              <p className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 md:mt-2 flex items-center gap-1 md:gap-2">
+                <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                {stat.sub}
+              </p>
             </div>
+            {/* Background Accent */}
+            <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${stat.bg} opacity-10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700`} />
           </motion.div>
         ))}
       </div>
@@ -264,7 +322,7 @@ export default function RevenuePage() {
             </div>
           </div>
 
-          <div className="h-[350px] w-full">
+          <div className="h-[200px] md:h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -355,10 +413,11 @@ export default function RevenuePage() {
             <thead>
               <tr className="bg-gray-50/50">
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date & Time</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Transaction Date</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Name</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Sold Price</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Qty</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Total Money</th>
               </tr>
             </thead>
@@ -377,8 +436,12 @@ export default function RevenuePage() {
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex flex-col">
-                        <span className="text-xs font-black text-gray-900">{new Date(log.date).toLocaleDateString()}</span>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{new Date(log.date).toLocaleTimeString()}</span>
+                        <span className="text-xs font-black text-gray-900">
+                          {new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </span>
+                        <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter mt-1">
+                          {new Date(log.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                        </span>
                       </div>
                     </td>
                     <td className="px-8 py-5">
@@ -392,6 +455,20 @@ export default function RevenuePage() {
                     </td>
                     <td className="px-8 py-5 text-center">
                       <span className="text-sm font-black text-gray-400 tabular-nums">x{log.quantity}</span>
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${
+                          log.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {log.status}
+                        </span>
+                        {log.status === 'delivered' && (
+                          <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+                            {new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(log.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-8 py-5 text-right">
                       <span className="text-lg font-black text-red-600 tabular-nums leading-none">৳{log.total.toLocaleString()}</span>
