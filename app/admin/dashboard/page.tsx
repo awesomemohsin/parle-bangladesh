@@ -139,7 +139,7 @@ export default function AdminDashboard() {
       {/* Order Lifecycle Section */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight italic">Order Lifecycle</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           <Card className="bg-white/80 p-6 rounded-xl border-none shadow-lg transform hover:scale-[1.02] transition-all">
             <div className="text-black-500 text-[10px] font-black uppercase tracking-widest mb-1">Today's Orders</div>
             <div className="text-4xl font-black tabular-nums">{stats?.todaysOrders || 0}</div>
@@ -163,6 +163,11 @@ export default function AdminDashboard() {
           <Card className="p-6 bg-white rounded-xl border-none shadow-sm border-l-4 border-l-emerald-500">
             <div className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Delivered</div>
             <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.orderStatuses?.delivered || 0}</div>
+          </Card>
+
+          <Card className="p-6 bg-white rounded-xl border-none shadow-sm border-l-4 border-l-red-500">
+            <div className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Cancelled</div>
+            <div className="text-4xl font-black text-gray-900 tabular-nums">{stats?.orderStatuses?.cancelled || 0}</div>
           </Card>
         </div>
       </div>
