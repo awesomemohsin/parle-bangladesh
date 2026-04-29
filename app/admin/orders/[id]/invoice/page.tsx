@@ -55,8 +55,9 @@ export default function OrderInvoicePage() {
       */}
       <style jsx global>{`
         main {
-          padding-top: 10 !important;
+          padding-top: 20 !important;
           padding-bottom: 0 !important;
+          margin-top: 0 !important;
         }
         #invoice-${order.id} {
           display: block !important;
