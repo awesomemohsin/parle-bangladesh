@@ -74,6 +74,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     sessionStorage.clear()
+    window.dispatchEvent(new Event('storage'))
     router.push('/auth/login')
   }
 

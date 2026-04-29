@@ -91,6 +91,7 @@ export default function Navbar() {
     localStorage.removeItem('user')
     sessionStorage.clear()
     syncAuth()
+    window.dispatchEvent(new Event('storage'))
     setIsMobileMenuOpen(false)
     router.push('/auth/login')
   }
