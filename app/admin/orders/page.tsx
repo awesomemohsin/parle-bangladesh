@@ -285,6 +285,18 @@ export default function AdminOrdersPage() {
                           <option value="damaged">Damaged</option>
                           <option value="lost">Lost</option>
                         </select>
+                        {order.status === 'delivered' && (
+                          <div className="mt-1.5 flex flex-col items-start sm:items-end">
+                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest leading-none">Delivered On</span>
+                            <span className="text-[9px] font-bold text-gray-500 mt-0.5">
+                              {(() => {
+                                const log = order.orderLogs?.find(l => l.toStatus === 'delivered');
+                                const d = log ? new Date(log.changedAt) : new Date(order.createdAt);
+                                return `${d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`;
+                              })()}
+                            </span>
+                          </div>
+                        )}
                         {!['pending', 'cancelled'].includes(currentStatus) && (
                           <Button
                             size="sm"
@@ -441,7 +453,7 @@ export default function AdminOrdersPage() {
                             {order.orderLogs.slice().reverse().map((log, idx) => (
                               <div key={idx} className="text-[10px] bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center">
                                 <span className="text-gray-600">From <span className="font-bold">{log.fromStatus}</span> → <span className="font-bold text-red-600">{log.toStatus}</span> by {log.changedBy}</span>
-                                <span className="text-gray-400 italic">12:30 PM</span>
+                                <span className="text-gray-400 italic">{new Date(log.changedAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
                               </div>
                             ))}
                           </div>
