@@ -32,13 +32,21 @@ export async function GET(request: NextRequest) {
           { customerEmail: user.email }
         ]
       };
-    } else if (user.role === ROLES.MODERATOR) {
-      // Moderators can only see processing orders
-      matchStage.status = "processing";
-    }
-
-    if (statusQuery !== "all" && user.role !== ROLES.MODERATOR) {
-      matchStage.status = statusQuery;
+    } else {
+      // Role-based filtering for moderators
+      if (user.role === ROLES.MODERATOR) {
+        // Moderators cannot see pending orders
+        if (statusQuery === "all") {
+          matchStage.status = { $ne: ORDER_STATUS.PENDING };
+        } else if (statusQuery === "pending") {
+          // Explicitly block searching for pending
+          matchStage.status = "NONE_ALLOWED";
+        } else {
+          matchStage.status = statusQuery;
+        }
+      } else if (statusQuery !== "all") {
+        matchStage.status = statusQuery;
+      }
     }
 
     // Get total count (using a separate query for simplicity and speed on large datasets)

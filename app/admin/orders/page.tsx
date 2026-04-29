@@ -50,7 +50,18 @@ export default function AdminOrdersPage() {
   // Search and Filter state
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearch = useDebounce(searchTerm, 500)
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr)
+          if (u.role === 'moderator') return 'processing'
+        } catch (e) { }
+      }
+    }
+    return 'all'
+  })
   const [sortBy, setSortBy] = useState('newest')
 
   // Pagination state
@@ -61,17 +72,26 @@ export default function AdminOrdersPage() {
   // Unsaved status changes
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({})
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({})
-  const [userRole, setUserRole] = useState<string>('')
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr)
+          return u.role
+        } catch (e) { }
+      }
+    }
+    return ''
+  })
 
   useEffect(() => {
+    // Sync roles just in case
     const userStr = localStorage.getItem('user')
     if (userStr) {
       try {
         const u = JSON.parse(userStr)
         setUserRole(u.role)
-        if (u.role === 'moderator') {
-          setStatusFilter('processing')
-        }
       } catch (e) { }
     }
   }, [])
@@ -206,11 +226,10 @@ export default function AdminOrdersPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            disabled={userRole === 'moderator'}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
           >
-            <option value="all">Statuses</option>
-            <option value="pending">Pending</option>
+            <option value="all">All Orders</option>
+            {userRole !== 'moderator' && <option value="pending">Pending</option>}
             <option value="cancelled">Cancelled</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
@@ -277,7 +296,7 @@ export default function AdminOrdersPage() {
                           className={`flex-1 sm:flex-none px-3 py-2 border rounded-lg text-xs font-black uppercase tracking-widest focus:outline-none transition-all ${hasChange ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
                             } ${order.pendingApproval ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
                         >
-                          <option value="pending">Pending</option>
+                          {userRole !== 'moderator' && <option value="pending">Pending</option>}
                           <option value="cancelled">Cancelled</option>
                           <option value="processing">Processing</option>
                           <option value="shipped">Shipped</option>
