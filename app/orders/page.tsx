@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { User, ShoppingBag, Clock, Package, ChevronRight, Hash, Calendar, ShieldCheck } from "lucide-react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 const formatCurrency = (val: number) => `৳${val.toFixed(2)}`;
 const formatDate = (dateString: string) => new Date(dateString).toLocaleString()
@@ -36,6 +37,10 @@ export default function MyOrdersPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Modal state
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -74,6 +79,35 @@ export default function MyOrdersPage() {
 
     fetchOrders();
   }, [search, status]);
+
+  const handleCancel = async (orderId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'cancelled', cancelReason: 'Cancelled by customer' })
+      });
+
+      if (res.ok) {
+        // Refresh orders locally
+        setOrders(orders.map(o => o.id === orderId ? { ...o, status: 'cancelled', cancelReason: 'Cancelled by customer' } : o));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to cancel order.");
+      }
+    } catch (err) {
+      alert("An error occurred.");
+    }
+  };
+
+  const triggerCancel = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setIsCancelModalOpen(true);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -212,13 +246,24 @@ export default function MyOrdersPage() {
 
                   {/* Summary Segment - Compact */}
                   <div className="flex justify-between items-end border-t border-gray-50 pt-3 mt-auto">
-                     <Link href={isAdmin ? `/admin/orders` : '/shop'}>
-                        <button className={`text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1 group/btn
-                          ${isAdmin ? 'text-red-600 hover:bg-red-600 border border-red-600 px-3 py-1 rounded-md hover:text-white' : 'text-gray-400 hover:text-red-600'}`}>
-                           {isAdmin ? 'Management' : 'Buy Again'}
-                           <ChevronRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
-                        </button>
-                     </Link>
+                     <div className="flex gap-2">
+                        <Link href={isAdmin ? `/admin/orders` : '/shop'}>
+                           <button className={`text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1 group/btn
+                             ${isAdmin ? 'text-red-600 hover:bg-red-600 border border-red-600 px-3 py-1 rounded-md hover:text-white' : 'text-gray-400 hover:text-red-600'}`}>
+                              {isAdmin ? 'Management' : 'Buy Again'}
+                              <ChevronRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
+                           </button>
+                        </Link>
+                        
+                        {!isAdmin && order.status === 'pending' && (
+                           <button 
+                             onClick={() => triggerCancel(order.id)}
+                             className="text-[9px] font-black uppercase tracking-[0.15em] text-red-500 hover:text-white hover:bg-red-500 border border-red-500 px-3 py-1 rounded-md transition-all"
+                           >
+                              Cancel Order
+                           </button>
+                        )}
+                     </div>
 
                      <div className="text-right flex flex-col items-end">
                         <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest block leading-none mb-1">TOTAL</span>
@@ -234,6 +279,16 @@ export default function MyOrdersPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={() => selectedOrderId && handleCancel(selectedOrderId)}
+        title="Cancel Order"
+        message="Are you sure you want to cancel this order? This action will return items to stock and cannot be reversed."
+        confirmText="Yes, Cancel Order"
+        cancelText="Keep Order"
+      />
     </div>
   );
 }

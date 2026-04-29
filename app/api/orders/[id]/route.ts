@@ -69,7 +69,17 @@ export async function PUT(request: NextRequest, { params }: Params) {
        return NextResponse.json({ error: "Restricted: Owner cannot update directly. Use the Approval system." }, { status: 403 });
     }
 
-    if (!hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
+    const { id } = await params;
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const isPrivileged = hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN]);
+    const isCustomerOwner = order.userId === user.id || (order.customerEmail && order.customerEmail.toLowerCase() === user.email.toLowerCase());
+
+    if (!isPrivileged && !isCustomerOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -77,18 +87,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const newStatus = String(body.status || "").toLowerCase();
     const statusReason = body.statusReason || body.cancelReason;
 
-    if (!Object.values(ORDER_STATUS).includes(newStatus as never)) {
-      return NextResponse.json(
-        { error: "Invalid order status" },
-        { status: 400 },
-      );
+    // CUSTOMER SPECIFIC CONSTRAINTS
+    if (!isPrivileged && isCustomerOwner) {
+       if (order.status !== ORDER_STATUS.PENDING) {
+          return NextResponse.json({ error: "Order is already being processed and cannot be cancelled. Contact support." }, { status: 403 });
+       }
+       if (newStatus !== ORDER_STATUS.CANCELLED) {
+          return NextResponse.json({ error: "Operation restricted: Customers may only cancel orders." }, { status: 403 });
+       }
     }
 
-    const { id } = await params;
-    const order = await Order.findById(id);
-
-    if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    if (!Object.values(ORDER_STATUS).includes(newStatus as never)) {
+      return NextResponse.json({ error: "Invalid order status" }, { status: 400 });
     }
 
     const oldStatus = order.status;
@@ -105,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     // ROLE-BASED CONSTRAINTS
     // 1. Moderator can only change status from processing onwards
-    if (user.role === ROLES.MODERATOR) {
+    if (isPrivileged && user.role === ROLES.MODERATOR) {
       if (oldStatus === ORDER_STATUS.PENDING) {
         return NextResponse.json({ error: "Moderators cannot modify pending orders. Please wait for Admin processing." }, { status: 403 });
       }
@@ -120,7 +130,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     // Check if permission required from Owner (for damaged and lost)
-    const requiresApproval = [ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any);
+    const requiresApproval = isPrivileged && [ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any);
 
     if (requiresApproval) {
        // Create approval request instead of updating order
@@ -259,7 +269,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     order.orderLogs.push({
       fromStatus: oldStatus,
       toStatus: newStatus,
-      changedBy: `${user.name || 'Admin'} (${user.email})`,
+      changedBy: isPrivileged ? `${user.name || 'Admin'} (${user.email})` : `Customer (${user.email})`,
       reason: statusReason,
       changedAt: new Date(),
     });
