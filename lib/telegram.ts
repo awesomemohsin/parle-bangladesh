@@ -1,10 +1,12 @@
-const TELEGRAM_BOT_TOKEN = "8697716533:AAGym-qQ0XdjOwEv2w1TO48hFJca8_QP1kU";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 // Chat IDs for Different Groups
 export const CHAT_IDS = {
-  MANAGEMENT: "-1003942975521", // For Admins/SuperAdmins (New Orders)
-  LOGISTICS: "-1003968662595",   // For Moderators (Processing/Dispatch)
+  MANAGEMENT: process.env.TELEGRAM_CHAT_ID_MANAGEMENT || "-1003942975521", 
+  LOGISTICS: process.env.TELEGRAM_CHAT_ID_LOGISTICS || "-1003968662595",   
 };
+
+const BASE_URL = "https://parlebangladesh.com";
 
 interface TelegramOptions {
   chatId: string;
@@ -13,6 +15,11 @@ interface TelegramOptions {
 }
 
 export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }: TelegramOptions) {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.error("TELEGRAM_BOT_TOKEN is missing in environment variables");
+    return false;
+  }
+
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     const response = await fetch(url, {
@@ -49,7 +56,7 @@ export async function notifyNewOrder(order: any) {
 🛒 <b>Items:</b> ${order.items?.length || 0} units
 
 📢 <b>Attention:</b> Admins & Superadmins
-<a href="https://parle-bangladesh.vercel.app/admin/orders">Click to View Order</a>
+<a href="${BASE_URL}/admin/orders">Click to View Order</a>
 `;
 
   return sendTelegramMessage({
@@ -71,7 +78,7 @@ export async function notifyOrderReady(order: any) {
 
 📢 <b>Attention:</b> Moderators
 <i>Please begin packing and arrange shipping.</i>
-<a href="https://parle-bangladesh.vercel.app/admin/orders">Open Logistics Queue</a>
+<a href="${BASE_URL}/admin/orders">Open Logistics Queue</a>
 `;
 
   return sendTelegramMessage({
@@ -84,7 +91,7 @@ export async function notifyOrderReady(order: any) {
  * Send critical alert (Cancellations, Loss, etc)
  */
 export async function notifyCriticalEvent(event: string, order: any, reason?: string) {
-    const message = `
+  const message = `
 ⚠️ <b>CRITICAL EVENT: ${event.toUpperCase()}</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>Order ID:</b> #${order._id.toString().slice(-8).toUpperCase()}
@@ -94,8 +101,8 @@ export async function notifyCriticalEvent(event: string, order: any, reason?: st
 📢 <b>Attention:</b> @SuperAdmins
 `;
 
-    return sendTelegramMessage({
-      chatId: CHAT_IDS.MANAGEMENT,
-      text: message,
-    });
+  return sendTelegramMessage({
+    chatId: CHAT_IDS.MANAGEMENT,
+    text: message,
+  });
 }
