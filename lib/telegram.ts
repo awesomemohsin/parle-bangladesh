@@ -2,8 +2,8 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 // Chat IDs for Different Groups
 export const CHAT_IDS = {
-  MANAGEMENT: process.env.TELEGRAM_CHAT_ID_MANAGEMENT || "-1003942975521", 
-  LOGISTICS: process.env.TELEGRAM_CHAT_ID_LOGISTICS || "-1003968662595",   
+  MANAGEMENT: process.env.TELEGRAM_CHAT_ID_MANAGEMENT || "-1003942975521",
+  LOGISTICS: process.env.TELEGRAM_CHAT_ID_LOGISTICS || "-1003968662595",
 };
 
 const BASE_URL = "https://parlebangladesh.com";
@@ -50,20 +50,20 @@ export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }:
 export async function notifyNewOrder(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   const itemsList = order.items.map((item: any) => `▫️ ${item.name} x${item.quantity}`).join('\n');
-  
+
   const isPickup = order.deliveryMethod === 'pickup';
-  
+
   // Format: Address, City - PostalCode
-  const displayAddress = isPickup 
-    ? "Collection Point - Yassin Tower" 
+  const displayAddress = isPickup
+    ? "Collection Point - Yassin Tower"
     : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
   const message = `
 🌟 <b>NEW PENDING ORDER</b>
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
-👤 <b>CLIENT:</b> ${order.customerName}
-📞 <b>PHONE:</b> <code>${order.customerPhone}</code>
+🆔 <b>ORDER ID:</b> <code>#${orderIdShort}</code>
+👤 <b>CLIENT NAME:</b> ${order.customerName}
+📞 <b>PHONE NUMBER:</b> <code>${order.customerPhone}</code>
 🏙️ <b>CITY:</b> ${isPickup ? "Dhaka" : (order.shippingCity || order.city)}
 📍 <b>ADDRESS:</b>
 <blockquote>${displayAddress}</blockquote>
@@ -92,20 +92,20 @@ export async function notifyNewOrder(order: any) {
 export async function notifyOrderReady(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   const itemsList = order.items.map((item: any) => `• ${item.name} x${item.quantity}`).join('\n');
-  
+
   const isPickup = order.deliveryMethod === 'pickup';
-  
+
   // Format: Address, City - PostalCode
-  const displayAddress = isPickup 
-    ? "Collection Point - Yassin Tower" 
+  const displayAddress = isPickup
+    ? "Collection Point - Yassin Tower"
     : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
   const message = `
-🚚 <b>DISPATCH NOTIFICATION</b>
+🚚 <b>NEW PROCESSING ORDER</b>
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
-👤 <b>CLIENT:</b> ${order.customerName}
-📞 <b>PHONE:</b> <code>${order.customerPhone}</code>
+🆔 <b>ORDER ID:</b> <code>#${orderIdShort}</code>
+👤 <b>CLIENT NAME:</b> ${order.customerName}
+📞 <b>PHONE NUMBER:</b> <code>${order.customerPhone}</code>
 🏙️ <b>CITY:</b> ${isPickup ? "Dhaka" : (order.shippingCity || order.city)}
 📍 <b>ADDRESS:</b>
 <blockquote>${displayAddress}</blockquote>
@@ -132,7 +132,7 @@ export async function notifyOrderReady(order: any) {
  */
 export async function notifyCriticalEvent(event: string, order: any, reason?: string) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
-  
+
   const message = `
 🚫 <b>SYSTEM ALERT: ${event.toUpperCase()}</b>
 ━━━━━━━━━━━━━━━━━━

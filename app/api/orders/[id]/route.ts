@@ -275,17 +275,19 @@ export async function PUT(request: NextRequest, { params }: Params) {
       changedAt: new Date(),
     });
 
+    // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF (Detect before save)
+    const isMovingToProcessing = newStatus.trim() === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING;
+
     await order.save();
 
-    // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF
-    if (newStatus.trim() === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING) {
-      console.log(`[Telegram] Triggering logistics notification for Order #${order._id.toString().slice(-8).toUpperCase()}`);
+    if (isMovingToProcessing) {
+      console.log(`[Telegram] Status change detected: ${oldStatus} -> ${newStatus}. Notifying Logistics...`);
       try {
         await notifyOrderReady(order);
       } catch (e) {
         console.error("Telegram notify error:", e);
       }
-
+      
       await Notification.create({
         role: ROLES.MODERATOR,
         title: "Order Ready for Dispatch",
@@ -293,7 +295,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         type: "order",
         targetLink: `/admin/orders`
       });
-    } else if (newStatus !== ORDER_STATUS.PROCESSING && newStatus !== oldStatus) {
+    } else if (newStatus !== oldStatus) {
       // Notify Admin of status updates (Shipped, Delivered, Cancelled, etc)
       await Notification.create({
         role: ROLES.ADMIN,
