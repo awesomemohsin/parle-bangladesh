@@ -7,6 +7,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing } from 'lucide-react'
 import { OrderInvoice } from '@/components/admin/order-invoice'
 import { toast } from 'sonner'
+import { useSearchParams } from 'next/navigation'
 
 interface OrderLog {
   fromStatus: string
@@ -44,6 +45,7 @@ interface Order {
 }
 
 export default function AdminOrdersPage() {
+  const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
@@ -102,9 +104,15 @@ export default function AdminOrdersPage() {
   }, [])
 
   useEffect(() => {
+    // Check for URL search params
+    const q = searchParams.get('q')
+    const status = searchParams.get('status')
+    if (q) setSearchTerm(q)
+    if (status) setStatusFilter(status)
+    
     setPage(1)
     isFirstLoad.current = true // Reset for new filter context
-  }, [debouncedSearch, statusFilter, sortBy])
+  }, [debouncedSearch, statusFilter, sortBy, searchParams])
 
   useEffect(() => {
     fetchOrders()

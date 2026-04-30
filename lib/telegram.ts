@@ -29,6 +29,7 @@ export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }:
         chat_id: chatId,
         text,
         parse_mode,
+        disable_web_page_preview: false,
       }),
     });
 
@@ -47,16 +48,28 @@ export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }:
  * Send alert to Management Group for a New Order
  */
 export async function notifyNewOrder(order: any) {
+  const orderIdShort = order._id.toString().slice(-8).toUpperCase();
+  const itemsList = order.items.map((item: any) => `• ${item.name} (${item.quantity}x)`).join('\n');
+  
   const message = `
-📦 <b>NEW ORDER RECEIVED!</b>
+🚨 <b>NEW ORDER RECEIVED</b> 🚨
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>Order ID:</b> #${order._id.toString().slice(-8).toUpperCase()}
+🆔 <b>Order ID:</b> #${orderIdShort}
 👤 <b>Customer:</b> ${order.customerName}
-💰 <b>Total:</b> ৳${order.total.toFixed(0)}
-🛒 <b>Items:</b> ${order.items?.length || 0} units
+📞 <b>Phone:</b> <code>${order.customerPhone}</code>
+📍 <b>City:</b> ${order.city}
+🏠 <b>Address:</b> ${order.address}
 
-📢 <b>Attention:</b> Admins & Superadmins
-<a href="${BASE_URL}/admin/orders">Click to View Order</a>
+🛒 <b>Items:</b>
+${itemsList}
+
+💰 <b>Total Amount:</b> ৳${order.total.toFixed(0)}
+💳 <b>Payment:</b> ${order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Online Payment'}
+
+⚠️ <b>STATUS: PENDING</b>
+<b><u>NEED YOUR ATTENTION TO PROCESS THIS ORDER!</u></b>
+
+🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">OPEN & PROCESS ORDER NOW</a>
 `;
 
   return sendTelegramMessage({
@@ -69,16 +82,20 @@ export async function notifyNewOrder(order: any) {
  * Send alert to Logistics Group for a Ready-to-Process Order
  */
 export async function notifyOrderReady(order: any) {
+  const orderIdShort = order._id.toString().slice(-8).toUpperCase();
+  
   const message = `
 🛠️ <b>ORDER READY FOR DISPATCH</b>
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>Order ID:</b> #${order._id.toString().slice(-8).toUpperCase()}
+🆔 <b>Order ID:</b> #${orderIdShort}
 👤 <b>Customer:</b> ${order.customerName}
 📍 <b>Address:</b> ${order.shippingAddress || order.address}
+📦 <b>Items:</b> ${order.items.length} product(s)
 
 📢 <b>Attention:</b> Moderators
 <i>Please begin packing and arrange shipping.</i>
-<a href="${BASE_URL}/admin/orders">Open Logistics Queue</a>
+
+🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">OPEN IN LOGISTICS QUEUE</a>
 `;
 
   return sendTelegramMessage({
@@ -91,14 +108,16 @@ export async function notifyOrderReady(order: any) {
  * Send critical alert (Cancellations, Loss, etc)
  */
 export async function notifyCriticalEvent(event: string, order: any, reason?: string) {
+  const orderIdShort = order._id.toString().slice(-8).toUpperCase();
+  
   const message = `
 ⚠️ <b>CRITICAL EVENT: ${event.toUpperCase()}</b>
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>Order ID:</b> #${order._id.toString().slice(-8).toUpperCase()}
+🆔 <b>Order ID:</b> #${orderIdShort}
 👤 <b>Customer:</b> ${order.customerName}
 ❗ <b>Reason:</b> ${reason || 'Not provided'}
 
-📢 <b>Attention:</b> @SuperAdmins
+📢 <b>Attention:</b> Superadmins
 `;
 
   return sendTelegramMessage({
