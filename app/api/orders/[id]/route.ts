@@ -278,8 +278,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     await order.save();
 
     // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF
-    if (newStatus === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING) {
-      // Notify Logistics Group
+    if (newStatus.trim() === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING) {
+      console.log(`[Telegram] Triggering logistics notification for Order #${order._id.toString().slice(-8).toUpperCase()}`);
       try {
         await notifyOrderReady(order);
       } catch (e) {
@@ -304,8 +304,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       });
     }
 
-    // TRIGGER CRITICAL ALERTS FOR MANAGEMENT
-    if ([ORDER_STATUS.CANCELLED, ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any) && newStatus !== oldStatus) {
+    // TRIGGER ALERTS FOR MANAGEMENT (LOST / DAMAGED)
+    if ([ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any) && newStatus !== oldStatus) {
        notifyCriticalEvent(newStatus, order, statusReason).catch(e => console.error("Telegram critical notify error:", e));
     }
 
