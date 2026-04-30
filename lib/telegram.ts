@@ -51,33 +51,31 @@ export async function notifyNewOrder(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   const itemsList = order.items.map((item: any) => `▫️ ${item.name} x${item.quantity}`).join('\n');
   
-  // Conditional Destination and City
   const isPickup = order.deliveryMethod === 'pickup';
-  const city = isPickup ? "Dhaka" : (order.shippingCity || order.city);
-  const destination = isPickup 
+  
+  // Format: Address, City - PostalCode
+  const displayAddress = isPickup 
     ? "Collection Point - Yassin Tower" 
-    : (order.shippingAddress || order.address);
+    : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
   const message = `
-🌟 <b>NEW ORDER</b> 🌟
+🌟 <b>NEW PENDING ORDER</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT:</b> ${order.customerName}
 📞 <b>PHONE:</b> <code>${order.customerPhone}</code>
-🏙️ <b>CITY:</b> ${city}
-📍 <b>DESTINATION:</b>
-<blockquote>${destination}</blockquote>
+🏙️ <b>CITY:</b> ${isPickup ? "Dhaka" : (order.shippingCity || order.city)}
+📍 <b>ADDRESS:</b>
+<blockquote>${displayAddress}</blockquote>
 
-🛒 <b>ORDERED ITEMS:</b>
+📦 <b>ORDERED ITEMS:</b>
 <pre>${itemsList}</pre>
 
+🏗️ <b>DELIVERY:</b> ${isPickup ? 'Store Pickup' : 'Home Delivery'}
 💰 <b>NET TOTAL:</b> <b>৳${order.total.toFixed(0)}</b>
-💳 <b>METHOD:</b> ${order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Online Payment'}
-
+━━━━━━━━━━━━━━━━━━
 🔴 <b>STATUS: PENDING</b>
-<b>──────────────────</b>
-📢 <b>ACTION REQUIRED:</b>
-<b>Please review and authorize this order for processing immediately.</b>
+📢 <b>ACTION: Review and authorize in dashboard.</b>
 
 🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">✨ MANAGE ORDER IN DASHBOARD</a>
 `;
@@ -95,27 +93,30 @@ export async function notifyOrderReady(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   const itemsList = order.items.map((item: any) => `• ${item.name} x${item.quantity}`).join('\n');
   
-  // Conditional Destination
   const isPickup = order.deliveryMethod === 'pickup';
-  const destination = isPickup 
+  
+  // Format: Address, City - PostalCode
+  const displayAddress = isPickup 
     ? "Collection Point - Yassin Tower" 
-    : (order.shippingAddress || order.address);
+    : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
   const message = `
 🚚 <b>DISPATCH NOTIFICATION</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT:</b> ${order.customerName}
+📞 <b>PHONE:</b> <code>${order.customerPhone}</code>
+🏙️ <b>CITY:</b> ${isPickup ? "Dhaka" : (order.shippingCity || order.city)}
 📍 <b>ADDRESS:</b>
-<blockquote>${destination}</blockquote>
+<blockquote>${displayAddress}</blockquote>
 
 📦 <b>PACKAGE CONTENTS:</b>
 <pre>${itemsList}</pre>
 
 🏗️ <b>DELIVERY:</b> ${isPickup ? 'Store Pickup' : 'Home Delivery'}
 ━━━━━━━━━━━━━━━━━━
-🛠️ <b>LOGISTICS ACTION:</b>
-<b>Prepare items for packing and schedule courier pickup.</b>
+🔵 <b>STATUS: PROCESSING</b>
+🛠️ <b>ACTION: Pack items and schedule dispatch.</b>
 
 🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">📦 OPEN LOGISTICS QUEUE</a>
 `;
