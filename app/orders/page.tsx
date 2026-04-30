@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { User, ShoppingBag, Clock, Package, ChevronRight, Hash, Calendar, ShieldCheck } from "lucide-react";
+import { User, ShoppingBag, Clock, Package, ChevronRight, Hash, Calendar, ShieldCheck, Printer, Image as ImageIcon } from "lucide-react";
+import { OrderInvoice } from "@/components/admin/order-invoice";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 const formatCurrency = (val: number) => `৳${val.toFixed(2)}`;
@@ -15,19 +16,30 @@ interface OrderItem {
   price: number;
   weight?: string;
   flavor?: string;
+  image?: string;
 }
 
 interface Order {
   id: string;
   createdAt: string;
   total: number;
+  subtotal?: number;
+  shippingCost?: number;
+  discountAmount?: number;
+  promoCode?: string;
   status: string;
+  deliveryMethod?: string;
+  paymentMethod?: string;
+  instruction?: string;
   cancelReason?: string;
   statusReason?: string;
   items: OrderItem[];
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
 }
 
 export default function MyOrdersPage() {
@@ -107,6 +119,15 @@ export default function MyOrdersPage() {
   const triggerCancel = (orderId: string) => {
     setSelectedOrderId(orderId);
     setIsCancelModalOpen(true);
+  };
+
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
+  const handlePrint = (orderId: string) => {
+    setPrintingOrderId(orderId);
+    setTimeout(() => {
+      window.print();
+      setPrintingOrderId(null);
+    }, 500);
   };
 
   return (
@@ -224,31 +245,57 @@ export default function MyOrdersPage() {
 
                 {/* Main Viewport */}
                 <div className="flex-1 flex flex-col justify-between self-stretch gap-4">
-                  <ul className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-[11px] group/item">
-                        <div className="flex items-center gap-3">
-                           <div className="w-6 h-6 bg-gray-50 rounded-md flex items-center justify-center font-black text-[9px] text-gray-300 border border-gray-100">
-                             {item.quantity}
-                           </div>
-                           <div className="flex flex-col">
-                             <span className="font-black text-gray-900 leading-none uppercase group-hover/item:text-red-600 transition-colors">{item.name}</span>
-                             <div className="flex gap-1.5 mt-0.5">
-                               {item.weight && <span className="text-[7px] text-gray-400 uppercase font-black">{item.weight}</span>}
-                               {item.flavor && <span className="text-[7px] text-gray-400 uppercase font-bold border-l pl-1.5">{item.flavor}</span>}
-                             </div>
-                           </div>
+                      <div key={idx} className="flex items-center gap-3 p-2 bg-slate-50/50 rounded-xl border border-gray-50 hover:border-gray-200 transition-all group/item">
+                        <div className="relative w-12 h-12 bg-white rounded-lg border border-gray-100 flex-shrink-0 overflow-hidden shadow-sm">
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500" 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="absolute top-0 right-0 bg-red-600 text-white font-black text-[8px] px-1 rounded-bl-md">
+                            x{item.quantity}
+                          </div>
                         </div>
-                        <span className="font-black text-gray-900 leading-none shrink-0">{formatCurrency(item.price * item.quantity)}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-black text-[10px] text-gray-900 leading-tight uppercase truncate">
+                            {item.name}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-black text-red-600">{formatCurrency(item.price)}</span>
+                            {(item.weight || item.flavor) && (
+                              <span className="text-[7px] text-gray-400 font-bold uppercase truncate border-l border-gray-200 pl-1.5">
+                                {[item.weight, item.flavor].filter(Boolean).join(' / ')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))}
-                  </ul>
+                  </div>
 
                   {/* Summary Segment - Compact */}
                   <div className="flex justify-between items-end border-t border-gray-50 pt-3 mt-auto">
-                     <div className="flex gap-2">
+                     <div className="flex flex-wrap gap-2">
+                        {order.status === 'delivered' && (
+                           <button 
+                             onClick={() => handlePrint(order.id)}
+                             className="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-600 px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 shadow-sm"
+                           >
+                             <Printer className="w-3 h-3" />
+                             Download Invoice
+                           </button>
+                        )}
+                        
                         <Link href={isAdmin ? `/admin/orders` : '/shop'}>
-                           <button className={`text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1 group/btn
+                           <button className={`text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1 group/btn h-8
                              ${isAdmin ? 'text-red-600 hover:bg-red-600 border border-red-600 px-3 py-1 rounded-md hover:text-white' : 'text-gray-400 hover:text-red-600'}`}>
                               {isAdmin ? 'Management' : 'Buy Again'}
                               <ChevronRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
@@ -258,7 +305,7 @@ export default function MyOrdersPage() {
                         {!isAdmin && order.status === 'pending' && (
                            <button 
                              onClick={() => triggerCancel(order.id)}
-                             className="text-[9px] font-black uppercase tracking-[0.15em] text-red-500 hover:text-white hover:bg-red-500 border border-red-500 px-3 py-1 rounded-md transition-all"
+                             className="text-[9px] font-black uppercase tracking-[0.15em] text-red-500 hover:text-white hover:bg-red-500 border border-red-500 px-3 py-1 rounded-md transition-all h-8"
                            >
                               Cancel Order
                            </button>
@@ -289,6 +336,13 @@ export default function MyOrdersPage() {
         confirmText="Yes, Cancel Order"
         cancelText="Keep Order"
       />
+
+      {/* Hidden Invoice for Printing */}
+      <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
+        {printingOrderId && (
+          <OrderInvoice order={orders.find(o => o.id === printingOrderId) as any} />
+        )}
+      </div>
     </div>
   );
 }
