@@ -51,28 +51,35 @@ export async function notifyNewOrder(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   const itemsList = order.items.map((item: any) => `▫️ ${item.name} x${item.quantity}`).join('\n');
   
+  // Conditional Destination and City
+  const isPickup = order.deliveryMethod === 'pickup';
+  const city = isPickup ? "Dhaka" : (order.shippingCity || order.city);
+  const destination = isPickup 
+    ? "Collection Point - Yassin Tower" 
+    : (order.shippingAddress || order.address);
+
   const message = `
-🌟 <b>NEW PREMIUM ORDER</b> 🌟
+🌟 <b>NEW ORDER</b> 🌟
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT:</b> ${order.customerName}
 📞 <b>PHONE:</b> <code>${order.customerPhone}</code>
-🏙️ <b>CITY:</b> ${order.city}
+🏙️ <b>CITY:</b> ${city}
 📍 <b>DESTINATION:</b>
-<blockquote>${order.address}</blockquote>
+<blockquote>${destination}</blockquote>
 
-🛒 <b>CART INVENTORY:</b>
+🛒 <b>ORDERED ITEMS:</b>
 <pre>${itemsList}</pre>
 
 💰 <b>NET TOTAL:</b> <b>৳${order.total.toFixed(0)}</b>
 💳 <b>METHOD:</b> ${order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Online Payment'}
 
-🔴 <b>STATUS: PENDING APPROVAL</b>
+🔴 <b>STATUS: PENDING</b>
 <b>──────────────────</b>
 📢 <b>ACTION REQUIRED:</b>
 <b>Please review and authorize this order for processing immediately.</b>
 
-🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">✨ MANAGE ORDER IN DASHBOARD</a>
+🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">✨ MANAGE ORDER IN DASHBOARD</a>
 `;
 
   return sendTelegramMessage({
@@ -88,23 +95,29 @@ export async function notifyOrderReady(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   const itemsList = order.items.map((item: any) => `• ${item.name} x${item.quantity}`).join('\n');
   
+  // Conditional Destination
+  const isPickup = order.deliveryMethod === 'pickup';
+  const destination = isPickup 
+    ? "Collection Point - Yassin Tower" 
+    : (order.shippingAddress || order.address);
+
   const message = `
 🚚 <b>DISPATCH NOTIFICATION</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT:</b> ${order.customerName}
 📍 <b>ADDRESS:</b>
-<blockquote>${order.shippingAddress || order.address}</blockquote>
+<blockquote>${destination}</blockquote>
 
 📦 <b>PACKAGE CONTENTS:</b>
 <pre>${itemsList}</pre>
 
-🏗️ <b>DELIVERY:</b> ${order.deliveryMethod === 'pickup' ? 'Store Pickup' : 'Home Delivery'}
+🏗️ <b>DELIVERY:</b> ${isPickup ? 'Store Pickup' : 'Home Delivery'}
 ━━━━━━━━━━━━━━━━━━
 🛠️ <b>LOGISTICS ACTION:</b>
 <b>Prepare items for packing and schedule courier pickup.</b>
 
-🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">📦 OPEN LOGISTICS QUEUE</a>
+🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">📦 OPEN LOGISTICS QUEUE</a>
 `;
 
   return sendTelegramMessage({

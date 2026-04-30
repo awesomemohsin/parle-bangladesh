@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X } from 'lucide-react'
 import { OrderInvoice } from '@/components/admin/order-invoice'
 import { toast } from 'sonner'
 import { useSearchParams } from 'next/navigation'
@@ -55,9 +55,12 @@ export default function AdminOrdersPage() {
   const isFirstLoad = useRef(true)
 
   // Search and Filter state
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '')
   const debouncedSearch = useDebounce(searchTerm, 500)
   const [statusFilter, setStatusFilter] = useState(() => {
+    const urlStatus = searchParams.get('status')
+    if (urlStatus) return urlStatus
+
     if (typeof window !== 'undefined') {
       const userStr = localStorage.getItem('user')
       if (userStr) {
@@ -92,27 +95,33 @@ export default function AdminOrdersPage() {
     return ''
   })
 
+  // URL Parameter sync for back/forward navigation
   useEffect(() => {
-    // Sync roles just in case
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        const u = JSON.parse(userStr)
-        setUserRole(u.role)
-      } catch (e) { }
-    }
-  }, [])
-
-  useEffect(() => {
-    // Check for URL search params
     const q = searchParams.get('q')
     const status = searchParams.get('status')
-    if (q) setSearchTerm(q)
-    if (status) setStatusFilter(status)
     
+    if (q !== null && q !== searchTerm) {
+      setSearchTerm(q)
+    }
+    if (status !== null && status !== statusFilter) {
+      setStatusFilter(status)
+    }
+  }, [searchParams])
+
+  const clearSearch = () => {
+    setSearchTerm('')
+    // Optionally clear URL param q without page reload
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('q')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }
+
+  useEffect(() => {
     setPage(1)
     isFirstLoad.current = true // Reset for new filter context
-  }, [debouncedSearch, statusFilter, sortBy, searchParams])
+  }, [debouncedSearch, statusFilter, sortBy])
 
   useEffect(() => {
     fetchOrders()
@@ -282,8 +291,17 @@ export default function AdminOrdersPage() {
             placeholder="Search by ID, Customer Name, Phone, or Email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
+            className="w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
           />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="w-full md:w-48 relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
