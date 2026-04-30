@@ -45,13 +45,11 @@ export async function notifyNewOrder(order: any) {
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>Order ID:</b> #${order._id.toString().slice(-8).toUpperCase()}
 👤 <b>Customer:</b> ${order.customerName}
-📞 <b>Phone:</b> ${order.customerPhone}
-📍 <b>Location:</b> ${order.city}
 💰 <b>Total:</b> ৳${order.total.toFixed(0)}
-🛒 <b>Items:</b> ${order.items.length} units
+🛒 <b>Items:</b> ${order.items?.length || 0} units
 
-📢 <b>Attention:</b> @Admins @SuperAdmins
-<a href="https://parle-bangladesh.vercel.app/admin/orders">View in Admin Panel</a>
+📢 <b>Attention:</b> Admins & Superadmins
+<a href="https://parle-bangladesh.vercel.app/admin/orders">Click to View Order</a>
 `;
 
   return sendTelegramMessage({
@@ -70,10 +68,9 @@ export async function notifyOrderReady(order: any) {
 🆔 <b>Order ID:</b> #${order._id.toString().slice(-8).toUpperCase()}
 👤 <b>Customer:</b> ${order.customerName}
 📍 <b>Address:</b> ${order.shippingAddress || order.address}
-🏗️ <b>Method:</b> ${order.deliveryMethod === 'pickup' ? 'Store Pickup' : 'Home Delivery'}
 
-📢 <b>Attention:</b> @Moderators
-<i>Please begin packing and arrange shipping immediately.</i>
+📢 <b>Attention:</b> Moderators
+<i>Please begin packing and arrange shipping.</i>
 <a href="https://parle-bangladesh.vercel.app/admin/orders">Open Logistics Queue</a>
 `;
 

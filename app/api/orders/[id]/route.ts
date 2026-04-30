@@ -280,7 +280,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
     // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF
     if (newStatus === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING) {
       // Notify Logistics Group
-      notifyOrderReady(order).catch(e => console.error("Telegram notify error:", e));
+      try {
+        await notifyOrderReady(order);
+      } catch (e) {
+        console.error("Telegram notify error:", e);
+      }
 
       await Notification.create({
         role: ROLES.MODERATOR,

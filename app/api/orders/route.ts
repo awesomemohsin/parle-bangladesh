@@ -277,7 +277,11 @@ export async function POST(request: NextRequest) {
     await order.save();
 
     // Trigger Telegram Notification for Management
-    notifyNewOrder(order).catch(e => console.error("Telegram notify error:", e));
+    try {
+      await notifyNewOrder(order);
+    } catch (e) {
+      console.error("Telegram notify error:", e);
+    }
 
     const { Notification } = require("@/lib/models");
     await Notification.create({
