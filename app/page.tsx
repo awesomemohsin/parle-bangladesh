@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, Star, Truck, ShieldCheck, Banknote, Zap } from 'lucide-react'
 import { getProducts, getCategories } from '@/lib/data'
 import { HomeHero, MotionDiv } from '@/components/home-client'
+import HomeProductSection from '@/components/home/product-section'
 
 export const metadata = {
   title: 'Home | Parle Bangladesh',
@@ -14,8 +15,8 @@ export const metadata = {
 export default async function HomePage() {
   const [categories, recentProducts, bestSellers] = await Promise.all([
     getCategories(),
-    getProducts({ limit: 4 }), // Reduced from 8 for speed
-    getProducts({ sort: { ordersCount: -1 }, limit: 4 }) // Reduced from 8
+    getProducts({ limit: 12 }), 
+    getProducts({ sort: { ordersCount: -1 }, limit: 12 }) 
   ]);
 
   return (
@@ -157,18 +158,7 @@ export default async function HomePage() {
           </div>
 
           {recentProducts.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-10 sm:gap-y-12">
-              {recentProducts.map((product: any, i: number) => (
-                <MotionDiv key={product._id || i} i={i} className="relative">
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <span className="bg-red-600 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg">
-                      New
-                    </span>
-                  </div>
-                  <ProductCard id={product._id} {...product} priority={i < 4} />
-                </MotionDiv>
-              ))}
-            </div>
+            <HomeProductSection products={recentProducts} type="recent" />
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <Zap className="w-10 h-10 text-slate-100 mb-4 animate-pulse" />
@@ -198,18 +188,7 @@ export default async function HomePage() {
           </div>
 
           {bestSellers.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-10 sm:gap-y-12">
-              {bestSellers.map((product: any, i: number) => (
-                <MotionDiv key={product._id || i} i={i} className="relative">
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <span className="bg-black text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-lg border border-white/10">
-                      Best Seller
-                    </span>
-                  </div>
-                  <ProductCard id={product._id} {...product} priority={i < 4} />
-                </MotionDiv>
-              ))}
-            </div>
+            <HomeProductSection products={bestSellers} type="bestseller" />
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <Star className="w-10 h-10 text-slate-100 mb-4" />
