@@ -29,7 +29,7 @@ export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }:
         chat_id: chatId,
         text,
         parse_mode,
-        disable_web_page_preview: false,
+        disable_web_page_preview: true,
       }),
     });
 
@@ -49,27 +49,30 @@ export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }:
  */
 export async function notifyNewOrder(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
-  const itemsList = order.items.map((item: any) => `• ${item.name} (${item.quantity}x)`).join('\n');
+  const itemsList = order.items.map((item: any) => `▫️ ${item.name} x${item.quantity}`).join('\n');
   
   const message = `
-🚨 <b>NEW ORDER RECEIVED</b> 🚨
+🌟 <b>NEW PREMIUM ORDER</b> 🌟
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>Order ID:</b> #${orderIdShort}
-👤 <b>Customer:</b> ${order.customerName}
-📞 <b>Phone:</b> <code>${order.customerPhone}</code>
-📍 <b>City:</b> ${order.city}
-🏠 <b>Address:</b> ${order.address}
+🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
+👤 <b>CLIENT:</b> ${order.customerName}
+📞 <b>PHONE:</b> <code>${order.customerPhone}</code>
+🏙️ <b>CITY:</b> ${order.city}
+📍 <b>DESTINATION:</b>
+<blockquote>${order.address}</blockquote>
 
-🛒 <b>Items:</b>
-${itemsList}
+🛒 <b>CART INVENTORY:</b>
+<pre>${itemsList}</pre>
 
-💰 <b>Total Amount:</b> ৳${order.total.toFixed(0)}
-💳 <b>Payment:</b> ${order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Online Payment'}
+💰 <b>NET TOTAL:</b> <b>৳${order.total.toFixed(0)}</b>
+💳 <b>METHOD:</b> ${order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Online Payment'}
 
-⚠️ <b>STATUS: PENDING</b>
-<b><u>NEED YOUR ATTENTION TO PROCESS THIS ORDER!</u></b>
+🔴 <b>STATUS: PENDING APPROVAL</b>
+<b>──────────────────</b>
+📢 <b>ACTION REQUIRED:</b>
+<b>Please review and authorize this order for processing immediately.</b>
 
-🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">OPEN & PROCESS ORDER NOW</a>
+🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">✨ MANAGE ORDER IN DASHBOARD</a>
 `;
 
   return sendTelegramMessage({
@@ -83,19 +86,25 @@ ${itemsList}
  */
 export async function notifyOrderReady(order: any) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
+  const itemsList = order.items.map((item: any) => `• ${item.name} x${item.quantity}`).join('\n');
   
   const message = `
-🛠️ <b>ORDER READY FOR DISPATCH</b>
+🚚 <b>DISPATCH NOTIFICATION</b>
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>Order ID:</b> #${orderIdShort}
-👤 <b>Customer:</b> ${order.customerName}
-📍 <b>Address:</b> ${order.shippingAddress || order.address}
-📦 <b>Items:</b> ${order.items.length} product(s)
+🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
+👤 <b>CLIENT:</b> ${order.customerName}
+📍 <b>ADDRESS:</b>
+<blockquote>${order.shippingAddress || order.address}</blockquote>
 
-📢 <b>Attention:</b> Moderators
-<i>Please begin packing and arrange shipping.</i>
+📦 <b>PACKAGE CONTENTS:</b>
+<pre>${itemsList}</pre>
 
-🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">OPEN IN LOGISTICS QUEUE</a>
+🏗️ <b>DELIVERY:</b> ${order.deliveryMethod === 'pickup' ? 'Store Pickup' : 'Home Delivery'}
+━━━━━━━━━━━━━━━━━━
+🛠️ <b>LOGISTICS ACTION:</b>
+<b>Prepare items for packing and schedule courier pickup.</b>
+
+🔗 <a href="${BASE_URL}/admin/orders?q=${order._id.toString()}">📦 OPEN LOGISTICS QUEUE</a>
 `;
 
   return sendTelegramMessage({
@@ -111,13 +120,14 @@ export async function notifyCriticalEvent(event: string, order: any, reason?: st
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
   
   const message = `
-⚠️ <b>CRITICAL EVENT: ${event.toUpperCase()}</b>
+🚫 <b>SYSTEM ALERT: ${event.toUpperCase()}</b>
 ━━━━━━━━━━━━━━━━━━
-🆔 <b>Order ID:</b> #${orderIdShort}
-👤 <b>Customer:</b> ${order.customerName}
-❗ <b>Reason:</b> ${reason || 'Not provided'}
+🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
+👤 <b>CLIENT:</b> ${order.customerName}
+❗ <b>REASON:</b>
+<blockquote>${reason || 'Not provided'}</blockquote>
 
-📢 <b>Attention:</b> Superadmins
+📢 <b>ATTENTION:</b> @SuperAdmins
 `;
 
   return sendTelegramMessage({
