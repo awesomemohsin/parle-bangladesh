@@ -4,6 +4,7 @@ import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product, Customer, PromoCode, ApprovalRequest } from "@/lib/models";
 import mongoose from "mongoose";
+import { notifyNewOrder } from "@/lib/telegram";
 
 export async function GET(request: NextRequest) {
   try {
@@ -274,6 +275,9 @@ export async function POST(request: NextRequest) {
     });
 
     await order.save();
+
+    // Trigger Telegram Notification for Management
+    notifyNewOrder(order).catch(e => console.error("Telegram notify error:", e));
 
     const { Notification } = require("@/lib/models");
     await Notification.create({

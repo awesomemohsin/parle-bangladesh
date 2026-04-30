@@ -4,6 +4,7 @@ import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
+import { notifyOrderReady, notifyCriticalEvent } from "@/lib/telegram";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -278,6 +279,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF
     if (newStatus === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING) {
+      // Notify Logistics Group
+      notifyOrderReady(order).catch(e => console.error("Telegram notify error:", e));
+
       await Notification.create({
         role: ROLES.MODERATOR,
         title: "Order Ready for Dispatch",
@@ -294,6 +298,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
         type: "order",
         targetLink: `/admin/orders`
       });
+    }
+
+    // TRIGGER CRITICAL ALERTS FOR MANAGEMENT
+    if ([ORDER_STATUS.CANCELLED, ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any) && newStatus !== oldStatus) {
+       notifyCriticalEvent(newStatus, order, statusReason).catch(e => console.error("Telegram critical notify error:", e));
     }
 
     // Log administrative activity globally

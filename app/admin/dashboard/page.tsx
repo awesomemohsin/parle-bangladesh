@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { BellRing } from 'lucide-react'
+import { useRef } from 'react'
 
 interface DashboardStats {
   totalProducts: number
@@ -33,6 +35,12 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Notification refs
+  const lastProcessingCount = useRef<number | null>(null)
+  const lastTotalCount = useRef<number | null>(null)
+  const isFirstLoad = useRef(true)
+  const [userRole, setUserRole] = useState('')
 
   const fetchStats = async () => {
     setIsLoading(true)
@@ -65,8 +73,71 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchStatsSilent = async () => {
+    try {
+      const response = await fetch('/api/admin/stats', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Notification Logic
+        const role = userRole || (typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').role : '')
+        
+        if (!isFirstLoad.current) {
+            if (role === 'moderator') {
+                const currentProc = data.orderStatuses?.processing || 0
+                if (lastProcessingCount.current !== null && currentProc > lastProcessingCount.current) {
+                    toast.success('New order assigned to your queue!', {
+                        description: "An order has been moved to 'Processing' for your attention.",
+                        icon: <BellRing className="w-4 h-4 text-emerald-500" />,
+                        duration: 8000
+                    })
+                    try { new Audio('/sounds/notification.mp3').play().catch(() => {}) } catch(e) {}
+                }
+                lastProcessingCount.current = currentProc
+            } else if (['admin', 'super_admin', 'owner'].includes(role)) {
+                if (lastTotalCount.current !== null && data.totalOrders > lastTotalCount.current) {
+                    toast.success('New order received!', {
+                        description: `Total orders: ${data.totalOrders}`,
+                        icon: <BellRing className="w-4 h-4 text-emerald-500" />,
+                        duration: 8000
+                    })
+                    try { new Audio('/sounds/notification.mp3').play().catch(() => {}) } catch(e) {}
+                }
+                lastTotalCount.current = data.totalOrders
+            }
+        } else {
+            lastProcessingCount.current = data.orderStatuses?.processing || 0
+            lastTotalCount.current = data.totalOrders
+            isFirstLoad.current = false
+        }
+
+        setStats(data)
+      }
+    } catch (error) {
+      console.error('Background fetch failed:', error)
+    }
+  }
+
   useEffect(() => {
     fetchStats()
+    
+    // Set user role
+    if (typeof window !== 'undefined') {
+        const u = JSON.parse(localStorage.getItem('user') || '{}')
+        setUserRole(u.role || '')
+    }
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+        fetchStatsSilent()
+    }, 30000)
+
+    return () => clearInterval(interval)
   }, [router])
 
   if (isLoading) {
@@ -100,9 +171,18 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 p-4 md:p-8">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Dashboard Overview</h1>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Main Stats • Recent Activity</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Dashboard Overview</h1>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Main Stats • Recent Activity</p>
+        </div>
+        <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 self-start md:self-auto">
+            <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
+            Real-time Sync Active (30s)
+        </div>
       </div>
 
       {/* Main Stats */}

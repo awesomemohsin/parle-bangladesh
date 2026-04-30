@@ -74,6 +74,12 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInventory();
+
+    const interval = setInterval(() => {
+      fetchInventory();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDrillDownOrders = async (product: any | null, variation: any | null, type: string) => {
@@ -156,9 +162,18 @@ export default function InventoryPage() {
       <div className="max-w-7xl mx-auto space-y-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="w-12 h-1 bg-gray-900 rounded-full"></span>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Read-Only Archive</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="w-12 h-1 bg-gray-900 rounded-full"></span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Read-Only Archive</span>
+              </div>
+              <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                </span>
+                Live Sync Active (30s)
+              </div>
             </div>
             <h1 className="text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Stock Ledger</h1>
             <p className="text-gray-500 font-medium max-w-xl">View real-time physical stock and hold logs. <span className="text-red-600 font-black">Stock updates must be requested via the Product Engine.</span></p>

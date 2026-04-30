@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing } from 'lucide-react'
 import { OrderInvoice } from '@/components/admin/order-invoice'
+import { toast } from 'sonner'
 
 interface OrderLog {
   fromStatus: string
@@ -46,6 +47,10 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  
+  // Notification state
+  const lastTotalOrders = useRef<number | null>(null)
+  const isFirstLoad = useRef(true)
 
   // Search and Filter state
   const [searchTerm, setSearchTerm] = useState('')
@@ -98,18 +103,26 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     setPage(1)
+    isFirstLoad.current = true // Reset for new filter context
   }, [debouncedSearch, statusFilter, sortBy])
 
   useEffect(() => {
     fetchOrders()
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchOrders(true) // true means background sync
+    }, 30000)
+
+    return () => clearInterval(interval)
   }, [debouncedSearch, statusFilter, page, sortBy])
 
   const handlePrint = (id: string) => {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
   };
 
-  const fetchOrders = async () => {
-    setIsLoading(true)
+  const fetchOrders = async (isBackground = false) => {
+    if (!isBackground) setIsLoading(true)
     try {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('q', debouncedSearch)
@@ -127,13 +140,47 @@ export default function AdminOrdersPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setOrders(data.orders || [])
+        const newOrders = data.orders || []
+        const newTotal = data.pagination?.total || 0
+        
+        // Notification Logic: If total count increased and not first load
+        if (!isFirstLoad.current && lastTotalOrders.current !== null && newTotal > lastTotalOrders.current) {
+          const diff = newTotal - lastTotalOrders.current
+          const isModerator = userRole === 'moderator'
+          
+          toast.success(isModerator ? `New order assigned to your queue!` : `You have ${diff} new order${diff > 1 ? 's' : ''}!`, {
+            description: isModerator 
+              ? "An order has been moved to 'Processing' for your attention." 
+              : "Refreshing the list to show latest updates.",
+            icon: <BellRing className="w-4 h-4 text-emerald-500" />,
+            duration: 10000,
+            action: {
+                label: 'View',
+                onClick: () => {
+                    setPage(1)
+                    setSearchTerm('')
+                    if (isModerator) setStatusFilter('processing')
+                    else setStatusFilter('all')
+                }
+            }
+          })
+          
+          // Optional: Play a subtle notification sound
+          try {
+            const audio = new Audio('/sounds/notification.mp3')
+            audio.play().catch(() => {}) // Ignore if browser blocks auto-play
+          } catch (e) {}
+        }
+
+        setOrders(newOrders)
         setTotalPages(data.pagination?.totalPages || 1)
+        lastTotalOrders.current = newTotal
+        isFirstLoad.current = false
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error)
     } finally {
-      setIsLoading(false)
+      if (!isBackground) setIsLoading(false)
     }
   }
 
@@ -205,8 +252,17 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h1 className="text-2xl font-bold text-gray-900 italic uppercase">Orders List</h1>
-        <div className="text-sm text-gray-500 font-bold uppercase tracking-wider">
-          Total orders: {orders.length} (Page {page} of {totalPages})
+        <div className="flex flex-col items-end gap-1">
+          <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Live Sync (30s)
+          </div>
+          <div className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+            Total orders: {lastTotalOrders.current || orders.length} (Page {page} of {totalPages})
+          </div>
         </div>
       </div>
 
@@ -481,7 +537,6 @@ export default function AdminOrdersPage() {
                     </div>
                   </div>
                 )}
-                {/* Removed OrderInvoice from here to move it outside the loop */}
               </Card>
             )
           })
