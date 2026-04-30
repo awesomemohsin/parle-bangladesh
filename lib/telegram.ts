@@ -118,6 +118,8 @@ export async function notifyOrderReady(order: any) {
 🔵 <b>STATUS: PROCESSING</b>
 🛠️ <b>ACTION: Pack items and schedule dispatch.</b>
 
+📢 <b>ATTENTION:</b> <a href="tg://user?id=8699195789">Logistics Department</a>
+
 🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">📦 OPEN LOGISTICS QUEUE</a>
 `;
 
