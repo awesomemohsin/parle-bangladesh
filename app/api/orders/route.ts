@@ -14,19 +14,31 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("q") || "";
     const statusQuery = searchParams.get("status") || "all";
-    const adminContext = searchParams.get("adminContext") === "true"; // New flag
+    const adminContext = searchParams.get("adminContext") === "true"; 
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
+    const productSlugQuery = searchParams.get("productSlug");
+    const weightQuery = searchParams.get("weight");
+    const flavorQuery = searchParams.get("flavor");
+
     // 1. Initial Match (Security + Context)
     let matchStage: any = {};
+
+    if (productSlugQuery) {
+      const itemMatch: any = { productSlug: productSlugQuery };
+      if (weightQuery) itemMatch.weight = weightQuery;
+      if (flavorQuery) itemMatch.flavor = flavorQuery;
+      matchStage.items = { $elemMatch: itemMatch };
+    }
     
     // If not admin context OR not an admin role, force identity filter
     const privilegedUser = hasAnyRole(user, [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR]);
     
     if (!adminContext || !privilegedUser) {
       matchStage = { 
+        ...matchStage,
         $or: [
           { userId: user.id },
           { customerEmail: user.email }
@@ -42,10 +54,21 @@ export async function GET(request: NextRequest) {
           // Explicitly block searching for pending
           matchStage.status = "NONE_ALLOWED";
         } else {
-          matchStage.status = statusQuery;
+          // Support multiple statuses
+          const statuses = statusQuery.split(",");
+          if (statuses.length > 1) {
+            matchStage.status = { $in: statuses };
+          } else {
+            matchStage.status = statusQuery;
+          }
         }
       } else if (statusQuery !== "all") {
-        matchStage.status = statusQuery;
+        const statuses = statusQuery.split(",");
+        if (statuses.length > 1) {
+          matchStage.status = { $in: statuses };
+        } else {
+          matchStage.status = statusQuery;
+        }
       }
     }
 

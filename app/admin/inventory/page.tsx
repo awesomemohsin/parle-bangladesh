@@ -14,8 +14,14 @@ import {
   ArrowUpRight,
   RefreshCw,
   Box,
-  PauseCircle
+  PauseCircle,
+  X,
+  ExternalLink,
+  Info,
+  LayoutGrid
 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function InventoryPage() {
   const router = useRouter();
@@ -24,6 +30,16 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+
+  // Drill-down states
+  const [selectedMetric, setSelectedMetric] = useState<{
+    product: any | null;
+    variation: any | null;
+    type: string;
+    isGlobal?: boolean;
+  } | null>(null);
+  const [drillDownOrders, setDrillDownOrders] = useState<any[]>([]);
+  const [loadingDrillDown, setLoadingDrillDown] = useState(false);
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -59,6 +75,61 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchInventory();
   }, []);
+
+  const fetchDrillDownOrders = async (product: any | null, variation: any | null, type: string) => {
+    setLoadingDrillDown(true);
+    try {
+      let status = "all";
+      if (type === 'hold' || type === 'On Hold') status = "processing,shipped,pending";
+      else if (type === 'delivered' || type === 'Delivered') status = "delivered";
+      else if (type === 'lost' || type === 'Lost') status = "lost";
+      else if (type === 'damaged' || type === 'Damaged') status = "damaged";
+
+      const params = new URLSearchParams();
+      params.append('adminContext', 'true');
+      if (product) params.append('productSlug', product.slug);
+      if (variation?.weight) params.append('weight', variation.weight);
+      if (variation?.flavor) params.append('flavor', variation.flavor);
+      params.append('status', status);
+      params.append('limit', '50');
+
+      const res = await fetch(`/api/orders?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        let results = data.orders || [];
+        
+        // Client-side exact filter only if product was specified
+        if (product) {
+          results = results.filter((o: any) => 
+            o.items.some((item: any) => 
+              item.productSlug === product.slug &&
+              ((!item.weight && !variation.weight) || (item.weight === variation.weight)) &&
+              ((!item.flavor && !variation.flavor) || (item.flavor === variation.flavor) || (item.flavor === "" && !variation.flavor) || (!item.flavor && variation.flavor === ""))
+            )
+          );
+        }
+        setDrillDownOrders(results);
+      }
+    } catch (err) {
+      console.error("Drill-down error:", err);
+      toast.error("Failed to load order details");
+    } finally {
+      setLoadingDrillDown(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedMetric) {
+      fetchDrillDownOrders(selectedMetric.product, selectedMetric.variation, selectedMetric.type);
+    } else {
+      setDrillDownOrders([]);
+    }
+  }, [selectedMetric]);
 
   const getProductStock = (p: any) => {
     return p.variations ? p.variations.reduce((acc: number, v: any) => acc + (v.stock || 0), 0) : 0;
@@ -139,16 +210,25 @@ export default function InventoryPage() {
              { label: "Lost", value: products.reduce((acc, p) => acc + (p.variations ? p.variations.reduce((vAcc: number, v: any) => vAcc + (v.lostCount || 0), 0) : 0), 0), icon: Trash2, color: "text-red-500", bg: "bg-red-50" },
              { label: "Damaged", value: products.reduce((acc, p) => acc + (p.variations ? p.variations.reduce((vAcc: number, v: any) => vAcc + (v.damagedCount || 0), 0) : 0), 0), icon: AlertTriangle, color: "text-rose-500", bg: "bg-rose-50" }
            ].map((stat, i) => (
-             <div key={i} className="p-5 bg-white shadow-sm rounded-3xl border border-gray-100 transition-all hover:shadow-md">
+             <div 
+               key={i} 
+               className={`p-5 bg-white shadow-sm rounded-3xl border border-gray-100 transition-all hover:shadow-md ${stat.label !== 'Physical' ? 'cursor-pointer hover:border-red-200 group/stat' : ''}`}
+               onClick={() => stat.label !== 'Physical' && stat.value > 0 && setSelectedMetric({ product: null, variation: null, type: stat.label, isGlobal: true })}
+             >
                 <div className="flex justify-between items-start mb-3">
-                  <div className={`p-2.5 ${stat.bg} ${stat.color} rounded-xl`}>
+                  <div className={`p-2.5 ${stat.bg} ${stat.color} rounded-xl group-hover/stat:scale-110 transition-transform`}>
                     <stat.icon className="w-4 h-4" />
                   </div>
                   <div className="w-1.5 h-1.5 rounded-full bg-gray-200"></div>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{stat.label}</span>
-                  <span className="text-2xl font-black text-gray-900 tabular-nums leading-none tracking-tighter">{stat.value}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-black text-gray-900 tabular-nums leading-none tracking-tighter">{stat.value}</span>
+                    {stat.label !== 'Physical' && stat.value > 0 && (
+                      <ArrowUpRight className="w-3 h-3 text-red-600 opacity-0 group-hover/stat:opacity-100 transition-opacity" />
+                    )}
+                  </div>
                 </div>
              </div>
            ))}
@@ -221,12 +301,15 @@ export default function InventoryPage() {
                                          {[v.weight, v.flavor].filter(Boolean).join(" ") || "STANDARD SKU"}
                                       </span>
                                       <div className="flex gap-3">
-                                         <div className="flex flex-col">
+                                         <div className="flex flex-col cursor-help" title="Physical stock ready to sell">
                                             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Physical Free</span>
                                             <span className="text-sm font-black text-gray-900">{v.stock}</span>
                                          </div>
-                                         <div className="flex flex-col">
-                                            <span className="text-[8px] font-bold text-amber-500 uppercase tracking-tighter">On Hold</span>
+                                         <div 
+                                           className="flex flex-col cursor-pointer group/hold hover:bg-amber-100/50 p-1 rounded-md transition-colors"
+                                           onClick={() => v.holdStock > 0 && setSelectedMetric({ product, variation: v, type: 'hold' })}
+                                         >
+                                            <span className="text-[8px] font-bold text-amber-500 uppercase tracking-tighter group-hover/hold:underline">On Hold</span>
                                             <span className="text-sm font-black text-amber-500">{v.holdStock || 0}</span>
                                          </div>
                                       </div>
@@ -243,10 +326,30 @@ export default function InventoryPage() {
                                 </td>
                                 <td className="p-8 w-1/5 border-l border-red-100/30">
                                    <div className="flex flex-col gap-2">
-                                      <MetricRow label="Hold" value={v.holdStock} color="amber" />
-                                      <MetricRow label="Delivered" value={v.deliveredCount} color="emerald" />
-                                      <MetricRow label="Damaged" value={v.damagedCount} color="rose" />
-                                      <MetricRow label="Lost Item" value={v.lostCount} color="red" />
+                                      <MetricRow 
+                                        label="Hold" 
+                                        value={v.holdStock} 
+                                        color="amber" 
+                                        onClick={() => v.holdStock > 0 && setSelectedMetric({ product, variation: v, type: 'hold' })}
+                                      />
+                                      <MetricRow 
+                                        label="Delivered" 
+                                        value={v.deliveredCount} 
+                                        color="emerald" 
+                                        onClick={() => v.deliveredCount > 0 && setSelectedMetric({ product, variation: v, type: 'delivered' })}
+                                      />
+                                      <MetricRow 
+                                        label="Damaged" 
+                                        value={v.damagedCount} 
+                                        color="rose" 
+                                        onClick={() => v.damagedCount > 0 && setSelectedMetric({ product, variation: v, type: 'damaged' })}
+                                      />
+                                      <MetricRow 
+                                        label="Lost Item" 
+                                        value={v.lostCount} 
+                                        color="red" 
+                                        onClick={() => v.lostCount > 0 && setSelectedMetric({ product, variation: v, type: 'lost' })}
+                                      />
                                    </div>
                                 </td>
                                 <td className="p-8 w-1/5 border-l border-red-100/30">
@@ -281,6 +384,145 @@ export default function InventoryPage() {
           )}
         </div>
       </div>
+
+      {/* Drill-down Modal */}
+      {selectedMetric && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 lg:p-8 animate-in fade-in duration-300">
+           <Card className="w-full max-w-5xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                 <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center text-white shadow-lg">
+                       {(selectedMetric.type === 'hold' || selectedMetric.type === 'On Hold') && <PauseCircle className="w-7 h-7" />}
+                       {(selectedMetric.type === 'delivered' || selectedMetric.type === 'Delivered') && <Truck className="w-7 h-7" />}
+                       {(selectedMetric.type === 'lost' || selectedMetric.type === 'Lost') && <Trash2 className="w-7 h-7" />}
+                       {(selectedMetric.type === 'damaged' || selectedMetric.type === 'Damaged') && <AlertTriangle className="w-7 h-7" />}
+                    </div>
+                    <div>
+                       <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none">
+                          {selectedMetric.isGlobal ? `Global ${selectedMetric.type}` : selectedMetric.type} Audit Logs
+                       </h2>
+                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                          {selectedMetric.isGlobal ? (
+                            <span className="flex items-center gap-2"><LayoutGrid className="w-3 h-3" /> Showing items from ALL products</span>
+                          ) : (
+                            <span>{selectedMetric.product.name} • {[selectedMetric.variation.weight, selectedMetric.variation.flavor].filter(Boolean).join(" ")}</span>
+                          )}
+                       </p>
+                    </div>
+                 </div>
+                 <button 
+                   onClick={() => setSelectedMetric(null)}
+                   className="p-3 hover:bg-gray-200 rounded-full transition-colors"
+                 >
+                    <X className="w-6 h-6 text-gray-400" />
+                 </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white">
+                 {loadingDrillDown ? (
+                   <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
+                      <RefreshCw className="w-8 h-8 animate-spin" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Querying System Ledger...</span>
+                   </div>
+                 ) : drillDownOrders.length > 0 ? (
+                   <div className="space-y-4">
+                      {drillDownOrders.map((order: any, idx: number) => {
+                        // Find relevant items in the order
+                        const relevantItems = selectedMetric.isGlobal 
+                          ? order.items 
+                          : order.items.filter((i: any) => 
+                              i.productSlug === selectedMetric.product.slug &&
+                              ((!i.weight && !selectedMetric.variation.weight) || (i.weight === selectedMetric.variation.weight)) &&
+                              ((!i.flavor && !selectedMetric.variation.flavor) || (i.flavor === selectedMetric.variation.flavor) || (i.flavor === "" && !selectedMetric.variation.flavor) || (!i.flavor && selectedMetric.variation.flavor === ""))
+                            );
+
+                        if (relevantItems.length === 0 && !selectedMetric.isGlobal) return null;
+
+                        return (
+                          <div key={order.id || idx} className="p-6 rounded-[32px] border border-gray-100 hover:border-red-200 hover:bg-red-50/5 transition-all group flex flex-col gap-4">
+                             <div className="flex items-center justify-between gap-6">
+                                <div className="flex items-center gap-6">
+                                   <div className="flex flex-col">
+                                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Order ID</span>
+                                      <span className="text-sm font-black text-gray-900 tabular-nums">#{order.id?.slice(-8).toUpperCase()}</span>
+                                   </div>
+                                   <div className="w-px h-8 bg-gray-100"></div>
+                                   <div className="flex flex-col">
+                                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Customer</span>
+                                      <span className="text-xs font-bold text-gray-700">{order.customerName}</span>
+                                   </div>
+                                   <div className="w-px h-8 bg-gray-100"></div>
+                                   <div className="flex flex-col">
+                                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Status</span>
+                                      <span className="text-[10px] font-black text-red-600 uppercase tracking-widest px-2 py-0.5 bg-red-50 rounded-md">{order.status}</span>
+                                   </div>
+                                </div>
+
+                                <div className="flex items-center gap-6">
+                                   <div className="text-right flex flex-col">
+                                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Total Items</span>
+                                      <div className="text-xl font-black text-gray-900 leading-none">×{relevantItems.reduce((acc: number, cur: any) => acc + cur.quantity, 0)}</div>
+                                   </div>
+                                   <button 
+                                     onClick={() => router.push(`/admin/orders?q=${order.id}`)}
+                                     className="w-12 h-12 bg-gray-50 group-hover:bg-red-600 group-hover:text-white rounded-2xl flex items-center justify-center transition-all shadow-sm"
+                                   >
+                                      <ArrowUpRight className="w-6 h-6" />
+                                   </button>
+                                </div>
+                             </div>
+
+                             {/* Item detail list in the order */}
+                             <div className="bg-gray-50/50 rounded-2xl p-4 flex flex-col gap-2">
+                                {relevantItems.map((ri: any, riIdx: number) => (
+                                  <div key={riIdx} className="flex justify-between items-center border-b border-white/50 last:border-0 pb-2 last:pb-0">
+                                     <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-[10px] font-black text-gray-400 border border-gray-100">
+                                           {ri.quantity}
+                                        </div>
+                                        <div>
+                                           <p className="text-[11px] font-black text-gray-900 uppercase leading-none">{ri.name}</p>
+                                           <p className="text-[8px] font-bold text-gray-400 uppercase mt-0.5">{ri.weight} • {ri.flavor || 'Original'}</p>
+                                        </div>
+                                     </div>
+                                     <span className="text-[10px] font-black text-gray-900 italic">৳{(ri.price * ri.quantity).toFixed(0)}</span>
+                                  </div>
+                                ))}
+                             </div>
+                          </div>
+                        );
+                      })}
+                   </div>
+                 ) : (
+                   <div className="h-64 flex flex-col items-center justify-center gap-6 text-center text-gray-400 grayscale opacity-50">
+                      <Box className="w-16 h-16 stroke-1" />
+                      <div>
+                        <h4 className="text-base font-black text-gray-900 uppercase tracking-tighter">No Linked Orders Found</h4>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1">No orders currently match this global status criteria.</p>
+                      </div>
+                   </div>
+                 )}
+              </div>
+
+              <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                 <div className="flex items-center gap-3">
+                    <Info className="w-4 h-4 text-gray-400" />
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                       {selectedMetric.isGlobal ? "Global summary across all products" : "Variation-specific drill-down"}
+                    </span>
+                 </div>
+                 <Button 
+                   onClick={() => setSelectedMetric(null)}
+                   variant="outline"
+                   className="rounded-2xl font-black text-[10px] uppercase tracking-widest h-12 px-8"
+                 >
+                    Close Ledger
+                 </Button>
+              </div>
+           </Card>
+        </div>
+      )}
+
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 3px;
@@ -294,17 +536,25 @@ export default function InventoryPage() {
   );
 }
 
-function MetricRow({ label, value, color }: any) {
+function MetricRow({ label, value, color, onClick }: any) {
   const colors: any = {
-    emerald: "text-emerald-600 bg-emerald-50",
-    rose: "text-rose-600 bg-rose-50",
-    red: "text-red-500 bg-red-50",
-    amber: "text-amber-500 bg-amber-50"
+    emerald: "text-emerald-600 bg-emerald-50 hover:bg-emerald-100",
+    rose: "text-rose-600 bg-rose-50 hover:bg-rose-100",
+    red: "text-red-500 bg-red-50 hover:bg-red-100",
+    amber: "text-amber-500 bg-amber-50 hover:bg-amber-100"
   };
+  
+  const isClickable = (value || 0) > 0;
+
   return (
-    <div className="flex justify-between items-center">
+    <div 
+      className={`flex justify-between items-center p-1 rounded-lg transition-colors ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+      onClick={onClick}
+    >
        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{label}</span>
-       <span className={`px-2 py-0.5 rounded-md text-[9px] font-black tabular-nums ${colors[color]}`}>{value || 0}</span>
+       <span className={`px-2 py-0.5 rounded-md text-[9px] font-black tabular-nums transition-all ${colors[color]} ${isClickable ? 'scale-100 group-hover:scale-110' : ''}`}>
+         {value || 0}
+       </span>
     </div>
   );
 }
