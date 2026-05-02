@@ -8,6 +8,7 @@ export interface User {
   email: string
   name: string
   role: 'customer' | 'admin' | 'moderator' | 'super_admin' | 'owner'
+  customerType?: 'retailer' | 'dealer'
 }
 
 export interface AuthState {

@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
+      customerType: user.customerType || 'retailer',
     });
 
     const response = NextResponse.json({
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
+        customerType: user.customerType || 'retailer',
       },
     });
 
