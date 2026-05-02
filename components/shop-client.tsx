@@ -41,8 +41,8 @@ export default function ShopClient({
   initialProducts, 
   categories 
 }: { 
-  initialProducts: any[], 
-  categories: any[] 
+  initialProducts: Product[], 
+  categories: Category[] 
 }) {
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -108,7 +108,7 @@ export default function ShopClient({
   };
 
   const filteredProducts = useMemo(() => {
-    return initialProducts.map((product) => {
+    let result = initialProducts.map((product) => {
       const byBrand = selectedBrand === "all" || product.brand === selectedBrand;
       const query = search.trim().toLowerCase();
       const bySearch =
@@ -142,9 +142,17 @@ export default function ShopClient({
     } else if (sortBy === "name-desc") {
       result.sort((a, b) => b.name.localeCompare(a.name));
     } else if (sortBy === "price-low") {
-      result.sort((a, b) => (a.variations?.[0]?.price || 0) - (b.variations?.[0]?.price || 0));
+      result.sort((a, b) => {
+        const priceA = a.variations[0]?.discountPrice || a.variations[0]?.price || 0;
+        const priceB = b.variations[0]?.discountPrice || b.variations[0]?.price || 0;
+        return priceA - priceB;
+      });
     } else if (sortBy === "price-high") {
-      result.sort((a, b) => (b.variations?.[0]?.price || 0) - (a.variations?.[0]?.price || 0));
+      result.sort((a, b) => {
+        const priceA = a.variations[0]?.discountPrice || a.variations[0]?.price || 0;
+        const priceB = b.variations[0]?.discountPrice || b.variations[0]?.price || 0;
+        return priceB - priceA;
+      });
     }
 
     return result;
@@ -284,7 +292,7 @@ export default function ShopClient({
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8 lg:gap-x-10 lg:gap-y-16">
-          {filteredProducts.map((product, index) => (
+          {filteredProducts.map((product: Product, index: number) => (
             <ProductCard
               key={product.id}
               {...product}
