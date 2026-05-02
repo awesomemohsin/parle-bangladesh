@@ -108,7 +108,7 @@ export default function ShopClient({
   };
 
   const filteredProducts = useMemo(() => {
-    let result = initialProducts.map((product) => {
+    let result = initialProducts.flatMap((product: Product) => {
       const byBrand = selectedBrand === "all" || product.brand === selectedBrand;
       const query = search.trim().toLowerCase();
       const bySearch =
@@ -121,21 +121,20 @@ export default function ShopClient({
       if (selectedCategory === "bulk") {
         const bulkVariations = product.variations?.filter(v => v.isBulk);
         if (bulkVariations && bulkVariations.length > 0 && byBrand && bySearch) {
-          // Transform the product to ONLY show bulk variations and force the first one as default
-          return {
+          // EXCLUSIVE: Create a separate product card for EACH bulk variation
+          return bulkVariations.map((v) => ({
             ...product,
-            variations: bulkVariations.map((v, i) => ({
-              ...v,
-              isDefault: i === 0
-            }))
-          };
+            // Generate a unique ID to prevent React key conflicts
+            id: `${product.id}-${v.weight || v.flavor || 'bulk'}-${v.price}`,
+            variations: [{ ...v, isDefault: true }] // Force this specific variation as the default
+          }));
         }
-        return null;
+        return [];
       }
 
       const byCategory = selectedCategory === "all" || product.category === selectedCategory;
-      return byCategory && byBrand && bySearch ? product : null;
-    }).filter(Boolean) as Product[];
+      return byCategory && byBrand && bySearch ? [product] : [];
+    });
 
     if (sortBy === "name-asc") {
       result.sort((a, b) => a.name.localeCompare(b.name));
