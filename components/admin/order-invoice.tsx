@@ -28,7 +28,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
   };
 
   return (
-    <div id={`invoice-${order.id}`} className="hidden print:block bg-white w-full max-w-[190mm] mx-auto font-sans text-gray-800 p-0 box-border overflow-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    <div id={`invoice-${order.id}`} className="bg-white w-full max-w-[190mm] mx-auto font-sans text-gray-800 p-0 box-border overflow-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as any}>
       <style jsx>{`
         div::-webkit-scrollbar { display: none; }
       `}</style>
@@ -185,10 +185,11 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
           </div>
         </div>
 
-        {/* Footer - Pushed to Bottom */}
+        {/* Signatures & Footer */}
         <div className="mt-auto">
+
           {order.instruction && (
-            <div className="mt-3 text-[8px]">
+            <div className="mt-2 text-[8px]">
               <h4 className="font-black uppercase tracking-widest text-gray-900 mb-0.5">Order Instructions:</h4>
               <p className="max-w-md text-gray-500 italic border-l border-gray-100 pl-3 leading-tight">
                 {order.instruction}
@@ -200,7 +201,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
             Thank you for your Purchase!
           </p>
 
-          <div className="mt-4 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
+          <div className="mt-2 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
             <div>
               <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">Questions?</h4>
               <p className="font-bold text-gray-900 leading-tight">Email: cfb@circlenetworkbd.net</p>
@@ -210,7 +211,6 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
             <div>
               <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1.5">Distributor Details:</h4>
               <p className="font-bold text-gray-900 uppercase leading-tight">Circle Enterprise Hub</p>
-              <p className="text-gray-900 mt-0.5 leading-tight uppercase text-[7px] font-bold">Official Distribution Network for Parle Products</p>
             </div>
 
             <div>
