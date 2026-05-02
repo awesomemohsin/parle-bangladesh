@@ -6,11 +6,14 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/hooks/useCart";
 import { Search, ShoppingCart, Filter, ArrowUpDown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Variation {
   weight?: string;
   flavor?: string;
   price: number;
+  dealerPrice?: number;
+  discountPrice?: number;
   stock: number;
   image?: string;
   isDefault?: boolean;
@@ -42,6 +45,8 @@ export default function ShopClient({
   categories: any[] 
 }) {
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const isDealer = user?.customerType === "dealer";
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
@@ -103,15 +108,8 @@ export default function ShopClient({
   };
 
   const filteredProducts = useMemo(() => {
-    let result = initialProducts.filter((product) => {
-      const isBulkMatch = selectedCategory === "bulk" && product.isBulk;
-      const byCategory =
-        selectedCategory === "all" || 
-        product.category === selectedCategory ||
-        isBulkMatch;
-      
+    return initialProducts.map((product) => {
       const byBrand = selectedBrand === "all" || product.brand === selectedBrand;
-      
       const query = search.trim().toLowerCase();
       const bySearch =
         !query ||
@@ -120,8 +118,24 @@ export default function ShopClient({
           .toLowerCase()
           .includes(query);
 
-      return byCategory && byBrand && bySearch;
-    });
+      if (selectedCategory === "bulk") {
+        const bulkVariations = product.variations?.filter(v => v.isBulk);
+        if (bulkVariations && bulkVariations.length > 0 && byBrand && bySearch) {
+          // Transform the product to ONLY show bulk variations and force the first one as default
+          return {
+            ...product,
+            variations: bulkVariations.map((v, i) => ({
+              ...v,
+              isDefault: i === 0
+            }))
+          };
+        }
+        return null;
+      }
+
+      const byCategory = selectedCategory === "all" || product.category === selectedCategory;
+      return byCategory && byBrand && bySearch ? product : null;
+    }).filter(Boolean) as Product[];
 
     if (sortBy === "name-asc") {
       result.sort((a, b) => a.name.localeCompare(b.name));
@@ -280,7 +294,7 @@ export default function ShopClient({
                   productId: product.id,
                   productSlug: product.slug,
                   productName: product.name,
-                  price: variation.price,
+                  price: (isDealer && variation.dealerPrice) ? variation.dealerPrice : (variation.discountPrice || variation.price),
                   image: variation.image,
                   quantity: 1,
                   weight: variation.weight,

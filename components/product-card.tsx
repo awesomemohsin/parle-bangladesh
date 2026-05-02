@@ -7,11 +7,14 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeProductImagePath } from "@/lib/utils";
 import { useCart, getItemKey } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
+import { ShieldCheck } from "lucide-react";
 
 interface Variation {
   weight?: string;
   flavor?: string;
   price: number;
+  dealerPrice?: number;
   discountPrice?: number;
   stock: number;
   holdStock?: number;
@@ -46,7 +49,9 @@ export default function ProductCard({
   priority = false,
 }: ProductCardProps) {
   const { items, addItem } = useCart();
+  const { user } = useAuth();
   const [isFlying, setIsFlying] = useState(false);
+  const isDealer = user?.customerType === "dealer";
 
   // Intelligent Default Selection: Skip out-of-stock items for the main display
   const primaryVar = variations.find(v => v.isDefault);
@@ -55,18 +60,25 @@ export default function ProductCard({
     : (variations.find(v => v.stock > 0) || variations[0]);
   const defaultVariation = {
     ...v,
-    price: v?.price ?? price,
-    discountPrice: v?.discountPrice ?? 0,
-    stock: v?.stock ?? stock,
-    weight: v?.weight ?? "",
-    flavor: v?.flavor ?? "",
-    image: v?.image ?? ""
+    price: v?.price || price,
+    discountPrice: v?.discountPrice || 0,
+    stock: v?.stock !== undefined ? v.stock : stock,
+    weight: v?.weight || "",
+    flavor: v?.flavor || "",
+    image: v?.image || ""
   };
 
   const productImg = sanitizeProductImagePath(defaultVariation.image || "");
 
-  const hasDiscount = !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
-  const currentPrice = (hasDiscount ? defaultVariation.discountPrice : defaultVariation.price) || 0;
+  const hasDealerPrice = isDealer && !!defaultVariation.dealerPrice && defaultVariation.dealerPrice > 0;
+  const hasDiscount = !hasDealerPrice && !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
+  
+  let currentPrice = defaultVariation.price;
+  if (hasDealerPrice) {
+    currentPrice = defaultVariation.dealerPrice!;
+  } else if (hasDiscount) {
+    currentPrice = defaultVariation.discountPrice!;
+  }
   
   const discountPercentage = hasDiscount 
     ? Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100) 
@@ -152,14 +164,20 @@ export default function ProductCard({
           </span>
         </div>
 
-        <div className="flex flex-col gap-0.5 mb-4">
+          <div className="flex flex-col gap-0.5 mb-4">
           <div className="flex items-center gap-1.5">
-            <span className="text-lg font-bold text-red-600">৳</span>
-            <span className="text-2xl font-black text-red-600 tracking-tighter">
+            <span className={`text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>৳</span>
+            <span className={`text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>
               {Math.round(currentPrice)}
             </span>
+            {hasDealerPrice && (
+              <div className="ml-2 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                <ShieldCheck className="w-2.5 h-2.5 text-amber-600" />
+                <span className="text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer Rate</span>
+              </div>
+            )}
           </div>
-          {hasDiscount && (
+          {(hasDiscount || hasDealerPrice) && (
             <div className="flex items-center gap-1 opacity-40">
                <span className="text-[10px] font-bold text-gray-500">৳</span>
                <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(defaultVariation.price)}</span>

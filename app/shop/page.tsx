@@ -8,7 +8,8 @@ export const metadata: Metadata = {
   description: "Browse our premium range of Parle biscuits and snacks. Fast delivery across Bangladesh.",
 };
 
-export const revalidate = 60; // Refresh data every minute
+export const dynamic = "force-dynamic";
+export const revalidate = 0; // Ensure fresh data on every request
 
 export default async function ShopPage({
   searchParams
