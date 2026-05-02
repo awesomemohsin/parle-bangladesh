@@ -26,15 +26,19 @@ export async function GET(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN])) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
     const order = await Order.findById(id);
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Security Check: Admin roles OR Ownership check
+    const isPrivileged = hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN]);
+    const isOwner = order.userId === user.id || (order.customerEmail && order.customerEmail.toLowerCase() === user.email.toLowerCase());
+
+    if (!isPrivileged && !isOwner) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { ApprovalRequest } = require("@/lib/models");
