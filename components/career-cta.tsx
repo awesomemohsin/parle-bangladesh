@@ -10,8 +10,8 @@ import { motion } from 'framer-motion';
 export default function CareerCTA() {
   const pathname = usePathname();
   
-  // Hide on admin routes and careers page itself
-  if (pathname?.startsWith('/admin') || pathname === '/careers') {
+  // Hide on admin routes, careers page, and invoice pages
+  if (pathname?.startsWith('/admin') || pathname === '/careers' || pathname?.includes('/invoice')) {
     return null;
   }
 

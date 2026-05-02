@@ -22,6 +22,7 @@ function ContactContent() {
   const [type, setType] = useState<'regular' | 'corporate' | 'dealer'>('regular')
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     number: '',
@@ -32,6 +33,7 @@ function ContactContent() {
   })
 
   useEffect(() => {
+    setMounted(true)
     const queryType = searchParams.get('type')
     if (queryType === 'corporate') {
       setType('corporate')
@@ -313,13 +315,14 @@ function ContactContent() {
       {/* Google Map Section - Contained */}
       <section className="pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-[500px] w-full bg-slate-100 relative rounded-[3rem] overflow-hidden border-4 border-white shadow-[0_30px_100px_rgba(0,0,0,0.05)] group">
+          <div className="h-[500px] w-full bg-slate-100 relative rounded-[3rem] overflow-hidden border-4 border-white shadow-[0_30px_100px_rgba(0,0,0,0.05)]">
              <iframe 
-               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d911.753636441421!2d90.26315919999999!3d23.924539!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755e85f478c8343%3A0xc72e18f02d1430f7!2z4KaH4KaJ4Kao4Ka_4Kaf4Ka_IOCmn-CnjeCmsOCnh-CmoSDgprjgp4fgpqjgp43gpp_gpr7gprA!5e0!3m2!1sen!2sbd!4v1775541863863!5m2!1sen!2sbd" 
+               title="Unity Trade Center Location"
+               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3648.5304997092413!2d90.2612711758941!3d23.924040982544605!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755e85f478c8343%3A0xc72e18f02d1430f7!2z4KaH4KaJ4Kao4Ka_4Kaf4Ka_IOCmn-CnjeCmsOCnh-CmoSDgprjgp4fgpqjgp43gpp_gpr7gprA!5e0!3m2!1sen!2sbd!4v1714476600000!5m2!1sen!2sbd" 
                width="100%" 
                height="100%" 
                style={{ border: 0 }} 
-               allowFullScreen={true} 
+               allowFullScreen
                loading="lazy" 
                referrerPolicy="no-referrer-when-downgrade"
                className="w-full h-full transition-all duration-1000"
