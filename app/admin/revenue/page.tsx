@@ -33,7 +33,7 @@ export default function RevenuePage() {
   const [filters, setFilters] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
-    productSlug: "all"
+    productId: "all"
   });
 
   const fetchData = async () => {
@@ -42,7 +42,7 @@ export default function RevenuePage() {
       const query = new URLSearchParams();
       if (filters.startDate) query.append("startDate", filters.startDate);
       if (filters.endDate) query.append("endDate", filters.endDate);
-      if (filters.productSlug !== "all") query.append("productSlug", filters.productSlug);
+      if (filters.productId !== "all") query.append("productId", filters.productId);
 
       const res = await fetch(`/api/admin/analytics/revenue?${query.toString()}`, {
         headers: {
@@ -95,7 +95,7 @@ export default function RevenuePage() {
     setFilters({
       startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
       endDate: new Date().toISOString().split('T')[0],
-      productSlug: "all"
+      productId: "all"
     });
   };
 
@@ -190,12 +190,12 @@ export default function RevenuePage() {
             <div className="flex items-center gap-2">
               <Filter className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
               <select
-                value={filters.productSlug}
-                onChange={(e) => setFilters({ ...filters, productSlug: e.target.value })}
+                value={filters.productId}
+                onChange={(e) => setFilters({ ...filters, productId: e.target.value })}
                 className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer pr-2 md:pr-4"
               >
                 <option value="all">ALL PRODUCTS</option>
-                {products.map(p => <option key={p.slug} value={p.slug}>{p.name.toUpperCase()}</option>)}
+                {products.map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name.toUpperCase()}</option>)}
               </select>
             </div>
           </div>

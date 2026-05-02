@@ -59,8 +59,28 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
     
+    // Security: Only admins and dealers can see dealerPrice
+    const user = getAuthUserFromRequest(request);
+    const isPrivileged = user && (
+      user.role === ROLES.ADMIN || 
+      user.role === ROLES.SUPER_ADMIN || 
+      user.role === ROLES.OWNER || 
+      user.role === ROLES.MODERATOR || 
+      user.customerType === "dealer"
+    );
+
     const response = NextResponse.json({ 
-      products: products.map((p: any) => ({ ...p, id: p._id.toString(), _id: undefined })),
+      products: products.map((p: any) => {
+        const product = { ...p, id: p._id.toString(), _id: undefined };
+        if (!isPrivileged && product.variations) {
+          product.variations = product.variations.map((v: any) => {
+            const variation = { ...v };
+            delete variation.dealerPrice;
+            return variation;
+          });
+        }
+        return product;
+      }),
       pagination: {
         total,
         page,

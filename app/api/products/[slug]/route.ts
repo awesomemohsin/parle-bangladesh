@@ -59,6 +59,24 @@ export async function GET(_: NextRequest, { params }: Params) {
       images = productDoc.images;
     }
 
+    // Security: Only admins and dealers can see dealerPrice
+    const user = getAuthUserFromRequest(_);
+    const isPrivileged = user && (
+      user.role === ROLES.ADMIN || 
+      user.role === ROLES.SUPER_ADMIN || 
+      user.role === ROLES.OWNER || 
+      user.role === ROLES.MODERATOR || 
+      user.customerType === "dealer"
+    );
+
+    if (!isPrivileged && product.variations) {
+      product.variations = product.variations.map((v: any) => {
+        const variation = { ...v };
+        delete variation.dealerPrice;
+        return variation;
+      });
+    }
+
     const pendingApprovals = await ApprovalRequest.find({ 
       targetId: productDoc._id.toString(), 
       status: "pending" 
@@ -140,9 +158,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
         const oldVar = existing.variations[i];
         
         if (oldVar) {
-          const varFields = ['price', 'stock', 'weight', 'flavor', 'discountPrice', 'isBulk'];
+          const varFields = ['price', 'dealerPrice', 'stock', 'weight', 'flavor', 'discountPrice', 'isBulk'];
           for (const field of varFields) {
-              const isAdminAction = field === 'price' || field === 'stock' || field === 'discountPrice';
+              const isAdminAction = field === 'price' || field === 'dealerPrice' || field === 'stock' || field === 'discountPrice';
               let newVal = isAdminAction ? Number(newVar[field]) : newVar[field];
               let oldVal = (oldVar as any)[field];
 

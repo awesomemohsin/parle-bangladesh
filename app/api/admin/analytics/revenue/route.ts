@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
-    const productSlug = searchParams.get("productSlug");
+    const productId = searchParams.get("productId");
 
     // Build the query - ONLY DELIVERED for standard revenue tracking
     let query: any = { status: 'delivered' };
@@ -26,19 +26,19 @@ export async function GET(request: NextRequest) {
         $lte: new Date(endDate),
       };
     }
-    if (productSlug) query["items.productSlug"] = productSlug;
+    if (productId) query["items.productId"] = productId;
 
     // 1. CALCULATE LIFETIME REVENUE (DELIVERED ONLY)
     const lifetimeQuery: any = { status: 'delivered' };
-    if (productSlug) lifetimeQuery["items.productSlug"] = productSlug;
+    if (productId) lifetimeQuery["items.productId"] = productId;
 
     const lifetimeStats = await Order.aggregate([
       { $match: lifetimeQuery },
-      ...(productSlug ? [{ $unwind: "$items" }, { $match: { "items.productSlug": productSlug } }] : []),
+      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productSlug ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
+          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
           totalOrders: { $addToSet: "$_id" }
         }
       },
@@ -49,15 +49,15 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dailyQuery: any = { status: 'delivered', updatedAt: { $gte: today } };
-    if (productSlug) dailyQuery["items.productSlug"] = productSlug;
+    if (productId) dailyQuery["items.productId"] = productId;
 
     const dailyStats = await Order.aggregate([
       { $match: dailyQuery },
-      ...(productSlug ? [{ $unwind: "$items" }, { $match: { "items.productSlug": productSlug } }] : []),
+      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productSlug ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
+          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
           totalOrders: { $addToSet: "$_id" }
         }
       },
@@ -66,15 +66,15 @@ export async function GET(request: NextRequest) {
 
     // 3. CALCULATE PENDING SALES (Pending, Processing, Shipped)
     const pendingQuery: any = { status: { $in: ['pending', 'processing', 'shipped'] } };
-    if (productSlug) pendingQuery["items.productSlug"] = productSlug;
+    if (productId) pendingQuery["items.productId"] = productId;
 
     const pendingStats = await Order.aggregate([
       { $match: pendingQuery },
-      ...(productSlug ? [{ $unwind: "$items" }, { $match: { "items.productSlug": productSlug } }] : []),
+      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productSlug ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
+          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
           totalOrders: { $addToSet: "$_id" }
         }
       },
@@ -83,15 +83,15 @@ export async function GET(request: NextRequest) {
 
     // 4. CALCULATE LOSS (Lost, Damaged)
     const lossQuery: any = { status: { $in: ['lost', 'damaged'] } };
-    if (productSlug) lossQuery["items.productSlug"] = productSlug;
+    if (productId) lossQuery["items.productId"] = productId;
 
     const lossStats = await Order.aggregate([
       { $match: lossQuery },
-      ...(productSlug ? [{ $unwind: "$items" }, { $match: { "items.productSlug": productSlug } }] : []),
+      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productSlug ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
+          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
           totalOrders: { $addToSet: "$_id" }
         }
       },
@@ -103,10 +103,10 @@ export async function GET(request: NextRequest) {
       { $match: query },
       { $unwind: "$items" },
       // Apply product filter if provided
-      ...(productSlug ? [{ $match: { "items.productSlug": productSlug } }] : []),
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
       {
         $group: {
-          _id: "$items.productSlug",
+          _id: "$items.productId",
           productName: { $first: "$items.name" },
           totalRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
           totalQuantity: { $sum: "$items.quantity" },
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       const saleDate = deliveryLog ? deliveryLog.changedAt : order.updatedAt;
 
       return order.items
-        .filter((item: any) => !productSlug || item.productSlug === productSlug)
+        .filter((item: any) => !productId || item.productId === productId)
         .map((item: any) => ({
           orderId: order._id.toString(),
           customerName: order.customerName,

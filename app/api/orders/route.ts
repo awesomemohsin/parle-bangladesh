@@ -152,42 +152,49 @@ export async function POST(request: NextRequest) {
 
     const rawItems = Array.isArray(body.items) ? body.items : [];
     
-    // Normalize resolving missing price/name from Database
+    // Securely calculate prices on the server based on user role
+    const user = getAuthUserFromRequest(request);
+    const isDealer = user?.customerType === "dealer";
+
     const items = [];
     for (const item of rawItems) {
       const quantity = Number(item.quantity || 0);
       if (quantity <= 0) continue;
 
-      let validItem: any = null;
       if (item.productSlug) {
         const product = await Product.findOne({ slug: item.productSlug });
         if (product) {
-          validItem = {
-            productId: product._id.toString(),
-            productSlug: product.slug,
-            name: product.name,
-            quantity,
-            price: item.price !== undefined ? Number(item.price) : product.price,
-            weight: item.weight,
-            flavor: item.flavor,
-            image: item.image || product.image,
-          };
+          // Find the specific variation to get the correct price
+          const variation = product.variations.find((v: any) => {
+            const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+            const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+            return weightMatch && flavorMatch;
+          });
+
+          if (variation) {
+            // DECISION ENGINE:
+            // 1. If Dealer -> Use dealerPrice (fallback to normal price if missing)
+            // 2. If Retailer -> Use discountPrice (if exists) or normal price
+            let finalPrice = variation.price;
+            if (isDealer && variation.dealerPrice) {
+              finalPrice = variation.dealerPrice;
+            } else if (variation.discountPrice && variation.discountPrice > 0) {
+              finalPrice = variation.discountPrice;
+            }
+
+            items.push({
+              productId: product._id.toString(),
+              productSlug: product.slug,
+              name: product.name,
+              quantity,
+              price: finalPrice, // Server-calculated price (ignore client input)
+              weight: item.weight,
+              flavor: item.flavor,
+              image: item.image || variation.image || product.image,
+            });
+          }
         }
       }
-      if (!validItem && item.name && item.price !== undefined) {
-          validItem = {
-            productId: item.productId,
-            productSlug: item.productSlug,
-            name: item.name,
-            quantity,
-            price: Number(item.price),
-            weight: item.weight,
-            flavor: item.flavor,
-            image: item.image,
-          };
-      }
-      
-      if (validItem) items.push(validItem);
     }
 
     if (items.length === 0) {
@@ -229,8 +236,6 @@ export async function POST(request: NextRequest) {
     const discountAmount = Number(body.discountAmount || 0);
     const total = subtotal + shippingCost - discountAmount;
     const taxRate = 0;
-
-    const user = getAuthUserFromRequest(request);
 
     // If guest (no user.id), upsert into Customer collection
     if (!user) {

@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
         if (hasAnindo && hasSaiful) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          const isFinancialOrStock = approvalRequest.field === 'price' || approvalRequest.field === 'stock' || approvalRequest.field === 'discountPrice';
+          const isFinancialOrStock = approvalRequest.field === 'price' || approvalRequest.field === 'dealerPrice' || approvalRequest.field === 'stock' || approvalRequest.field === 'discountPrice';
           const isSensitiveType = approvalRequest.type === 'product' || approvalRequest.type === 'category';
           
           if (isSensitiveType && !isFinancialOrStock) {
@@ -177,7 +177,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
 
     const field = approvalRequest.field;
     const newValue = approvalRequest.newValue;
-    const isNumeric = field === 'price' || field === 'stock' || field === 'discountPrice';
+    const isNumeric = field === 'price' || field === 'dealerPrice' || field === 'stock' || field === 'discountPrice';
 
     if (approvalRequest.variationIndex !== undefined && approvalRequest.variationIndex !== null) {
       const varIndex = Number(approvalRequest.variationIndex);

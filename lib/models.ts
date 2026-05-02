@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password?: string;
   name: string;
   role: "customer" | "admin" | "moderator" | "super_admin" | "owner";
+  customerType: "retailer" | "dealer";
   status: "active" | "disabled";
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
@@ -27,6 +28,7 @@ const UserSchema = new Schema<IUser>(
     password: { type: String }, // optional for oauth, required for credentials
     name: { type: String, required: true },
     role: { type: String, enum: ["customer", "admin", "moderator", "super_admin", "owner"], default: "customer" },
+    customerType: { type: String, enum: ["retailer", "dealer"], default: "retailer" },
     status: { type: String, enum: ["active", "disabled"], default: "active" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
@@ -166,6 +168,7 @@ export interface IVariation {
   weight?: string;
   flavor?: string;
   price: number;
+  dealerPrice?: number;
   discountPrice?: number;
   stock: number;
   holdStock: number;
@@ -201,6 +204,7 @@ const VariationSchema = new Schema<IVariation>({
   weight: { type: String },
   flavor: { type: String },
   price: { type: Number, required: true },
+  dealerPrice: { type: Number },
   discountPrice: { type: Number },
   stock: { type: Number, required: true, default: 0 },
   holdStock: { type: Number, default: 0 },
