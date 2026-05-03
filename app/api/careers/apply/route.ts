@@ -24,30 +24,15 @@ export async function POST(req: Request) {
 
     const emailLower = email.toLowerCase().trim();
 
-    // 1. Rate Limit: 2 applications per day per email
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const dailyCount = await CareerApplication.countDocuments({
+    // 1. Duplicate Check: Same email + Same position (No time limit, forever check)
+    const existingApplication = await CareerApplication.findOne({
       email: emailLower,
-      createdAt: { $gte: oneDayAgo }
+      position
     });
 
-    if (dailyCount >= 2) {
+    if (existingApplication) {
       return NextResponse.json({ 
-        message: "Security Protocol: You have reached the maximum of 2 applications per 24 hours. Please try again tomorrow." 
-      }, { status: 429 });
-    }
-
-    // 2. Duplicate Check: Same position within 48 hours
-    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const existingSamePosition = await CareerApplication.findOne({
-      email: emailLower,
-      position,
-      createdAt: { $gte: fortyEightHoursAgo }
-    });
-
-    if (existingSamePosition) {
-      return NextResponse.json({ 
-        message: `You have already applied for the "${position}" position. To re-apply or update your CV, please wait 48 hours.` 
+        message: "You have already applied for this position." 
       }, { status: 400 });
     }
 
@@ -99,6 +84,14 @@ export async function POST(req: Request) {
       } catch (error) {
         console.error('Error sending career emails:', error);
       }
+    }
+
+    // Send Telegram notification to Management
+    try {
+      const { notifyNewApplication } = await import("@/lib/telegram");
+      await notifyNewApplication(application);
+    } catch (error) {
+      console.error('Error sending career Telegram notification:', error);
     }
 
     return NextResponse.json({ message: "Application submitted successfully", id: application._id }, { status: 201 });
