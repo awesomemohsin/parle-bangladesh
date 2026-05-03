@@ -24,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+import { useAuth } from "@/hooks/useAuth";
+
 // Mock Circulars for UI demonstration
 const MOCK_CIRCULARS = [
   {
@@ -68,6 +70,7 @@ const MOCK_CIRCULARS = [
 ];
 
 export default function CareersPage() {
+  const { user, isAuthenticated } = useAuth();
   const [circulars, setCirculars] = useState<typeof MOCK_CIRCULARS>([]);
   const [selectedJob, setSelectedJob] = useState<typeof MOCK_CIRCULARS[0] | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -82,10 +85,40 @@ export default function CareersPage() {
   const [file, setFile] = useState<File | null>(null);
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
 
+  // 1. Sync local applications
   useEffect(() => {
     const saved = localStorage.getItem("parle_applied_jobs");
-    if (saved) setAppliedJobs(JSON.parse(saved));
+    if (saved) setAppliedJobs(prev => Array.from(new Set([...prev, ...JSON.parse(saved)])));
   }, []);
+
+  // 2. Fetch server applications if authenticated
+  useEffect(() => {
+    const fetchApplied = async () => {
+      try {
+        const res = await fetch("/api/careers/my-applications");
+        if (res.ok) {
+          const { appliedPositions } = await res.json();
+          if (appliedPositions && appliedPositions.length > 0) {
+            setAppliedJobs(prev => Array.from(new Set([...prev, ...appliedPositions])));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch applied jobs:", err);
+      }
+    };
+    if (isAuthenticated) fetchApplied();
+  }, [isAuthenticated]);
+
+  // Pre-fill form if logged in
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        fullname: user.name || "",
+        email: user.email || ""
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchCirculars = async () => {
