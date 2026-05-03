@@ -15,7 +15,7 @@ export async function PUT(req: any, { params }: { params: Promise<{ id: string }
     const body = await req.json();
     const { _id, createdAt, updatedAt, ...updateData } = body;
 
-    const circular = await JobCircular.findByIdAndUpdate(id, updateData, { new: true });
+    const circular = await JobCircular.findByIdAndUpdate(id, updateData, { returnDocument: 'after' });
 
     if (!circular) {
       return NextResponse.json({ message: "Circular not found" }, { status: 404 });

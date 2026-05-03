@@ -8,6 +8,7 @@ import './globals.css'
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: {
     template: '%s | Parle Bangladesh',
     default: 'Parle Bangladesh | Quality Biscuits & Snacks',

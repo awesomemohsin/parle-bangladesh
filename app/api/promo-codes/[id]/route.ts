@@ -29,7 +29,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     await dbConnect();
     const resolvedParams = await params;
-    const updatedPromo = await PromoCode.findByIdAndUpdate(resolvedParams.id, updates, { new: true });
+    const updatedPromo = await PromoCode.findByIdAndUpdate(resolvedParams.id, updates, { returnDocument: 'after' });
     
     if (!updatedPromo) {
       return NextResponse.json({ error: 'Promo code not found' }, { status: 404 });
