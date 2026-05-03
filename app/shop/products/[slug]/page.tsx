@@ -1,5 +1,6 @@
 import { getProductBySlug, getProducts, getCategoryBySlug } from "@/lib/data";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import ProductDetailsClient from "@/components/product-details-client";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -90,7 +91,16 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        <ProductDetailsClient product={serializedProduct} images={images} />
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Loading Product Details...</p>
+            </div>
+          </div>
+        }>
+          <ProductDetailsClient product={serializedProduct} images={images} />
+        </Suspense>
       </main>
     </div>
   );
