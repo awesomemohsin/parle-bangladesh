@@ -194,7 +194,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       if (newStatus === ORDER_STATUS.DELIVERED) {
         // Delivered: Release hold, subtract from physical stock, add to delivered count
         for (const item of order.items) {
-          const product = await Product.findOne({ slug: item.productSlug });
+          const product = item.productId 
+            ? await Product.findById(item.productId) 
+            : await Product.findOne({ slug: item.productSlug });
+            
           if (product && product.variations) {
             const varIndex = product.variations.findIndex((v: any) => {
               const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
@@ -215,7 +218,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       } else if (newStatus === ORDER_STATUS.CANCELLED) {
         // Cancelled: Return stock from hold to available pool
         for (const item of order.items) {
-          const product = await Product.findOne({ slug: item.productSlug });
+          const product = item.productId 
+            ? await Product.findById(item.productId) 
+            : await Product.findOne({ slug: item.productSlug });
+
           if (product && product.variations) {
             const varIndex = product.variations.findIndex((v: any) => {
               const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
@@ -236,7 +242,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       } else if (newStatus === ORDER_STATUS.DAMAGED || newStatus === ORDER_STATUS.LOST) {
           // Damaged/Lost: Just release the hold. Stock was already deducted at checkout.
           for (const item of order.items) {
-            const product = await Product.findOne({ slug: item.productSlug });
+            const product = item.productId 
+                ? await Product.findById(item.productId) 
+                : await Product.findOne({ slug: item.productSlug });
+
             if (product && product.variations) {
               const varIndex = product.variations.findIndex((v: any) => {
                 const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);

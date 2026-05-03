@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
+    const productIdQuery = searchParams.get("productId");
     const productSlugQuery = searchParams.get("productSlug");
     const weightQuery = searchParams.get("weight");
     const flavorQuery = searchParams.get("flavor");
@@ -27,8 +28,8 @@ export async function GET(request: NextRequest) {
     // 1. Initial Match (Security + Context)
     let matchStage: any = {};
 
-    if (productSlugQuery) {
-      const itemMatch: any = { productSlug: productSlugQuery };
+    if (productIdQuery || productSlugQuery) {
+      const itemMatch: any = productIdQuery ? { productId: productIdQuery } : { productSlug: productSlugQuery };
       if (weightQuery) itemMatch.weight = weightQuery;
       if (flavorQuery) itemMatch.flavor = flavorQuery;
       matchStage.items = { $elemMatch: itemMatch };
@@ -73,13 +74,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get total count (using a separate query for simplicity and speed on large datasets)
+    // Get total count
     const total = await Order.countDocuments(matchStage);
 
     // Pipeline
     const pipeline: any[] = [
       { $match: matchStage },
-      // Create string version of _id to allow partial regex search
       {
         $addFields: {
           idString: { $toString: "$_id" }
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     const ordersRaw = await Order.aggregate(pipeline);
 
-    // Fetch all pending order approvals to mark them in the list
+    // Fetch all pending order approvals
     const pendingRequests = await ApprovalRequest.find({ 
       type: "order", 
       status: "pending" 
@@ -129,7 +129,6 @@ export async function GET(request: NextRequest) {
       orders: ordersRaw.map(o => { 
         o.id = o._id.toString(); 
         o.pendingApproval = pendingIds.has(o.id);
-        // Ensure customerType is at least "retailer" if missing
         if (!o.customerType) o.customerType = "retailer";
         delete o.idString; 
         return o; 
@@ -151,7 +150,6 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-
     const rawItems = Array.isArray(body.items) ? body.items : [];
     
     // Securely calculate prices on the server based on user role
@@ -163,38 +161,35 @@ export async function POST(request: NextRequest) {
       const quantity = Number(item.quantity || 0);
       if (quantity <= 0) continue;
 
-      if (item.productSlug) {
-        const product = await Product.findOne({ slug: item.productSlug });
-        if (product) {
-          // Find the specific variation to get the correct price
-          const variation = product.variations.find((v: any) => {
-            const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
-            const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
-            return weightMatch && flavorMatch;
-          });
+      const product = item.productId 
+        ? await Product.findById(item.productId)
+        : (item.productSlug ? await Product.findOne({ slug: item.productSlug }) : null);
 
-          if (variation) {
-            // DECISION ENGINE:
-            // 1. If Dealer -> Use dealerPrice (fallback to normal price if missing)
-            // 2. If Retailer -> Use discountPrice (if exists) or normal price
-            let finalPrice = variation.price;
-            if (isDealer && variation.dealerPrice) {
-              finalPrice = variation.dealerPrice;
-            } else if (variation.discountPrice && variation.discountPrice > 0) {
-              finalPrice = variation.discountPrice;
-            }
+      if (product) {
+        const variation = product.variations.find((v: any) => {
+          const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+          const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+          return weightMatch && flavorMatch;
+        });
 
-            items.push({
-              productId: product._id.toString(),
-              productSlug: product.slug,
-              name: product.name,
-              quantity,
-              price: finalPrice, // Server-calculated price (ignore client input)
-              weight: item.weight,
-              flavor: item.flavor,
-              image: item.image || variation.image || product.image,
-            });
+        if (variation) {
+          let finalPrice = variation.price;
+          if (isDealer && variation.dealerPrice) {
+            finalPrice = variation.dealerPrice;
+          } else if (variation.discountPrice && variation.discountPrice > 0) {
+            finalPrice = variation.discountPrice;
           }
+
+          items.push({
+            productId: product._id.toString(),
+            productSlug: product.slug,
+            name: product.name,
+            quantity,
+            price: finalPrice,
+            weight: item.weight,
+            flavor: item.flavor,
+            image: item.image || variation.image || product.image,
+          });
         }
       }
     }
@@ -237,9 +232,8 @@ export async function POST(request: NextRequest) {
     const tax = 0;
     const discountAmount = Number(body.discountAmount || 0);
     const total = subtotal + shippingCost - discountAmount;
-    const taxRate = 0;
 
-    // If guest (no user.id), upsert into Customer collection
+    // If guest, upsert into Customer collection
     if (!user) {
       try {
         await Customer.findOneAndUpdate(
@@ -250,7 +244,7 @@ export async function POST(request: NextRequest) {
             email: customerEmail,
             role: "customer" 
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: 'after' }
         );
       } catch (upsertErr) {
         console.error("Guest customer upsert error:", upsertErr);
@@ -284,7 +278,6 @@ export async function POST(request: NextRequest) {
 
     await order.save();
 
-    // Trigger Telegram Notification for Management
     try {
       await notifyNewOrder(order);
     } catch (e) {
@@ -300,17 +293,10 @@ export async function POST(request: NextRequest) {
       targetLink: `/admin/orders`
     });
 
-    // Increment ordersCount and holdStock for each product
+    // Increment ordersCount and holdStock for each product atomically
     for (const item of items) {
-      if (item.productSlug) {
-        // Increment global ordersCount
-        await Product.findOneAndUpdate(
-          { slug: item.productSlug },
-          { $inc: { ordersCount: item.quantity } }
-        );
-
-        // Increment variation-specific holdStock
-        const product = await Product.findOne({ slug: item.productSlug });
+      if (item.productId) {
+        const product = await Product.findById(item.productId);
         if (product && product.variations) {
           const varIndex = product.variations.findIndex((v: any) => {
             const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
@@ -321,9 +307,22 @@ export async function POST(request: NextRequest) {
           if (varIndex !== -1) {
             const holdField = `variations.${varIndex}.holdStock`;
             const stockField = `variations.${varIndex}.stock`;
+            
             await Product.updateOne(
               { _id: product._id },
-              { $inc: { [holdField]: item.quantity, [stockField]: -item.quantity } }
+              { 
+                $inc: { 
+                  ordersCount: item.quantity,
+                  [holdField]: item.quantity, 
+                  [stockField]: -item.quantity 
+                } 
+              }
+            );
+          } else {
+            // No variation match, just update total count
+            await Product.updateOne(
+              { _id: product._id },
+              { $inc: { ordersCount: item.quantity } }
             );
           }
         }

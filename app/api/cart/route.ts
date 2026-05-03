@@ -44,21 +44,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, items: [] });
     }
 
-    let cart = await Cart.findOne({ userId: user.id });
-    if (!cart) {
-      cart = new Cart({ 
-        userId: user.id, 
-        items,
-        promoCode,
-        discountAmount
-      });
-    } else {
-      cart.items = items;
-      cart.promoCode = promoCode;
-      cart.discountAmount = discountAmount;
-    }
+    const cart = await Cart.findOneAndUpdate(
+      { userId: user.id },
+      { 
+        $set: { 
+          items,
+          promoCode,
+          discountAmount,
+          updatedAt: new Date()
+        } 
+      },
+      { upsert: true, returnDocument: 'after', runValidators: true }
+    );
 
-    await cart.save();
     return NextResponse.json({ 
       success: true, 
       items: cart.items,
