@@ -129,6 +129,8 @@ export async function GET(request: NextRequest) {
       orders: ordersRaw.map(o => { 
         o.id = o._id.toString(); 
         o.pendingApproval = pendingIds.has(o.id);
+        // Ensure customerType is at least "retailer" if missing
+        if (!o.customerType) o.customerType = "retailer";
         delete o.idString; 
         return o; 
       }),
@@ -277,6 +279,7 @@ export async function POST(request: NextRequest) {
       promoCode: body.promoCode,
       total,
       status: ORDER_STATUS.PENDING,
+      customerType: user?.customerType || "retailer",
     });
 
     await order.save();

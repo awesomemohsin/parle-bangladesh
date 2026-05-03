@@ -56,6 +56,7 @@ export default function MyOrdersPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDealer, setIsDealer] = useState(false);
 
   // Modal state
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -76,6 +77,7 @@ export default function MyOrdersPage() {
 
         const user = JSON.parse(userStr);
         setIsAdmin(user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner');
+        setIsDealer(user?.customerType === 'dealer');
 
         const params = new URLSearchParams()
         if (search) params.append('q', search)
@@ -223,11 +225,23 @@ export default function MyOrdersPage() {
             {orders.map((order) => (
               <Card
                 key={order.id}
-                className="overflow-hidden border border-gray-100 rounded-xl shadow-none hover:border-red-600 transition-all duration-300 group"
+                className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group ${
+                  order.customerType === 'dealer' 
+                    ? "border-amber-200 hover:border-amber-500 bg-amber-50/5" 
+                    : "border-gray-100 hover:border-red-600"
+                }`}
               >
                 {/* Header Bar - More Compact */}
-                <div className="bg-slate-50/80 border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 group-hover:bg-red-50/50 transition-colors">
+                <div className={`${
+                  order.customerType === 'dealer' ? "bg-amber-50" : "bg-slate-50/80"
+                } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
                   <div className="flex items-center gap-3">
+                    {order.customerType === 'dealer' && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-600 text-white rounded-md">
+                        <ShieldCheck className="w-2.5 h-2.5" />
+                        <span className="text-[7px] font-black uppercase tracking-widest">Dealer Order</span>
+                      </div>
+                    )}
                     <div
                       className="flex items-center gap-2 cursor-pointer"
                       onClick={() => setPreviewOrder(order)}

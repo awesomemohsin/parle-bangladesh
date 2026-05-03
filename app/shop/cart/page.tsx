@@ -245,14 +245,14 @@ export default function CartPage() {
                             >
                               {item.productName}
                             </Link>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1 mt-1.5">
                               {item.weight && (
-                                <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest leading-none">
+                                <span className="bg-red-600 text-white px-3 py-1 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest inline-flex items-center justify-center leading-none min-h-[1.25rem]">
                                   {item.weight}
                                 </span>
                               )}
                               {(item.flavor || (item as any).variationFlavor) && (
-                                <span className="bg-red-600 text-white px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                <span className="bg-red-600 text-white px-3 py-1 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest inline-flex items-center justify-center leading-none min-h-[1.25rem]">
                                   {item.flavor || (item as any).variationFlavor}
                                 </span>
                               )}

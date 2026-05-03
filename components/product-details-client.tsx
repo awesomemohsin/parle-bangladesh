@@ -9,11 +9,13 @@ import { useCart } from "@/hooks/useCart";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { sanitizeProductImagePath } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Variation {
   weight?: string;
   flavor?: string;
   price: number;
+  dealerPrice?: number;
   discountPrice?: number;
   stock: number;
   holdStock?: number;
@@ -38,6 +40,9 @@ interface Product {
 export default function ProductDetailsClient({ product, images }: { product: any, images: string[] }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const { user } = useAuth();
+  
+  const isDealer = user?.customerType === "dealer";
   
   // Intelligent Default Selection: Skip out-of-stock SKUs
   const defaultVar = product.variations.find((v: Variation) => v.isDefault);
@@ -53,10 +58,15 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const [isFlying, setIsFlying] = useState(false);
 
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
-  const displayPrice = selectedVariation?.discountPrice || selectedVariation?.price || product.price || 0;
+  
+  // Dealer Pricing Logic
+  const displayPrice = isDealer && selectedVariation?.dealerPrice 
+    ? selectedVariation.dealerPrice 
+    : (selectedVariation?.discountPrice || selectedVariation?.price || product.price || 0);
+
   const originalPrice = selectedVariation?.price || product.price || 0;
   const displayStock = selectedVariation?.stock ?? product.stock ?? 0;
-  const hasDiscount = !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
+  const hasDiscount = !isDealer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
   const discountPercentage = hasDiscount ? Math.round(((originalPrice - (selectedVariation?.discountPrice || 0)) / originalPrice) * 100) : 0;
 
   // Sync image with variation selection
@@ -192,14 +202,20 @@ export default function ProductDetailsClient({ product, images }: { product: any
             </div>
             
             <div className="flex flex-col mb-1.5">
-               <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">(Including Vat)</span>
-               {hasDiscount && (
+               <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
+                 {isDealer ? "Dealer Rate (Inc. Vat)" : "(Including Vat)"}
+               </span>
+               {(hasDiscount || (isDealer && selectedVariation?.dealerPrice)) && (
                  <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 opacity-40">
                        <span className="text-xs font-bold text-gray-400">৳</span>
-                       <span className="text-gray-400 line-through font-bold text-base tabular-nums leading-none">{Math.round(originalPrice)}</span>
+                       <span className="text-gray-400 line-through font-bold text-base tabular-nums leading-none">
+                         {Math.round(originalPrice)}
+                       </span>
                     </div>
-                    <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">{discountPercentage}% off</span>
+                    <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
+                      {isDealer ? "Dealer Savings" : `${discountPercentage}% off`}
+                    </span>
                  </div>
                )}
             </div>

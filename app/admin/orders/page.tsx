@@ -42,6 +42,7 @@ interface Order {
   deliveryMethod?: string
   subtotal?: number
   shippingCost?: number
+  customerType?: string
 }
 
 export default function AdminOrdersPage() {
@@ -341,12 +342,27 @@ export default function AdminOrdersPage() {
             const currentStatus = pendingChanges[order.id] || order.status;
             const hasChange = !!pendingChanges[order.id];
             return (
-              <Card key={order.id} className="p-4 shadow-sm border-gray-100/60 hover:shadow-md transition-shadow">
+              <Card 
+                key={order.id} 
+                className={`p-4 shadow-sm transition-all duration-300 ${
+                  order.customerType === 'dealer' 
+                    ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500' 
+                    : 'border-gray-100/60 hover:shadow-md'
+                }`}
+              >
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">
-                      Order ID: {order.id.slice(-8).toUpperCase()}
-                    </h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">
+                        Order ID: {order.id.slice(-8).toUpperCase()}
+                      </h3>
+                      {order.customerType === 'dealer' && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-600 text-white rounded-lg shadow-sm">
+                          <BellRing className="w-3 h-3 animate-pulse" />
+                          <span className="text-[8px] font-black uppercase tracking-widest">Dealer Order</span>
+                        </div>
+                      )}
+                    </div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
                       {new Date(order.createdAt).toLocaleString()}
                     </p>

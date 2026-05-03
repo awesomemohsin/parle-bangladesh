@@ -288,6 +288,7 @@ export interface IOrder extends Document {
   shippingPostalCode?: string;
   deliveryMethod?: string;
   orderLogs?: IOrderLog[];
+  customerType?: string; // 'retailer', 'dealer'
   createdAt: Date;
   updatedAt: Date;
 }
@@ -321,22 +322,23 @@ const OrderSchema = new Schema<IOrder>(
     city: { type: String, required: true },
     postalCode: { type: String, required: true },
     paymentMethod: { type: String, required: true },
-    items: [OrderItemSchema],
+    items: { type: [OrderItemSchema], default: [] },
     subtotal: { type: Number, required: true },
     shippingCost: { type: Number, required: true },
-    tax: { type: Number, required: true },
+    tax: { type: Number, default: 0 },
     total: { type: Number, required: true },
     promoCode: { type: String },
     discountAmount: { type: Number, default: 0 },
-    status: { type: String, default: "pending" },
+    status: { type: String, required: true, default: "pending" },
     cancelReason: { type: String },
     statusReason: { type: String },
     instruction: { type: String },
     shippingAddress: { type: String },
     shippingCity: { type: String },
     shippingPostalCode: { type: String },
-    deliveryMethod: { type: String, enum: ["shipping", "pickup"], default: "shipping" },
-    orderLogs: [OrderLogSchema],
+    deliveryMethod: { type: String, default: "shipping" },
+    orderLogs: { type: [OrderLogSchema], default: [] },
+    customerType: { type: String, default: "retailer" },
   },
   { timestamps: true }
 );

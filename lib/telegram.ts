@@ -58,8 +58,10 @@ export async function notifyNewOrder(order: any) {
     ? "Collection Point - Yassin Tower"
     : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
+  const title = order.customerType === 'dealer' ? '🌟 NEW DEALER ORDER' : '🌟 NEW PENDING ORDER';
+
   const message = `
-🌟 <b>NEW PENDING ORDER</b>
+<b>${title}</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER ID:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT NAME:</b> ${order.customerName}
@@ -100,8 +102,10 @@ export async function notifyOrderReady(order: any) {
     ? "Collection Point - Yassin Tower"
     : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
+  const title = order.customerType === 'dealer' ? '🚚 NEW DEALER ORDER (PROCESSING)' : '🚚 NEW PROCESSING ORDER';
+
   const message = `
-🚚 <b>NEW PROCESSING ORDER</b>
+<b>${title}</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER ID:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT NAME:</b> ${order.customerName}

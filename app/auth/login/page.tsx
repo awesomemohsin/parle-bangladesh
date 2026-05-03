@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 
 function LoginForm() {
+  const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -22,6 +24,28 @@ function LoginForm() {
       document.title = 'Login | Parle Bangladesh';
     }
   }, []);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (mounted && isAuthenticated && user) {
+      const isAdmin = ["admin", "super_admin", "moderator", "owner"].includes(user.role);
+      
+      if (isAdmin) {
+        router.replace("/admin/dashboard");
+      } else {
+        const callbackUrl = searchParams.get("callbackUrl");
+        if (callbackUrl) {
+          router.replace(callbackUrl);
+        } else {
+          router.replace("/");
+        }
+      }
+    }
+  }, [mounted, isAuthenticated, user, router, searchParams]);
+
+  if (authLoading || (isAuthenticated && mounted)) {
+    return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>;
+  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
