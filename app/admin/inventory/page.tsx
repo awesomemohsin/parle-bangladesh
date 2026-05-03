@@ -93,7 +93,7 @@ export default function InventoryPage() {
 
       const params = new URLSearchParams();
       params.append('adminContext', 'true');
-      if (product) params.append('productSlug', product.slug);
+      if (product) params.append('productId', product._id);
       if (variation?.weight) params.append('weight', variation.weight);
       if (variation?.flavor) params.append('flavor', variation.flavor);
       params.append('status', status);
@@ -113,7 +113,7 @@ export default function InventoryPage() {
         if (product) {
           results = results.filter((o: any) => 
             o.items.some((item: any) => 
-              item.productSlug === product.slug &&
+              (item.productId === product._id || item.productSlug === product.slug) &&
               ((!item.weight && !variation.weight) || (item.weight === variation.weight)) &&
               ((!item.flavor && !variation.flavor) || (item.flavor === variation.flavor) || (item.flavor === "" && !variation.flavor) || (!item.flavor && variation.flavor === ""))
             )
@@ -446,7 +446,7 @@ export default function InventoryPage() {
                         const relevantItems = selectedMetric.isGlobal 
                           ? order.items 
                           : order.items.filter((i: any) => 
-                              i.productSlug === selectedMetric.product.slug &&
+                              (i.productId === selectedMetric.product._id || i.productSlug === selectedMetric.product.slug) &&
                               ((!i.weight && !selectedMetric.variation.weight) || (i.weight === selectedMetric.variation.weight)) &&
                               ((!i.flavor && !selectedMetric.variation.flavor) || (i.flavor === selectedMetric.variation.flavor) || (i.flavor === "" && !selectedMetric.variation.flavor) || (!i.flavor && selectedMetric.variation.flavor === ""))
                             );
