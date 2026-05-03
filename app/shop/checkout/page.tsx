@@ -17,7 +17,7 @@ interface OrderState {
 }
 
 export default function CheckoutPage() {
-  const { items, total, clearCart, promoCode, discountAmount } = useCart();
+  const { items, total, clearCart, promoCode, discountAmount, isLoading } = useCart();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [formData, setFormData] = useState({
     name: '',
@@ -57,19 +57,37 @@ export default function CheckoutPage() {
     }
   }, []);
 
+  if (isLoading && items.length === 0) {
+    return (
+      <div className="min-h-screen bg-white font-sans p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="h-10 w-48 bg-slate-100 animate-pulse rounded-lg" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 w-full bg-slate-50 animate-pulse rounded-xl" />
+              ))}
+            </div>
+            <div className="h-64 bg-slate-50 animate-pulse rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (items.length === 0 && orderState.status !== 'success') {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <Link href="/shop" className="flex items-center gap-2 text-amber-700 mb-8">
+      <div className="min-h-screen bg-white font-sans p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <Link href="/shop" className="flex items-center gap-2 text-amber-700 hover:text-amber-800 mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            Back to Shop
+            <span className="font-bold">Back to Shop</span>
           </Link>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Your cart is empty</h1>
-            <p className="text-gray-600 mb-8">Add products before checking out.</p>
+          <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4 uppercase tracking-tight">Your cart is empty</h1>
+            <p className="text-gray-500 mb-8 font-bold uppercase text-[10px] tracking-widest">Add products before checking out.</p>
             <Link href="/shop">
-              <Button className="bg-amber-700 hover:bg-amber-800 text-white">
+              <Button className="bg-amber-700 hover:bg-black text-white h-14 px-10 rounded-2xl font-bold uppercase tracking-widest transition-all active:scale-95 shadow-lg">
                 Continue Shopping
               </Button>
             </Link>
@@ -289,7 +307,7 @@ export default function CheckoutPage() {
 
   // Checkout Form
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white font-sans p-8">
       {/* Header */}
       <div className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 py-4">

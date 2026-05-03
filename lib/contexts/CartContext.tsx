@@ -57,8 +57,8 @@ function calculateTotals(items: CartItem[]): { total: number; itemCount: number 
 
 function normalizeItem(item: any): CartItem | null {
   if (!item) return null;
-  const productId = String(item.productId || item._id || item.id || item.productSlug || item.slug || "").trim();
-  const productSlug = String(item.productSlug || item.slug || productId || "").trim();
+  const productId = String(item.productId || item._id || item.id || "").trim();
+  const productSlug = String(item.productSlug || item.slug || "").trim();
   const productName = String(item.productName || item.name || "Product").trim();
   const price = Number(item.price);
   const quantity = Number(item.quantity || 1);
@@ -79,7 +79,7 @@ function normalizeItem(item: any): CartItem | null {
 
 export function getItemKey(item: any): string {
   if (typeof item === "string") return item;
-  const id = item.productId || item.id || item.productSlug;
+  const id = item.productId || item.id;
   const weight = item.weight || "";
   const flavor = item.flavor || "";
   const priceSuffix = (!weight && !flavor && item.price) ? `-${item.price}` : "";
@@ -91,12 +91,38 @@ function itemMatchesKey(item: CartItem, key: string): boolean {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<Cart>({ items: [], total: 0, itemCount: 0 });
+  // Initialize state with a function to try and get data immediately on client
+  const [cart, setCart] = useState<Cart>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(CART_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const rawItems = Array.isArray(parsed?.items) ? parsed.items : [];
+          const normalizedItems = rawItems
+            .map((item: any) => normalizeItem(item))
+            .filter((item: CartItem | null): item is CartItem => item !== null);
+          
+          return {
+            items: normalizedItems,
+            ...calculateTotals(normalizedItems),
+            promoCode: parsed.promoCode,
+            discountAmount: parsed.discountAmount
+          };
+        } catch (e) {
+          console.error("Cart initial parse failed:", e);
+        }
+      }
+    }
+    return { items: [], total: 0, itemCount: 0 };
+  });
+
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // 1. Initialize from LocalStorage (Sync-like)
-  useEffect(() => {
+  // 1. Handle Mounting & PageShow
+  const syncFromStorage = useCallback(() => {
     const saved = localStorage.getItem(CART_STORAGE_KEY);
     if (saved) {
       try {
@@ -113,12 +139,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           discountAmount: parsed.discountAmount
         });
       } catch (e) {
-        console.error("Cart parse failed:", e);
+        console.error("Cart sync parse failed:", e);
       }
     }
     setIsInitialized(true);
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
+    syncFromStorage();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === CART_STORAGE_KEY) syncFromStorage();
+    };
+
+    const handlePageShow = () => syncFromStorage();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") syncFromStorage();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("visibilitychange", handleVisibility);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [syncFromStorage]);
 
   // 2. Sync with DB ONLY after initialization
   useEffect(() => {
@@ -250,12 +301,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     cart,
-    items: cart.items,
-    total: finalTotal,
-    itemCount: cart.itemCount,
-    promoCode: cart.promoCode,
-    discountAmount: cart.discountAmount,
-    isLoading,
+    items: isMounted ? cart.items : [],
+    total: isMounted ? finalTotal : 0,
+    itemCount: isMounted ? cart.itemCount : 0,
+    promoCode: isMounted ? cart.promoCode : undefined,
+    discountAmount: isMounted ? cart.discountAmount : undefined,
+    isLoading: !isMounted || isLoading,
     addItem,
     removeItem,
     updateQuantity,

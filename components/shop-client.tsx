@@ -124,8 +124,8 @@ export default function ShopClient({
           // EXCLUSIVE: Create a separate product card for EACH bulk variation
           return bulkVariations.map((v) => ({
             ...product,
-            // Generate a unique ID to prevent React key conflicts
-            id: `${product.id}-${v.weight || v.flavor || 'bulk'}-${v.price}`,
+            // UI Key for React rendering, while preserving the real product.id for transactions
+            uiKey: `${product.id}-${v.weight || v.flavor || 'bulk'}-${v.price}`,
             variations: [{ ...v, isDefault: true }] // Force this specific variation as the default
           }));
         }
@@ -291,9 +291,9 @@ export default function ShopClient({
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8 lg:gap-x-10 lg:gap-y-16">
-          {filteredProducts.map((product: Product, index: number) => (
+          {filteredProducts.map((product: any, index: number) => (
             <ProductCard
-              key={product.id}
+              key={product.uiKey || product.id}
               {...product}
               priority={index < 12}
               onAddToCart={(variation: Variation) =>

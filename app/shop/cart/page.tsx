@@ -9,20 +9,37 @@ import { useCart, getItemKey } from '@/hooks/useCart';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CartPage() {
-  useState(() => {
-    if (typeof window !== 'undefined') {
-      document.title = 'Cart | Parle Bangladesh';
-    }
-  });
+  useEffect(() => {
+    document.title = 'Cart | Parle Bangladesh';
+  }, []);
 
-  const { items, total, removeItem, updateQuantity, clearCart, applyPromo, removePromo, promoCode, discountAmount } = useCart();
+  const { items, total, removeItem, updateQuantity, clearCart, applyPromo, removePromo, promoCode, discountAmount, isLoading } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
-  
+
   // Modal states
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Only show skeleton if we are loading AND have no items yet
+  if (isLoading && items.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans p-8">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="h-10 w-48 bg-slate-200 animate-pulse rounded-lg" />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 space-y-6">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-32 w-full bg-white rounded-3xl animate-pulse shadow-sm" />
+              ))}
+            </div>
+            <div className="lg:col-span-4 h-64 bg-white rounded-3xl animate-pulse shadow-sm" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isFreeDelivery = total >= 1000;
   const shippingCost = (items.length > 0 && !isFreeDelivery) ? 80 : 0;
