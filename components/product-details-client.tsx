@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Check, ShoppingCart, ArrowLeft, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
@@ -44,13 +44,28 @@ export default function ProductDetailsClient({ product, images }: { product: any
   
   const isDealer = user?.customerType === "dealer";
   
-  // Intelligent Default Selection: Skip out-of-stock SKUs
-  const defaultVar = product.variations.find((v: Variation) => v.isDefault);
-  const initialVarIndex = (defaultVar && defaultVar.stock > 0) 
-    ? product.variations.indexOf(defaultVar)
-    : (product.variations.findIndex((v: Variation) => v.stock > 0) !== -1 
-       ? product.variations.findIndex((v: Variation) => v.stock > 0) 
-       : 0);
+  const searchParams = useSearchParams();
+  const targetWeight = searchParams.get('weight');
+  const targetFlavor = searchParams.get('flavor');
+  
+  // Intelligent Default Selection
+  let initialVarIndex = -1;
+  if (targetWeight || targetFlavor) {
+    initialVarIndex = product.variations.findIndex((v: Variation) => {
+      const wMatch = targetWeight ? v.weight === targetWeight : true;
+      const fMatch = targetFlavor ? v.flavor === targetFlavor : true;
+      return wMatch && fMatch;
+    });
+  }
+
+  if (initialVarIndex === -1) {
+    const defaultVar = product.variations.find((v: Variation) => v.isDefault);
+    initialVarIndex = (defaultVar && defaultVar.stock > 0) 
+      ? product.variations.indexOf(defaultVar)
+      : (product.variations.findIndex((v: Variation) => v.stock > 0) !== -1 
+         ? product.variations.findIndex((v: Variation) => v.stock > 0) 
+         : 0);
+  }
 
   const [selectedVarIndex, setSelectedVarIndex] = useState<number>(initialVarIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);

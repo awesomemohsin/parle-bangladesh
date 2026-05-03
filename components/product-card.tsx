@@ -120,6 +120,11 @@ export default function ProductCard({
     }
   };
 
+  const variationParams = new URLSearchParams();
+  if (defaultVariation.weight) variationParams.set('weight', defaultVariation.weight);
+  if (defaultVariation.flavor) variationParams.set('flavor', defaultVariation.flavor);
+  const productUrl = `/shop/products/${slug}${variationParams.toString() ? `?${variationParams.toString()}` : ''}`;
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
       {hasDiscount && (
@@ -128,7 +133,7 @@ export default function ProductCard({
         </div>
       )}
       {/* Image Container */}
-      <Link href={`/shop/products/${slug}`}>
+      <Link href={productUrl}>
         <div className="relative w-full h-56 bg-white overflow-hidden flex items-center justify-center p-4">
           <Image
             src={productImg}
@@ -153,7 +158,7 @@ export default function ProductCard({
 
       {/* Content */}
       <div className="p-4 border-t">
-        <Link href={`/shop/products/${slug}`}>
+        <Link href={productUrl}>
           <h3 className="font-bold text-gray-900 leading-tight hover:text-red-600 line-clamp-2 min-h-[2.5rem] mb-1 transition-colors">
             {name}
           </h3>
