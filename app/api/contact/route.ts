@@ -67,6 +67,14 @@ export async function POST(req: Request) {
       }
     }
 
+    // Send Telegram notification to Management
+    try {
+      const { notifyNewInquiry } = await import("@/lib/telegram");
+      await notifyNewInquiry(newSubmission);
+    } catch (error) {
+      console.error('Error sending contact Telegram notification:', error);
+    }
+
     return NextResponse.json(
       { message: "Success", id: newSubmission._id },
       { status: 201 }

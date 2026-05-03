@@ -151,3 +151,59 @@ export async function notifyCriticalEvent(event: string, order: any, reason?: st
     text: message,
   });
 }
+
+/**
+ * Send alert to Management for a New Contact Inquiry
+ */
+export async function notifyNewInquiry(submission: any) {
+  const message = `
+📨 <b>NEW CONTACT INQUIRY</b>
+━━━━━━━━━━━━━━━━━━
+👤 <b>NAME:</b> ${submission.name}
+📞 <b>PHONE:</b> <code>${submission.number}</code>
+📧 <b>EMAIL:</b> ${submission.email || 'Not provided'}
+🏷️ <b>TYPE:</b> ${submission.type.toUpperCase()}
+${submission.organizationName ? `🏢 <b>ORG:</b> ${submission.organizationName}` : ""}
+${submission.location ? `📍 <b>LOCATION:</b> ${submission.location}` : ""}
+
+💬 <b>MESSAGE:</b>
+<blockquote>${submission.message}</blockquote>
+━━━━━━━━━━━━━━━━━━
+📢 <b>ACTION: Follow up via dashboard.</b>
+
+🔗 <a href="${BASE_URL}/admin/contacts">📋 VIEW ALL INQUIRIES</a>
+`;
+
+  return sendTelegramMessage({
+    chatId: CHAT_IDS.MANAGEMENT,
+    text: message,
+  });
+}
+
+/**
+ * Send alert to Management for a New Career Application
+ */
+export async function notifyNewApplication(application: any) {
+  const message = `
+💼 <b>NEW CAREER APPLICATION</b>
+━━━━━━━━━━━━━━━━━━
+🎯 <b>POSITION:</b> ${application.position}
+👤 <b>NAME:</b> ${application.fullname}
+📞 <b>PHONE:</b> <code>${application.phone}</code>
+📧 <b>EMAIL:</b> ${application.email}
+⏳ <b>EXPERIENCE:</b> ${application.experience || 'N/A'}
+
+📝 <b>MESSAGE:</b>
+<blockquote>${application.message}</blockquote>
+━━━━━━━━━━━━━━━━━━
+📎 <b>RESUME: Attached to admin email.</b>
+📢 <b>ACTION: Review candidate in dashboard.</b>
+
+🔗 <a href="${BASE_URL}/admin/careers">📂 OPEN CAREER QUEUE</a>
+`;
+
+  return sendTelegramMessage({
+    chatId: CHAT_IDS.MANAGEMENT,
+    text: message,
+  });
+}
