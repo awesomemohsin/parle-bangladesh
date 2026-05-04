@@ -181,6 +181,7 @@ export interface IVariation {
     reason?: string;
   }[];
   image?: string; // Image specific to this variation
+  description?: string; // Dynamic description for this variation
   isDefault?: boolean;
   isBulk?: boolean;
 }
@@ -217,6 +218,7 @@ const VariationSchema = new Schema<IVariation>({
     reason: { type: String }
   }],
   image: { type: String },
+  description: { type: String },
   isDefault: { type: Boolean, default: false },
   isBulk: { type: Boolean, default: false },
 });
