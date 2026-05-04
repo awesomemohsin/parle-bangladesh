@@ -23,6 +23,7 @@ interface Variation {
   lostCount?: number;
   damagedCount?: number;
   image?: string;
+  description?: string;
   isDefault?: boolean;
   isBulk?: boolean;
 }
@@ -382,9 +383,19 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
           <div className="md:w-2/3 md:pl-10">
             <div className="prose prose-slate max-w-none">
-              <p className="text-gray-600 font-medium leading-relaxed text-base">
-                {product.description || "High quality Parle product. Guaranteed fresh and delicious for your enjoyment."}
+              <p className="text-gray-900 font-bold leading-relaxed text-lg mb-4">
+                {product.description}
               </p>
+              {selectedVariation?.description && (
+                <p className="text-gray-600 font-medium leading-relaxed text-base border-l-4 border-red-600 pl-6 py-2 bg-red-50/20 rounded-r-lg">
+                  {selectedVariation.description}
+                </p>
+              )}
+              {!selectedVariation?.description && !product.description && (
+                <p className="text-gray-600 font-medium leading-relaxed text-base">
+                  High quality Parle product. Guaranteed fresh and delicious for your enjoyment.
+                </p>
+              )}
             </div>
             
             {/* Additional Variation Context if any */}
