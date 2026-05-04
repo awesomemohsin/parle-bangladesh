@@ -225,19 +225,19 @@ export default function ShopClient({
 
       {/* Brand Selection Interface */}
       {availableBrands.length > 0 && (
-        <div className="mb-12 animate-fade-in relative">
-          <div className="flex items-center justify-between mb-8 px-1">
+        <div className="mb-6 animate-fade-in relative">
+          <div className="flex items-center justify-between mb-4 px-1">
             <div className="flex items-center gap-3">
                <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></div>
-               <h3 className="text-[11px] font-black uppercase text-gray-500 tracking-[0.4em]">Explore {selectedCategory !== 'all' ? selectedCategory : 'Product'} Brands</h3>
+               <h3 className="text-[11px] font-black uppercase text-gray-500 tracking-[0.3em]">Explore {selectedCategory !== 'all' ? selectedCategory : 'Product'} Brands</h3>
             </div>
             <div className="hidden md:block h-px flex-1 bg-gradient-to-r from-gray-100 to-transparent ml-6"></div>
           </div>
           
-          <div className="flex flex-wrap gap-2.5 sm:gap-3.5">
+          <div className="flex flex-nowrap overflow-x-auto pb-4 gap-2 no-scrollbar">
             <button
               onClick={() => handleBrandChange("all")}
-              className={`relative px-7 py-3.5 rounded-2xl text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 active:scale-95 overflow-hidden ${
+              className={`relative px-6 py-3 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 active:scale-95 overflow-hidden whitespace-nowrap ${
                 selectedBrand === "all" 
                 ? "bg-gray-900 border-gray-900 text-white shadow-2xl shadow-gray-300 ring-4 ring-gray-900/5 translate-y-[-2px]" 
                 : "bg-white border-gray-100 text-gray-400 hover:border-gray-300 hover:text-gray-600 shadow-sm border-2"
@@ -253,7 +253,7 @@ export default function ShopClient({
               <button
                 key={brand}
                 onClick={() => handleBrandChange(brand)}
-                className={`relative px-7 py-3.5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-500 border-2 active:scale-95 group overflow-hidden ${
+                className={`relative px-6 py-3 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-500 border-2 active:scale-95 group overflow-hidden whitespace-nowrap ${
                   selectedBrand === brand
                   ? "bg-red-600 border-red-600 text-white shadow-2xl shadow-red-200 ring-4 ring-red-600/10 translate-y-[-2px]"
                   : "bg-white/50 backdrop-blur-sm border-gray-50 text-gray-700 hover:border-red-500/30 hover:text-red-600 hover:bg-white shadow-sm"
