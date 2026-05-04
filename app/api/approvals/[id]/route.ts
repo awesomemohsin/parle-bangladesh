@@ -3,6 +3,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { ApprovalRequest, Product, Order, Category, Notification } from "@/lib/models";
+import { notifyOwnerApprovalRequired, notifyApprovalFinalized } from "@/lib/telegram";
 import { logAdminActivity } from "@/lib/activity";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -61,6 +62,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         details: `${approvalRequest.type} ${approvalRequest.field} change from ${approvalRequest.oldValue} to ${approvalRequest.newValue} was DECLINED during ${approvalRequest.stage === 'superadmin' ? 'Superadmin' : 'Final Authorized'} review by ${userName}.`
       });
 
+      // Notify via Telegram
+      await notifyApprovalFinalized(approvalRequest);
+
       return NextResponse.json({ message: "Request declined successfully", request: approvalRequest });
     }
 
@@ -84,25 +88,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
         if (hasAnindo && hasSaiful) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          const isFinancialOrStock = approvalRequest.field === 'price' || approvalRequest.field === 'dealerPrice' || approvalRequest.field === 'stock' || approvalRequest.field === 'discountPrice';
-          const isSensitiveType = approvalRequest.type === 'product' || approvalRequest.type === 'category';
+          const isFinancialOrStock = ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field);
           
-          if (isSensitiveType && !isFinancialOrStock) {
-            // CATEGORY/PRODUCT CONTENT: 2-STAGE ONLY (SuperAdmin Final)
+          if (!isFinancialOrStock) {
+            // BASIC CONTENT: 2nd SuperAdmin is Final
             approvalRequest.status = 'approved';
             
             // Notify Requester (Admin)
             await Notification.create({
               userId: approvalRequest.requesterEmail,
               title: "Update Approved (Live)",
-              message: `Your catalog update for ${approvalRequest.targetName} has been approved by Anindo & Saiful and is now LIVE.`,
+              message: `Your catalog update for ${approvalRequest.targetName} has been approved by consensus and is now LIVE.`,
               type: "system",
               targetLink: `/admin/products`
             });
             
             await applyApprovedChanges(approvalRequest, userName, comment);
+            await notifyApprovalFinalized(approvalRequest);
           } else {
-            // PRICE, STOCK, OR ORDERS: 3-STAGE (Needs Owner)
+            // PRICE OR STOCK: 3-STAGE (Needs Owner after 2 Superadmins)
             approvalRequest.stage = "owner";
             await Notification.create({
               role: ROLES.OWNER,
@@ -111,6 +115,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               type: "approval",
               targetLink: `/admin/approvals`
             });
+
+            // Trigger Telegram to Owner
+            await notifyOwnerApprovalRequired(approvalRequest);
           }
         }
 
@@ -142,6 +149,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         });
 
         await applyApprovedChanges(approvalRequest, userName, comment);
+        await notifyApprovalFinalized(approvalRequest);
       } else {
         return NextResponse.json({ error: "Forbidden: You are not authorized for consensus approval" }, { status: 403 });
       }

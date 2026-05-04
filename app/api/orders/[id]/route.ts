@@ -4,7 +4,7 @@ import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
-import { notifyOrderReady, notifyCriticalEvent } from "@/lib/telegram";
+import { notifyOrderReady, notifyCriticalEvent, notifyNewApprovalRequest } from "@/lib/telegram";
 
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -153,6 +153,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
          stage: "superadmin",
        });
        await approvalRequest.save();
+       
+       // Trigger Telegram Notification for Approval
+       try {
+         await notifyNewApprovalRequest(approvalRequest);
+       } catch (tgError) {
+         console.error("Telegram notification failed for order approval:", tgError);
+       }
 
        // Notify Superadmins of new pending approval
        await Notification.create({

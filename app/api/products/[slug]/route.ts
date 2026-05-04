@@ -5,6 +5,7 @@ import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Product, ApprovalRequest, Notification, Category } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
+import { notifyNewApprovalRequest } from "@/lib/telegram";
 import fs from "fs";
 import path from "path";
 
@@ -137,6 +138,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
                 stage: "superadmin",
             });
             await approvalRequest.save();
+            try {
+                await notifyNewApprovalRequest(approvalRequest);
+            } catch (tgError) {
+                console.error("Telegram notification failed for product change:", tgError);
+            }
             await Notification.create({
                 role: ROLES.SUPER_ADMIN,
                 title: "Product Detail Change",
@@ -195,6 +201,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
                     stage: "superadmin",
                 });
                 await approvalRequest.save();
+                try {
+                    await notifyNewApprovalRequest(approvalRequest);
+                } catch (tgError) {
+                    console.error("Telegram notification failed for variation change:", tgError);
+                }
 
                 await Notification.create({
                     role: ROLES.SUPER_ADMIN,

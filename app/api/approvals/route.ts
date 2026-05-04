@@ -3,6 +3,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { ApprovalRequest } from "@/lib/models";
+import { notifyNewApprovalRequest } from "@/lib/telegram";
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const { type, targetId, targetName, field, oldValue, newValue, variationIndex } = body;
+    const { type, targetId, targetName, field, oldValue, newValue, variationIndex, weight, flavor } = body;
 
     if (!type || !targetId || !targetName || !field || oldValue === undefined || newValue === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -101,11 +102,21 @@ export async function POST(request: NextRequest) {
       oldValue: String(oldValue),
       newValue: String(newValue),
       variationIndex,
+      weight,
+      flavor,
       status: "pending",
       stage: "superadmin",
     });
 
     await approvalRequest.save();
+
+    // Trigger Telegram Notification
+    try {
+      await notifyNewApprovalRequest(approvalRequest);
+    } catch (tgError) {
+      console.error("Telegram notification failed for approval request:", tgError);
+    }
+
     return NextResponse.json({ message: "Approval request created", request: approvalRequest }, { status: 201 });
   } catch (error) {
     console.error("Approvals POST error:", error);
