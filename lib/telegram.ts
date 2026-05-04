@@ -4,6 +4,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 export const CHAT_IDS = {
   MANAGEMENT: process.env.TELEGRAM_CHAT_ID_MANAGEMENT || "-1003942975521",
   LOGISTICS: process.env.TELEGRAM_CHAT_ID_LOGISTICS || "-1003968662595",
+  OWNER: "8781056260", 
 };
 
 const BASE_URL = "https://parlebangladesh.com";
@@ -206,6 +207,79 @@ export async function notifyNewApplication(application: any) {
 🔗 <a href="${BASE_URL}/admin/careers">📂 OPEN CAREER QUEUE</a>
 `;
 
+  return sendTelegramMessage({
+    chatId: CHAT_IDS.MANAGEMENT,
+    text: message,
+  });
+}
+
+/**
+ * Notify Superadmins about a new approval request
+ */
+export async function notifyNewApprovalRequest(request: any) {
+  const isSensitive = ['price', 'stock', 'dealerPrice', 'discountPrice'].includes(request.field);
+  const typeIcon = request.type === 'order' ? '📦' : '🏷️';
+  const level = isSensitive ? 'LEVEL 3 (SENSITIVE)' : 'LEVEL 2 (BASIC)';
+  
+  const message = `
+<b>${typeIcon} NEW APPROVAL REQUEST</b>
+<b>PRIORITY:</b> ${level}
+━━━━━━━━━━━━━━━━━━
+👤 <b>REQUESTER:</b> ${request.requesterEmail}
+🎯 <b>TARGET:</b> ${request.targetName}
+${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
+🔄 <b>VALUE:</b> ${request.oldValue} ➡️ <b>${request.newValue}</b>
+
+📢 <b>ACTION:</b> 2 Superadmins must approve to proceed.
+━━━━━━━━━━━━━━━━━━
+🔗 <a href="${BASE_URL}/admin/approvals">⚡ OPEN APPROVAL DASHBOARD</a>
+`;
+
+  // Send all initial requests to Management Group
+  return sendTelegramMessage({ chatId: CHAT_IDS.MANAGEMENT, text: message });
+}
+
+/**
+ * Notify Owner when a sensitive request passes Superadmin phase
+ */
+export async function notifyOwnerApprovalRequired(request: any) {
+  const message = `
+<b>👑 FINAL AUTHORIZATION REQUIRED</b>
+━━━━━━━━━━━━━━━━━━
+👤 <b>APPROVED BY:</b> ${request.superadminApprovals.join(' & ')}
+🎯 <b>TARGET:</b> ${request.targetName}
+${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
+🔄 <b>VALUE:</b> ${request.oldValue} ➡️ <b>${request.newValue}</b>
+
+❗ <b>SENSITIVE CHANGE:</b> This requires your final approval to go live.
+━━━━━━━━━━━━━━━━━━
+🔗 <a href="${BASE_URL}/admin/approvals">👑 OPEN OWNER CONSOLE</a>
+`;
+
+  return sendTelegramMessage({
+    chatId: CHAT_IDS.OWNER,
+    text: message,
+  });
+}
+
+/**
+ * Notify Requester when a request is finalized (Approved/Declined)
+ */
+export async function notifyApprovalFinalized(request: any) {
+  const isApproved = request.status === 'approved';
+  const icon = isApproved ? '✅' : '❌';
+  
+  const message = `
+<b>${icon} REQUEST ${request.status.toUpperCase()}</b>
+━━━━━━━━━━━━━━━━━━
+🎯 <b>TARGET:</b> ${request.targetName}
+📝 <b>FIELD:</b> <code>${request.field}</code>
+👤 <b>FINALIZED BY:</b> ${isApproved ? 'Authorization Consensus' : request.declinedBy}
+
+${isApproved ? '✨ The changes are now LIVE in the system.' : '🚫 The request was rejected and no changes were applied.'}
+`;
+
+  // This could go to the management group or the individual requester if we had their Telegram ID
   return sendTelegramMessage({
     chatId: CHAT_IDS.MANAGEMENT,
     text: message,
