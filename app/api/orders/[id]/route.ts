@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     // Security Check: Admin roles OR Ownership check
-    const isPrivileged = hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN]);
+    const isPrivileged = hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER]);
     const isOwner = order.userId === user.id || (order.customerEmail && order.customerEmail.toLowerCase() === user.email.toLowerCase());
 
     if (!isPrivileged && !isOwner) {
