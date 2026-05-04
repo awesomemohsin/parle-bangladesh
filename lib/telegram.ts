@@ -4,7 +4,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 export const CHAT_IDS = {
   MANAGEMENT: process.env.TELEGRAM_CHAT_ID_MANAGEMENT || "-1003942975521",
   LOGISTICS: process.env.TELEGRAM_CHAT_ID_LOGISTICS || "-1003968662595",
-  OWNER: "8781056260", 
+  OWNERS: (process.env.TELEGRAM_OWNER_IDS || "8781056260").split(","), 
 };
 
 const BASE_URL = "https://parlebangladesh.com";
@@ -256,10 +256,18 @@ ${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight
 🔗 <a href="${BASE_URL}/admin/approvals">👑 OPEN OWNER CONSOLE</a>
 `;
 
-  return sendTelegramMessage({
-    chatId: CHAT_IDS.OWNER,
-    text: message,
-  });
+  // Send to all Owners (gracefully handle if someone hasn't started the bot)
+  const results = await Promise.all(
+    CHAT_IDS.OWNERS.map(async (id) => {
+      try {
+        return await sendTelegramMessage({ chatId: id, text: message });
+      } catch (err) {
+        console.error(`Failed to notify owner ${id}:`, err);
+        return false;
+      }
+    })
+  );
+  return results.some(res => res); // Return true if at least one was successful
 }
 
 /**
