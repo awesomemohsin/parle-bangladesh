@@ -40,15 +40,15 @@ export default function AdminActivitiesPage() {
         return
       }
     }
-    fetchActivities()
+    fetchActivities(page > 1)
   }, [page, emailFilter, actionFilter, dateFilter])
 
-  const fetchActivities = async () => {
-    setIsLoading(true)
+  const fetchActivities = async (isAppend = false) => {
+    if (!isAppend) setIsLoading(true)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20'
+        limit: '100'
       })
       if (emailFilter) params.append('email', emailFilter)
       if (actionFilter) params.append('action', actionFilter)
@@ -62,7 +62,18 @@ export default function AdminActivitiesPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setActivities(data.activities || [])
+        const newActivities = data.activities || []
+        
+        if (isAppend) {
+          setActivities(prev => {
+            const existingIds = new Set(prev.map(a => a._id))
+            const filteredNew = newActivities.filter((a: Activity) => !existingIds.has(a._id))
+            return [...prev, ...filteredNew]
+          })
+        } else {
+          setActivities(newActivities)
+        }
+        
         setTotalPages(data.totalPages || 1)
       } else {
         const data = await response.json()
@@ -72,7 +83,7 @@ export default function AdminActivitiesPage() {
       console.error('Fetch activities error:', err)
       setError('An unexpected error occurred')
     } finally {
-      setIsLoading(false)
+      if (!isAppend) setIsLoading(false)
     }
   }
 
@@ -263,25 +274,20 @@ export default function AdminActivitiesPage() {
         </div>
         
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-gray-50 px-6 py-3 flex justify-center items-center gap-4 border-t border-gray-100">
+        {page < totalPages && (
+          <div className="bg-gray-50 px-6 py-4 flex justify-center border-t border-gray-100">
             <Button 
-              disabled={page === 1} 
-              onClick={() => setPage(page - 1)}
-              variant="outline"
-              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest border-2"
-            >
-              Previous
-            </Button>
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Page {page} of {totalPages}</span>
-            <Button 
-              disabled={page === totalPages} 
               onClick={() => setPage(page + 1)}
               variant="outline"
-              className="h-7 px-3 text-[9px] font-black uppercase tracking-widest border-2"
+              className="rounded-xl font-black uppercase text-[10px] tracking-widest px-12 py-5 border-2 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-all shadow-sm"
             >
-              Next
+              Show More Logs
             </Button>
+          </div>
+        )}
+        {page === totalPages && activities.length > 0 && (
+          <div className="bg-gray-50 py-6 text-center text-gray-400 text-[10px] font-black uppercase tracking-[0.3em] border-t border-gray-100">
+            End of audit log
           </div>
         )}
       </Card>
