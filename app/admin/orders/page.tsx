@@ -78,7 +78,7 @@ export default function AdminOrdersPage() {
   // Pagination state
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const limit = 10
+  const limit = 20
 
   // Unsaved status changes
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({})
@@ -125,11 +125,11 @@ export default function AdminOrdersPage() {
   }, [debouncedSearch, statusFilter, sortBy])
 
   useEffect(() => {
-    fetchOrders()
+    fetchOrders(false, page > 1) // isBackground=false, isAppend=page > 1
 
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
-      fetchOrders(true) // true means background sync
+      fetchOrders(true, false) // background sync, refresh from start
     }, 30000)
 
     return () => clearInterval(interval)
@@ -139,15 +139,17 @@ export default function AdminOrdersPage() {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
   };
 
-  const fetchOrders = async (isBackground = false) => {
-    if (!isBackground) setIsLoading(true)
+  const fetchOrders = async (isBackground = false, isAppend = false) => {
+    if (!isBackground && !isAppend) setIsLoading(true)
     try {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('q', debouncedSearch)
       if (statusFilter !== 'all') params.append('status', statusFilter)
       params.append('sort', sortBy)
-      params.append('page', page.toString())
-      params.append('limit', limit.toString())
+      // If we are refreshing in background, we might want to fetch all current items
+      // but for simplicity, we'll just fetch the first page to check for new ones.
+      params.append('page', isBackground ? '1' : page.toString())
+      params.append('limit', isBackground ? (page * limit).toString() : limit.toString())
       params.append('adminContext', 'true')
 
       const response = await fetch(`/api/orders?${params.toString()}`, {
@@ -161,7 +163,7 @@ export default function AdminOrdersPage() {
         const newOrders = data.orders || []
         const newTotal = data.pagination?.total || 0
         
-        // Notification Logic: If total count increased and not first load
+        // Notification Logic
         if (!isFirstLoad.current && lastTotalOrders.current !== null && newTotal > lastTotalOrders.current) {
           const diff = newTotal - lastTotalOrders.current
           const isModerator = userRole === 'moderator'
@@ -182,15 +184,19 @@ export default function AdminOrdersPage() {
                 }
             }
           })
-          
-          // Optional: Play a subtle notification sound
-          try {
-            const audio = new Audio('/sounds/notification.mp3')
-            audio.play().catch(() => {}) // Ignore if browser blocks auto-play
-          } catch (e) {}
         }
 
-        setOrders(newOrders)
+        if (isAppend) {
+          setOrders(prev => {
+            // Filter out any duplicates just in case
+            const existingIds = new Set(prev.map(o => o.id))
+            const filteredNew = newOrders.filter((o: Order) => !existingIds.has(o.id))
+            return [...prev, ...filteredNew]
+          })
+        } else {
+          setOrders(newOrders)
+        }
+        
         setTotalPages(data.pagination?.totalPages || 1)
         lastTotalOrders.current = newTotal
         isFirstLoad.current = false
@@ -198,7 +204,7 @@ export default function AdminOrdersPage() {
     } catch (error) {
       console.error('Failed to fetch orders:', error)
     } finally {
-      if (!isBackground) setIsLoading(false)
+      if (!isBackground && !isAppend) setIsLoading(false)
     }
   }
 
@@ -589,27 +595,20 @@ export default function AdminOrdersPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-8 pb-10">
-          <Button
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-            variant="outline"
-            className="rounded-xl font-bold uppercase text-xs px-6"
-          >
-            Previous
-          </Button>
-          <span className="text-sm font-bold text-gray-600">
-            {page} / {totalPages}
-          </span>
+      {page < totalPages && (
+        <div className="flex justify-center mt-8 pb-10">
           <Button
             onClick={() => setPage(page + 1)}
-            disabled={page === totalPages}
             variant="outline"
-            className="rounded-xl font-bold uppercase text-xs px-6"
+            className="rounded-xl font-black uppercase text-[10px] tracking-widest px-12 py-6 border-2 border-blue-100 text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm"
           >
-            Next
+            Show More Orders
           </Button>
+        </div>
+      )}
+      {page === totalPages && orders.length > 0 && (
+        <div className="text-center py-10 text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">
+          End of orders list
         </div>
       )}
     </div>
