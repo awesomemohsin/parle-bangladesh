@@ -199,7 +199,6 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                 </Button>
               </Link>
             )}
-
             {isAdmin && (
               <Link href="/admin/careers" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
@@ -247,7 +246,8 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
               </div>
-              <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Users</Button></Link>
+              <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Admins</Button></Link>
+              <Link href="/admin/customers" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">Customer Hub</Button></Link>
               <Link href="/admin/careers/circulars" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Circulars</Button></Link>
               <Link href="/admin/promo-codes" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Promo Codes</Button></Link>
               <Link href="/admin/activities" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Action Logs</Button></Link>
@@ -267,7 +267,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
 
         {/* System Health Status */}
         <div className="px-6 py-4 border-t border-gray-800 bg-black/20">
-           <SystemStatusIndicator />
+          <SystemStatusIndicator />
         </div>
 
         {/* Logout */}
@@ -310,17 +310,17 @@ function SystemStatusIndicator() {
 
   return (
     <div className="flex items-center gap-3">
-       <div className={`w-2 h-2 rounded-full ${status.online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'} shadow-[0_0_8px_rgba(16,185,129,0.5)]`}></div>
-       <div className="flex flex-col">
-          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest italic">System Status</span>
-          <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">
-            {status.online ? 'Cloud Synchronized' : 'Sync Interrupted'}
-          </span>
-       </div>
-       <div className="ml-auto flex flex-col items-end">
-          <span className="text-[7px] font-black text-gray-600 uppercase italic">Ping</span>
-          <span className="text-[9px] font-black text-gray-400 italic leading-none">{status.latency}</span>
-       </div>
+      <div className={`w-2 h-2 rounded-full ${status.online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'} shadow-[0_0_8px_rgba(16,185,129,0.5)]`}></div>
+      <div className="flex flex-col">
+        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest italic">System Status</span>
+        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">
+          {status.online ? 'Cloud Synchronized' : 'Sync Interrupted'}
+        </span>
+      </div>
+      <div className="ml-auto flex flex-col items-end">
+        <span className="text-[7px] font-black text-gray-600 uppercase italic">Ping</span>
+        <span className="text-[9px] font-black text-gray-400 italic leading-none">{status.latency}</span>
+      </div>
     </div>
   );
 }
