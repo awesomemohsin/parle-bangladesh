@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
+import { getVerifiedAuthUser, hasAnyRole, getAuthUserFromRequest } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product, Customer, PromoCode, ApprovalRequest } from "@/lib/models";
@@ -153,7 +153,15 @@ export async function POST(request: NextRequest) {
     const rawItems = Array.isArray(body.items) ? body.items : [];
     
     // Securely calculate prices on the server based on user role
-    const user = getAuthUserFromRequest(request);
+    // DEEP VERIFICATION: Checks tokenVersion and ensures user isn't stale
+    const token = await import("@/lib/api-auth").then(m => m.getTokenFromRequest(request));
+    const user = await getVerifiedAuthUser(request);
+
+    // If token was provided but verification failed (e.g. role demoted), force re-login
+    if (token && !user) {
+      return NextResponse.json({ error: "Session expired or role updated. Please login again." }, { status: 401 });
+    }
+    
     const isDealer = user?.customerType === "dealer";
 
     const items = [];

@@ -16,9 +16,9 @@ export interface IUser extends Document {
   otpCode?: string;
   otpExpires?: Date;
   failedLoginAttempts?: number;
-  lockUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
+  tokenVersion: number;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -38,6 +38,7 @@ const UserSchema = new Schema<IUser>(
     otpExpires: { type: Date },
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
+    tokenVersion: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

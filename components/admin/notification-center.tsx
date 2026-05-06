@@ -127,7 +127,11 @@ export default function NotificationCenter() {
   }, []);
 
   useEffect(() => {
-    if (user) {
+    // Only poll if user is an admin, super_admin, owner, or moderator
+    const privilegedRoles = ['admin', 'super_admin', 'owner', 'moderator'];
+    const isPrivileged = user && privilegedRoles.includes(user.role);
+
+    if (isPrivileged) {
       fetchNotifs();
       fetchTasks(true);
       

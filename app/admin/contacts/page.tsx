@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Filter, User, Building2, Calendar, Phone, Mail, MessageSquare, MapPin } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminContactsPage() {
+  const { logout } = useAuth()
   const [contacts, setContacts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'regular' | 'corporate' | 'dealer'>('all')
@@ -29,9 +31,7 @@ export default function AdminContactsPage() {
         window.dispatchEvent(new CustomEvent('refreshAdminCounts'))
       } else if (response.status === 401) {
         // Force logout on auth failure
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        window.location.href = '/auth/login'
+        logout()
         toast.error('Session expired. Please login again.')
       } else {
         toast.error('Failed to fetch contacts')

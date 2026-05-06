@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface CartItem {
   productId: string;
@@ -91,6 +92,7 @@ function itemMatchesKey(item: CartItem, key: string): boolean {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   // Initialize state with a function to try and get data immediately on client
   const [cart, setCart] = useState<Cart>(() => {
     if (typeof window !== "undefined") {
@@ -189,11 +191,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const dbItems = (data.items || []).map((i: any) => normalizeItem(i)).filter((i: any): i is CartItem => i !== null);
             
             setCart(prev => {
+              const dbItemMap = new Map(dbItems.map(i => [getItemKey(i), i]));
               const localKeys = new Set(prev.items.map(i => getItemKey(i)));
-              const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
-              if (uniqueDBItems.length === 0 && !data.promoCode) return prev;
               
-              const mergedItems = [...prev.items, ...uniqueDBItems];
+              // Update local items with DB prices/stock if they exist in DB
+              const updatedLocalItems = prev.items.map(item => {
+                const key = getItemKey(item);
+                const dbItem = dbItemMap.get(key);
+                if (dbItem) {
+                  return { ...item, price: dbItem.price, stock: dbItem.stock };
+                }
+                return item;
+              });
+
+              // Add items from DB that aren't in local cart
+              const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
+              
+              const mergedItems = [...updatedLocalItems, ...uniqueDBItems];
               sessionStorage.setItem("cart_synced", "true");
               return { 
                 items: mergedItems,
@@ -210,7 +224,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     syncDB();
-  }, [isInitialized]);
+  }, [isInitialized, user?.customerType]);
+
+  // Trigger re-sync on auth change
+  useEffect(() => {
+    if (user?.id) {
+      sessionStorage.removeItem("cart_synced");
+    }
+  }, [user?.id, user?.customerType]);
 
   // 3. Persist to LocalStorage & DB on changes
   useEffect(() => {

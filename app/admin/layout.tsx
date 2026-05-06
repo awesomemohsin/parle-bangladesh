@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/admin/admin-sidebar";
 import NotificationCenter from "@/components/admin/notification-center";
 import Footer from "@/components/footer";
 import { ShieldAlert, Menu } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLayout({
   children,
@@ -13,6 +14,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { logout } = useAuth();
   const pathname = usePathname();
   const isLoginRoute = pathname === "/auth/login";
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +39,7 @@ export default function AdminLayout({
       const userStr = localStorage.getItem("user");
 
       if (!token || !userStr) {
-        router.push("/auth/login");
+        logout();
         setIsLoading(false);
         return;
       }
@@ -50,9 +52,7 @@ export default function AdminLayout({
         const isExpired = payload.exp * 1000 < Date.now();
         
         if (isExpired) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          router.push("/auth/login");
+          logout();
           return;
         }
 
@@ -70,9 +70,7 @@ export default function AdminLayout({
         setIsAuthed(true);
       } catch (e) {
         console.error("Auth check failed:", e);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        router.push("/auth/login");
+        logout();
       } finally {
         setIsLoading(false);
       }

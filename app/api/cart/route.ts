@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import { Cart } from "@/lib/models";
-import { getAuthUserFromRequest } from "@/lib/api-auth";
+import { Cart, Product } from "@/lib/models";
+import { getVerifiedAuthUser } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request);
+    const user = await getVerifiedAuthUser(request);
     
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,8 +17,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ items: [] });
     }
 
+    // REFRESH PRICES BASED ON CURRENT ROLE
+    const items = [];
+    const isDealer = user.customerType === "dealer";
+
+    for (const item of (cart.items || [])) {
+      try {
+        const product = await Product.findById(item.productId).lean() as any;
+        if (product) {
+          const variation = product.variations.find((v: any) => {
+            const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+            const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+            return weightMatch && flavorMatch;
+          });
+
+          if (variation) {
+            let currentPrice = variation.price;
+            if (isDealer && variation.dealerPrice) {
+              currentPrice = variation.dealerPrice;
+            } else if (variation.discountPrice && variation.discountPrice > 0) {
+              currentPrice = variation.discountPrice;
+            }
+            
+            items.push({
+              ...item,
+              price: currentPrice,
+              stock: variation.stock // Sync stock too while we're at it
+            });
+            continue;
+          }
+        }
+        // If product/variation not found, keep existing item but maybe it should be removed?
+        // For now, keep it to avoid deleting items if product is temporarily missing
+        items.push(item);
+      } catch (err) {
+        items.push(item);
+      }
+    }
+
     return NextResponse.json({ 
-      items: cart.items,
+      items,
       promoCode: cart.promoCode,
       discountAmount: cart.discountAmount
     });
@@ -31,7 +69,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request);
+    const user = await getVerifiedAuthUser(request);
     
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

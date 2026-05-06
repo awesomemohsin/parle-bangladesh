@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
 import { BellRing } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -32,6 +33,7 @@ interface DashboardStats {
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const { logout } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,9 +59,7 @@ export default function AdminDashboard() {
         setStats(data)
       } else if (response.status === 401) {
         // Force logout if unauthorized
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        router.push('/auth/login')
+        logout()
         toast.error('Session expired. Please login again.')
       } else {
         const errData = await response.json()

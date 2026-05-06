@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
+import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Product } from "@/lib/models";
+import { Product, User } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 function mapDoc(doc: any) {
@@ -32,8 +32,6 @@ export async function GET(request: NextRequest) {
     }
     
     if (searchQuery) {
-      // Use text index if possible, or fallback to regex
-      // Note: Full-text search requires a text index on name and description
       query.$or = [
         { name: new RegExp(searchQuery, "i") },
         { slug: new RegExp(searchQuery, "i") },
@@ -49,25 +47,30 @@ export async function GET(request: NextRequest) {
       sort = { "variations.0.price": -1 };
     }
 
-    // Get total count for pagination metadata
     const total = await Product.countDocuments(query);
     
-    // Fetch products with pagination and lean for performance
     const products = await Product.find(query, { images: { $slice: 1 } })
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean();
     
-    // Security: Only admins and dealers can see dealerPrice
-    const user = getAuthUserFromRequest(request);
-    const isPrivileged = user && (
-      user.role === ROLES.ADMIN || 
-      user.role === ROLES.SUPER_ADMIN || 
-      user.role === ROLES.OWNER || 
-      user.role === ROLES.MODERATOR || 
-      user.customerType === "dealer"
-    );
+    // Deep verification: checks tokenVersion
+    const user = await getVerifiedAuthUser(request);
+    let isPrivileged = false;
+    
+    if (user) {
+      if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role)) {
+        isPrivileged = true;
+      } 
+      else if (user.customerType === "dealer") {
+        // We already did a deep check in getVerifiedAuthUser, but we need to ensure the user is STILL a dealer in DB
+        const dbUser = await User.findById(user.id).select("customerType").lean();
+        if (dbUser && dbUser.customerType === "dealer") {
+          isPrivileged = true;
+        }
+      }
+    }
 
     const response = NextResponse.json({ 
       products: products.map((p: any) => {
@@ -89,9 +92,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Disable cache for real-time stock integrity
     response.headers.set('Cache-Control', 'no-store, max-age=0');
-    
     return response;
   } catch (error) {
     console.error("Products GET error:", error);
@@ -102,15 +103,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request);
+    const user = await getVerifiedAuthUser(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const isAllowed = user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN || user.role === ROLES.OWNER || user.role === ROLES.MODERATOR;
+    
+    const isAllowed = [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role);
     if (!isAllowed) {
-        return NextResponse.json({ error: "Restricted: Insufficient permissions to manage products." }, { status: 403 });
+        return NextResponse.json({ error: "Restricted: Insufficient permissions." }, { status: 403 });
     }
 
     const body = await request.json();
-    
     const slug = body.slug || String(Date.now());
     
     let product = await Product.findOne({ slug });
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       action,
       targetId: product._id.toString(),
       targetName: product.name,
-      details: `${action === 'create_product' ? 'Created' : 'Updated'} product: ${product.name} (${product.slug})`
+      details: `${action === 'create_product' ? 'Created' : 'Updated'} product: ${product.name}`
     });
 
     return NextResponse.json({ product: mapDoc(product) }, { status: 201 });

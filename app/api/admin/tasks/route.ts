@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUserFromRequest } from "@/lib/api-auth";
+import { getVerifiedAuthUser } from "@/lib/api-auth";
 import { ROLES, ORDER_STATUS } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, ApprovalRequest, ContactSubmission, CareerApplication } from "@/lib/models";
@@ -7,7 +7,9 @@ import { Order, ApprovalRequest, ContactSubmission, CareerApplication } from "@/
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request);
+    
+    // DEEP VERIFICATION: Checks tokenVersion
+    const user = await getVerifiedAuthUser(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const results: any = { pendingOrders: 0, processingOrders: 0, pendingApprovals: 0, unseenContacts: 0, pendingApplications: 0 };
