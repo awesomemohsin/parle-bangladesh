@@ -78,9 +78,13 @@ export async function PATCH(request: NextRequest) {
     
     if (customerType && ["retailer", "dealer"].includes(customerType)) {
       customer.customerType = customerType;
+      // Force logout by incrementing version
+      customer.tokenVersion = (customer.tokenVersion || 0) + 1;
     }
     if (status && ["active", "disabled"].includes(status)) {
       customer.status = status;
+      // Force logout by incrementing version
+      customer.tokenVersion = (customer.tokenVersion || 0) + 1;
     }
     
     await customer.save();

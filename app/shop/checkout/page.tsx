@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Check, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
 import { BD_DISTRICTS } from '@/lib/constants';
 
 interface OrderState {
@@ -18,6 +19,7 @@ interface OrderState {
 
 export default function CheckoutPage() {
   const { items, total, clearCart, promoCode, discountAmount, isLoading } = useCart();
+  const { logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [formData, setFormData] = useState({
     name: '',
@@ -162,6 +164,7 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         const data = await response.json();
+        if (response.status === 401) logout();
         throw new Error(data.error || 'Failed to place order');
       }
 
@@ -170,9 +173,9 @@ export default function CheckoutPage() {
       setOrderState({
         status: 'success',
         orderId: order.id,
-        finalSubtotal: currentSubtotal,
-        finalShippingCost: shippingCost,
-        finalDeliveryMethod: deliveryMethod
+        finalSubtotal: order.subtotal,
+        finalShippingCost: order.shippingCost,
+        finalDeliveryMethod: order.deliveryMethod
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';

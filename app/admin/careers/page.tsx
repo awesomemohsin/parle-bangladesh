@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Filter, User, Briefcase, Calendar, Phone, Mail, FileText, ChevronRight, MessageSquare } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminCareersPage() {
+  const { logout } = useAuth()
   const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -26,9 +28,7 @@ export default function AdminCareersPage() {
         // Trigger sidebar update to clear the badge
         window.dispatchEvent(new CustomEvent('refreshAdminCounts'))
       } else if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        window.location.href = '/auth/login'
+        logout()
         toast.error('Session expired. Please login again.')
       } else {
         toast.error('Failed to fetch applications')

@@ -23,53 +23,26 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
+import { useAuth } from '@/hooks/useAuth'
 import NotificationCenter from '@/components/admin/notification-center'
-
-interface User {
-  id: string
-  email: string
-  role: 'user' | 'admin' | 'moderator' | 'super_admin' | 'owner'
-  name?: string
-}
 
 export default function Navbar() {
   const { itemCount } = useCart()
+  const { user, isAuthenticated: isLoggedIn, logout: handleLogout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const isAdminRoute = pathname.startsWith('/admin')
-
-  const syncAuth = useCallback(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    if (token && userData) {
-      setIsLoggedIn(true)
-      try {
-        setUser(JSON.parse(userData))
-      } catch (e) {
-        setUser(null)
-      }
-    } else {
-      setIsLoggedIn(false)
-      setUser(null)
-    }
-  }, [])
 
   useEffect(() => {
     const scrollHandler = () => setIsScrolled(window.scrollY > 20)
     window.addEventListener('scroll', scrollHandler)
-    syncAuth()
-    window.addEventListener('storage', syncAuth)
-    
     return () => {
       window.removeEventListener('scroll', scrollHandler)
-      window.removeEventListener('storage', syncAuth)
     }
-  }, [syncAuth])
+  }, [])
 
   // Simplified Scroll Lock
   useEffect(() => {
@@ -86,17 +59,7 @@ export default function Navbar() {
     }
   }, [isMobileMenuOpen])
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    sessionStorage.clear()
-    syncAuth()
-    window.dispatchEvent(new Event('storage'))
-    setIsMobileMenuOpen(false)
-    router.push('/auth/login')
-  }
-
-  const userRole = user?.role || 'user'
+  const userRole = user?.role || 'customer'
   const isOwner = userRole === 'owner'
   const isSuperAdmin = userRole === 'super_admin' || isOwner
   const isAdmin = userRole === 'admin' || isSuperAdmin

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Package, 
   Truck, 
@@ -25,6 +26,7 @@ import { Button } from "@/components/ui/button";
 
 export default function InventoryPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +54,7 @@ export default function InventoryPage() {
       });
       
       if (res.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        router.push('/auth/login');
+        logout();
         toast.error('Session expired. Please login again.');
         return;
       }

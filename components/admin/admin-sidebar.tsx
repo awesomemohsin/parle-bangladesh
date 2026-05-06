@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 interface User {
   id: string
@@ -15,6 +16,7 @@ interface User {
 
 export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const router = useRouter()
+  const { logout } = useAuth()
   const [user, setUser] = useState<User | null>(null)
   const [counts, setCounts] = useState({ pendingOrders: 0, processingOrders: 0, pendingApprovals: 0, unseenContacts: 0, pendingApplications: 0 })
 
@@ -71,11 +73,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    sessionStorage.clear()
-    window.dispatchEvent(new Event('storage'))
-    router.push('/auth/login')
+    logout()
   }
 
   const isOwner = user?.role === 'owner'

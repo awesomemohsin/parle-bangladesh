@@ -26,6 +26,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import CareerCTA from '@/components/career-cta'
 import { CartProvider } from '@/lib/contexts/CartContext'
+import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { Toaster } from 'sonner'
 
 export default function RootLayout({
@@ -36,15 +37,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased min-h-screen flex flex-col overflow-x-hidden`}>
-        <CartProvider>
-          <Toaster position="top-center" richColors />
-          <Navbar />
-          <main className="flex-grow pt-20">
-            {children}
-          </main>
-          <CareerCTA />
-          <Footer />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Toaster position="top-center" richColors />
+            <Navbar />
+            <main className="flex-grow pt-20">
+              {children}
+            </main>
+            <CareerCTA />
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
         <Analytics />
         <Script id="disable-img-interaction">
           {`

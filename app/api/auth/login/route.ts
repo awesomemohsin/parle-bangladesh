@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       name: user.name,
       role: user.role,
       customerType: user.customerType || 'retailer',
+      tokenVersion: user.tokenVersion || 0,
     });
 
     const response = NextResponse.json({
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
         role: user.role,
         customerType: user.customerType || 'retailer',
+        tokenVersion: user.tokenVersion || 0,
       },
     });
 
