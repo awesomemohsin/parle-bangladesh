@@ -106,17 +106,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("[Auth] Session invalidated by server. Logging out...");
           logout();
         } else if (response.ok) {
-          const data = await response.json();
-          // If any important field changed, update local state
-          const serverUser = data.user;
-          if (
-            serverUser.customerType !== localUser.customerType || 
-            serverUser.role !== localUser.role || 
-            serverUser.status !== localUser.status ||
-            serverUser.email !== localUser.email
-          ) {
-            console.log("[Auth] User profile updated, syncing local state...");
-            updateAuth(serverUser, token);
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            // If any important field changed, update local state
+            const serverUser = data.user;
+            if (
+              serverUser.customerType !== localUser.customerType || 
+              serverUser.role !== localUser.role || 
+              serverUser.status !== localUser.status ||
+              serverUser.email !== localUser.email
+            ) {
+              console.log("[Auth] User profile updated, syncing local state...");
+              updateAuth(serverUser, token);
+            }
+          } else {
+            const text = await response.text();
+            console.error("[Auth Sync] Expected JSON but received:", contentType, text.substring(0, 100));
           }
         }
       } catch (error) {

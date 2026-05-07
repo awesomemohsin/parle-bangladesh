@@ -3,6 +3,8 @@ import connectDB from "@/lib/db";
 import { Cart, Product } from "@/lib/models";
 import { getVerifiedAuthUser } from "@/lib/api-auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Cart GET err:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }
 
@@ -103,6 +105,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Cart POST err:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }

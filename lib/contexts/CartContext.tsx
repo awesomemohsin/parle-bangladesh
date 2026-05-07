@@ -187,35 +187,43 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
-            const data = await res.json();
-            const dbItems = (data.items || []).map((i: any) => normalizeItem(i)).filter((i: any): i is CartItem => i !== null);
-            
-            setCart(prev => {
-              const dbItemMap = new Map(dbItems.map(i => [getItemKey(i), i]));
-              const localKeys = new Set(prev.items.map(i => getItemKey(i)));
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await res.json();
+              const dbItems = (data.items || []).map((i: any) => normalizeItem(i)).filter((i: any): i is CartItem => i !== null);
               
-              // Update local items with DB prices/stock if they exist in DB
-              const updatedLocalItems = prev.items.map(item => {
-                const key = getItemKey(item);
-                const dbItem = dbItemMap.get(key);
-                if (dbItem) {
-                  return { ...item, price: dbItem.price, stock: dbItem.stock };
-                }
-                return item;
-              });
+              setCart(prev => {
+                const dbItemMap = new Map(dbItems.map(i => [getItemKey(i), i]));
+                const localKeys = new Set(prev.items.map(i => getItemKey(i)));
+                
+                // Update local items with DB prices/stock if they exist in DB
+                const updatedLocalItems = prev.items.map(item => {
+                  const key = getItemKey(item);
+                  const dbItem = dbItemMap.get(key);
+                  if (dbItem) {
+                    return { ...item, price: dbItem.price, stock: dbItem.stock };
+                  }
+                  return item;
+                });
 
-              // Add items from DB that aren't in local cart
-              const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
-              
-              const mergedItems = [...updatedLocalItems, ...uniqueDBItems];
-              sessionStorage.setItem("cart_synced", "true");
-              return { 
-                items: mergedItems,
-                ...calculateTotals(mergedItems), 
-                promoCode: prev.promoCode || data.promoCode, 
-                discountAmount: prev.discountAmount || data.discountAmount 
-              };
-            });
+                // Add items from DB that aren't in local cart
+                const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
+                
+                const mergedItems = [...updatedLocalItems, ...uniqueDBItems];
+                sessionStorage.setItem("cart_synced", "true");
+                return { 
+                  items: mergedItems,
+                  ...calculateTotals(mergedItems), 
+                  promoCode: prev.promoCode || data.promoCode, 
+                  discountAmount: prev.discountAmount || data.discountAmount 
+                };
+              });
+            } else {
+              const text = await res.text();
+              console.error("[Cart GET] Expected JSON but received:", contentType, text.substring(0, 100));
+            }
+          } else {
+            console.error("[Cart GET] Failed with status:", res.status);
           }
         } catch (e) {
           console.error("DB Sync failed:", e);
@@ -254,6 +262,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             promoCode: cart.promoCode,
             discountAmount: cart.discountAmount
           })
+        }).then(async (res) => {
+          if (res.ok) {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await res.json();
+              if (data && data.items) {
+                setCart(prev => ({
+                  ...prev,
+                  items: data.items,
+                  promoCode: data.promoCode || null,
+                  discountAmount: data.discountAmount || 0
+                }));
+              }
+            } else {
+              const text = await res.text();
+              console.error("[Cart] Expected JSON but received:", contentType, text.substring(0, 100));
+            }
+          } else {
+            console.error("[Cart] Fetch failed with status:", res.status);
+          }
         }).catch(err => console.error("DB Save failed:", err));
       }, 1000);
       return () => clearTimeout(timer);

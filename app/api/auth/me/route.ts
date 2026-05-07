@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({ user: sanitizedUser });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Auth Me Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }

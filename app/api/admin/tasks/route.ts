@@ -4,6 +4,8 @@ import { ROLES, ORDER_STATUS } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, ApprovalRequest, ContactSubmission, CareerApplication } from "@/lib/models";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -50,8 +52,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Tasks API error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }
