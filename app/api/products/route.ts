@@ -5,6 +5,8 @@ import connectDB from "@/lib/db";
 import { Product, User } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
+export const dynamic = "force-dynamic";
+
 function mapDoc(doc: any) {
   const obj = doc.toObject ? doc.toObject() : doc;
   obj.id = obj._id.toString();
@@ -94,9 +96,9 @@ export async function GET(request: NextRequest) {
 
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Products GET error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }
 
@@ -148,8 +150,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ product: mapDoc(product) }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Products POST error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }

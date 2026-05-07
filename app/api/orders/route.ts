@@ -6,6 +6,8 @@ import { Order, Product, Customer, PromoCode, ApprovalRequest } from "@/lib/mode
 import mongoose from "mongoose";
 import { notifyNewOrder } from "@/lib/telegram";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -140,9 +142,9 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit)
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Orders GET error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }
 
@@ -350,8 +352,8 @@ export async function POST(request: NextRequest) {
     delete mappedOrder.__v;
     
     return NextResponse.json(mappedOrder, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Orders POST error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }

@@ -107,10 +107,10 @@ export async function POST(request: NextRequest) {
 
     response.headers.set("Set-Cookie", setAuthCookie(token, 'token', 86400 * 7));
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error: " + (error.message || "Unknown error") },
       { status: 500 },
     );
   }

@@ -44,13 +44,11 @@ export async function GET(request: NextRequest) {
             items.push({
               ...item,
               price: currentPrice,
-              stock: variation.stock // Sync stock too while we're at it
+              stock: variation.stock
             });
             continue;
           }
         }
-        // If product/variation not found, keep existing item but maybe it should be removed?
-        // For now, keep it to avoid deleting items if product is temporarily missing
         items.push(item);
       } catch (err) {
         items.push(item);
