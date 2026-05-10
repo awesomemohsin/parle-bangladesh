@@ -3,7 +3,7 @@ import { ProductSchema } from "@/lib/schemas";
 import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Product, User, ApprovalRequest, Notification, Category } from "@/lib/models";
+import { Product, User, ApprovalRequest, Notification, Category, PromoCode } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 import { notifyNewApprovalRequest } from "@/lib/telegram";
 import fs from "fs";
@@ -36,7 +36,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
     let isPrivileged = false;
     
     if (user) {
-      if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role)) {
+      if (user && [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
         isPrivileged = true;
       } 
       else if (user.customerType === "dealer") {
@@ -47,16 +47,46 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
       }
     }
 
+    // 1. Fetch all active flat discounts
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+
     const sanitizedProduct = { ...product, id: product._id.toString(), _id: undefined };
-    if (!isPrivileged && sanitizedProduct.variations) {
+    
+    // 2. Apply flat discounts
+    if (sanitizedProduct.variations) {
       sanitizedProduct.variations = sanitizedProduct.variations.map((v: any) => {
         const variation = { ...v };
-        delete variation.dealerPrice;
+        
+        // Find applicable flat discounts
+        const applicableFlat = flatDiscounts.find(d => 
+          d.allProducts || (d.applicableProducts && d.applicableProducts.includes(sanitizedProduct.id))
+        );
+
+        if (applicableFlat) {
+          const amount = Number(applicableFlat.discountAmount || 0);
+          const originalPrice = Number(isPrivileged && variation.dealerPrice ? variation.dealerPrice : variation.price);
+          let discounted = originalPrice;
+          
+          if (applicableFlat.discountType === 'percentage') {
+            discounted = originalPrice - (originalPrice * amount) / 100;
+          } else {
+            discounted = Math.max(0, originalPrice - amount);
+          }
+
+          variation.flatDiscountPrice = Math.round(discounted);
+          variation.hasFlatDiscount = true;
+          variation.flatDiscountAmount = amount;
+          variation.flatDiscountType = applicableFlat.discountType;
+        }
+
+        if (!isPrivileged) {
+          delete variation.dealerPrice;
+        }
         return variation;
       });
     }
 
-    return NextResponse.json(sanitizedProduct);
+    return NextResponse.json({ product: sanitizedProduct });
   } catch (error) {
     console.error("Product Detail error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -90,7 +120,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
          targetName: existingProduct.name,
          details: `Directly updated product: ${existingProduct.name}`
        });
-       return NextResponse.json(existingProduct);
+       return NextResponse.json({ product: existingProduct });
     }
 
     // Moderators/Admins create approval requests

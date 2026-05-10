@@ -27,26 +27,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { code, discountAmount, maxUsage, expiresAt, isActive } = await req.json();
+    const { code, type, discountType, discountAmount, maxUsage, expiresAt, isActive, allProducts, applicableProducts } = await req.json();
 
-    if (!code || !discountAmount || !maxUsage) {
-      return NextResponse.json({ error: 'Code, discount amount, and max usage are required' }, { status: 400 });
+    if (type === 'promo' && !code) {
+      return NextResponse.json({ error: 'Code is required for promo type' }, { status: 400 });
+    }
+
+    if (!discountAmount) {
+      return NextResponse.json({ error: 'Discount amount is required' }, { status: 400 });
     }
 
     await dbConnect();
     
-    // Check if code already exists
-    const existing = await PromoCode.findOne({ code: code.toUpperCase() });
-    if (existing) {
-      return NextResponse.json({ error: 'Promo code already exists' }, { status: 400 });
+    // Check if code already exists if provided
+    if (code) {
+      const existing = await PromoCode.findOne({ code: code.toUpperCase() });
+      if (existing) {
+        return NextResponse.json({ error: 'Promo code already exists' }, { status: 400 });
+      }
     }
 
     const newPromo = await PromoCode.create({
-      code: code.toUpperCase(),
+      code: code ? code.toUpperCase() : undefined,
+      type: type || 'promo',
+      discountType: discountType || 'fixed',
       discountAmount,
-      maxUsage,
+      maxUsage: maxUsage || 999999,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
       isActive: isActive !== undefined ? isActive : true,
+      allProducts: allProducts !== undefined ? allProducts : false,
+      applicableProducts: applicableProducts || [],
     });
 
     return NextResponse.json(newPromo, { status: 201 });

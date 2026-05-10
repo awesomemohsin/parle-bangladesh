@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Product, User } from "@/lib/models";
+import { Product, User, PromoCode } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     let isPrivileged = false;
     
     if (user) {
-      if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role)) {
+      if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
         isPrivileged = true;
       } 
       else if (user.customerType === "dealer") {
@@ -74,13 +74,61 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 1. Fetch all active flat discounts
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+
     const response = NextResponse.json({ 
       products: products.map((p: any) => {
         const product = { ...p, id: p._id.toString(), _id: undefined };
-        if (!isPrivileged && product.variations) {
+        
+        // 2. Apply flat discounts to each product
+        if (product.variations) {
           product.variations = product.variations.map((v: any) => {
             const variation = { ...v };
-            delete variation.dealerPrice;
+            
+            // Logic: Option A (Best Value)
+            // Find ALL applicable flat discounts and pick the one with max savings
+            const applicableFlats = flatDiscounts.filter(d => 
+              d.allProducts || (d.applicableProducts && d.applicableProducts.includes(product.id))
+            );
+
+            if (applicableFlats.length > 0) {
+              const originalPrice = Number(isPrivileged && variation.dealerPrice ? variation.dealerPrice : variation.price);
+              let bestSavings = 0;
+              let bestDiscountedPrice = originalPrice;
+              let bestDiscountAmount = 0;
+              let bestDiscountType = 'fixed';
+
+              applicableFlats.forEach(rule => {
+                const amount = Number(rule.discountAmount || 0);
+                let currentDiscounted = originalPrice;
+                let currentSavings = 0;
+
+                if (rule.discountType === 'percentage') {
+                  currentSavings = (originalPrice * amount) / 100;
+                  currentDiscounted = originalPrice - currentSavings;
+                } else {
+                  currentSavings = amount;
+                  currentDiscounted = Math.max(0, originalPrice - amount);
+                }
+
+                if (currentSavings > bestSavings) {
+                  bestSavings = currentSavings;
+                  bestDiscountedPrice = currentDiscounted;
+                  bestDiscountAmount = amount;
+                  bestDiscountType = rule.discountType;
+                }
+              });
+
+              variation.flatDiscountPrice = Math.round(bestDiscountedPrice);
+              variation.hasFlatDiscount = true;
+              variation.flatDiscountAmount = bestDiscountAmount;
+              variation.flatDiscountType = bestDiscountType;
+            }
+
+            if (!isPrivileged) {
+              delete variation.dealerPrice;
+            }
             return variation;
           });
         }
@@ -108,7 +156,7 @@ export async function POST(request: NextRequest) {
     const user = await getVerifiedAuthUser(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
-    const isAllowed = [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role);
+    const isAllowed = [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any);
     if (!isAllowed) {
         return NextResponse.json({ error: "Restricted: Insufficient permissions." }, { status: 403 });
     }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import { Cart, Product } from "@/lib/models";
+import { Cart, Product, PromoCode } from "@/lib/models";
 import { getVerifiedAuthUser } from "@/lib/api-auth";
+import { calculateServerSideCart } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -9,18 +10,17 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     const user = await getVerifiedAuthUser(request);
-    
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const cart = await Cart.findOne({ userId: user.id }).lean();
     if (!cart) {
-      return NextResponse.json({ items: [] });
+      return NextResponse.json({ items: [], subtotal: 0, total: 0, discountAmount: 0 });
     }
 
-    // REFRESH PRICES BASED ON CURRENT ROLE
-    const items = [];
+    const refreshedItems = [];
     const isDealer = user.customerType === "dealer";
 
     for (const item of (cart.items || [])) {
@@ -34,37 +34,43 @@ export async function GET(request: NextRequest) {
           });
 
           if (variation) {
-            let currentPrice = variation.price;
-            if (isDealer && variation.dealerPrice) {
-              currentPrice = variation.dealerPrice;
-            } else if (variation.discountPrice && variation.discountPrice > 0) {
-              currentPrice = variation.discountPrice;
-            }
-            
-            items.push({
-              ...item,
-              price: currentPrice,
-              stock: variation.stock // Sync stock too while we're at it
-            });
-            continue;
+            item.price = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
+            item.variationDiscountPrice = variation.discountPrice;
+            item.stock = variation.stock;
           }
         }
-        // If product/variation not found, keep existing item but maybe it should be removed?
-        // For now, keep it to avoid deleting items if product is temporarily missing
-        items.push(item);
+        refreshedItems.push(item);
       } catch (err) {
-        items.push(item);
+        refreshedItems.push(item);
       }
     }
 
-    return NextResponse.json({ 
-      items,
-      promoCode: cart.promoCode,
-      discountAmount: cart.discountAmount
+    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode);
+
+    // Apply flat discounts to item prices for UI consistency
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+    for (const item of refreshedItems) {
+      const applicableFlat = flatDiscounts.find(d => 
+        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === item.productId))
+      );
+      if (applicableFlat) {
+        const amount = Number(applicableFlat.discountAmount || 0);
+        const originalPrice = Number(item.price);
+        if (applicableFlat.discountType === 'percentage') {
+          item.price = originalPrice - (originalPrice * amount) / 100;
+        } else {
+          item.price = Math.max(0, originalPrice - amount);
+        }
+      }
+    }
+
+    return NextResponse.json({
+      items: refreshedItems,
+      ...totals
     });
   } catch (error: any) {
     console.error("Cart GET err:", error);
-    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -72,39 +78,77 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const user = await getVerifiedAuthUser(request);
-    
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { items, promoCode, discountAmount } = await request.json();
+    const { items, promoCode } = await request.json();
 
     if (!items || items.length === 0) {
       await Cart.deleteOne({ userId: user.id });
-      return NextResponse.json({ success: true, items: [] });
+      return NextResponse.json({ success: true, items: [], subtotal: 0, total: 0, discountAmount: 0 });
+    }
+
+    const refreshedItems = [];
+    const isDealer = user.customerType === "dealer";
+    for (const item of items) {
+      const product = await Product.findById(item.productId).lean() as any;
+      if (product) {
+        const variation = product.variations.find((v: any) => {
+          const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+          const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+          return weightMatch && flavorMatch;
+        });
+        if (variation) {
+          item.price = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
+          item.variationDiscountPrice = variation.discountPrice;
+          item.stock = variation.stock;
+        }
+      }
+      refreshedItems.push(item);
+    }
+
+    const totals = await calculateServerSideCart(refreshedItems, promoCode);
+
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+    for (const item of refreshedItems) {
+      const applicableFlat = flatDiscounts.find(d => 
+        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === item.productId))
+      );
+      if (applicableFlat) {
+        const amount = Number(applicableFlat.discountAmount || 0);
+        const originalPrice = Number(item.price);
+        if (applicableFlat.discountType === 'percentage') {
+          item.price = originalPrice - (originalPrice * amount) / 100;
+        } else {
+          item.price = Math.max(0, originalPrice - amount);
+        }
+      }
     }
 
     const cart = await Cart.findOneAndUpdate(
       { userId: user.id },
-      { 
-        $set: { 
-          items,
-          promoCode,
-          discountAmount,
+      {
+        $set: {
+          items: refreshedItems,
+          promoCode: totals.promoCode,
+          discountAmount: totals.discountAmount,
+          promoDetails: totals.promoDetails,
           updatedAt: new Date()
-        } 
+        }
       },
       { upsert: true, returnDocument: 'after', runValidators: true }
     );
 
-    return NextResponse.json({ 
-      success: true, 
-      items: cart.items,
-      promoCode: cart.promoCode,
-      discountAmount: cart.discountAmount
+
+    return NextResponse.json({
+      success: true,
+      items: refreshedItems,
+      ...totals
     });
   } catch (error: any) {
     console.error("Cart POST err:", error);
-    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
