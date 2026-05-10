@@ -1,351 +1,166 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
-import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product } from "@/lib/models";
-import { logAdminActivity } from "@/lib/activity";
-import { notifyOrderReady, notifyCriticalEvent, notifyNewApprovalRequest } from "@/lib/telegram";
+import { Order } from "@/lib/models";
+import { getAuthUserFromRequest } from "@/lib/api-auth";
 
-function mapDoc(doc: any) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  delete obj._id;
-  delete obj.__v;
-  return obj;
-}
+export const dynamic = "force-dynamic";
 
-interface Params {
-  params: Promise<{ id: string }>;
-}
-
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
     }
 
-    const { id } = await params;
-    const order = await Order.findById(id);
+    const order = await Order.findById(id).lean();
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Security Check: Admin roles OR Ownership check
-    const isPrivileged = hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER]);
-    const isOwner = order.userId === user.id || (order.customerEmail && order.customerEmail.toLowerCase() === user.email.toLowerCase());
-
-    if (!isPrivileged && !isOwner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Security check: only allow the owner or an admin to see the order
+    const user = getAuthUserFromRequest(request);
+    const isAdmin = user && ["admin", "super_admin", "owner", "moderator"].includes(user.role);
+    
+    // For guest orders, we might want to allow viewing if they have the ID, 
+    // but ideally we should verify email/phone too. 
+    // For now, we'll allow viewing by ID since it's a GUID and used for the success page.
+    // If it's a logged-in order, verify the user.
+    if (order.userId && (!user || user.id !== order.userId.toString()) && !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized access to this order" }, { status: 403 });
     }
 
-    const { ApprovalRequest } = require("@/lib/models");
-    const pendingRequests = await ApprovalRequest.find({ 
-      targetId: id,
-      status: "pending" 
-    });
+    const mappedOrder = {
+      ...order,
+      id: order._id.toString()
+    };
+    delete (mappedOrder as any)._id;
+    delete (mappedOrder as any).__v;
 
-    return NextResponse.json({ 
-      order: { 
-        ...mapDoc(order), 
-        pendingApproval: pendingRequests.length > 0 
-      } 
-    });
-  } catch (error) {
-    console.error("Order GET by id error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json(mappedOrder);
+  } catch (error: any) {
+    console.error("Order GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await connectDB();
+    const { id } = await params;
+    const body = await request.json();
+    const { status, statusReason } = body;
+
     const user = getAuthUserFromRequest(request);
-    if (!user) {
+    if (!user || !["admin", "super_admin", "owner", "moderator"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (user.role === ROLES.OWNER) {
-       return NextResponse.json({ error: "Restricted: Owner cannot update directly. Use the Approval system." }, { status: 403 });
-    }
-
-    const { id } = await params;
     const order = await Order.findById(id);
-
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    const isPrivileged = hasAnyRole(user, [ROLES.MODERATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN]);
-    const isCustomerOwner = order.userId === user.id || (order.customerEmail && order.customerEmail.toLowerCase() === user.email.toLowerCase());
-
-    if (!isPrivileged && !isCustomerOwner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const newStatus = String(body.status || "").toLowerCase();
-    const statusReason = body.statusReason || body.cancelReason;
-
-    // CUSTOMER SPECIFIC CONSTRAINTS
-    if (!isPrivileged && isCustomerOwner) {
-       if (order.status !== ORDER_STATUS.PENDING) {
-          return NextResponse.json({ error: "Order is already being processed and cannot be cancelled. Contact support." }, { status: 403 });
-       }
-       if (newStatus !== ORDER_STATUS.CANCELLED) {
-          return NextResponse.json({ error: "Operation restricted: Customers may only cancel orders." }, { status: 403 });
-       }
-    }
-
-    if (!Object.values(ORDER_STATUS).includes(newStatus as never)) {
-      return NextResponse.json({ error: "Invalid order status" }, { status: 400 });
-    }
-
     const oldStatus = order.status;
-    const { Notification } = require("@/lib/models");
-
-    // IMMUTABILITY CONSTRAINTS
-    // Prevent any changes once an order has hit a 'terminal' state
-    const terminalStatuses = [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED, ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST];
-    if (terminalStatuses.includes(oldStatus as any)) {
-       return NextResponse.json({ 
-         error: `This order is already marked as ${oldStatus.toUpperCase()} and cannot be modified again. Status is final.` 
-       }, { status: 400 });
-    }
-
-    // ROLE-BASED CONSTRAINTS
-    // 1. Moderator can only change status from processing onwards
-    if (isPrivileged && user.role === ROLES.MODERATOR) {
-      if (oldStatus === ORDER_STATUS.PENDING) {
-        return NextResponse.json({ error: "Moderators cannot modify pending orders. Please wait for Admin processing." }, { status: 403 });
-      }
-      if (newStatus === ORDER_STATUS.PENDING) {
-        return NextResponse.json({ error: "Moderators cannot revert orders to pending status." }, { status: 403 });
-      }
-    }
-
-    // 2. No role can revert to pending after processing started
-    if (newStatus === ORDER_STATUS.PENDING && oldStatus !== ORDER_STATUS.PENDING) {
-       return NextResponse.json({ error: "Orders cannot be reverted to pending status once processing has begun." }, { status: 400 });
-    }
-
-    // Check if permission required from Owner (for damaged and lost)
-    const requiresApproval = isPrivileged && [ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any);
-
-    if (requiresApproval) {
-       // Create approval request instead of updating order
-       const { ApprovalRequest } = require("@/lib/models");
-       const approvalRequest = new ApprovalRequest({
-         requesterEmail: user.email,
-         type: "order",
-         targetId: order._id.toString(),
-         targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
-         field: "status",
-         oldValue: oldStatus,
-         newValue: newStatus,
-         status: "pending",
-         targetDetails: order.toObject(),
-         stage: "superadmin",
-       });
-       await approvalRequest.save();
-       
-       // Trigger Telegram Notification for Approval
-       try {
-         await notifyNewApprovalRequest(approvalRequest);
-       } catch (tgError) {
-         console.error("Telegram notification failed for order approval:", tgError);
-       }
-
-       // Notify Superadmins of new pending approval
-       await Notification.create({
-         role: ROLES.SUPER_ADMIN,
-         title: "New Order Approval Req",
-         message: `Approval required for Order #${order._id.toString().slice(-8).toUpperCase()} status change to ${newStatus}`,
-         type: "approval",
-         targetLink: `/admin/approvals/orders`
-       });
-
-       // Log to order history that it's waiting for approval
-       if (!order.orderLogs) order.orderLogs = [];
-       order.orderLogs.push({
-         fromStatus: oldStatus,
-         toStatus: `${newStatus} (Waiting for Approval)`,
-         changedBy: user.email,
-         reason: `Admin requested change to ${newStatus}. Reason: ${statusReason || 'Not provided'}`,
-         changedAt: new Date()
-       });
-       await order.save();
-
-       return NextResponse.json({ 
-         message: "This status change requires OWNER approval and has been queued.",
-         pendingApproval: true,
-         order: { ...mapDoc(order), pendingApproval: true }
-       });
-    }
     
+    // Moderators cannot move orders back to pending
+    if (user.role === "moderator" && status === "pending") {
+      return NextResponse.json({ error: "Moderators cannot move orders back to pending" }, { status: 403 });
+    }
+
     // Update order
-    order.status = newStatus;
-    const reasonRequiredStatuses = [ORDER_STATUS.CANCELLED, ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST];
-    
-    // --- STOCK MANAGEMENT LOGIC ---
-    // If transitioning from a 'holding' state (pending/processing/shipped) to a 'terminal' state
-    const holdingStatuses = [ORDER_STATUS.PENDING, ORDER_STATUS.PROCESSING, ORDER_STATUS.SHIPPED];
-    const isFromHolding = holdingStatuses.includes(oldStatus as any);
+    order.status = status;
+    if (statusReason) order.statusReason = statusReason;
 
-    if (isFromHolding) {
-      if (newStatus === ORDER_STATUS.DELIVERED) {
-        // Delivered: Release hold, subtract from physical stock, add to delivered count
-        for (const item of order.items) {
-          const product = item.productId 
-            ? await Product.findById(item.productId) 
-            : await Product.findOne({ slug: item.productSlug });
-            
-          if (product && product.variations) {
-            const varIndex = product.variations.findIndex((v: any) => {
-              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
-              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
-              return weightMatch && flavorMatch;
-            });
-            if (varIndex !== -1) {
-              const qty = item.quantity;
-              const update: any = { $inc: {} };
-              // Stock was already reduced at order time
-              // We only clear the hold now
-              update.$inc[`variations.${varIndex}.holdStock`] = -qty;
-              update.$inc[`variations.${varIndex}.deliveredCount`] = qty;
-              await Product.updateOne({ _id: product._id }, update);
-            }
-          }
-        }
-      } else if (newStatus === ORDER_STATUS.CANCELLED) {
-        // Cancelled: Return stock from hold to available pool
-        for (const item of order.items) {
-          const product = item.productId 
-            ? await Product.findById(item.productId) 
-            : await Product.findOne({ slug: item.productSlug });
-
-          if (product && product.variations) {
-            const varIndex = product.variations.findIndex((v: any) => {
-              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
-              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
-              return weightMatch && flavorMatch;
-            });
-            if (varIndex !== -1) {
-               await Product.updateOne(
-                 { _id: product._id },
-                 { $inc: { 
-                   [`variations.${varIndex}.holdStock`]: -item.quantity,
-                   [`variations.${varIndex}.stock`]: item.quantity
-                 } }
-               );
-            }
-          }
-        }
-      } else if (newStatus === ORDER_STATUS.DAMAGED || newStatus === ORDER_STATUS.LOST) {
-          // Damaged/Lost: Just release the hold. Stock was already deducted at checkout.
-          for (const item of order.items) {
-            const product = item.productId 
-                ? await Product.findById(item.productId) 
-                : await Product.findOne({ slug: item.productSlug });
-
-            if (product && product.variations) {
-              const varIndex = product.variations.findIndex((v: any) => {
-                const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
-                const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
-                return weightMatch && flavorMatch;
-              });
-              if (varIndex !== -1) {
-                const qty = item.quantity;
-                const update: any = { $inc: {} };
-                update.$inc[`variations.${varIndex}.holdStock`] = -qty;
-                if (newStatus === ORDER_STATUS.DAMAGED) update.$inc[`variations.${varIndex}.damagedCount`] = qty;
-                if (newStatus === ORDER_STATUS.LOST) update.$inc[`variations.${varIndex}.lostCount`] = qty;
-                await Product.updateOne({ _id: product._id }, update);
-              }
-            }
-          }
-      }
-    }
-
-    if (reasonRequiredStatuses.includes(newStatus as any)) {
-      if (statusReason) {
-        order.statusReason = statusReason;
-        if (newStatus === ORDER_STATUS.CANCELLED) {
-          order.cancelReason = statusReason;
-        }
-      }
-    } else {
-      // Clear reasons if moving to a status that doesn't require them
-      order.statusReason = undefined;
-      order.cancelReason = undefined;
-    }
-
-    // Add log to order document
+    // Add log
     if (!order.orderLogs) order.orderLogs = [];
     order.orderLogs.push({
       fromStatus: oldStatus,
-      toStatus: newStatus,
-      changedBy: isPrivileged ? `${user.name || 'Admin'} (${user.email})` : `Customer (${user.email})`,
+      toStatus: status,
+      changedBy: user.name || user.email,
       reason: statusReason,
       changedAt: new Date(),
     });
 
-    // TRIGGER NOTIFICATIONS FOR ROLE HAND-OFF (Detect before save)
-    const isMovingToProcessing = newStatus.trim() === ORDER_STATUS.PROCESSING && oldStatus !== ORDER_STATUS.PROCESSING;
+    // If status changed to cancelled, damaged, or lost, restore stock
+    const restorableStatuses = ["cancelled", "damaged", "lost"];
+    if (restorableStatuses.includes(status) && !restorableStatuses.includes(oldStatus)) {
+      const { Product } = await import("@/lib/models");
+      for (const item of order.items) {
+        if (item.productId) {
+          const product = await Product.findById(item.productId);
+          if (product && product.variations) {
+            const varIndex = product.variations.findIndex((v: any) => {
+              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+              return weightMatch && flavorMatch;
+            });
+            
+            if (varIndex !== -1) {
+              const holdField = `variations.${varIndex}.holdStock`;
+              const stockField = `variations.${varIndex}.stock`;
+              const lostField = `variations.${varIndex}.lostCount`;
+              const damagedField = `variations.${varIndex}.damagedCount`;
+
+              const update: any = { $inc: {} };
+              
+              // Remove from hold anyway
+              update.$inc[holdField] = -item.quantity;
+
+              if (status === "cancelled") {
+                // Return to stock
+                update.$inc[stockField] = item.quantity;
+              } else if (status === "lost") {
+                update.$inc[lostField] = item.quantity;
+              } else if (status === "damaged") {
+                update.$inc[damagedField] = item.quantity;
+              }
+
+              await Product.updateOne({ _id: product._id }, update);
+            }
+          }
+        }
+      }
+    }
+
+    // If status changed to delivered, remove from hold
+    if (status === "delivered" && oldStatus !== "delivered") {
+      const { Product } = await import("@/lib/models");
+      for (const item of order.items) {
+        if (item.productId) {
+          const product = await Product.findById(item.productId);
+          if (product && product.variations) {
+             const varIndex = product.variations.findIndex((v: any) => {
+              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+              return weightMatch && flavorMatch;
+            });
+            if (varIndex !== -1) {
+              const holdField = `variations.${varIndex}.holdStock`;
+              const deliveredField = `variations.${varIndex}.deliveredCount`;
+              await Product.updateOne(
+                { _id: product._id },
+                { $inc: { [holdField]: -item.quantity, [deliveredField]: item.quantity } }
+              );
+            }
+          }
+        }
+      }
+    }
 
     await order.save();
 
-    if (isMovingToProcessing) {
-      console.log(`[Telegram] Status change detected: ${oldStatus} -> ${newStatus}. Notifying Logistics...`);
-      try {
-        await notifyOrderReady(order);
-      } catch (e) {
-        console.error("Telegram notify error:", e);
-      }
-      
-      await Notification.create({
-        role: ROLES.MODERATOR,
-        title: "Order Ready for Dispatch",
-        message: `Order #${order._id.toString().slice(-8).toUpperCase()} has been processed and is ready for status management.`,
-        type: "order",
-        targetLink: `/admin/orders`
-      });
-    } else if (newStatus !== oldStatus) {
-      // Notify Admin of status updates (Shipped, Delivered, Cancelled, etc)
-      await Notification.create({
-        role: ROLES.ADMIN,
-        title: "Order Status Updated",
-        message: `Order #${order._id.toString().slice(-8).toUpperCase()} status changed from ${oldStatus} to ${newStatus}.`,
-        type: "order",
-        targetLink: `/admin/orders`
-      });
-    }
-
-    // TRIGGER ALERTS FOR MANAGEMENT (LOST / DAMAGED)
-    if ([ORDER_STATUS.DAMAGED, ORDER_STATUS.LOST].includes(newStatus as any) && newStatus !== oldStatus) {
-       notifyCriticalEvent(newStatus, order, statusReason).catch(e => console.error("Telegram critical notify error:", e));
-    }
-
-    // Log administrative activity globally
-    await logAdminActivity({
-      adminEmail: user.email,
-      action: "update_order_status",
-      targetId: order._id.toString(),
-      targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
-      details: `Updated order ${order._id} status from ${oldStatus} to ${newStatus}${statusReason ? ` (Reason: ${statusReason})` : ''}`
-    });
-
-    return NextResponse.json({ order: mapDoc(order) });
-  } catch (error) {
+    return NextResponse.json({ success: true, order });
+  } catch (error: any) {
     console.error("Order PUT error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
 }
