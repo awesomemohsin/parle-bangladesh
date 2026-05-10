@@ -16,6 +16,7 @@ export interface IUser extends Document {
   otpCode?: string;
   otpExpires?: Date;
   failedLoginAttempts?: number;
+  lockUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
   tokenVersion: number;
@@ -90,6 +91,7 @@ export interface ICart extends Document {
   items: ICartItem[];
   promoCode?: string;
   discountAmount?: number;
+  promoDetails?: any;
 }
 
 const CartItemSchema = new Schema<ICartItem>({
@@ -109,6 +111,7 @@ const CartSchema = new Schema<ICart>(
     items: [CartItemSchema],
     promoCode: { type: String },
     discountAmount: { type: Number, default: 0 },
+    promoDetails: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
 );
@@ -282,6 +285,8 @@ export interface IOrder extends Document {
   total: number;
   promoCode?: string;
   discountAmount?: number;
+  ruleDiscount?: number;
+  promoDiscount?: number;
   status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
   cancelReason?: string;
   statusReason?: string;
@@ -332,6 +337,8 @@ const OrderSchema = new Schema<IOrder>(
     total: { type: Number, required: true },
     promoCode: { type: String },
     discountAmount: { type: Number, default: 0 },
+    ruleDiscount: { type: Number, default: 0 },
+    promoDiscount: { type: Number, default: 0 },
     status: { type: String, required: true, default: "pending" },
     cancelReason: { type: String },
     statusReason: { type: String },
@@ -483,11 +490,15 @@ export const Notification = mongoose.models?.Notification || mongoose.model<INot
 
 // --- PROMO CODE MODEL ---
 export interface IPromoCode extends Document {
-  code: string;
+  code?: string;
+  type: 'promo' | 'flat';
+  discountType: 'fixed' | 'percentage';
   discountAmount: number;
   maxUsage: number;
   currentUsage: number;
   isActive: boolean;
+  allProducts: boolean;
+  applicableProducts: string[]; // Array of product IDs
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -495,11 +506,15 @@ export interface IPromoCode extends Document {
 
 const PromoCodeSchema = new Schema<IPromoCode>(
   {
-    code: { type: String, required: true, unique: true, uppercase: true },
+    code: { type: String, unique: true, uppercase: true, sparse: true },
+    type: { type: String, enum: ['promo', 'flat'], default: 'promo' },
+    discountType: { type: String, enum: ['fixed', 'percentage'], default: 'fixed' },
     discountAmount: { type: Number, required: true },
-    maxUsage: { type: Number, required: true },
+    maxUsage: { type: Number, required: true, default: 50 },
     currentUsage: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    allProducts: { type: Boolean, default: false },
+    applicableProducts: [{ type: String }],
     expiresAt: { type: Date },
   },
   { timestamps: true }
@@ -507,6 +522,7 @@ const PromoCodeSchema = new Schema<IPromoCode>(
 
 PromoCodeSchema.index({ isActive: 1 });
 PromoCodeSchema.index({ expiresAt: 1 });
+PromoCodeSchema.index({ type: 1 });
 
 export const PromoCode = mongoose.models?.PromoCode || mongoose.model<IPromoCode>("PromoCode", PromoCodeSchema, "promo_codes"); 
 
