@@ -42,6 +42,8 @@ interface Order {
   deliveryMethod?: string
   subtotal?: number
   shippingCost?: number
+  ruleDiscount?: number
+  promoDiscount?: number
   customerType?: string
 }
 
@@ -392,9 +394,14 @@ export default function AdminOrdersPage() {
                     <div className="text-[10px] font-black text-gray-500 mt-0.5 uppercase tracking-tighter">
                       Incl. Delivery: ৳{(order.shippingCost || 0).toFixed(0)}
                     </div>
-                    {(order.discountAmount || 0) > 0 && (
+                    {(order.ruleDiscount || 0) > 0 && (
+                      <div className="text-[10px] font-black text-amber-600 mt-1 uppercase tracking-tighter italic">
+                        Flat Discount (-৳{(order.ruleDiscount || 0).toFixed(0)})
+                      </div>
+                    )}
+                    {(order.promoDiscount || 0) > 0 && (
                       <div className="text-[10px] font-black text-green-600 mt-1 uppercase tracking-tighter italic">
-                        Promo Applied (-৳{(order.discountAmount || 0).toFixed(0)})
+                        Promo Applied {order.promoCode ? `(${order.promoCode})` : ''} (-৳{(order.promoDiscount || 0).toFixed(0)})
                       </div>
                     )}
                     {order.pendingApproval && (
@@ -561,17 +568,23 @@ export default function AdminOrdersPage() {
 
                       <div className="mt-4 pt-4 border-t border-white space-y-1.5">
                         <div className="flex justify-between items-center text-[11px] text-gray-600">
-                          <span className="font-bold uppercase tracking-wider">Subtotal</span>
+                          <span className="font-bold uppercase tracking-wider">Subtotal (Gross)</span>
                           <span className="font-bold text-gray-900">৳{order.subtotal?.toFixed(0) || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0)).toFixed(0)}</span>
                         </div>
+                        {(order.ruleDiscount || 0) > 0 && (
+                          <div className="flex justify-between items-center text-[11px] text-amber-600">
+                            <span className="font-bold uppercase tracking-wider">Flat Discount</span>
+                            <span className="font-bold">- ৳{(order.ruleDiscount || 0).toFixed(0)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-[11px] text-gray-600">
                           <span className="font-bold uppercase tracking-wider">Delivery Charge</span>
                           <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
                         </div>
-                        {(order.discountAmount || 0) > 0 && (
+                        {(order.promoDiscount || 0) > 0 && (
                           <div className="flex justify-between items-center text-[11px] text-green-600">
                             <span className="font-bold uppercase tracking-wider">Promo Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
-                            <span className="font-bold">- ৳{(order.discountAmount || 0).toFixed(0)}</span>
+                            <span className="font-bold">- ৳{(order.promoDiscount || 0).toFixed(0)}</span>
                           </div>
                         )}
                         <div className="flex justify-between items-center border-t border-white/50 pt-2 mt-1">
