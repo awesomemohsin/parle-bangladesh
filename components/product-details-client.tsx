@@ -17,6 +17,8 @@ interface Variation {
   price: number;
   dealerPrice?: number;
   discountPrice?: number;
+  flatDiscountPrice?: number;
+  hasFlatDiscount?: boolean;
   stock: number;
   holdStock?: number;
   deliveredCount?: number;
@@ -75,15 +77,21 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
   
+  const hasFlatDiscount = !isDealer && !!selectedVariation?.hasFlatDiscount && !!selectedVariation?.flatDiscountPrice;
+  const hasManualDiscount = !isDealer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
+  const hasAnyRetailDiscount = hasFlatDiscount || hasManualDiscount;
+
   // Dealer Pricing Logic
   const displayPrice = isDealer && selectedVariation?.dealerPrice 
     ? selectedVariation.dealerPrice 
-    : (selectedVariation?.discountPrice || selectedVariation?.price || product.price || 0);
+    : (hasFlatDiscount ? selectedVariation.flatDiscountPrice : (selectedVariation?.discountPrice || selectedVariation?.price || product.price || 0));
 
   const originalPrice = selectedVariation?.price || product.price || 0;
   const displayStock = selectedVariation?.stock ?? product.stock ?? 0;
-  const hasDiscount = !isDealer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
-  const discountPercentage = hasDiscount ? Math.round(((originalPrice - (selectedVariation?.discountPrice || 0)) / originalPrice) * 100) : 0;
+  
+  const finalDiscountPercentage = hasFlatDiscount 
+    ? Math.round(((originalPrice - (selectedVariation?.flatDiscountPrice || 0)) / originalPrice) * 100)
+    : (hasManualDiscount ? Math.round(((originalPrice - (selectedVariation?.discountPrice || 0)) / originalPrice) * 100) : 0);
 
   // Sync image with variation selection
   useEffect(() => {
@@ -121,7 +129,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
       productId: product.id,
       productSlug: product.slug,
       productName: product.name,
-      price: displayPrice,
+      price: originalPrice,
       image: selectedVariation?.image || images[currentImageIndex] || "/placeholder.svg",
       quantity: quantity,
       weight: selectedVariation?.weight || "",
@@ -221,7 +229,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
                  {isDealer ? "Dealer Rate (Inc. Vat)" : "(Including Vat)"}
                </span>
-               {(hasDiscount || (isDealer && selectedVariation?.dealerPrice)) && (
+               {(hasAnyRetailDiscount || (isDealer && selectedVariation?.dealerPrice)) && (
                  <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 opacity-40">
                        <span className="text-xs font-bold text-gray-400">৳</span>
@@ -230,7 +238,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                        </span>
                     </div>
                     <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
-                      {isDealer ? "Dealer Savings" : `${discountPercentage}% off`}
+                      {isDealer ? "Dealer Savings" : `${finalDiscountPercentage}% off`}
                     </span>
                  </div>
                )}

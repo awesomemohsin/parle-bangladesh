@@ -16,6 +16,10 @@ interface Variation {
   price: number;
   dealerPrice?: number;
   discountPrice?: number;
+  flatDiscountPrice?: number;
+  hasFlatDiscount?: boolean;
+  flatDiscountAmount?: number;
+  flatDiscountType?: string;
   stock: number;
   holdStock?: number;
   deliveredCount?: number;
@@ -58,10 +62,15 @@ export default function ProductCard({
   const v = (primaryVar && primaryVar.stock > 0) 
     ? primaryVar 
     : (variations.find(v => v.stock > 0) || variations[0]);
+    
   const defaultVariation = {
     ...v,
     price: v?.price || price,
     discountPrice: v?.discountPrice || 0,
+    flatDiscountPrice: v?.flatDiscountPrice || 0,
+    hasFlatDiscount: !!v?.hasFlatDiscount,
+    flatDiscountAmount: v?.flatDiscountAmount || 0,
+    flatDiscountType: v?.flatDiscountType || '',
     stock: v?.stock !== undefined ? v.stock : stock,
     weight: v?.weight || "",
     flavor: v?.flavor || "",
@@ -71,18 +80,26 @@ export default function ProductCard({
   const productImg = sanitizeProductImagePath(defaultVariation.image || "");
 
   const hasDealerPrice = isDealer && !!defaultVariation.dealerPrice && defaultVariation.dealerPrice > 0;
-  const hasDiscount = !hasDealerPrice && !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
+  
+  // A product has a retail discount if it has a manual discountPrice OR a global flatDiscountPrice
+  const hasManualDiscount = !hasDealerPrice && !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
+  const hasFlatDiscount = !hasDealerPrice && !!defaultVariation.hasFlatDiscount && !!defaultVariation.flatDiscountPrice;
+  const hasAnyRetailDiscount = hasManualDiscount || hasFlatDiscount;
   
   let currentPrice = defaultVariation.price;
   if (hasDealerPrice) {
     currentPrice = defaultVariation.dealerPrice!;
-  } else if (hasDiscount) {
+  } else if (hasFlatDiscount) {
+    currentPrice = defaultVariation.flatDiscountPrice!;
+  } else if (hasManualDiscount) {
     currentPrice = defaultVariation.discountPrice!;
   }
   
-  const discountPercentage = hasDiscount 
-    ? Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100) 
-    : 0;
+  const discountPercentage = hasFlatDiscount 
+    ? (defaultVariation.flatDiscountType === 'percentage' 
+        ? defaultVariation.flatDiscountAmount 
+        : Math.round(((defaultVariation.price - defaultVariation.flatDiscountPrice!) / defaultVariation.price) * 100))
+    : (hasManualDiscount ? Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100) : 0);
 
   const cartItemKey = getItemKey({ productId: id || slug, weight: defaultVariation.weight, flavor: defaultVariation.flavor });
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
@@ -127,7 +144,7 @@ export default function ProductCard({
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
-      {hasDiscount && (
+      {hasAnyRetailDiscount && (
         <div className="absolute top-4 left-4 z-10">
           <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">Sale: {discountPercentage}% off</span>
         </div>
@@ -182,7 +199,7 @@ export default function ProductCard({
               </div>
             )}
           </div>
-          {(hasDiscount || hasDealerPrice) && (
+          {(hasAnyRetailDiscount || hasDealerPrice) && (
             <div className="flex items-center gap-1 opacity-40">
                <span className="text-[10px] font-bold text-gray-500">৳</span>
                <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(defaultVariation.price)}</span>
