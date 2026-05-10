@@ -1,26 +1,55 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check, Tag } from 'lucide-react';
+import { ArrowLeft, Check, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { BD_DISTRICTS } from '@/lib/constants';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
   orderId?: string;
   finalSubtotal?: number;
   finalShippingCost?: number;
+  finalDiscountAmount?: number;
   finalDeliveryMethod?: 'shipping' | 'pickup';
   error?: string;
 }
 
 export default function CheckoutPage() {
-  const { items, total, clearCart, promoCode, discountAmount, isLoading } = useCart();
+  const router = useRouter();
+  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isLoading, applyPromo, removePromo } = useCart();
   const { logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoError('');
+    
+    try {
+      const res = await fetch(`/api/promo-codes/validate?code=${promoInput.toUpperCase()}`);
+      const data = await res.json();
+      
+      if (res.ok) {
+        applyPromo(data);
+        setPromoInput('');
+        setShowSuccessAlert(true);
+        // Hide alert after 5 seconds
+        setTimeout(() => setShowSuccessAlert(false), 5000);
+      } else {
+        setPromoError(data.error || 'Invalid code');
+      }
+    } catch (err) {
+      setPromoError('Failed to validate code');
+    }
+  };
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,6 +66,8 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
+
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     document.title = 'Checkout | Parle Bangladesh';
@@ -57,7 +88,10 @@ export default function CheckoutPage() {
         });
       } catch (e) { }
     }
+    setMounted(true);
   }, []);
+
+  if (!mounted) return null;
 
   if (isLoading && items.length === 0) {
     return (
@@ -99,16 +133,37 @@ export default function CheckoutPage() {
     );
   }
 
-  const isFreeDelivery = total >= 1000;
+  // Simple Logic:
+  // 1. Product subtotal is the sum of already-discounted item prices
+  const productSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  const isFreeDelivery = productSubtotal >= 1000;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
   const shippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
-  const grandTotal = total + shippingCost - (discountAmount || 0);
+  
+  // 2. Add delivery charge to get the amount before coupon
+  const amountBeforeCoupon = productSubtotal + shippingCost;
+  
+  // 3. Calculate coupon discount on the (subtotal + delivery)
+  let displayPromoDiscount = 0;
+  if (promoCode && promoDetails) {
+    const amount = Number(promoDetails.discountAmount || 0);
+    if (promoDetails.discountType === 'percentage') {
+      displayPromoDiscount = (amountBeforeCoupon * amount) / 100;
+    } else {
+      displayPromoDiscount = Math.min(amountBeforeCoupon, amount);
+    }
+  }
+
+  // 4. Final Grand Total
+  const grandTotal = amountBeforeCoupon - displayPromoDiscount;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
 
   const handleSameAsBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSameAsBilling(e.target.checked);
@@ -116,7 +171,7 @@ export default function CheckoutPage() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    const currentSubtotal = total; // Capture subtotal before clearing
+    const currentSubtotal = subtotal; // Use original price for the database subtotal field
     setOrderState({ status: 'confirming' });
 
     try {
@@ -170,14 +225,8 @@ export default function CheckoutPage() {
 
       const order = await response.json();
       clearCart();
-      setOrderState({
-        status: 'success',
-        orderId: order.id,
-        finalSubtotal: order.subtotal,
-        finalShippingCost: order.shippingCost,
-        finalDeliveryMethod: order.deliveryMethod
-      });
-    } catch (error) {
+      router.push(`/shop/order-received/${order.id}`);
+    } catch (error: any) {
       const message = error instanceof Error ? error.message : 'An error occurred';
       setOrderState({
         status: 'error',
@@ -186,103 +235,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Success State
-  if (orderState.status === 'success') {
-    const displaySubtotal = orderState.finalSubtotal || 0;
-    const displayShipping = orderState.finalShippingCost || 0;
-    const displayTotal = displaySubtotal + displayShipping - (discountAmount || 0);
-
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-4xl w-full bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-2">
-            {/* Left Column: Confirmation & Logistics */}
-            <div className="p-8 lg:p-12 border-b md:border-b-0 md:border-r border-gray-100 bg-white">
-              <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                <div className="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                  <Check className="w-8 h-8 text-green-600" />
-                </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Received!</h1>
-                <p className="text-gray-500 mb-8">Your order has been placed successfully.</p>
-
-                <div className="bg-gray-50 px-4 py-2 rounded-lg mb-10 w-full flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Order ID:</span>
-                  <span className="text-base font-bold text-red-600">{orderState.orderId?.slice(-8).toUpperCase()}</span>
-                </div>
-
-                <div className="w-full">
-                  <h2 className="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Order Summary</h2>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span className="font-semibold text-gray-900 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
-                      <span className="font-bold text-gray-900">৳ {Math.round(displaySubtotal)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600 uppercase font-bold tracking-tight">Delivery Charge</span>
-                      <span className="font-semibold text-gray-300 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
-                      <span className="font-bold text-gray-900">{displayShipping === 0 ? "FREE" : `৳ ${Math.round(displayShipping)}`}</span>
-                    </div>
-                    {(discountAmount || 0) > 0 && (
-                      <div className="flex justify-between items-center text-sm text-green-600">
-                        <span className="font-bold uppercase tracking-tight flex items-center gap-1"><Tag className="w-3 h-3" /> Promo Discount</span>
-                        <span className="font-semibold text-gray-100 border-b border-dotted border-gray-100 flex-grow mx-4"></span>
-                        <span className="font-bold">- ৳ {Math.round(discountAmount || 0)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-t pt-4 mt-2">
-                      <span className="font-bold text-gray-900">Total</span>
-                      <span className="font-bold text-red-610 text-2xl tracking-tighter">৳ {Math.round(displayTotal)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Payment & Next Steps */}
-            <div className="p-8 lg:p-12 bg-gray-50 flex flex-col justify-between">
-              <div className="space-y-6">
-                {/* Payment Card */}
-                <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
-                  <h3 className="text-red-900 font-bold text-base mb-2 flex items-center gap-2">
-                    Payment: Cash on Delivery
-                  </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    Please keep exact change ready. Payment is due strictly upon physical receipt of order.
-                  </p>
-                </div>
-
-                {/* Verification Steps */}
-                <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm">
-                  <h3 className="text-green-900 font-bold text-base mb-4">What's Next?</h3>
-                  <ul className="space-y-3">
-                    <li className="flex items-center gap-3 text-gray-700 text-sm">
-                      <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>We have received your order</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-gray-700 text-sm">
-                      <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>We will contact you for confirmation</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-gray-700 text-sm">
-                      <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span>Estimated delivery: 3-5 business days</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <Link href="/shop" className="w-full mt-8">
-                <Button className="w-full py-6 font-bold bg-amber-700 hover:bg-amber-800 text-white h-14 rounded-2xl shadow-lg transition-all active:scale-95">
-                  Back to Shop
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Error State
   if (orderState.status === 'error') {
@@ -324,6 +276,23 @@ export default function CheckoutPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-4">
+        {/* Success Alert */}
+        <AnimatePresence>
+          {showSuccessAlert && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-5 flex items-center gap-3 bg-[#f3f9f1] border border-[#d6e9c6] p-4 rounded-md shadow-sm"
+            >
+              <div className="w-6 h-6 bg-[#82b440] rounded flex items-center justify-center">
+                <Check className="w-4 h-4 text-white" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">Coupon code applied successfully.</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Checkout Form - Left Column */}
           <div className="lg:col-span-2 space-y-4">
@@ -550,27 +519,80 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-2 text-left mb-4 border-t pt-3">
+                {/* Subtotal (Discounted by flat rules) */}
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold text-gray-900">৳ {Math.round(total)}</span>
+                  <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">Subtotal</span>
+                  <span className="font-semibold text-gray-900">৳ {Math.round(productSubtotal)}</span>
                 </div>
+
+                {/* Delivery Charge */}
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
+                  <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">Delivery Charge</span>
                   <span className="font-semibold text-gray-900">৳ {Math.round(shippingCost)}</span>
                 </div>
-                {(discountAmount || 0) > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Promo ({promoCode})</span>
-                    <span className="font-semibold">- ৳ {Math.round(discountAmount || 0)}</span>
+                
+                {/* Coupon Discount */}
+                {promoCode && (
+                  <div className="flex justify-between items-center py-2 border-t border-gray-100">
+                    <span className="font-bold uppercase text-[9px] tracking-widest text-gray-500">
+                      Coupon ({promoCode}):
+                    </span>
+                    <div className="flex items-center gap-2">
+                       <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
+                       <button 
+                        type="button" 
+                        onClick={removePromo} 
+                        className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                       >
+                         [Remove] <X className="w-2.5 h-2.5" />
+                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* PROMO CODE INPUT SECTION */}
+                {!promoCode && (
+                  <div className="py-3 border-y border-gray-100 my-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Have a Discount Code?</label>
+                    <div className="flex gap-1.5">
+                       <input 
+                         type="text" 
+                         placeholder="Code"
+                         value={promoInput}
+                         onChange={(e) => setPromoInput(e.target.value)}
+                         className="flex-1 bg-white border border-gray-200 focus:border-red-600 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
+                       />
+                       <button 
+                         type="button"
+                         onClick={handleApplyPromo}
+                         className="bg-gray-900 text-white px-3 rounded text-[9px] font-black uppercase hover:bg-red-600 transition-colors active:scale-95"
+                       >
+                         Apply
+                       </button>
+                    </div>
+                    {promoError && (
+                       <p className="mt-1.5 text-[8px] font-black text-red-600 uppercase tracking-widest">{promoError}</p>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between border-t border-gray-200 pt-3">
-                <span className="font-bold text-gray-900 text-lg">Total</span>
-                <span className="text-2xl font-bold text-red-600">
-                  ৳ {Math.round(grandTotal)}
-                </span>
+              <div className="flex justify-between border-t border-gray-200 pt-3 items-end">
+                <div>
+                   <div className="flex items-center gap-2 mb-0.5">
+                     <span className="font-bold text-gray-900 text-lg">Grand Total</span>
+                     {(discountAmount || 0) > 0 && (
+                       <span className="text-[10px] font-black text-white bg-green-600 px-2 py-1 rounded uppercase tracking-tighter shadow-sm animate-bounce-slow">
+                         Saved ৳{Math.round(discountAmount || 0)}
+                       </span>
+                     )}
+                   </div>
+                </div>
+                <div className="text-right">
+                   <span className="text-2xl font-bold text-red-600 leading-none">
+                     ৳ {Math.round(grandTotal)}
+                   </span>
+                </div>
               </div>
             </div>
 
