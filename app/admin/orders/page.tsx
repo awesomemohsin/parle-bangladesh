@@ -246,15 +246,26 @@ export default function AdminOrdersPage() {
           setOrders(orders.filter(o => o.id !== orderId));
         } else {
           setOrders(
-            orders.map((o) => (o.id === orderId ? { ...data.order, pendingApproval: data.pendingApproval } : o))
+            orders.map((o) => (o.id === orderId ? { ...o, ...data.order } : o))
           )
         }
         const newPending = { ...pendingChanges }
         delete newPending[orderId]
         setPendingChanges(newPending)
       } else {
-        const error = await response.json()
-        alert(`Error: ${error.error || 'Failed to update'}`)
+        let errorMessage = 'Failed to update';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            errorMessage = `Server Error: ${response.status} ${response.statusText}`;
+          }
+        } catch (e) {
+          errorMessage = `Error: ${response.status}`;
+        }
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Failed to update order:', error)
