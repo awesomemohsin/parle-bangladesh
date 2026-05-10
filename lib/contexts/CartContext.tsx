@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface CartItem {
@@ -15,12 +15,25 @@ export interface CartItem {
   stock?: number;
 }
 
+export interface PromoDetails {
+  code?: string;
+  type: 'promo' | 'flat';
+  discountType: 'fixed' | 'percentage';
+  discountAmount: number;
+  allProducts: boolean;
+  applicableProducts: string[];
+}
+
 export interface Cart {
   items: CartItem[];
-  total: number;
   itemCount: number;
   promoCode?: string;
   discountAmount?: number;
+  subtotal: number;
+  total: number;
+  promoDetails?: PromoDetails;
+  promoDiscount?: number;
+  ruleDiscount?: number;
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -33,28 +46,26 @@ interface CartContextType {
   cart: Cart;
   items: CartItem[];
   total: number;
+  subtotal: number;
   itemCount: number;
   promoCode?: string;
   discountAmount?: number;
+  promoDiscount?: number;
+  ruleDiscount?: number;
+  promoDetails?: PromoDetails;
   isLoading: boolean;
   addItem: (item: AddCartItemInput, quantity?: number) => void;
   removeItem: (key: string) => void;
   updateQuantity: (key: string, quantity: number) => void;
-  applyPromo: (promoCode: string, discountAmount: number) => void;
+  applyPromo: (details: PromoDetails) => void;
   removePromo: () => void;
   clearCart: () => void;
+  getItemDiscount: (item: CartItem) => number;
 }
 
 const CART_STORAGE_KEY = "parle-cart";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
-// Helper functions moved outside for cleaner code
-function calculateTotals(items: CartItem[]): { total: number; itemCount: number } {
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  return { total, itemCount };
-}
 
 function normalizeItem(item: any): CartItem | null {
   if (!item) return null;
@@ -87,13 +98,16 @@ export function getItemKey(item: any): string {
   return `${id}-${weight}-${flavor}${priceSuffix}`;
 }
 
-function itemMatchesKey(item: CartItem, key: string): boolean {
+export function itemMatchesKey(item: CartItem, key: string): boolean {
   return getItemKey(item) === key;
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  // Initialize state with a function to try and get data immediately on client
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
   const [cart, setCart] = useState<Cart>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
@@ -107,23 +121,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           
           return {
             items: normalizedItems,
-            ...calculateTotals(normalizedItems),
+            itemCount: normalizedItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0),
+            subtotal: parsed.subtotal || 0,
+            total: parsed.total || 0,
+            discountAmount: parsed.discountAmount || 0,
             promoCode: parsed.promoCode,
-            discountAmount: parsed.discountAmount
+            promoDetails: parsed.promoDetails
           };
         } catch (e) {
           console.error("Cart initial parse failed:", e);
         }
       }
     }
-    return { items: [], total: 0, itemCount: 0 };
+    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0 };
   });
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
-  // 1. Handle Mounting & PageShow
   const syncFromStorage = useCallback(() => {
     const saved = localStorage.getItem(CART_STORAGE_KEY);
     if (saved) {
@@ -136,9 +148,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         
         setCart({
           items: normalizedItems,
-          ...calculateTotals(normalizedItems),
+          itemCount: normalizedItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0),
+          subtotal: parsed.subtotal || 0,
+          total: parsed.total || 0,
+          discountAmount: parsed.discountAmount || 0,
           promoCode: parsed.promoCode,
-          discountAmount: parsed.discountAmount
+          promoDetails: parsed.promoDetails
         });
       } catch (e) {
         console.error("Cart sync parse failed:", e);
@@ -156,24 +171,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (e.key === CART_STORAGE_KEY) syncFromStorage();
     };
 
-    const handlePageShow = () => syncFromStorage();
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") syncFromStorage();
-    };
-
     window.addEventListener("storage", handleStorage);
-    window.addEventListener("pageshow", handlePageShow);
-    window.addEventListener("visibilitychange", handleVisibility);
-    
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("pageshow", handlePageShow);
-      window.removeEventListener("visibilitychange", handleVisibility);
-    };
+    return () => window.removeEventListener("storage", handleStorage);
   }, [syncFromStorage]);
 
-  // 2. Sync with DB ONLY after initialization
+  // Sync with DB
   useEffect(() => {
     if (!isInitialized) return;
 
@@ -187,43 +189,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
-            const contentType = res.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-              const data = await res.json();
-              const dbItems = (data.items || []).map((i: any) => normalizeItem(i)).filter((i: any): i is CartItem => i !== null);
-              
-              setCart(prev => {
-                const dbItemMap = new Map(dbItems.map(i => [getItemKey(i), i]));
-                const localKeys = new Set(prev.items.map(i => getItemKey(i)));
-                
-                // Update local items with DB prices/stock if they exist in DB
-                const updatedLocalItems = prev.items.map(item => {
-                  const key = getItemKey(item);
-                  const dbItem = dbItemMap.get(key);
-                  if (dbItem) {
-                    return { ...item, price: dbItem.price, stock: dbItem.stock };
-                  }
-                  return item;
-                });
-
-                // Add items from DB that aren't in local cart
-                const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
-                
-                const mergedItems = [...updatedLocalItems, ...uniqueDBItems];
-                sessionStorage.setItem("cart_synced", "true");
-                return { 
-                  items: mergedItems,
-                  ...calculateTotals(mergedItems), 
-                  promoCode: prev.promoCode || data.promoCode, 
-                  discountAmount: prev.discountAmount || data.discountAmount 
-                };
+            const data = await res.json();
+            const dbItems = (data.items || []).map((i: any) => normalizeItem(i)).filter((i: any): i is CartItem => i !== null);
+            
+            setCart(prev => {
+              const dbItemMap = new Map(dbItems.map((i: CartItem) => [getItemKey(i), i]));
+              const localKeys = new Set(prev.items.map((i: CartItem) => getItemKey(i)));
+              const updatedLocalItems = prev.items.map(item => {
+                const key = getItemKey(item);
+                const dbItem = dbItemMap.get(key) as CartItem | undefined;
+                return dbItem ? { ...item, price: dbItem.price, stock: dbItem.stock } : item;
               });
-            } else {
-              const text = await res.text();
-              console.error("[Cart GET] Expected JSON but received:", contentType, text.substring(0, 100));
-            }
-          } else {
-            console.error("[Cart GET] Failed with status:", res.status);
+              const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
+              const mergedItems = [...updatedLocalItems, ...uniqueDBItems];
+              
+              sessionStorage.setItem("cart_synced", "true");
+              return { 
+                items: mergedItems,
+                itemCount: mergedItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0),
+                subtotal: data.subtotal || 0,
+                total: data.total || 0,
+                discountAmount: data.discountAmount || 0,
+                promoDiscount: data.promoDiscount || 0,
+                ruleDiscount: data.ruleDiscount || 0,
+                promoCode: prev.promoCode || data.promoCode, 
+                promoDetails: prev.promoDetails || data.promoDetails
+              };
+            });
           }
         } catch (e) {
           console.error("DB Sync failed:", e);
@@ -234,137 +226,182 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     syncDB();
   }, [isInitialized, user?.customerType]);
 
-  // Trigger re-sync on auth change
-  useEffect(() => {
-    if (user?.id) {
-      sessionStorage.removeItem("cart_synced");
-    }
-  }, [user?.id, user?.customerType]);
+  const lastRequestData = React.useRef<string>("");
 
-  // 3. Persist to LocalStorage & DB on changes
+  // Persist to LocalStorage & DB (and fetch recalculated totals)
   useEffect(() => {
     if (!isInitialized) return;
 
-    const newStr = JSON.stringify(cart);
-    localStorage.setItem(CART_STORAGE_KEY, newStr);
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
 
     const token = localStorage.getItem("token");
     if (token) {
-      const timer = setTimeout(() => {
-        fetch("/api/cart", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            items: cart.items,
-            promoCode: cart.promoCode,
-            discountAmount: cart.discountAmount
-          })
-        }).then(async (res) => {
+      // Create a simplified version of items for comparison (only things that represent user intent)
+      const currentRequestData = JSON.stringify({
+        items: cart.items.map(i => ({ id: i.productId, q: i.quantity, w: i.weight, f: i.flavor })),
+        promo: cart.promoCode
+      });
+
+      // If nothing significant changed since last request, skip
+      if (currentRequestData === lastRequestData.current) return;
+
+      const abortController = new AbortController();
+      const timer = setTimeout(async () => {
+        try {
+          const res = await fetch("/api/cart", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            signal: abortController.signal,
+            body: JSON.stringify({ 
+              items: cart.items,
+              promoCode: cart.promoCode
+            })
+          });
           if (res.ok) {
-            const contentType = res.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-              const data = await res.json();
-              if (data && data.items) {
-                setCart(prev => ({
-                  ...prev,
-                  items: data.items,
-                  promoCode: data.promoCode || null,
-                  discountAmount: data.discountAmount || 0
-                }));
+            const data = await res.json();
+            // Update lastRequestData ONLY after successful sync to prevent loops
+            lastRequestData.current = currentRequestData;
+            
+            setCart(prev => {
+              const dbItems = data.items || [];
+              const dbItemMap = new Map(dbItems.map((i: any) => [getItemKey(i), i]));
+              
+              let hasChanged = false;
+              const mergedItems = prev.items.map(item => {
+                const key = getItemKey(item);
+                const dbItem = dbItemMap.get(key) as CartItem | undefined;
+                if (dbItem) {
+                  const newQuantity = Math.min(item.quantity, dbItem.quantity || item.quantity);
+                  if (item.price !== dbItem.price || item.stock !== dbItem.stock || item.quantity !== newQuantity) {
+                    hasChanged = true;
+                  }
+                  return {
+                    ...item,
+                    price: dbItem.price,
+                    stock: dbItem.stock,
+                    quantity: newQuantity
+                  };
+                }
+                return item;
+              });
+
+              // Only update state if data is actually different to avoid extra renders/loops
+              if (!hasChanged && 
+                  prev.subtotal === data.subtotal && 
+                  prev.total === data.total &&
+                  prev.promoCode === data.promoCode) {
+                return prev;
               }
-            } else {
-              const text = await res.text();
-              console.error("[Cart] Expected JSON but received:", contentType, text.substring(0, 100));
-            }
-          } else {
-            console.error("[Cart] Fetch failed with status:", res.status);
+
+              return {
+                ...prev,
+                items: mergedItems,
+                subtotal: data.subtotal,
+                total: data.total,
+                discountAmount: data.discountAmount,
+                promoDiscount: data.promoDiscount,
+                ruleDiscount: data.ruleDiscount,
+                promoDetails: data.promoDetails
+              };
+            });
           }
-        }).catch(err => console.error("DB Save failed:", err));
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.error("DB Save failed:", err);
+          }
+        }
       }, 1000);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        abortController.abort();
+      };
     }
-  }, [cart, isInitialized]);
+  }, [cart.items, cart.promoCode, isInitialized]);
 
   const addItem = useCallback((item: AddCartItemInput, quantity: number = 1) => {
     setCart(prev => {
       const normalized = normalizeItem({ ...item, quantity: item.quantity ?? quantity });
       if (!normalized) return prev;
-
       const itemKey = getItemKey(normalized);
       const existingIdx = prev.items.findIndex(i => itemMatchesKey(i, itemKey));
       let newItems = [...prev.items];
-
       if (existingIdx > -1) {
         const existing = newItems[existingIdx];
-        const nextQty = Math.min(normalized.stock || 999, existing.quantity + normalized.quantity);
-        newItems[existingIdx] = { ...existing, quantity: nextQty };
+        newItems[existingIdx] = { ...existing, quantity: Math.min(normalized.stock || 999, existing.quantity + normalized.quantity) };
       } else {
-        const nextQty = Math.min(normalized.stock || 999, normalized.quantity);
-        if (nextQty > 0) newItems.push({ ...normalized, quantity: nextQty });
+        newItems.push({ ...normalized, quantity: Math.min(normalized.stock || 999, normalized.quantity) });
       }
-
-      return { ...prev, items: newItems, ...calculateTotals(newItems) };
+      const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+      return { ...prev, items: newItems, itemCount: newItemCount };
     });
   }, []);
 
   const removeItem = useCallback((key: string) => {
     setCart(prev => {
       const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
-      return { ...prev, items: newItems, ...calculateTotals(newItems) };
+      const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+      return { ...prev, items: newItems, itemCount: newItemCount };
     });
   }, []);
 
   const updateQuantity = useCallback((key: string, quantity: number) => {
     setCart(prev => {
-      if (quantity <= 0) {
-        const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
-        return { ...prev, items: newItems, ...calculateTotals(newItems) };
-      }
-      const newItems = prev.items.map(i => {
-        if (itemMatchesKey(i, key)) {
-          return { ...i, quantity: Math.min(i.stock || 999, quantity) };
-        }
-        return i;
-      });
-      return { ...prev, items: newItems, ...calculateTotals(newItems) };
+      const newItems = quantity <= 0 
+        ? prev.items.filter(i => !itemMatchesKey(i, key))
+        : prev.items.map(i => itemMatchesKey(i, key) ? { ...i, quantity: Math.min(i.stock || 999, quantity) } : i);
+      const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+      return { ...prev, items: newItems, itemCount: newItemCount };
     });
   }, []);
 
-  const applyPromo = useCallback((promoCode: string, discountAmount: number) => {
-    setCart(prev => ({ ...prev, promoCode, discountAmount }));
+  const applyPromo = useCallback((details: PromoDetails) => {
+    setCart(prev => ({ 
+      ...prev, 
+      promoCode: details.code, 
+      promoDetails: details,
+      promoDiscount: 0,
+      discountAmount: 0,
+      ruleDiscount: 0
+    }));
   }, []);
 
   const removePromo = useCallback(() => {
-    setCart(prev => ({ ...prev, promoCode: undefined, discountAmount: undefined }));
+    setCart(prev => ({ ...prev, promoCode: undefined, discountAmount: 0, promoDetails: undefined }));
   }, []);
 
   const clearCart = useCallback(() => {
-    setCart({ items: [], total: 0, itemCount: 0 });
+    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0 });
   }, []);
 
-  const subtotal = useMemo(() => cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart.items]);
-  const finalTotal = useMemo(() => Math.max(0, subtotal - (cart.discountAmount || 0)), [subtotal, cart.discountAmount]);
-
-  const value = {
+  const contextValue: CartContextType = {
     cart,
-    items: isMounted ? cart.items : [],
-    total: isMounted ? finalTotal : 0,
-    itemCount: isMounted ? cart.itemCount : 0,
-    promoCode: isMounted ? cart.promoCode : undefined,
-    discountAmount: isMounted ? cart.discountAmount : undefined,
+    items: cart.items,
+    total: isMounted ? (cart.total || 0) : 0,
+    subtotal: isMounted ? (cart.subtotal || 0) : 0,
+    itemCount: cart.itemCount,
+    promoCode: cart.promoCode,
+    discountAmount: isMounted ? (cart.discountAmount || 0) : 0,
+    promoDiscount: isMounted ? (cart.promoDiscount || 0) : 0,
+    ruleDiscount: isMounted ? (cart.ruleDiscount || 0) : 0,
+    promoDetails: cart.promoDetails,
     isLoading: !isMounted || isLoading,
     addItem,
     removeItem,
     updateQuantity,
     applyPromo,
     removePromo,
-    clearCart
+    clearCart,
+    getItemDiscount: () => 0
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={contextValue}>
+      {children}
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {

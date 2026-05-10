@@ -33,10 +33,12 @@ export default function Navbar() {
   const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   const isAdminRoute = pathname.startsWith('/admin')
 
   useEffect(() => {
+    setMounted(true)
     const scrollHandler = () => setIsScrolled(window.scrollY > 20)
     window.addEventListener('scroll', scrollHandler)
     return () => {
@@ -125,7 +127,7 @@ export default function Navbar() {
               ) : (
                 <Link href="/shop/cart" className="relative p-2 text-gray-700 hover:text-red-600 transition-colors">
                   <ShoppingCart className="w-6 h-6" />
-                  {itemCount > 0 && (
+                  {mounted && itemCount > 0 && (
                     <span className="absolute top-0 right-0 h-4 w-4 bg-red-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg">
                       {itemCount}
                     </span>
@@ -160,7 +162,7 @@ export default function Navbar() {
                 </Link>
                 <Link href="/shop/cart" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] relative hover:text-red-600 transition-all font-sans">
                   <ShoppingCart className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Cart
-                  {itemCount > 0 && (
+                  {mounted && itemCount > 0 && (
                     <span className="absolute -top-1 -right-5 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-10 shadow-lg shadow-red-200">
                       {itemCount}
                     </span>
