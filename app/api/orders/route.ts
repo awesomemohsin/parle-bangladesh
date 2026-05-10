@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import { Order, Product, Customer, PromoCode, ApprovalRequest } from "@/lib/models";
 import mongoose from "mongoose";
 import { notifyNewOrder } from "@/lib/telegram";
+import { calculateServerSideCart } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -183,19 +184,13 @@ export async function POST(request: NextRequest) {
         });
 
         if (variation) {
-          let finalPrice = variation.price;
-          if (isDealer && variation.dealerPrice) {
-            finalPrice = variation.dealerPrice;
-          } else if (variation.discountPrice && variation.discountPrice > 0) {
-            finalPrice = variation.discountPrice;
-          }
-
           items.push({
             productId: product._id.toString(),
             productSlug: product.slug,
             name: product.name,
             quantity,
-            price: finalPrice,
+            price: isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price,
+            variationDiscountPrice: variation.discountPrice,
             weight: item.weight,
             flavor: item.flavor,
             image: item.image || variation.image || product.image,
@@ -236,11 +231,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const totals = await calculateServerSideCart(items, body.promoCode);
+    const subtotal = totals.subtotal;
+    const discountAmount = totals.discountAmount;
+    const ruleDiscount = totals.ruleDiscount || 0;
+    const promoDiscount = totals.promoDiscount || 0;
+    
     const baseShippingCharge = reqShippingCity === "Dhaka" ? 80 : 130;
     const shippingCost = deliveryMethod === "pickup" ? 0 : (subtotal >= 1000 ? 0 : baseShippingCharge);
     const tax = 0;
-    const discountAmount = Number(body.discountAmount || 0);
     const total = subtotal + shippingCost - discountAmount;
 
     // If guest, upsert into Customer collection
@@ -280,6 +279,8 @@ export async function POST(request: NextRequest) {
       shippingCost,
       tax,
       discountAmount,
+      ruleDiscount,
+      promoDiscount,
       promoCode: body.promoCode,
       total,
       status: ORDER_STATUS.PENDING,
