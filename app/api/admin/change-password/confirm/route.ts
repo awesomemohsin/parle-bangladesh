@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     // Validate Admin Session
-    const user = getAuthUserFromRequest(request, true);
+    const user = getAuthUserFromRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }

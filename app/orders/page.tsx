@@ -46,6 +46,7 @@ interface Order {
   address?: string;
   city?: string;
   postalCode?: string;
+  customerType?: string;
 }
 
 export default function MyOrdersPage() {

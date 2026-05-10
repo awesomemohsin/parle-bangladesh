@@ -4,19 +4,29 @@ import { useState, useEffect, FormEvent } from 'react';
 import { Plus, Trash2, Edit, AlertCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface PromoCode {
+interface Discount {
   _id: string;
-  code: string;
+  code?: string;
+  type: 'promo' | 'flat';
+  discountType: 'fixed' | 'percentage';
   discountAmount: number;
   maxUsage: number;
   currentUsage: number;
   isActive: boolean;
+  allProducts: boolean;
+  applicableProducts: string[];
   expiresAt?: string;
   createdAt: string;
 }
 
-export default function PromoCodesAdmin() {
-  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+interface ProductInfo {
+  id: string;
+  name: string;
+}
+
+export default function DiscountsAdmin() {
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [products, setProducts] = useState<ProductInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Modal states
@@ -25,51 +35,83 @@ export default function PromoCodesAdmin() {
   
   // Form states
   const [code, setCode] = useState('');
+  const [type, setType] = useState<'promo' | 'flat'>('promo');
+  const [discountType, setDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [discountAmount, setDiscountAmount] = useState('');
   const [maxUsage, setMaxUsage] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [allProducts, setAllProducts] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchPromoCodes();
+    fetchDiscounts();
+    fetchProducts();
   }, []);
 
-  const fetchPromoCodes = async () => {
+  const fetchDiscounts = async () => {
     try {
       const res = await fetch('/api/promo-codes');
       if (res.ok) {
         const data = await res.json();
-        setPromoCodes(data);
+        setDiscounts(data);
       }
     } catch (err) {
-      console.error('Failed to fetch promo codes', err);
+      console.error('Failed to fetch discounts', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('/api/products?limit=1000');
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data.products || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch products', err);
     }
   };
 
   const openAddModal = () => {
     setEditingId(null);
     setCode('');
+    setType('promo');
+    setDiscountType('fixed');
     setDiscountAmount('');
-    setMaxUsage('');
+    setMaxUsage('50');
     setExpiresAt('');
     setIsActive(true);
+    setAllProducts(false);
+    setSelectedProducts([]);
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const openEditModal = (promo: PromoCode) => {
-    setEditingId(promo._id);
-    setCode(promo.code);
-    setDiscountAmount(promo.discountAmount.toString());
-    setMaxUsage(promo.maxUsage.toString());
+  const openEditModal = (discount: Discount) => {
+    setEditingId(discount._id);
+    setCode(discount.code || '');
+    setType(discount.type || 'promo');
+    setDiscountType(discount.discountType || 'fixed');
+    setDiscountAmount(discount.discountAmount.toString());
+    setMaxUsage(discount.maxUsage.toString());
+    setAllProducts(discount.allProducts || false);
     
-    if (promo.expiresAt) {
-      // Format to YYYY-MM-DD for input type="date"
-      const d = new Date(promo.expiresAt);
+    // If allProducts was true, we might not have a list of IDs in DB, 
+    // so we should populate it for the UI to show everything as ticked.
+    if (discount.allProducts) {
+      setSelectedProducts(products.map(p => p.id));
+    } else {
+      setSelectedProducts(discount.applicableProducts || []);
+    }
+    
+    if (discount.expiresAt) {
+      const d = new Date(discount.expiresAt);
       const tzOffset = d.getTimezoneOffset() * 60000;
       const localDate = new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
       setExpiresAt(localDate);
@@ -77,7 +119,7 @@ export default function PromoCodesAdmin() {
       setExpiresAt('');
     }
     
-    setIsActive(promo.isActive);
+    setIsActive(discount.isActive);
     setFormError('');
     setIsModalOpen(true);
   };
@@ -87,11 +129,19 @@ export default function PromoCodesAdmin() {
     setFormError('');
     setIsSubmitting(true);
 
+    // For promo codes, they are now always applicable to all products.
+    // For flat discounts, we check if all products are selected.
+    const isActuallyAllSelected = type === 'promo' || (products.length > 0 && selectedProducts.length === products.length);
+
     const payload = {
-      code,
+      code: type === 'promo' ? code : undefined,
+      type,
+      discountType,
       discountAmount: Number(discountAmount),
       maxUsage: Number(maxUsage),
       isActive,
+      allProducts: isActuallyAllSelected,
+      applicableProducts: isActuallyAllSelected ? [] : selectedProducts,
       expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
     };
 
@@ -108,10 +158,10 @@ export default function PromoCodesAdmin() {
       const data = await res.json();
 
       if (!res.ok) {
-        setFormError(data.error || 'Failed to save promo code');
+        setFormError(data.error || 'Failed to save discount');
       } else {
         setIsModalOpen(false);
-        fetchPromoCodes();
+        fetchDiscounts();
       }
     } catch (err: any) {
       setFormError('Network error occurred');
@@ -121,13 +171,29 @@ export default function PromoCodesAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this promo code?')) return;
+    if (!confirm('Are you sure you want to delete this discount?')) return;
     
     try {
       const res = await fetch(`/api/promo-codes/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchPromoCodes();
+      if (res.ok) fetchDiscounts();
     } catch (err) {
       console.error('Failed to delete', err);
+    }
+  };
+
+  const toggleProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleSelectAllProducts = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(products.map(p => p.id));
+    } else {
+      setSelectedProducts([]);
     }
   };
 
@@ -137,11 +203,11 @@ export default function PromoCodesAdmin() {
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Promo Codes</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage global discount codes and usage limits</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Discounts</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage promo codes and flat discounts across products</p>
         </div>
         <Button onClick={openAddModal} className="bg-amber-600 hover:bg-amber-700 text-white gap-2">
-          <Plus className="w-4 h-4" /> Add Promo Code
+          <Plus className="w-4 h-4" /> Add Discount
         </Button>
       </div>
 
@@ -150,53 +216,64 @@ export default function PromoCodesAdmin() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 uppercase text-[10px] font-black tracking-widest text-gray-500">
-                <th className="p-4 rounded-tl-2xl">Code</th>
-                <th className="p-4">Discount (৳)</th>
-                <th className="p-4">Usage Limits</th>
-                <th className="p-4">Expires</th>
+                <th className="p-4 rounded-tl-2xl">Type / Code</th>
+                <th className="p-4">Discount</th>
+                <th className="p-4">Applicability</th>
+                <th className="p-4">Usage</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right rounded-tr-2xl">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {promoCodes.length === 0 ? (
+              {discounts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-500 text-sm">
-                    No promo codes active. Click "Add Promo Code" to create one.
+                    No discounts active. Click "Add Discount" to create one.
                   </td>
                 </tr>
               ) : (
-                promoCodes.map((promo) => (
-                  <tr key={promo._id} className="hover:bg-slate-50 transition-colors">
+                discounts.map((discount) => (
+                  <tr key={discount._id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4">
-                      <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
-                        {promo.code}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400">
+                          {discount.type === 'promo' ? 'Promo Code' : 'Flat Discount'}
+                        </span>
+                        {discount.type === 'promo' && (
+                          <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100 w-fit">
+                            {discount.code}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="p-4 font-black">৳ {promo.discountAmount}</td>
+                    <td className="p-4 font-black">
+                      {discount.discountType === 'percentage' ? `${discount.discountAmount}%` : `৳ ${discount.discountAmount}`}
+                    </td>
+                    <td className="p-4">
+                       <span className="text-xs font-bold text-gray-600">
+                          {discount.allProducts ? 'All Products' : `${discount.applicableProducts?.length || 0} Products`}
+                       </span>
+                    </td>
                     <td className="p-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold">{promo.currentUsage} / {promo.maxUsage}</span>
-                        {promo.currentUsage >= promo.maxUsage && (
+                        <span className="text-sm font-semibold">{discount.currentUsage} / {discount.maxUsage}</span>
+                        {discount.currentUsage >= discount.maxUsage && (
                           <span className="text-[10px] text-red-500 font-bold uppercase">Limit Reached</span>
                         )}
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-gray-500">
-                      {promo.expiresAt ? new Date(promo.expiresAt).toLocaleDateString() : 'Never'}
-                    </td>
                     <td className="p-4">
-                      {promo.isActive ? (
+                      {discount.isActive ? (
                         <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full uppercase">Active</span>
                       ) : (
                         <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full uppercase">Disabled</span>
                       )}
                     </td>
                     <td className="p-4 text-right space-x-2">
-                       <button onClick={() => openEditModal(promo)} className="text-blue-500 hover:text-blue-700 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                       <button onClick={() => openEditModal(discount)} className="text-blue-500 hover:text-blue-700 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                           <Edit className="w-4 h-4" />
                        </button>
-                       <button onClick={() => handleDelete(promo._id)} className="text-red-500 hover:text-red-700 p-2 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                       <button onClick={() => handleDelete(discount._id)} className="text-red-500 hover:text-red-700 p-2 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                        </button>
                     </td>
@@ -210,89 +287,171 @@ export default function PromoCodesAdmin() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className={`bg-white rounded-3xl w-full ${type === 'flat' ? 'max-w-2xl' : 'max-w-md'} overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]`}>
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
-               <h2 className="text-xl font-bold uppercase tracking-tight">{editingId ? 'Edit Promo Code' : 'New Promo Code'}</h2>
+               <h2 className="text-xl font-bold uppercase tracking-tight">{editingId ? 'Edit Discount' : 'New Discount'}</h2>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600 text-sm font-bold">
                    <AlertCircle className="w-4 h-4" /> {formError}
                 </div>
               )}
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Code *</label>
-                <input
-                  type="text"
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono font-bold uppercase"
-                  placeholder="e.g. FLASH50"
-                  disabled={!!editingId} // Usually good practice to not change code string once published, but editable if needed.
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Discount (৳) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={discountAmount}
-                    onChange={(e) => setDiscountAmount(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
-                    placeholder="e.g. 50"
-                  />
+ 
+              <div className={`grid ${type === 'flat' ? 'grid-cols-2 gap-6' : 'grid-cols-1 gap-4'}`}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Discount Type</label>
+                    <div className="flex gap-2">
+                       <button 
+                         type="button"
+                         onClick={() => setType('promo')}
+                         className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${type === 'promo' ? 'bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                       >
+                         Promo Code
+                       </button>
+                       <button 
+                         type="button"
+                         onClick={() => setType('flat')}
+                         className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${type === 'flat' ? 'bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                       >
+                         Flat Discount
+                       </button>
+                    </div>
+                  </div>
+ 
+                  {type === 'promo' && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Promo Code *</label>
+                      <input
+                        type="text"
+                        required
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono font-bold uppercase"
+                        placeholder="e.g. FLASH50"
+                        disabled={!!editingId}
+                      />
+                    </div>
+                  )}
+ 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Value Type</label>
+                      <select 
+                        value={discountType}
+                        onChange={(e) => setDiscountType(e.target.value as any)}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
+                      >
+                        <option value="fixed">Taka (৳)</option>
+                        <option value="percentage">Percentage (%)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Amount *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={discountAmount}
+                        onChange={(e) => setDiscountAmount(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
+                        placeholder={discountType === 'percentage' ? 'e.g. 10' : 'e.g. 50'}
+                      />
+                    </div>
+                  </div>
+ 
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Max Usage Total</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={maxUsage}
+                      onChange={(e) => setMaxUsage(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
+                      placeholder="e.g. 1000"
+                    />
+                  </div>
+ 
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                       <Calendar className="w-3 h-3" /> Expiration Date
+                    </label>
+                    <input
+                      type="date"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-gray-700"
+                    />
+                  </div>
+ 
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <label htmlFor="isActive" className="text-sm font-bold text-gray-700 cursor-pointer">
+                      Discount is actively running
+                    </label>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Max Usage *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={maxUsage}
-                    onChange={(e) => setMaxUsage(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
-                    placeholder="e.g. 100"
-                  />
-                </div>
+ 
+                {type === 'flat' && (
+                  <div className="space-y-4 border-l border-gray-100 pl-6">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Apply To Products</label>
+                      <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-gray-100 mb-3">
+                        <input
+                          type="checkbox"
+                          id="allProducts"
+                          checked={products.length > 0 && selectedProducts.length === products.length}
+                          onChange={(e) => handleSelectAllProducts(e.target.checked)}
+                          className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                        />
+                        <label htmlFor="allProducts" className="text-xs font-black uppercase tracking-widest text-gray-700 cursor-pointer">
+                          Select All Products
+                        </label>
+                      </div>
+  
+                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                        <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Select Specific Products</p>
+                        </div>
+                        <div className="max-h-[250px] overflow-y-auto divide-y divide-gray-100">
+                          {products.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-gray-400">No products found</div>
+                          ) : (
+                            products.map(product => (
+                              <div 
+                                key={product.id}
+                                onClick={() => toggleProduct(product.id)}
+                                className={`p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${selectedProducts.includes(product.id) ? 'bg-amber-50/50' : ''}`}
+                              >
+                                <span className="text-xs font-bold text-gray-700">{product.name}</span>
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${selectedProducts.includes(product.id) ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
+                                  {selectedProducts.includes(product.id) && <Plus className="w-3 h-3 rotate-45" />}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1">
-                   <Calendar className="w-3 h-3" /> Expiration Date (Optional)
-                </label>
-                <input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-gray-700"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-                />
-                <label htmlFor="isActive" className="text-sm font-bold text-gray-700 cursor-pointer">
-                  Promo is actively running
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 sticky bottom-0 bg-white">
                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="text-gray-500 font-bold hover:bg-gray-100">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-black text-white font-bold px-6">
-                  {isSubmitting ? 'Saving...' : 'Save Promo'}
+                <Button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-black text-white font-bold px-6 min-w-[120px]">
+                  {isSubmitting ? 'Saving...' : 'Save Discount'}
                 </Button>
               </div>
             </form>
