@@ -37,8 +37,41 @@ export async function GET(request: NextRequest) {
       .limit(100)
       .lean();
 
+    const customerEmails = customers.map((c: any) => c.email.toLowerCase());
+
+    const { Order } = await import("@/lib/models");
+    const { ORDER_STATUS } = await import("@/lib/constants");
+
+    const stats = await Order.aggregate([
+      { 
+        $match: { 
+          customerEmail: { $in: customerEmails },
+          status: { $ne: ORDER_STATUS.CANCELLED }
+        } 
+      },
+      {
+        $group: {
+          _id: { $toLower: "$customerEmail" },
+          ordersCount: { $sum: 1 },
+          totalSpent: { $sum: "$total" },
+          totalProducts: { $sum: { $sum: "$items.quantity" } }
+        }
+      }
+    ]);
+
+    const statsMap = new Map(stats.map((s: any) => [s._id, s]));
+
     return NextResponse.json({ 
-      customers: customers.map((c: any) => ({ ...c, id: c._id.toString() })) 
+      customers: customers.map((c: any) => {
+        const customerStats = statsMap.get(c.email.toLowerCase()) || { ordersCount: 0, totalSpent: 0, totalProducts: 0 };
+        return { 
+          ...c, 
+          id: c._id.toString(),
+          ordersCount: customerStats.ordersCount,
+          totalSpent: customerStats.totalSpent,
+          totalProducts: customerStats.totalProducts
+        };
+      }) 
     });
   } catch (error) {
     console.error("Customers GET error:", error);

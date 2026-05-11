@@ -23,6 +23,9 @@ interface Customer {
   customerType: "retailer" | "dealer";
   status: "active" | "disabled";
   createdAt: string;
+  ordersCount: number;
+  totalProducts: number;
+  totalSpent: number;
 }
 
 export default function AdminCustomersPage() {
@@ -129,6 +132,9 @@ export default function AdminCustomersPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer Info</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Orders</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Purchased</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Spent</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
@@ -136,14 +142,14 @@ export default function AdminCustomersPage() {
             <tbody className="divide-y divide-gray-50">
               {loading && customers.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-20 text-center">
+                  <td colSpan={6} className="px-6 py-20 text-center">
                     <Loader2 className="w-6 h-6 text-red-600 animate-spin mx-auto mb-2" />
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Customers...</p>
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-20 text-center">
+                  <td colSpan={6} className="px-6 py-20 text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">No customers found</p>
                   </td>
                 </tr>
@@ -158,6 +164,18 @@ export default function AdminCustomersPage() {
                           <span className="text-gray-200">|</span>
                           <span>{customer.mobile}</span>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-black text-gray-900 tabular-nums italic">{customer.ordersCount || 0}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-black text-gray-900 tabular-nums italic">{customer.totalProducts || 0}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1 text-sm font-black text-red-600 tabular-nums italic">
+                        <span className="text-[10px] not-italic">৳</span>
+                        <span>{Math.round(customer.totalSpent || 0).toLocaleString()}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
