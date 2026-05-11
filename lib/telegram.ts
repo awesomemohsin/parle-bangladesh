@@ -226,6 +226,29 @@ export async function notifyNewApprovalRequest(request: any) {
   if (request.type === 'promo-code') typeIcon = '🎟️';
   
   const level = isSensitive ? 'LEVEL 2 (FINANCIAL)' : 'LEVEL 1 (BASIC)';
+
+  // Format values for better readability (handling JSON stringified snapshots)
+  const formatValue = (val: string) => {
+    if (!val || val === 'none') return '<i>None</i>';
+    try {
+      if (val.startsWith('{') && val.endsWith('}')) {
+        const obj = JSON.parse(val);
+        // Extract meaningful info for summary
+        const summaryParts = [];
+        if (obj.code) summaryParts.push(`Code: ${obj.code}`);
+        if (obj.discountAmount) summaryParts.push(`Amt: ${obj.discountAmount}${obj.discountType === 'percentage' ? '%' : '৳'}`);
+        if (obj.minOrderAmount) summaryParts.push(`Min: ৳${obj.minOrderAmount}`);
+        if (obj.maxDiscountAmount) summaryParts.push(`Cap: ৳${obj.maxDiscountAmount}`);
+        if (obj.type) summaryParts.push(`Type: ${obj.type}`);
+        
+        return summaryParts.length > 0 ? summaryParts.join(' | ') : '<i>(Current Config)</i>';
+      }
+    } catch (e) {}
+    return `<code>${val}</code>`;
+  };
+
+  const formattedOld = formatValue(request.oldValue);
+  const formattedNew = request.newValue === 'updated_configuration' ? '<b>[New Configuration]</b>' : `<b>${request.newValue}</b>`;
   
   const message = `
 <b>${typeIcon} NEW APPROVAL REQUEST</b>
@@ -234,7 +257,7 @@ export async function notifyNewApprovalRequest(request: any) {
 👤 <b>REQUESTER:</b> ${request.requesterEmail}
 🎯 <b>TARGET:</b> ${request.targetName}
 ${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
-🔄 <b>VALUE:</b> ${request.oldValue} ➡️ <b>${request.newValue}</b>
+🔄 <b>VALUE:</b> ${formattedOld} ➡️ ${formattedNew}
 
 📢 <b>ACTION:</b> 2 Superadmins must approve to proceed.
 ━━━━━━━━━━━━━━━━━━
