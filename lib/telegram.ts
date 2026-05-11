@@ -36,7 +36,9 @@ export async function sendTelegramMessage({ chatId, text, parse_mode = "HTML" }:
 
     if (!response.ok) {
       const error = await response.json();
-      console.error("Telegram API Error:", error);
+      console.error("Telegram API Error:", JSON.stringify(error));
+    } else {
+      console.log(`Telegram message sent successfully to ${chatId}`);
     }
     return response.ok;
   } catch (error) {
@@ -128,6 +130,7 @@ export async function notifyOrderReady(order: any) {
 🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">📦 OPEN LOGISTICS QUEUE</a>
 `;
 
+  console.log(`Sending order ready notification for ${orderIdShort} to group ${CHAT_IDS.LOGISTICS}`);
   return sendTelegramMessage({
     chatId: CHAT_IDS.LOGISTICS,
     text: message,

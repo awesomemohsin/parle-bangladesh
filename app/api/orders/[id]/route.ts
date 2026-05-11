@@ -162,9 +162,13 @@ export async function PUT(
 
     // Telegram Notifications
     try {
+      console.log(`Order ${id} status change: ${oldStatus} -> ${status}`);
       if (status === ORDER_STATUS.PROCESSING && oldStatus === ORDER_STATUS.PENDING) {
-        await notifyOrderReady(order);
+        console.log(`Triggering Logistics notification for order ${id}`);
+        const notified = await notifyOrderReady(order);
+        console.log(`Logistics notification result: ${notified}`);
       } else if (["cancelled", "damaged", "lost"].includes(status) && oldStatus !== status) {
+        console.log(`Triggering Management notification for critical status: ${status}`);
         await notifyCriticalEvent(`Order ${status}`, order, statusReason);
       }
     } catch (notifyError) {
