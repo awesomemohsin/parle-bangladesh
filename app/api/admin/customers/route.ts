@@ -6,7 +6,7 @@ import { User } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 /**
- * GET: List all customers for management
+ * GET: List all customers for management (including Guests)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,58 +20,108 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-
-    let query: any = { role: "customer" };
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { mobile: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const customers = await User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
-
-    const customerEmails = customers.map((c: any) => c.email.toLowerCase());
+    const search = (searchParams.get("search") || "").toLowerCase();
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
 
     const { Order } = await import("@/lib/models");
     const { ORDER_STATUS } = await import("@/lib/constants");
 
-    const stats = await Order.aggregate([
+    // 1. Get all registered customers
+    const registeredUsers = await User.find({ role: "customer" })
+      .select("-password")
+      .lean();
+
+    // 2. Aggregate order statistics for ALL emails (including guests)
+    const orderStats = await Order.aggregate([
       { 
         $match: { 
-          customerEmail: { $in: customerEmails },
           status: { $ne: ORDER_STATUS.CANCELLED }
         } 
       },
       {
         $group: {
           _id: { $toLower: "$customerEmail" },
+          name: { $first: "$customerName" },
+          mobile: { $first: "$customerPhone" },
           ordersCount: { $sum: 1 },
           totalSpent: { $sum: "$total" },
-          totalProducts: { $sum: { $sum: "$items.quantity" } }
+          totalProducts: { $sum: { $sum: "$items.quantity" } },
+          lastOrderDate: { $max: "$createdAt" },
+          firstOrderDate: { $min: "$createdAt" }
         }
       }
     ]);
 
-    const statsMap = new Map(stats.map((s: any) => [s._id, s]));
+    const statsMap = new Map(orderStats.map((s: any) => [s._id, s]));
+    const registeredEmails = new Set(registeredUsers.map(u => u.email.toLowerCase()));
+
+    // 3. Merge Registered Users with their stats
+    const customersList: any[] = registeredUsers.map((u: any) => {
+      const stats = statsMap.get(u.email.toLowerCase()) || { ordersCount: 0, totalSpent: 0, totalProducts: 0 };
+      return {
+        id: u._id.toString(),
+        name: u.name,
+        email: u.email,
+        mobile: u.mobile,
+        customerType: u.customerType || "retailer",
+        status: u.status,
+        createdAt: u.createdAt,
+        ordersCount: stats.ordersCount,
+        totalSpent: stats.totalSpent,
+        totalProducts: stats.totalProducts,
+        isGuest: false
+      };
+    });
+
+    // 4. Add Guest Customers (those who have orders but no account)
+    orderStats.forEach((s: any) => {
+      if (!registeredEmails.has(s._id)) {
+        customersList.push({
+          id: `guest-${s._id}`,
+          name: s.name,
+          email: s._id,
+          mobile: s.mobile,
+          customerType: "guest",
+          status: "active",
+          createdAt: s.firstOrderDate, // For guests, first order is their "joined" date
+          ordersCount: s.ordersCount,
+          totalSpent: s.totalSpent,
+          totalProducts: s.totalProducts,
+          isGuest: true
+        });
+      }
+    });
+
+    // 5. Apply Search Filtering
+    let filtered = customersList;
+    if (search) {
+      filtered = customersList.filter(c => 
+        c.name?.toLowerCase().includes(search) || 
+        c.email?.toLowerCase().includes(search) || 
+        c.mobile?.toLowerCase().includes(search)
+      );
+    }
+
+    // 6. Final Sort (By dynamic field)
+    filtered.sort((a: any, b: any) => {
+      const fieldA = a[sortBy];
+      const fieldB = b[sortBy];
+
+      // Handle dates or numbers
+      if (sortBy === "createdAt") {
+        const dateA = new Date(fieldA || 0).getTime();
+        const dateB = new Date(fieldB || 0).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      }
+
+      const valA = fieldA || 0;
+      const valB = fieldB || 0;
+      return sortOrder === "desc" ? valB - valA : valA - valB;
+    });
 
     return NextResponse.json({ 
-      customers: customers.map((c: any) => {
-        const customerStats = statsMap.get(c.email.toLowerCase()) || { ordersCount: 0, totalSpent: 0, totalProducts: 0 };
-        return { 
-          ...c, 
-          id: c._id.toString(),
-          ordersCount: customerStats.ordersCount,
-          totalSpent: customerStats.totalSpent,
-          totalProducts: customerStats.totalProducts
-        };
-      }) 
+      customers: filtered.slice(0, 100) 
     });
   } catch (error) {
     console.error("Customers GET error:", error);
@@ -100,6 +150,11 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "Customer ID is required" }, { status: 400 });
+    }
+
+    // Guests cannot be promoted/demoted as they have no account
+    if (id.startsWith("guest-")) {
+      return NextResponse.json({ error: "Guest customers cannot be modified. They must register an account first." }, { status: 400 });
     }
 
     const customer = await User.findById(id);

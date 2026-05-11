@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, Loader2, UserCheck, UserPlus, AlertCircle, X } from "lucide-react";
+import { Search, Loader2, UserCheck, UserPlus, AlertCircle, X, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, Calendar } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,25 +14,32 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { format } from "date-fns";
 
 interface Customer {
   id: string;
   name: string;
   email: string;
   mobile: string;
-  customerType: "retailer" | "dealer";
+  customerType: "retailer" | "dealer" | "guest";
   status: "active" | "disabled";
   createdAt: string;
   ordersCount: number;
   totalProducts: number;
   totalSpent: number;
+  isGuest?: boolean;
 }
+
+type SortField = "ordersCount" | "totalProducts" | "totalSpent" | "createdAt";
+type SortOrder = "asc" | "desc";
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -43,11 +50,11 @@ export default function AdminCustomersPage() {
     customer: null,
   });
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const url = `/api/admin/customers?search=${encodeURIComponent(search)}`;
+      const url = `/api/admin/customers?search=${encodeURIComponent(search)}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -60,18 +67,38 @@ export default function AdminCustomersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, sortBy, sortOrder]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchCustomers();
     }, 400);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [fetchCustomers]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("desc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortBy !== field) return <ArrowUpDown className="w-3 h-3 ml-1 opacity-20" />;
+    return sortOrder === "asc" ? <ChevronUp className="w-3 h-3 ml-1 text-red-600" /> : <ChevronDown className="w-3 h-3 ml-1 text-red-600" />;
+  };
 
   const handleConfirmAction = async () => {
     const { customer } = confirmModal;
     if (!customer) return;
+
+    if (customer.isGuest) {
+      toast.error("Guest customers cannot be modified");
+      setConfirmModal({ ...confirmModal, open: false });
+      return;
+    }
 
     const newType = customer.customerType === "dealer" ? "retailer" : "dealer";
     setUpdatingId(customer.id);
@@ -108,11 +135,11 @@ export default function AdminCustomersPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-black tracking-tighter uppercase italic">Customer <span className="text-red-600">Hub</span></h1>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Manage Dealer Privileges</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Manage Dealer Privileges & Guest Orders</p>
         </div>
 
         <div className="relative w-full md:w-80">
@@ -132,9 +159,43 @@ export default function AdminCustomersPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer Info</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Orders</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Purchased</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Spent</th>
+                
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  onClick={() => toggleSort("createdAt")}
+                >
+                  <div className="flex items-center justify-center">
+                    Joined <SortIcon field="createdAt" />
+                  </div>
+                </th>
+
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  onClick={() => toggleSort("ordersCount")}
+                >
+                  <div className="flex items-center justify-center">
+                    Orders <SortIcon field="ordersCount" />
+                  </div>
+                </th>
+                
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  onClick={() => toggleSort("totalProducts")}
+                >
+                  <div className="flex items-center justify-center">
+                    Purchased Product <SortIcon field="totalProducts" />
+                  </div>
+                </th>
+                
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  onClick={() => toggleSort("totalSpent")}
+                >
+                  <div className="flex items-center justify-center">
+                    Spent <SortIcon field="totalSpent" />
+                  </div>
+                </th>
+
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
@@ -142,14 +203,14 @@ export default function AdminCustomersPage() {
             <tbody className="divide-y divide-gray-50">
               {loading && customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <Loader2 className="w-6 h-6 text-red-600 animate-spin mx-auto mb-2" />
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Customers...</p>
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">No customers found</p>
                   </td>
                 </tr>
@@ -158,22 +219,41 @@ export default function AdminCustomersPage() {
                   <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-gray-900 uppercase tracking-tight leading-none mb-1">{customer.name}</span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-black text-gray-900 uppercase tracking-tight leading-none">{customer.name || 'Anonymous'}</span>
+                          {customer.isGuest && (
+                             <span className="text-[8px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-widest border border-gray-200">Guest</span>
+                          )}
+                        </div>
                         <div className="flex gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                           <span>{customer.email}</span>
-                          <span className="text-gray-200">|</span>
-                          <span>{customer.mobile}</span>
+                          {customer.mobile && (
+                            <>
+                              <span className="text-gray-200">|</span>
+                              <span>{customer.mobile}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-black text-gray-900 tabular-nums italic">{customer.ordersCount || 0}</span>
+                      <div className={`flex flex-col items-center ${sortBy === 'createdAt' ? 'text-red-600' : 'text-gray-500'}`}>
+                        <span className="text-[11px] font-black uppercase tracking-tighter">
+                          {customer.createdAt ? format(new Date(customer.createdAt), "MMM dd, yyyy") : "N/A"}
+                        </span>
+                        <span className="text-[9px] font-bold opacity-50">
+                          {customer.createdAt ? format(new Date(customer.createdAt), "hh:mm a") : ""}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-black text-gray-900 tabular-nums italic">{customer.totalProducts || 0}</span>
+                      <span className={`text-sm font-black tabular-nums italic ${sortBy === 'ordersCount' ? 'text-red-600' : 'text-gray-900'}`}>{customer.ordersCount || 0}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm font-black text-red-600 tabular-nums italic">
+                      <span className={`text-sm font-black tabular-nums italic ${sortBy === 'totalProducts' ? 'text-red-600' : 'text-gray-900'}`}>{customer.totalProducts || 0}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className={`flex items-center justify-center gap-1 text-sm font-black tabular-nums italic ${sortBy === 'totalSpent' ? 'text-red-600' : 'text-red-600/70'}`}>
                         <span className="text-[10px] not-italic">৳</span>
                         <span>{Math.round(customer.totalSpent || 0).toLocaleString()}</span>
                       </div>
@@ -182,39 +262,48 @@ export default function AdminCustomersPage() {
                       <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${
                         customer.customerType === 'dealer' 
                           ? 'bg-amber-100 text-amber-700' 
+                          : customer.customerType === 'guest'
+                          ? 'bg-gray-100 text-gray-400'
                           : 'bg-slate-100 text-slate-500'
                       }`}>
                         {customer.customerType}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setConfirmModal({ open: true, customer });
-                        }}
-                        disabled={updatingId === customer.id}
-                        variant={customer.customerType === "dealer" ? "outline" : "default"}
-                        className={`h-9 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                          customer.customerType === "dealer"
-                            ? "border-amber-200 text-amber-600 hover:bg-amber-50"
-                            : "bg-red-600 hover:bg-black text-white shadow-lg shadow-red-100"
-                        }`}
-                      >
-                        {updatingId === customer.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : customer.customerType === "dealer" ? (
-                          <>
-                            <UserCheck className="w-3.5 h-3.5 mr-2" />
-                            Demote
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="w-3.5 h-3.5 mr-2" />
-                            Promote
-                          </>
-                        )}
-                      </Button>
+                      {!customer.isGuest && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setConfirmModal({ open: true, customer });
+                          }}
+                          disabled={updatingId === customer.id}
+                          variant={customer.customerType === "dealer" ? "outline" : "default"}
+                          className={`h-9 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                            customer.customerType === "dealer"
+                              ? "border-amber-200 text-amber-600 hover:bg-amber-50"
+                              : "bg-red-600 hover:bg-black text-white shadow-lg shadow-red-100"
+                          }`}
+                        >
+                          {updatingId === customer.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : customer.customerType === "dealer" ? (
+                            <>
+                              <UserCheck className="w-3.5 h-3.5 mr-2" />
+                              Demote
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-3.5 h-3.5 mr-2" />
+                              Promote
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      {customer.isGuest && (
+                        <div className="text-[9px] font-black text-gray-300 uppercase italic px-4">
+                          Non-Registered
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -235,7 +324,7 @@ export default function AdminCustomersPage() {
         <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white z-[200]">
           <div className="p-8 flex flex-col items-center text-center">
              <div className={`w-16 h-16 rounded-2xl mb-6 flex items-center justify-center ${
-               confirmModal.customer?.customerType === 'dealer' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
+                confirmModal.customer?.customerType === 'dealer' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
              }`}>
                 <AlertCircle className="w-8 h-8" />
              </div>
