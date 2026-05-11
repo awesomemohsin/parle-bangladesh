@@ -72,45 +72,37 @@ export default function PromoPostersAdmin() {
   };
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
-    console.log(`[Frontend] Toggling status for: ${id}, Current: ${currentStatus}`);
     try {
       const res = await fetch(`/api/admin/promo-posters/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
-      console.log(`[Frontend] Patch Response Status: ${res.status}`);
       if (res.ok) {
         fetchPosters();
       } else {
         const errorData = await res.json();
-        console.error('[Frontend] Patch Failed:', errorData);
         alert(`Failed to update: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
-      console.error('[Frontend] Update error:', err);
+      console.error('[Admin] Update error:', err);
     }
   };
 
   const deletePoster = async (id: string) => {
-    console.log(`[Frontend] Requesting delete for: ${id}`);
-    const fetchUrl = `/api/admin/promo-posters/${id}`;
-    alert(`DEBUG: Fetching URL: ${fetchUrl}`);
     if (!confirm('Are you sure you want to delete this poster? It will be permanently removed from storage.')) return;
     try {
-      const res = await fetch(fetchUrl, {
+      const res = await fetch(`/api/admin/promo-posters/${id}`, {
         method: 'DELETE',
       });
-      console.log(`[Frontend] Delete Response Status: ${res.status}`);
       if (res.ok) {
         fetchPosters();
       } else {
         const errorData = await res.json();
-        console.error('[Frontend] Delete Failed:', errorData);
         alert(`Failed to delete: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
-      console.error('[Frontend] Delete error:', err);
+      console.error('[Admin] Delete error:', err);
     }
   };
 

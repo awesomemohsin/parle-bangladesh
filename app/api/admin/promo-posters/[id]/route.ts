@@ -7,10 +7,10 @@ import { ROLES } from '@/lib/constants';
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { posterId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    console.log(`[Admin] Attempting to delete poster: ${params.posterId}`);
+    console.log(`[Admin] Attempting to delete poster: ${params.id}`);
     const user = getAuthUserFromRequest(req as any);
     if (!user) {
       console.error('[Admin] Delete Failed: No user found in request');
@@ -21,12 +21,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Permission denied' }, { status: 401 });
     }
 
-    const { posterId } = params;
+    const { id } = params;
     await dbConnect();
     
-    const poster = await PromoPoster.findById(posterId);
+    const poster = await PromoPoster.findById(id);
     if (!poster) {
-      console.error(`[Admin] Poster not found: ${posterId}`);
+      console.error(`[Admin] Poster not found: ${id}`);
       return NextResponse.json({ error: 'Poster not found' }, { status: 404 });
     }
 
@@ -41,8 +41,8 @@ export async function DELETE(
     }
 
     // 2. Delete from MongoDB
-    await PromoPoster.findByIdAndDelete(posterId);
-    console.log(`[Admin] Deleted from MongoDB: ${posterId}`);
+    await PromoPoster.findByIdAndDelete(id);
+    console.log(`[Admin] Deleted from MongoDB: ${id}`);
 
     return NextResponse.json({ message: 'Poster deleted successfully' });
   } catch (error) {
@@ -53,10 +53,10 @@ export async function DELETE(
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { posterId: string } }
+    { params }: { params: { id: string } }
 ) {
     try {
-        console.log(`[Admin] Toggling status for poster: ${params.posterId}`);
+        console.log(`[Admin] Toggling status for poster: ${params.id}`);
         const user = getAuthUserFromRequest(req as any);
         if (!user) {
             console.error('[Admin] Patch Failed: No user found in request');
@@ -72,7 +72,7 @@ export async function PATCH(
 
         await dbConnect();
         const poster = await PromoPoster.findByIdAndUpdate(
-            params.posterId,
+            params.id,
             { isActive },
             { new: true }
         );
@@ -81,7 +81,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Poster not found' }, { status: 404 });
         }
 
-        console.log(`[Admin] Poster ${params.posterId} active status set to: ${isActive}`);
+        console.log(`[Admin] Poster ${params.id} active status set to: ${isActive}`);
         return NextResponse.json(poster);
     } catch (error) {
         console.error('[Admin] PATCH error:', error);
