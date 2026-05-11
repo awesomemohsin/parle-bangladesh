@@ -22,11 +22,18 @@ export async function GET(request: NextRequest) {
 
     const refreshedItems = [];
     const isDealer = user.customerType === "dealer";
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
 
     for (const item of (cart.items || [])) {
       try {
         const product = await Product.findById(item.productId).lean() as any;
         if (product) {
+          const productIdStr = product._id?.toString();
+          // Find if any flat discount applies to this product (regardless of minOrder for now)
+          const applicableFlat = flatDiscounts.find(d => 
+            d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
+          );
+
           const variation = product.variations.find((v: any) => {
             const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
             const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
@@ -47,19 +54,23 @@ export async function GET(request: NextRequest) {
 
     const totals = await calculateServerSideCart(refreshedItems, cart.promoCode);
 
-    // Apply flat discounts to item prices for UI consistency
-    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+    // Apply flat discounts to item prices for UI consistency ONLY if thresholds are met
     for (const item of refreshedItems) {
+      const pId = item.productId || item.id;
       const applicableFlat = flatDiscounts.find(d => 
-        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === item.productId))
+        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === pId))
       );
+      
       if (applicableFlat) {
-        const amount = Number(applicableFlat.discountAmount || 0);
-        const originalPrice = Number(item.price);
-        if (applicableFlat.discountType === 'percentage') {
-          item.price = originalPrice - (originalPrice * amount) / 100;
-        } else {
-          item.price = Math.max(0, originalPrice - amount);
+        const minOrder = Number(applicableFlat.minOrderAmount || 0);
+        if (totals.subtotal >= minOrder) {
+          const amount = Number(applicableFlat.discountAmount || 0);
+          const basePrice = Number(item.price);
+          if (applicableFlat.discountType === 'percentage') {
+            item.price = basePrice - (basePrice * amount) / 100;
+          } else {
+            item.price = Math.max(0, basePrice - amount);
+          }
         }
       }
     }
@@ -113,22 +124,7 @@ export async function POST(request: NextRequest) {
 
         if (variation) {
           item.price = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
-          
-          // If there's a flat discount with NO minOrderAmount, it acts as a sale price
-          if (applicableFlat && (Number(applicableFlat.minOrderAmount) || 0) <= 0) {
-            const amount = Number(applicableFlat.discountAmount || 0);
-            const originalPrice = Number(item.price);
-            let discounted = originalPrice;
-            if (applicableFlat.discountType === 'percentage') {
-              discounted = originalPrice - (originalPrice * amount) / 100;
-            } else {
-              discounted = Math.max(0, originalPrice - amount);
-            }
-            item.variationDiscountPrice = Math.round(discounted);
-          } else {
-            item.variationDiscountPrice = variation.discountPrice;
-          }
-          
+          item.variationDiscountPrice = variation.discountPrice;
           item.stock = variation.stock;
         }
       }
@@ -137,18 +133,24 @@ export async function POST(request: NextRequest) {
 
     const totals = await calculateServerSideCart(refreshedItems, promoCode);
 
+    // Update item prices for display ONLY if thresholds are met
     for (const item of refreshedItems) {
       const pId = item.productId || item.id;
       const applicableFlat = flatDiscounts.find(d => 
         d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === pId))
       );
+      
       if (applicableFlat) {
-        const amount = Number(applicableFlat.discountAmount || 0);
-        const originalPrice = Number(item.price);
-        if (applicableFlat.discountType === 'percentage') {
-          item.price = originalPrice - (originalPrice * amount) / 100;
-        } else {
-          item.price = Math.max(0, originalPrice - amount);
+        const minOrder = Number(applicableFlat.minOrderAmount || 0);
+        // Only override price for display if the threshold is met
+        if (totals.subtotal >= minOrder) {
+          const amount = Number(applicableFlat.discountAmount || 0);
+          const basePrice = Number(item.price);
+          if (applicableFlat.discountType === 'percentage') {
+            item.price = basePrice - (basePrice * amount) / 100;
+          } else {
+            item.price = Math.max(0, basePrice - amount);
+          }
         }
       }
     }
