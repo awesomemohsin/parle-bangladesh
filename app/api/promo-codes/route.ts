@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { getAuthUserFromRequest, hasAnyRole } from '@/lib/api-auth';
 import { ROLES } from '@/lib/constants';
 import dbConnect from '@/lib/db';
-import { PromoCode } from '@/lib/models';
+import { PromoCode, ApprovalRequest, Notification } from '@/lib/models';
+import { notifyNewApprovalRequest } from '@/lib/telegram';
 
 export async function GET(req: Request) {
   try {
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -54,10 +55,42 @@ export async function POST(req: Request) {
       discountAmount,
       maxUsage: maxUsage || 999999,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-      isActive: isActive !== undefined ? isActive : true,
+      isActive: false,
+      status: 'pending',
       allProducts: allProducts !== undefined ? allProducts : false,
       applicableProducts: applicableProducts || [],
     });
+
+    // Create approval request for ALL new promo codes
+    const approvalRequest = new ApprovalRequest({
+      requesterEmail: user.email,
+      type: "promo-code",
+      targetId: newPromo._id,
+      targetName: type === 'promo' ? `Promo: ${code}` : `Flat Discount: ${discountAmount}${discountType === 'percentage' ? '%' : '৳'}`,
+      field: "creation",
+      oldValue: "none",
+      newValue: "active",
+      status: "pending",
+      stage: "superadmin",
+      targetDetails: newPromo.toObject(),
+    });
+    await approvalRequest.save();
+
+    // Create notification for Level 2 admins
+    await Notification.create({
+      role: ROLES.SUPER_ADMIN,
+      title: "New Promo Code Approval Required",
+      message: `${user.name || user.email} created a new ${type === 'promo' ? 'promo code' : 'flat discount'} that requires Level 2 approval.`,
+      type: "approval",
+      targetLink: "/admin/approvals/promo-codes"
+    });
+
+    // Telegram notification
+    try {
+      await notifyNewApprovalRequest(approvalRequest.toObject());
+    } catch (tgErr) {
+      console.error("Telegram notification failed", tgErr);
+    }
 
     return NextResponse.json(newPromo, { status: 201 });
   } catch (error: any) {

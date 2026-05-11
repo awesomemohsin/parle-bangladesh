@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { ApprovalRequest, Product, Order, Category, Notification } from "@/lib/models";
+import { ApprovalRequest, Product, Order, Category, Notification, PromoCode } from "@/lib/models";
 import { notifyOwnerApprovalRequired, notifyApprovalFinalized, notifyOrderReady, notifyCriticalEvent } from "@/lib/telegram";
 import { logAdminActivity } from "@/lib/activity";
 
@@ -64,6 +64,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       // Notify via Telegram
       await notifyApprovalFinalized(approvalRequest);
+
+      // If it's a promo code, also update the promo code status
+      if (approvalRequest.type === 'promo-code') {
+        await PromoCode.findByIdAndUpdate(approvalRequest.targetId, { status: 'declined', isActive: false });
+      }
 
       return NextResponse.json({ message: "Request declined successfully", request: approvalRequest });
     }
@@ -252,6 +257,28 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
       } catch (notifyError) {
         console.error("Failed to send status update notification from approval:", notifyError);
       }
+    }
+  } else if (approvalRequest.type === 'promo-code') {
+    const promoCode = await PromoCode.findById(approvalRequest.targetId);
+    if (promoCode) {
+      // If it's an update, apply the changes from targetDetails
+      if (approvalRequest.field === 'update' && approvalRequest.targetDetails) {
+        const details = approvalRequest.targetDetails;
+        if (details.code) promoCode.code = details.code.toUpperCase();
+        if (details.type) promoCode.type = details.type;
+        if (details.discountType) promoCode.discountType = details.discountType;
+        if (details.discountAmount) promoCode.discountAmount = details.discountAmount;
+        if (details.maxUsage) promoCode.maxUsage = details.maxUsage;
+        if (details.minOrderAmount !== undefined) promoCode.minOrderAmount = details.minOrderAmount;
+        if (details.expiresAt) promoCode.expiresAt = new Date(details.expiresAt);
+        
+        promoCode.allProducts = details.allProducts !== undefined ? details.allProducts : promoCode.allProducts;
+        promoCode.applicableProducts = details.applicableProducts || promoCode.applicableProducts;
+      }
+      
+      promoCode.status = 'approved';
+      promoCode.isActive = true;
+      await promoCode.save();
     }
   }
 }

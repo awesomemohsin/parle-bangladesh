@@ -13,10 +13,13 @@ interface Discount {
   maxUsage: number;
   currentUsage: number;
   isActive: boolean;
+  status: 'pending' | 'approved' | 'declined';
   allProducts: boolean;
   applicableProducts: string[];
+  minOrderAmount: number;
   expiresAt?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface ProductInfo {
@@ -41,6 +44,7 @@ export default function DiscountsAdmin() {
   const [maxUsage, setMaxUsage] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [minOrderAmount, setMinOrderAmount] = useState('');
   const [allProducts, setAllProducts] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
@@ -87,8 +91,9 @@ export default function DiscountsAdmin() {
     setMaxUsage('50');
     setExpiresAt('');
     setIsActive(true);
-    setAllProducts(false);
-    setSelectedProducts([]);
+    setMinOrderAmount('0');
+    setAllProducts(true);
+    setSelectedProducts(products.map(p => p.id));
     setFormError('');
     setIsModalOpen(true);
   };
@@ -100,6 +105,7 @@ export default function DiscountsAdmin() {
     setDiscountType(discount.discountType || 'fixed');
     setDiscountAmount(discount.discountAmount.toString());
     setMaxUsage(discount.maxUsage.toString());
+    setMinOrderAmount(discount.minOrderAmount?.toString() || '0');
     setAllProducts(discount.allProducts || false);
     
     // If allProducts was true, we might not have a list of IDs in DB, 
@@ -129,9 +135,8 @@ export default function DiscountsAdmin() {
     setFormError('');
     setIsSubmitting(true);
 
-    // For promo codes, they are now always applicable to all products.
-    // For flat discounts, we check if all products are selected.
-    const isActuallyAllSelected = type === 'promo' || (products.length > 0 && selectedProducts.length === products.length);
+    // Check if all products are selected.
+    const isActuallyAllSelected = products.length > 0 && selectedProducts.length === products.length;
 
     const payload = {
       code: type === 'promo' ? code : undefined,
@@ -142,6 +147,7 @@ export default function DiscountsAdmin() {
       isActive,
       allProducts: isActuallyAllSelected,
       applicableProducts: isActuallyAllSelected ? [] : selectedProducts,
+      minOrderAmount: Number(minOrderAmount),
       expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
     };
 
@@ -218,6 +224,7 @@ export default function DiscountsAdmin() {
               <tr className="bg-gray-50 border-b border-gray-100 uppercase text-[10px] font-black tracking-widest text-gray-500">
                 <th className="p-4 rounded-tl-2xl">Type / Code</th>
                 <th className="p-4">Discount</th>
+                <th className="p-4">Min Order</th>
                 <th className="p-4">Applicability</th>
                 <th className="p-4">Usage</th>
                 <th className="p-4">Status</th>
@@ -249,6 +256,9 @@ export default function DiscountsAdmin() {
                     <td className="p-4 font-black">
                       {discount.discountType === 'percentage' ? `${discount.discountAmount}%` : `৳ ${discount.discountAmount}`}
                     </td>
+                    <td className="p-4 text-xs font-bold text-gray-500">
+                      {discount.minOrderAmount > 0 ? `৳ ${discount.minOrderAmount}` : 'None'}
+                    </td>
                     <td className="p-4">
                        <span className="text-xs font-bold text-gray-600">
                           {discount.allProducts ? 'All Products' : `${discount.applicableProducts?.length || 0} Products`}
@@ -263,11 +273,21 @@ export default function DiscountsAdmin() {
                       </div>
                     </td>
                     <td className="p-4">
-                      {discount.isActive ? (
-                        <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full uppercase">Active</span>
-                      ) : (
-                        <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full uppercase">Disabled</span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {discount.status === 'pending' ? (
+                          <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter w-fit">Pending Approval</span>
+                        ) : discount.status === 'declined' ? (
+                          <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter w-fit">Declined</span>
+                        ) : (
+                          <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter w-fit">Approved</span>
+                        )}
+                        
+                        {discount.isActive ? (
+                          <span className="text-[10px] font-bold text-green-600 uppercase tracking-tighter">● Live</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">○ Inactive</span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 text-right space-x-2">
                        <button onClick={() => openEditModal(discount)} className="text-blue-500 hover:text-blue-700 p-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
@@ -287,7 +307,7 @@ export default function DiscountsAdmin() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`bg-white rounded-3xl w-full ${type === 'flat' ? 'max-w-2xl' : 'max-w-md'} overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]`}>
+          <div className={`bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]`}>
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
                <h2 className="text-xl font-bold uppercase tracking-tight">{editingId ? 'Edit Discount' : 'New Discount'}</h2>
             </div>
@@ -299,7 +319,7 @@ export default function DiscountsAdmin() {
                 </div>
               )}
  
-              <div className={`grid ${type === 'flat' ? 'grid-cols-2 gap-6' : 'grid-cols-1 gap-4'}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Discount Type</label>
@@ -362,17 +382,31 @@ export default function DiscountsAdmin() {
                     </div>
                   </div>
  
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Max Usage Total</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      value={maxUsage}
-                      onChange={(e) => setMaxUsage(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
-                      placeholder="e.g. 1000"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Max Usage Total</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={maxUsage}
+                        onChange={(e) => setMaxUsage(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
+                        placeholder="e.g. 1000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Min Order Amount</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        value={minOrderAmount}
+                        onChange={(e) => setMinOrderAmount(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
+                        placeholder="e.g. 500"
+                      />
+                    </div>
                   </div>
  
                   <div>
@@ -399,9 +433,11 @@ export default function DiscountsAdmin() {
                       Discount is actively running
                     </label>
                   </div>
+                  <p className="text-[10px] text-amber-600 font-bold italic">
+                    * Note: New discounts require Level 2 approval before going live.
+                  </p>
                 </div>
  
-                {type === 'flat' && (
                   <div className="space-y-4 border-l border-gray-100 pl-6">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Apply To Products</label>
@@ -443,7 +479,6 @@ export default function DiscountsAdmin() {
                       </div>
                     </div>
                   </div>
-                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 sticky bottom-0 bg-white">

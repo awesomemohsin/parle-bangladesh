@@ -220,9 +220,12 @@ export async function notifyNewApplication(application: any) {
  * Notify Superadmins about a new approval request
  */
 export async function notifyNewApprovalRequest(request: any) {
-  const isSensitive = ['price', 'stock', 'dealerPrice', 'discountPrice'].includes(request.field);
-  const typeIcon = request.type === 'order' ? '📦' : '🏷️';
-  const level = isSensitive ? 'LEVEL 3 (SENSITIVE)' : 'LEVEL 2 (BASIC)';
+  const isSensitive = ['price', 'stock', 'dealerPrice', 'discountPrice', 'creation'].includes(request.field);
+  let typeIcon = '🏷️';
+  if (request.type === 'order') typeIcon = '📦';
+  if (request.type === 'promo-code') typeIcon = '🎟️';
+  
+  const level = isSensitive ? 'LEVEL 2 (FINANCIAL)' : 'LEVEL 1 (BASIC)';
   
   const message = `
 <b>${typeIcon} NEW APPROVAL REQUEST</b>

@@ -6,18 +6,24 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export default function ApprovalDashboardPage() {
-  const [stats, setStats] = useState({ products: 0, orders: 0 })
+  const [stats, setStats] = useState({ products: 0, orders: 0, promos: 0 })
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [prodRes, orderRes] = await Promise.all([
+        const [prodRes, orderRes, promoRes] = await Promise.all([
           fetch('/api/approvals?type=product&status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-          fetch('/api/approvals?type=order&status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+          fetch('/api/approvals?type=order&status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+          fetch('/api/approvals?type=promo-code&status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
         ])
         const prodData = await prodRes.json()
         const orderData = await orderRes.json()
-        setStats({ products: prodData.requests?.length || 0, orders: orderData.requests?.length || 0 })
+        const promoData = await promoRes.json()
+        setStats({ 
+          products: prodData.requests?.length || 0, 
+          orders: orderData.requests?.length || 0,
+          promos: promoData.requests?.length || 0
+        })
       } catch (e) {}
     }
     fetchStats()
@@ -30,9 +36,9 @@ export default function ApprovalDashboardPage() {
         <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Multi-Tier Identity Management System</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <Link href="/admin/approvals/products">
-           <Card className="p-8 border-2 border-gray-100 hover:border-black transition-all group overflow-hidden relative">
+           <Card className="p-8 border-2 border-gray-100 hover:border-black transition-all group overflow-hidden relative h-full">
               <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full -translate-y-12 translate-x-12 scale-150 transition-transform group-hover:scale-[2] duration-500"></div>
               <div className="space-y-4 relative z-10">
                  <div className="flex justify-between items-start">
@@ -51,7 +57,7 @@ export default function ApprovalDashboardPage() {
         </Link>
 
         <Link href="/admin/approvals/orders">
-           <Card className="p-8 border-2 border-gray-100 hover:border-black transition-all group overflow-hidden relative">
+           <Card className="p-8 border-2 border-gray-100 hover:border-black transition-all group overflow-hidden relative h-full">
               <div className="absolute top-0 right-0 w-24 h-24 bg-black/5 rounded-full -translate-y-12 translate-x-12 scale-150 transition-transform group-hover:scale-[2] duration-500"></div>
               <div className="space-y-4 relative z-10">
                  <div className="flex justify-between items-start">
@@ -61,6 +67,25 @@ export default function ApprovalDashboardPage() {
                  <div>
                     <h2 className="text-2xl font-black text-gray-900 uppercase">Order Statuses</h2>
                     <p className="text-gray-400 text-xs font-medium leading-relaxed italic">Restricted status modifications requiring triple-user consensus.</p>
+                 </div>
+                 <div className="flex items-center gap-2 text-gray-300 group-hover:text-black transition-colors font-black text-[9px] uppercase tracking-widest pt-4">
+                    Enter Verification Terminal →
+                 </div>
+              </div>
+           </Card>
+        </Link>
+
+        <Link href="/admin/approvals/promo-codes">
+           <Card className="p-8 border-2 border-gray-100 hover:border-black transition-all group overflow-hidden relative h-full">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-600/5 rounded-full -translate-y-12 translate-x-12 scale-150 transition-transform group-hover:scale-[2] duration-500"></div>
+              <div className="space-y-4 relative z-10">
+                 <div className="flex justify-between items-start">
+                    <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-1 rounded tracking-widest">Marketing Level</span>
+                    <span className="text-4xl font-black text-gray-900">{stats.promos}</span>
+                 </div>
+                 <div>
+                    <h2 className="text-2xl font-black text-gray-900 uppercase">Promo Codes</h2>
+                    <p className="text-gray-400 text-xs font-medium leading-relaxed italic">New discounts and promo codes require Level 2 verification to go live.</p>
                  </div>
                  <div className="flex items-center gap-2 text-gray-300 group-hover:text-black transition-colors font-black text-[9px] uppercase tracking-widest pt-4">
                     Enter Verification Terminal →
