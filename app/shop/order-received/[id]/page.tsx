@@ -36,6 +36,7 @@ interface Order {
   total: number;
   createdAt: string;
   promoCode?: string;
+  isRestricted?: boolean;
 }
 
 export default function OrderReceivedPage() {
@@ -129,12 +130,19 @@ export default function OrderReceivedPage() {
 
                   {/* Coupon Discount */}
                   {displayPromoDiscount > 0 && (
-                    <div className="flex justify-between items-center text-sm text-green-600">
-                      <span className="font-bold uppercase tracking-tight flex items-center gap-1 text-[11px]">
-                        <Tag className="w-3 h-3" /> Coupon {order.promoCode ? `(${order.promoCode})` : ''}:
-                      </span>
-                      <span className="font-semibold text-gray-100 border-b border-dotted border-gray-100 flex-grow mx-4"></span>
-                      <span className="font-bold">- ৳ {Math.round(displayPromoDiscount)}</span>
+                    <div className="border-b border-gray-50 pb-2 mb-2">
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span className="font-bold uppercase tracking-tight flex items-center gap-1 text-[11px]">
+                          <Tag className="w-3 h-3" /> Coupon {order.promoCode ? `(${order.promoCode})` : ''}:
+                        </span>
+                        <span className="font-semibold text-gray-100 border-b border-dotted border-gray-100 flex-grow mx-4"></span>
+                        <span className="font-bold">- ৳ {Math.round(displayPromoDiscount)}</span>
+                      </div>
+                      {order.isRestricted && (
+                        <p className="text-[9px] text-amber-600 font-bold uppercase tracking-tight leading-none italic mt-1 text-right">
+                          * Applied to selected items only
+                        </p>
+                      )}
                     </div>
                   )}
 

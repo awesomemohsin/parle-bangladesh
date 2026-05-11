@@ -22,7 +22,7 @@ interface OrderState {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isLoading, applyPromo, removePromo } = useCart();
+  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, applyPromo, removePromo } = useCart();
   const { logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [promoInput, setPromoInput] = useState('');
@@ -34,7 +34,8 @@ export default function CheckoutPage() {
     setPromoError('');
     
     try {
-      const res = await fetch(`/api/promo-codes/validate?code=${promoInput.toUpperCase()}`);
+      const pIds = items.map(item => item.productId).join(',');
+      const res = await fetch(`/api/promo-codes/validate?code=${promoInput.toUpperCase()}&subtotal=${subtotal}&productIds=${pIds}`);
       const data = await res.json();
       
       if (res.ok) {
@@ -133,31 +134,18 @@ export default function CheckoutPage() {
     );
   }
 
-  // Simple Logic:
-  // 1. Product subtotal is the sum of already-discounted item prices
-  const productSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  
-  const isFreeDelivery = productSubtotal >= 1000;
+  // Use the synchronized values from the CartContext (server-side calculation)
+  // Note: we might need to handle shipping cost locally as it depends on the form
+  const isFreeDelivery = subtotal >= 1000;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
-  const shippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
+  const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
   
-  // 2. Add delivery charge to get the amount before coupon
-  const amountBeforeCoupon = productSubtotal + shippingCost;
-  
-  // 3. Calculate coupon discount on the (subtotal + delivery)
-  let displayPromoDiscount = 0;
-  if (promoCode && promoDetails) {
-    const amount = Number(promoDetails.discountAmount || 0);
-    if (promoDetails.discountType === 'percentage') {
-      displayPromoDiscount = (amountBeforeCoupon * amount) / 100;
-    } else {
-      displayPromoDiscount = Math.min(amountBeforeCoupon, amount);
-    }
-  }
-
-  // 4. Final Grand Total
-  const grandTotal = amountBeforeCoupon - displayPromoDiscount;
+  // The final total should be (subtotal - ruleDiscount - promoDiscount) + shippingCost
+  const grandTotal = Math.max(0, (subtotal - (ruleDiscount || 0) - (promoDiscount || 0)) + currentShippingCost);
+  const displayPromoDiscount = promoDiscount || 0;
+  const shippingCost = currentShippingCost;
+  const productSubtotal = subtotal;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -533,20 +521,27 @@ export default function CheckoutPage() {
                 
                 {/* Coupon Discount */}
                 {promoCode && (
-                  <div className="flex justify-between items-center py-2 border-t border-gray-100">
-                    <span className="font-bold uppercase text-[9px] tracking-widest text-gray-500">
-                      Coupon ({promoCode}):
-                    </span>
-                    <div className="flex items-center gap-2">
-                       <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
-                       <button 
-                        type="button" 
-                        onClick={removePromo} 
-                        className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1"
-                       >
-                         [Remove] <X className="w-2.5 h-2.5" />
-                       </button>
+                  <div className="border-t border-gray-100 py-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold uppercase text-[9px] tracking-widest text-gray-500">
+                        Coupon ({promoCode}):
+                      </span>
+                      <div className="flex items-center gap-2">
+                         <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
+                         <button 
+                          type="button" 
+                          onClick={removePromo} 
+                          className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                         >
+                           [Remove] <X className="w-2.5 h-2.5" />
+                         </button>
+                      </div>
                     </div>
+                    {isRestricted && (
+                      <p className="text-[8px] text-amber-600 font-bold uppercase tracking-tight leading-none italic">
+                        * Valid for selected items only
+                      </p>
+                    )}
                   </div>
                 )}
 

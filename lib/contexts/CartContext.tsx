@@ -34,6 +34,8 @@ export interface Cart {
   promoDetails?: PromoDetails;
   promoDiscount?: number;
   ruleDiscount?: number;
+  isRestricted?: boolean;
+  applicableSubtotal?: number;
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -53,6 +55,8 @@ interface CartContextType {
   promoDiscount?: number;
   ruleDiscount?: number;
   promoDetails?: PromoDetails;
+  isRestricted?: boolean;
+  applicableSubtotal?: number;
   isLoading: boolean;
   addItem: (item: AddCartItemInput, quantity?: number) => void;
   removeItem: (key: string) => void;
@@ -126,14 +130,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             total: parsed.total || 0,
             discountAmount: parsed.discountAmount || 0,
             promoCode: parsed.promoCode,
-            promoDetails: parsed.promoDetails
+            promoDetails: parsed.promoDetails,
+            promoDiscount: parsed.promoDiscount,
+            ruleDiscount: parsed.ruleDiscount,
+            isRestricted: parsed.isRestricted,
+            applicableSubtotal: parsed.applicableSubtotal
           };
         } catch (e) {
           console.error("Cart initial parse failed:", e);
         }
       }
     }
-    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0 };
+    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0 };
   });
 
   const syncFromStorage = useCallback(() => {
@@ -153,7 +161,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           total: parsed.total || 0,
           discountAmount: parsed.discountAmount || 0,
           promoCode: parsed.promoCode,
-          promoDetails: parsed.promoDetails
+          promoDetails: parsed.promoDetails,
+          promoDiscount: parsed.promoDiscount,
+          ruleDiscount: parsed.ruleDiscount,
+          isRestricted: parsed.isRestricted,
+          applicableSubtotal: parsed.applicableSubtotal
         });
       } catch (e) {
         console.error("Cart sync parse failed:", e);
@@ -212,6 +224,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 discountAmount: data.discountAmount || 0,
                 promoDiscount: data.promoDiscount || 0,
                 ruleDiscount: data.ruleDiscount || 0,
+                isRestricted: data.isRestricted,
+                applicableSubtotal: data.applicableSubtotal,
                 promoCode: prev.promoCode || data.promoCode, 
                 promoDetails: prev.promoDetails || data.promoDetails
               };
@@ -304,6 +318,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 discountAmount: data.discountAmount,
                 promoDiscount: data.promoDiscount,
                 ruleDiscount: data.ruleDiscount,
+                isRestricted: data.isRestricted,
+                applicableSubtotal: data.applicableSubtotal,
+                promoCode: data.promoCode,
                 promoDetails: data.promoDetails
               };
             });
@@ -364,7 +381,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       promoDetails: details,
       promoDiscount: 0,
       discountAmount: 0,
-      ruleDiscount: 0
+      ruleDiscount: 0,
+      isRestricted: !details.allProducts,
+      applicableSubtotal: 0
     }));
   }, []);
 
@@ -387,6 +406,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     promoDiscount: isMounted ? (cart.promoDiscount || 0) : 0,
     ruleDiscount: isMounted ? (cart.ruleDiscount || 0) : 0,
     promoDetails: cart.promoDetails,
+    isRestricted: cart.isRestricted,
+    applicableSubtotal: cart.applicableSubtotal,
     isLoading: !isMounted || isLoading,
     addItem,
     removeItem,
