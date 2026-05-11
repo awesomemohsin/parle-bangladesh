@@ -1,33 +1,23 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import dbConnect from '@/lib/db';
+import { PromoPoster } from '@/lib/models';
 
 export async function GET() {
   try {
-    const promoDir = path.join(process.cwd(), 'public', 'images', 'promo');
+    await dbConnect();
+    const posters = await PromoPoster.find({ isActive: true }).sort({ order: 1 });
     
-    // Check if directory exists
-    try {
-      await fs.access(promoDir);
-    } catch {
-      return NextResponse.json([]);
-    }
+    // Map to match the frontend expectations
+    const formattedPosters = posters.map(p => ({
+      id: p._id,
+      image: p.imageUrl,
+      link: p.link,
+      alt: p.altText
+    }));
 
-    const files = await fs.readdir(promoDir);
-    
-    // Filter for images and map to URLs
-    const posters = files
-      .filter(file => /\.(png|jpg|jpeg|webp|gif)$/i.test(file))
-      .map((file, index) => ({
-        id: index + 1,
-        image: `/images/promo/${file}`,
-        link: '/shop',
-        alt: `Promotion ${index + 1}`
-      }));
-
-    return NextResponse.json(posters);
+    return NextResponse.json(formattedPosters);
   } catch (error) {
-    console.error('Failed to read promo directory:', error);
+    console.error('Failed to fetch promo posters:', error);
     return NextResponse.json([], { status: 500 });
   }
 }

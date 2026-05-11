@@ -635,3 +635,30 @@ CareerApplicationSchema.index({ createdAt: -1 });
 
 export const CareerApplication = mongoose.models?.CareerApplication || mongoose.model<ICareerApplication>("CareerApplication", CareerApplicationSchema, "career_applications");
 
+// --- PROMO POSTER MODEL ---
+export interface IPromoPoster extends Document {
+  imageUrl: string;
+  link: string;
+  altText: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const PromoPosterSchema = new Schema<IPromoPoster>(
+  {
+    imageUrl: { type: String, required: true },
+    link: { type: String, default: "/shop" },
+    altText: { type: String, default: "Special Promotion" },
+    isActive: { type: Boolean, default: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+PromoPosterSchema.index({ isActive: 1 });
+PromoPosterSchema.index({ order: 1 });
+
+export const PromoPoster = mongoose.models?.PromoPoster || mongoose.model<IPromoPoster>("PromoPoster", PromoPosterSchema, "promo_posters");
+
