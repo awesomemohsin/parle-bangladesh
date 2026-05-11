@@ -10,6 +10,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log(`[Admin] Attempting to delete poster: ${params.id}`);
     const user = getAuthUserFromRequest(req as any);
     if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,22 +21,27 @@ export async function DELETE(
     
     const poster = await PromoPoster.findById(id);
     if (!poster) {
+      console.error(`[Admin] Poster not found: ${id}`);
       return NextResponse.json({ error: 'Poster not found' }, { status: 404 });
     }
 
     // 1. Delete from Vercel Blob
     try {
-      await del(poster.imageUrl);
+      if (poster.imageUrl.includes('blob.vercel-storage.com')) {
+        await del(poster.imageUrl);
+        console.log(`[Admin] Deleted from Vercel Blob: ${poster.imageUrl}`);
+      }
     } catch (err) {
-      console.error('Failed to delete from Blob:', err);
-      // Continue even if blob deletion fails to keep DB clean
+      console.error('[Admin] Failed to delete from Blob:', err);
     }
 
     // 2. Delete from MongoDB
     await PromoPoster.findByIdAndDelete(id);
+    console.log(`[Admin] Deleted from MongoDB: ${id}`);
 
     return NextResponse.json({ message: 'Poster deleted successfully' });
   } catch (error) {
+    console.error('[Admin] Delete error:', error);
     return NextResponse.json({ error: 'Failed to delete poster' }, { status: 500 });
   }
 }
@@ -45,6 +51,7 @@ export async function PATCH(
     { params }: { params: { id: string } }
 ) {
     try {
+        console.log(`[Admin] Toggling status for poster: ${params.id}`);
         const user = getAuthUserFromRequest(req as any);
         if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,8 +67,14 @@ export async function PATCH(
             { new: true }
         );
 
+        if (!poster) {
+            return NextResponse.json({ error: 'Poster not found' }, { status: 404 });
+        }
+
+        console.log(`[Admin] Poster ${params.id} active status set to: ${isActive}`);
         return NextResponse.json(poster);
     } catch (error) {
+        console.error('[Admin] PATCH error:', error);
         return NextResponse.json({ error: 'Failed to update poster' }, { status: 500 });
     }
 }
