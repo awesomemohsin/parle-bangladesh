@@ -7,10 +7,11 @@ import { ROLES } from '@/lib/constants';
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log(`[Admin] Attempting to delete poster: ${params.id}`);
+    const { id } = await params;
+    console.log(`[Admin] Attempting to delete poster: ${id}`);
     const user = getAuthUserFromRequest(req as any);
     if (!user) {
       console.error('[Admin] Delete Failed: No user found in request');
@@ -21,7 +22,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Permission denied' }, { status: 401 });
     }
 
-    const { id } = params;
     await dbConnect();
     
     const poster = await PromoPoster.findById(id);
@@ -53,10 +53,11 @@ export async function DELETE(
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        console.log(`[Admin] Toggling status for poster: ${params.id}`);
+        const { id } = await params;
+        console.log(`[Admin] Toggling status for poster: ${id}`);
         const user = getAuthUserFromRequest(req as any);
         if (!user) {
             console.error('[Admin] Patch Failed: No user found in request');
@@ -72,7 +73,7 @@ export async function PATCH(
 
         await dbConnect();
         const poster = await PromoPoster.findByIdAndUpdate(
-            params.id,
+            id,
             { isActive },
             { new: true }
         );
@@ -81,7 +82,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Poster not found' }, { status: 404 });
         }
 
-        console.log(`[Admin] Poster ${params.id} active status set to: ${isActive}`);
+        console.log(`[Admin] Poster ${id} active status set to: ${isActive}`);
         return NextResponse.json(poster);
     } catch (error) {
         console.error('[Admin] PATCH error:', error);
