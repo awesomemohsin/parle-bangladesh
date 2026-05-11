@@ -152,7 +152,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
       productId: product.id,
       productSlug: product.slug,
       productName: product.name,
-      price: originalPrice,
+      price: displayPrice,
       image: selectedVariation?.image || images[currentImageIndex] || "/placeholder.svg",
       quantity: quantity,
       weight: selectedVariation?.weight || "",

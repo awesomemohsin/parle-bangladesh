@@ -92,9 +92,9 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
   if (promoDetails) {
     const remainingTotal = subtotal - flatDiscountTotal;
     
-    // Check if minimum order amount is met
+    // Check if minimum order amount is met (against the total AFTER automatic discounts)
     const currentMinOrder = Number(promoDetails.minOrderAmount || 0);
-    if (currentMinOrder > 0 && subtotal < currentMinOrder) {
+    if (currentMinOrder > 0 && remainingTotal < currentMinOrder) {
       applicableSubtotal = 0;
     } else if (promoDetails.allProducts === true) {
       applicableSubtotal = subtotal;

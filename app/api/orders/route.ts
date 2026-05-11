@@ -168,32 +168,55 @@ export async function POST(request: NextRequest) {
     const isDealer = user?.customerType === "dealer";
 
     const items = [];
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+    
     for (const item of rawItems) {
       const quantity = Number(item.quantity || 0);
       if (quantity <= 0) continue;
 
       const product = item.productId 
-        ? await Product.findById(item.productId)
-        : (item.productSlug ? await Product.findOne({ slug: item.productSlug }) : null);
+        ? await Product.findById(item.productId).lean()
+        : (item.productSlug ? await Product.findOne({ slug: item.productSlug }).lean() : null);
 
       if (product) {
-        const variation = product.variations.find((v: any) => {
+        const productIdStr = (product as any)._id?.toString();
+        // Find if any flat discount applies to this product (regardless of minOrder for now)
+        const applicableFlat = flatDiscounts.find(d => 
+          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
+        );
+
+        const variation = (product as any).variations.find((v: any) => {
           const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
           const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
           return weightMatch && flavorMatch;
         });
 
         if (variation) {
+          const basePrice = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
+          let effectiveVarDiscountPrice = variation.discountPrice;
+
+          // If there's a flat discount with NO minOrderAmount, it acts as a sale price
+          if (applicableFlat && (Number(applicableFlat.minOrderAmount) || 0) <= 0) {
+            const amount = Number(applicableFlat.discountAmount || 0);
+            let discounted = basePrice;
+            if (applicableFlat.discountType === 'percentage') {
+              discounted = basePrice - (basePrice * amount) / 100;
+            } else {
+              discounted = Math.max(0, basePrice - amount);
+            }
+            effectiveVarDiscountPrice = Math.round(discounted);
+          }
+
           items.push({
-            productId: product._id.toString(),
-            productSlug: product.slug,
-            name: product.name,
+            productId: (product as any)._id.toString(),
+            productSlug: (product as any).slug,
+            name: (product as any).name,
             quantity,
-            price: isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price,
-            variationDiscountPrice: variation.discountPrice,
+            price: basePrice,
+            variationDiscountPrice: effectiveVarDiscountPrice,
             weight: item.weight,
             flavor: item.flavor,
-            image: item.image || variation.image || product.image,
+            image: item.image || variation.image || (product as any).image,
           });
         }
       }

@@ -92,18 +92,43 @@ export async function POST(request: NextRequest) {
 
     const refreshedItems = [];
     const isDealer = user.customerType === "dealer";
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+    
     for (const item of items) {
       const pId = item.productId || item.id;
       const product = await Product.findById(pId).lean() as any;
       if (product) {
+        const productIdStr = product._id?.toString();
+        // Find if any flat discount applies to this product (regardless of minOrder for now, 
+        // calculateServerSideCart will check minOrder)
+        const applicableFlat = flatDiscounts.find(d => 
+          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
+        );
+
         const variation = product.variations.find((v: any) => {
           const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
           const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
           return weightMatch && flavorMatch;
         });
+
         if (variation) {
           item.price = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
-          item.variationDiscountPrice = variation.discountPrice;
+          
+          // If there's a flat discount with NO minOrderAmount, it acts as a sale price
+          if (applicableFlat && (Number(applicableFlat.minOrderAmount) || 0) <= 0) {
+            const amount = Number(applicableFlat.discountAmount || 0);
+            const originalPrice = Number(item.price);
+            let discounted = originalPrice;
+            if (applicableFlat.discountType === 'percentage') {
+              discounted = originalPrice - (originalPrice * amount) / 100;
+            } else {
+              discounted = Math.max(0, originalPrice - amount);
+            }
+            item.variationDiscountPrice = Math.round(discounted);
+          } else {
+            item.variationDiscountPrice = variation.discountPrice;
+          }
+          
           item.stock = variation.stock;
         }
       }
@@ -112,7 +137,6 @@ export async function POST(request: NextRequest) {
 
     const totals = await calculateServerSideCart(refreshedItems, promoCode);
 
-    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
     for (const item of refreshedItems) {
       const pId = item.productId || item.id;
       const applicableFlat = flatDiscounts.find(d => 
