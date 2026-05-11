@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Promo code is required' }, { status: 400 });
     }
 
+    const subtotal = Number(searchParams.get('subtotal') || 0);
+    const productIds = searchParams.get('productIds')?.split(',').filter(Boolean) || [];
+
     await dbConnect();
     
     // Find exact active match
@@ -33,6 +36,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Check minimum order amount
+    if (promo.minOrderAmount > 0 && subtotal > 0 && subtotal < promo.minOrderAmount) {
+      return NextResponse.json({ error: `You need a minimum order of ৳ ${promo.minOrderAmount} to use this promo code.` }, { status: 400 });
+    }
+
+    // Check product applicability
+    if (!promo.allProducts && productIds.length > 0 && promo.applicableProducts && promo.applicableProducts.length > 0) {
+      const applicableSet = new Set(promo.applicableProducts.map((id: any) => id.toString().trim().toLowerCase()));
+      const hasMatch = productIds.some((id: string) => applicableSet.has(id.trim().toLowerCase()));
+      if (!hasMatch) {
+        return NextResponse.json({ error: 'This promo code is not applicable to the items in your cart.' }, { status: 400 });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       code: promo.code,
@@ -40,7 +57,8 @@ export async function GET(req: NextRequest) {
       discountType: promo.discountType,
       discountAmount: promo.discountAmount,
       allProducts: promo.allProducts,
-      applicableProducts: promo.applicableProducts
+      applicableProducts: promo.applicableProducts,
+      minOrderAmount: promo.minOrderAmount
     });
 
   } catch (error: any) {
@@ -51,7 +69,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: Request) {
   try {
-    const { code } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { code, subtotal, productIds = [] } = body;
 
     if (!code) {
       return NextResponse.json({ error: 'Promo code is required' }, { status: 400 });
@@ -79,6 +98,20 @@ export async function POST(req: Request) {
       }
     }
 
+    // Check minimum order amount
+    if (promo.minOrderAmount > 0 && subtotal > 0 && subtotal < promo.minOrderAmount) {
+      return NextResponse.json({ error: `You need a minimum order of ৳ ${promo.minOrderAmount} to use this promo code.` }, { status: 400 });
+    }
+
+    // Check product applicability
+    if (!promo.allProducts && productIds.length > 0 && promo.applicableProducts && promo.applicableProducts.length > 0) {
+      const applicableSet = new Set(promo.applicableProducts.map((id: any) => id.toString().trim().toLowerCase()));
+      const hasMatch = productIds.some((id: string) => applicableSet.has(id.trim().toLowerCase()));
+      if (!hasMatch) {
+        return NextResponse.json({ error: 'This promo code is not applicable to the items in your cart.' }, { status: 400 });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       code: promo.code,
@@ -86,7 +119,8 @@ export async function POST(req: Request) {
       discountType: promo.discountType,
       discountAmount: promo.discountAmount,
       allProducts: promo.allProducts,
-      applicableProducts: promo.applicableProducts
+      applicableProducts: promo.applicableProducts,
+      minOrderAmount: promo.minOrderAmount
     });
 
   } catch (error: any) {

@@ -32,14 +32,14 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
     }
   }
 
-  const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity || item.q) || 0), 0);
   let flatDiscountTotal = 0;
 
   // Calculate Best Flat Discount per item
   items.forEach(item => {
-    const productId = item.productId?.toString();
+    const productId = (item.productId || item.id || item._id)?.toString();
     const itemPrice = Number(item.price) || 0;
-    const itemQuantity = Number(item.quantity) || 0;
+    const itemQuantity = Number(item.quantity || item.q) || 0;
     const itemSubtotal = itemPrice * itemQuantity;
 
     let bestDiscountForItem = 0;
@@ -77,37 +77,55 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
 
   // Calculate Promo Discount (stacks on top of remaining total)
   let promoDiscount = 0;
+  let applicableSubtotal = 0;
+
   if (promoDetails) {
     const remainingTotal = subtotal - flatDiscountTotal;
     const amount = Number(promoDetails.discountAmount || 0);
-
-    // If it applies to all products (explicitly or by having no restrictions)
-    if (promoDetails.allProducts || !promoDetails.applicableProducts || promoDetails.applicableProducts.length === 0) {
-       if (promoDetails.discountType === 'percentage') {
-         promoDiscount = (remainingTotal * amount) / 100;
-       } else {
-         promoDiscount = Math.min(remainingTotal, amount);
-       }
+    
+    // Check if minimum order amount is met
+    const currentMinOrder = Number(promoDetails.minOrderAmount || 0);
+    if (currentMinOrder > 0 && subtotal < currentMinOrder) {
+      applicableSubtotal = 0;
+    } else if (promoDetails.allProducts === true) {
+      applicableSubtotal = subtotal;
     } else {
-      // Promo applies to specific products
-      const productIdStrings = promoDetails.applicableProducts.map((id: any) => id.toString());
-      const applicableItems = items.filter(item => {
-        const pId = item.productId?.toString();
-        return pId && productIdStrings.includes(pId);
-      });
+      const restrictedIds = (promoDetails.applicableProducts || [])
+        .map((id: any) => id?.toString()?.trim()?.toLowerCase())
+        .filter(Boolean);
       
-      const groupSubtotal = applicableItems.reduce((sum, item) => {
-        return sum + (Number(item.price) || 0) * (Number(item.quantity) || 0);
-      }, 0);
-
-      // Estimate flat discount share for these items to get their "remaining" subtotal
-      // Simpler: Promos apply to the group subtotal but capped by the overall remaining total
-      if (promoDetails.discountType === 'percentage') {
-        promoDiscount = (groupSubtotal * amount) / 100;
+      if (restrictedIds.length > 0) {
+        items.forEach(item => {
+          const possibleIds = [
+            item.productId,
+            item.id,
+            item._id,
+            item.productSlug,
+            item.slug
+          ].map(id => id?.toString()?.trim()?.toLowerCase()).filter(Boolean);
+          
+          const isMatch = possibleIds.some(id => restrictedIds.includes(id));
+          if (isMatch) {
+            applicableSubtotal += (Number(item.price) || 0) * (Number(item.quantity || item.q) || 0);
+          }
+        });
       } else {
-        promoDiscount = Math.min(groupSubtotal, amount);
+        applicableSubtotal = 0;
       }
-      promoDiscount = Math.min(remainingTotal, promoDiscount);
+    }
+
+    if (applicableSubtotal > 0) {
+      const amount = Number(promoDetails.discountAmount || 0);
+      if (amount > 0) {
+        if (promoDetails.discountType === 'percentage') {
+          promoDiscount = (applicableSubtotal * amount) / 100;
+        } else {
+          promoDiscount = Math.min(applicableSubtotal, amount);
+        }
+        
+        // Final cap: Cannot exceed remaining balance
+        promoDiscount = Math.min(remainingTotal, promoDiscount);
+      }
     }
   }
 
@@ -122,7 +140,9 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
     ruleDiscount: Number(flatDiscountTotal) || 0,
     total: Number(total) || 0,
     promoCode: promoDetails ? promoDetails.code : null,
-    promoDetails: promoDetails ? JSON.parse(JSON.stringify(promoDetails)) : null
+    promoDetails: promoDetails ? JSON.parse(JSON.stringify(promoDetails)) : null,
+    isRestricted: promoDetails ? !promoDetails.allProducts : false,
+    applicableSubtotal: Number(applicableSubtotal) || 0
   };
 
   return result;

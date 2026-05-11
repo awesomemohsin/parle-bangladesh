@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
     const refreshedItems = [];
     const isDealer = user.customerType === "dealer";
     for (const item of items) {
-      const product = await Product.findById(item.productId).lean() as any;
+      const pId = item.productId || item.id;
+      const product = await Product.findById(pId).lean() as any;
       if (product) {
         const variation = product.variations.find((v: any) => {
           const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
@@ -113,8 +114,9 @@ export async function POST(request: NextRequest) {
 
     const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
     for (const item of refreshedItems) {
+      const pId = item.productId || item.id;
       const applicableFlat = flatDiscounts.find(d => 
-        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === item.productId))
+        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === pId))
       );
       if (applicableFlat) {
         const amount = Number(applicableFlat.discountAmount || 0);

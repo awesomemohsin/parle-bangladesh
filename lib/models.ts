@@ -287,6 +287,7 @@ export interface IOrder extends Document {
   discountAmount?: number;
   ruleDiscount?: number;
   promoDiscount?: number;
+  isRestricted?: boolean;
   status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
   cancelReason?: string;
   statusReason?: string;
@@ -339,6 +340,7 @@ const OrderSchema = new Schema<IOrder>(
     discountAmount: { type: Number, default: 0 },
     ruleDiscount: { type: Number, default: 0 },
     promoDiscount: { type: Number, default: 0 },
+    isRestricted: { type: Boolean, default: false },
     status: { type: String, required: true, default: "pending" },
     cancelReason: { type: String },
     statusReason: { type: String },
@@ -393,7 +395,7 @@ export const AdminActivity = mongoose.models?.AdminActivity || mongoose.model<IA
 // --- APPROVAL REQUEST MODEL ---
 export interface IApprovalRequest extends Document {
   requesterEmail: string;
-  type: "product" | "order";
+  type: "product" | "order" | "promo-code";
   targetId: string;
   targetName: string;
   targetSlug?: string;
@@ -422,7 +424,7 @@ export interface IApprovalRequest extends Document {
 const ApprovalRequestSchema = new Schema<IApprovalRequest>(
   {
     requesterEmail: { type: String, required: true },
-    type: { type: String, enum: ["product", "order"], required: true },
+    type: { type: String, enum: ["product", "order", "promo-code"], required: true },
     targetId: { type: String, required: true },
     targetName: { type: String, required: true },
     targetSlug: { type: String }, // For products
@@ -497,8 +499,10 @@ export interface IPromoCode extends Document {
   maxUsage: number;
   currentUsage: number;
   isActive: boolean;
+  status: 'pending' | 'approved' | 'declined';
   allProducts: boolean;
   applicableProducts: string[]; // Array of product IDs
+  minOrderAmount: number;
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -512,15 +516,18 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     discountAmount: { type: Number, required: true },
     maxUsage: { type: Number, required: true, default: 50 },
     currentUsage: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: true },
-    allProducts: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: false },
+    status: { type: String, enum: ['pending', 'approved', 'declined'], default: 'pending' },
+    allProducts: { type: Boolean, default: true },
     applicableProducts: [{ type: String }],
+    minOrderAmount: { type: Number, default: 0 },
     expiresAt: { type: Date },
   },
   { timestamps: true }
 );
 
 PromoCodeSchema.index({ isActive: 1 });
+PromoCodeSchema.index({ status: 1 });
 PromoCodeSchema.index({ expiresAt: 1 });
 PromoCodeSchema.index({ type: 1 });
 
