@@ -40,9 +40,22 @@ export default function CartPage() {
   const { user } = useAuth();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    const fetchActiveDiscounts = async () => {
+      try {
+        const res = await fetch('/api/discounts/active');
+        if (res.ok) {
+          const data = await res.json();
+          setActiveDiscounts(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch active discounts", err);
+      }
+    };
+    fetchActiveDiscounts();
   }, []);
 
   // Modal states
@@ -128,6 +141,37 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             {/* Items Column */}
             <div className="lg:col-span-8 space-y-4">
+              {/* Flat Discount Requirement Notice */}
+              {activeDiscounts.filter(rule => {
+                const minOrder = Number(rule.minOrderAmount || 0);
+                if (minOrder <= 0 || subtotal >= minOrder) return false;
+                
+                const hasApplicableItem = items.some(item => 
+                  rule.allProducts || 
+                  (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
+                );
+                return hasApplicableItem;
+              }).map((rule, idx) => (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  key={idx} 
+                  className="bg-amber-50 border border-amber-200 rounded-[24px] p-4 flex items-center gap-4 shadow-sm"
+                >
+                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Tag className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black text-amber-800 uppercase tracking-tight italic">
+                      Add ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} more for automatic {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} discount!
+                    </p>
+                    <p className="text-[9px] font-bold text-amber-600/60 uppercase tracking-widest mt-0.5">
+                      Minimum order required: ৳{rule.minOrderAmount}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+
               <div className="flex flex-col gap-4">
                 <AnimatePresence mode="popLayout">
                   {items.map((item) => {

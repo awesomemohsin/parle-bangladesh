@@ -28,6 +28,22 @@ export default function CheckoutPage() {
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchActiveDiscounts = async () => {
+      try {
+        const res = await fetch('/api/discounts/active');
+        if (res.ok) {
+          const data = await res.json();
+          setActiveDiscounts(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch active discounts", err);
+      }
+    };
+    fetchActiveDiscounts();
+  }, []);
   
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return;
@@ -493,6 +509,28 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Order Summary</h2>
 
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                {/* Flat Discount Requirement Notice */}
+                {activeDiscounts.filter(rule => {
+                  // Only show rules that are NOT already met
+                  const minOrder = Number(rule.minOrderAmount || 0);
+                  if (minOrder <= 0 || subtotal >= minOrder) return false;
+                  
+                  // Only show rules that COULD apply to current items
+                  const hasApplicableItem = items.some(item => 
+                    rule.allProducts || 
+                    (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
+                  );
+                  return hasApplicableItem;
+                }).map((rule, idx) => (
+                  <div key={idx} className="bg-amber-50 border border-amber-200 rounded-md p-2 mb-3 flex items-start gap-2 shadow-sm">
+                    <Tag className="w-3.5 h-3.5 text-amber-600 mt-0.5" />
+                    <p className="text-[9px] font-bold text-amber-800 leading-tight">
+                      ADD ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} MORE TO AVAIL {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} AUTOMATIC DISCOUNT!
+                      <span className="block text-[8px] font-medium opacity-70 mt-0.5">Minimum order required: ৳{rule.minOrderAmount}</span>
+                    </p>
+                  </div>
+                ))}
+
                 {items.map(item => {
                   const itemKey = getItemKey(item);
                   return (

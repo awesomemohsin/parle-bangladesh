@@ -81,6 +81,29 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const hasManualDiscount = !isDealer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
   const hasAnyRetailDiscount = hasFlatDiscount || hasManualDiscount;
 
+  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchActiveDiscounts = async () => {
+      try {
+        const res = await fetch('/api/discounts/active');
+        if (res.ok) {
+          const data = await res.json();
+          setActiveDiscounts(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch discounts", err);
+      }
+    };
+    fetchActiveDiscounts();
+  }, []);
+
+  // Find if current product has an active flat discount with a minimum order amount
+  const activeMinOrderDiscount = activeDiscounts.find(rule => {
+    const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === product.id));
+    return applies && (Number(rule.minOrderAmount) || 0) > 0;
+  });
+
   // Dealer Pricing Logic
   const displayPrice = isDealer && selectedVariation?.dealerPrice 
     ? selectedVariation.dealerPrice 
@@ -245,6 +268,16 @@ export default function ProductDetailsClient({ product, images }: { product: any
             </div>
           </div>
         </div>
+        
+        {/* Minimum Order Discount Notice */}
+        {activeMinOrderDiscount && (
+          <div className="flex items-center gap-2 -mt-4 mb-2 py-1.5 px-3 bg-amber-50 border border-amber-100 rounded-lg w-fit">
+            <span className="animate-pulse w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">
+              To avail this discount, minimum order amount is ৳{activeMinOrderDiscount.minOrderAmount}
+            </p>
+          </div>
+        )}
 
         {/* Option Selection */}
         {product.variations && product.variations.length > 0 && (

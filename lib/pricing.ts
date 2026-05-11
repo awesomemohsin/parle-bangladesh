@@ -32,24 +32,30 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
     }
   }
 
-  const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity || item.q) || 0), 0);
+  const subtotal = items.reduce((sum, item) => {
+    const itemPrice = Number(item.price) || 0;
+    // Use variationDiscountPrice if available, otherwise original price
+    const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+      ? item.variationDiscountPrice
+      : itemPrice;
+    return sum + effectivePrice * (Number(item.quantity || item.q) || 0);
+  }, 0);
+
   let flatDiscountTotal = 0;
 
-  // Calculate Best Flat Discount per item
+  // Calculate Best Flat Discount per item (Campaign-based only, since variation discounts are now part of subtotal)
   items.forEach(item => {
     const productId = (item.productId || item.id || item._id)?.toString();
     const itemPrice = Number(item.price) || 0;
+    const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+      ? item.variationDiscountPrice
+      : itemPrice;
     const itemQuantity = Number(item.quantity || item.q) || 0;
-    const itemSubtotal = itemPrice * itemQuantity;
+    const itemEffectiveSubtotal = effectivePrice * itemQuantity;
 
     let bestDiscountForItem = 0;
 
-    // A. Consider the variation's own discountPrice if provided
-    if (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice) {
-      bestDiscountForItem = (itemPrice - item.variationDiscountPrice) * itemQuantity;
-    }
-
-    // B. Consider campaign-based flat discounts from PromoCode collection
+    // A. Consider campaign-based flat discounts from PromoCode collection
     flatDiscounts.forEach(rule => {
       // 1. Check product applicability
       const appliesToProduct = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
@@ -62,13 +68,13 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
         const amount = Number(rule.discountAmount || 0);
 
         if (rule.discountType === 'percentage') {
-          currentDiscount = (itemSubtotal * amount) / 100;
+          currentDiscount = (itemEffectiveSubtotal * amount) / 100;
         } else {
           currentDiscount = amount * itemQuantity;
         }
         
         // Ensure discount doesn't exceed item subtotal
-        currentDiscount = Math.min(itemSubtotal, currentDiscount);
+        currentDiscount = Math.min(itemEffectiveSubtotal, currentDiscount);
 
         if (currentDiscount > bestDiscountForItem) {
           bestDiscountForItem = currentDiscount;
@@ -85,7 +91,6 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
 
   if (promoDetails) {
     const remainingTotal = subtotal - flatDiscountTotal;
-    const amount = Number(promoDetails.discountAmount || 0);
     
     // Check if minimum order amount is met
     const currentMinOrder = Number(promoDetails.minOrderAmount || 0);
@@ -110,7 +115,11 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
           
           const isMatch = possibleIds.some(id => restrictedIds.includes(id));
           if (isMatch) {
-            applicableSubtotal += (Number(item.price) || 0) * (Number(item.quantity || item.q) || 0);
+            const itemPrice = Number(item.price) || 0;
+            const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+              ? item.variationDiscountPrice
+              : itemPrice;
+            applicableSubtotal += effectivePrice * (Number(item.quantity || item.q) || 0);
           }
         });
       } else {
