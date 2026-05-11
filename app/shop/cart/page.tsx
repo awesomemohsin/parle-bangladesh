@@ -234,6 +234,49 @@ export default function CartPage() {
 
             {/* Order Summary Column */}
             <div className="lg:col-span-4 sticky top-24 space-y-6">
+              {/* Free Delivery Progress */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-[32px] p-6 shadow-xl shadow-slate-200/50 border border-gray-50 overflow-hidden relative"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${cartDisplayTotal >= 1000 ? 'bg-green-600 shadow-lg shadow-green-100 rotate-6' : 'bg-red-600 shadow-lg shadow-red-100'}`}>
+                      <Truck className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight italic">
+                        {cartDisplayTotal >= 1000 ? 'Free Delivery Unlocked!' : 'Free Delivery'}
+                      </h3>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                        {cartDisplayTotal >= 1000 ? 'Your snacks ship for free' : `Spend ৳${Math.max(1000 - cartDisplayTotal, 0)} more`}
+                      </p>
+                    </div>
+                  </div>
+                  {cartDisplayTotal < 1000 && (
+                    <div className="text-right">
+                      <span className="text-[10px] font-black text-red-600 italic tracking-tighter bg-red-50 px-2 py-1 rounded-lg">
+                        {Math.round(Math.min((cartDisplayTotal / 1000) * 100, 100))}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((cartDisplayTotal / 1000) * 100, 100)}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`absolute top-0 left-0 h-full rounded-full ${
+                      cartDisplayTotal >= 1000 ? 'bg-green-500' : 'bg-red-600'
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                  </motion.div>
+                </div>
+              </motion.div>
+
               <div className="bg-white rounded-[32px] p-8 shadow-2xl shadow-slate-200/50 border border-gray-50 flex flex-col gap-8 relative overflow-hidden">
                 {/* Decorative background element */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/50 blur-3xl -mr-16 -mt-16 pointer-events-none" />

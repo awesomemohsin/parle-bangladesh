@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
     const promoDiscount = totals.promoDiscount || 0;
     
     const baseShippingCharge = reqShippingCity === "Dhaka" ? 80 : 130;
-    const shippingCost = deliveryMethod === "pickup" ? 0 : (subtotal >= 1000 ? 0 : baseShippingCharge);
+    const shippingCost = deliveryMethod === "pickup" ? 0 : ((subtotal - ruleDiscount) >= 1000 ? 0 : baseShippingCharge);
     const tax = 0;
     const total = subtotal + shippingCost - discountAmount;
 
