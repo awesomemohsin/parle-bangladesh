@@ -109,6 +109,7 @@ export default function DiscountsAdmin() {
     setDiscountAmount(discount.discountAmount.toString());
     setMaxUsage(discount.maxUsage.toString());
     setMinOrderAmount(discount.minOrderAmount?.toString() || '0');
+    setMaxDiscountAmount(discount.maxDiscountAmount?.toString() || '0');
     setAllProducts(discount.allProducts || false);
     
     // If allProducts was true, we might not have a list of IDs in DB, 

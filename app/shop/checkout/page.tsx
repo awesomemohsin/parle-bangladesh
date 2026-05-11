@@ -507,7 +507,6 @@ export default function CheckoutPage() {
             {/* Order Summary */}
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Order Summary</h2>
-
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {/* Flat Discount Requirement Notice */}
                 {activeDiscounts.filter(rule => {
@@ -530,7 +529,9 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 ))}
+              </div>
 
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {items.map(item => {
                   const itemKey = getItemKey(item);
                   return (

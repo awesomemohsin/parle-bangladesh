@@ -42,6 +42,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
   }, 0);
 
   let flatDiscountTotal = 0;
+  const ruleUsage = new Map<string, number>();
 
   // Calculate Best Flat Discount per item (Campaign-based only, since variation discounts are now part of subtotal)
   items.forEach(item => {
@@ -53,6 +54,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
     const itemQuantity = Number(item.quantity || item.q) || 0;
     const itemEffectiveSubtotal = effectivePrice * itemQuantity;
 
+    let bestRuleId = null;
     let bestDiscountForItem = 0;
 
     // A. Consider campaign-based flat discounts from PromoCode collection
@@ -78,11 +80,28 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
 
         if (currentDiscount > bestDiscountForItem) {
           bestDiscountForItem = currentDiscount;
+          bestRuleId = rule._id.toString();
         }
       }
     });
     
-    flatDiscountTotal += bestDiscountForItem;
+    if (bestRuleId && bestDiscountForItem > 0) {
+      const currentRuleTotal = ruleUsage.get(bestRuleId) || 0;
+      ruleUsage.set(bestRuleId, currentRuleTotal + bestDiscountForItem);
+    }
+  });
+    
+  // Apply max caps to each rule's total discount
+  flatDiscounts.forEach(rule => {
+    const ruleId = rule._id.toString();
+    const usedAmount = ruleUsage.get(ruleId) || 0;
+    const maxCap = Number(rule.maxDiscountAmount || 0);
+    
+    if (maxCap > 0 && usedAmount > maxCap) {
+      flatDiscountTotal += maxCap;
+    } else {
+      flatDiscountTotal += usedAmount;
+    }
   });
 
   // Calculate Promo Discount (stacks on top of remaining total)

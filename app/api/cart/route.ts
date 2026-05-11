@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
       
       if (applicableFlat) {
         const minOrder = Number(applicableFlat.minOrderAmount || 0);
-        if (totals.subtotal >= minOrder) {
+        const maxCap = Number(applicableFlat.maxDiscountAmount || 0);
+        if (totals.subtotal >= minOrder && maxCap <= 0) {
           const amount = Number(applicableFlat.discountAmount || 0);
           const basePrice = Number(item.price);
           if (applicableFlat.discountType === 'percentage') {
@@ -142,8 +143,10 @@ export async function POST(request: NextRequest) {
       
       if (applicableFlat) {
         const minOrder = Number(applicableFlat.minOrderAmount || 0);
-        // Only override price for display if the threshold is met
-        if (totals.subtotal >= minOrder) {
+        const maxCap = Number(applicableFlat.maxDiscountAmount || 0);
+        // Only override price for display if the threshold is met AND there is NO max cap
+        // (Capped discounts are shown at the bottom to avoid confusion)
+        if (totals.subtotal >= minOrder && maxCap <= 0) {
           const amount = Number(applicableFlat.discountAmount || 0);
           const basePrice = Number(item.price);
           if (applicableFlat.discountType === 'percentage') {
