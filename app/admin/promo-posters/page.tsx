@@ -94,9 +94,11 @@ export default function PromoPostersAdmin() {
 
   const deletePoster = async (id: string) => {
     console.log(`[Frontend] Requesting delete for: ${id}`);
+    const fetchUrl = `/api/admin/promo-posters/${id}`;
+    alert(`DEBUG: Fetching URL: ${fetchUrl}`);
     if (!confirm('Are you sure you want to delete this poster? It will be permanently removed from storage.')) return;
     try {
-      const res = await fetch(`/api/admin/promo-posters/${id}`, {
+      const res = await fetch(fetchUrl, {
         method: 'DELETE',
       });
       console.log(`[Frontend] Delete Response Status: ${res.status}`);

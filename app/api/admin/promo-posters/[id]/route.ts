@@ -12,8 +12,13 @@ export async function DELETE(
   try {
     console.log(`[Admin] Attempting to delete poster: ${params.id}`);
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) {
+      console.error('[Admin] Delete Failed: No user found in request');
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+      console.error(`[Admin] Delete Failed: User ${user.email} does not have required role: ${user.role}`);
+      return NextResponse.json({ error: 'Permission denied' }, { status: 401 });
     }
 
     const { id } = params;
@@ -53,8 +58,13 @@ export async function PATCH(
     try {
         console.log(`[Admin] Toggling status for poster: ${params.id}`);
         const user = getAuthUserFromRequest(req as any);
-        if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user) {
+            console.error('[Admin] Patch Failed: No user found in request');
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+        }
+        if (!hasAnyRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+            console.error(`[Admin] Patch Failed: User ${user.email} does not have required role: ${user.role}`);
+            return NextResponse.json({ error: 'Permission denied' }, { status: 401 });
         }
 
         const body = await req.json();
