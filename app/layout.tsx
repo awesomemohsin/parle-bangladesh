@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import CareerCTA from '@/components/career-cta'
+import PromoModal from '@/components/promo-modal'
 import { CartProvider } from '@/lib/contexts/CartContext'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { Toaster } from 'sonner'
@@ -40,6 +41,7 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <Toaster position="top-center" richColors />
+            <PromoModal />
             <Navbar />
             <main className="flex-grow pt-20">
               {children}
