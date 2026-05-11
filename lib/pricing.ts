@@ -51,9 +51,13 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
 
     // B. Consider campaign-based flat discounts from PromoCode collection
     flatDiscounts.forEach(rule => {
-      const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
+      // 1. Check product applicability
+      const appliesToProduct = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
       
-      if (applies) {
+      // 2. Check minimum order amount
+      const minOrderMet = subtotal >= (Number(rule.minOrderAmount) || 0);
+
+      if (appliesToProduct && minOrderMet) {
         let currentDiscount = 0;
         const amount = Number(rule.discountAmount || 0);
 
