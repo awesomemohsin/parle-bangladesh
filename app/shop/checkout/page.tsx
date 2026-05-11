@@ -90,7 +90,14 @@ export default function CheckoutPage() {
       } catch (e) { }
     }
     setMounted(true);
-  }, []);
+
+    return () => {
+      // Clear promo code when leaving checkout
+      // We wrap it in a check to ensure it only happens when navigating AWAY
+      // rather than just a re-render or strict-mode double-effect
+      removePromo();
+    };
+  }, [removePromo]);
 
   if (!mounted) return null;
 

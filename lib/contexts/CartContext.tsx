@@ -20,6 +20,7 @@ export interface PromoDetails {
   type: 'promo' | 'flat';
   discountType: 'fixed' | 'percentage';
   discountAmount: number;
+  maxDiscountAmount?: number;
   allProducts: boolean;
   applicableProducts: string[];
 }

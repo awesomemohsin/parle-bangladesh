@@ -503,6 +503,7 @@ export interface IPromoCode extends Document {
   allProducts: boolean;
   applicableProducts: string[]; // Array of product IDs
   minOrderAmount: number;
+  maxDiscountAmount?: number;
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -521,6 +522,7 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     allProducts: { type: Boolean, default: true },
     applicableProducts: [{ type: String }],
     minOrderAmount: { type: Number, default: 0 },
+    maxDiscountAmount: { type: Number, default: 0 },
     expiresAt: { type: Date },
   },
   { timestamps: true }

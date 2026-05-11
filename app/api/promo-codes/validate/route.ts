@@ -120,7 +120,8 @@ export async function POST(req: Request) {
       discountAmount: promo.discountAmount,
       allProducts: promo.allProducts,
       applicableProducts: promo.applicableProducts,
-      minOrderAmount: promo.minOrderAmount
+      minOrderAmount: promo.minOrderAmount,
+      maxDiscountAmount: promo.maxDiscountAmount
     });
 
   } catch (error: any) {

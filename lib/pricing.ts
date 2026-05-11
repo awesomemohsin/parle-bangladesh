@@ -119,6 +119,12 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
       if (amount > 0) {
         if (promoDetails.discountType === 'percentage') {
           promoDiscount = (applicableSubtotal * amount) / 100;
+          
+          // Apply max discount cap if set
+          const maxCap = Number(promoDetails.maxDiscountAmount || 0);
+          if (maxCap > 0 && promoDiscount > maxCap) {
+            promoDiscount = maxCap;
+          }
         } else {
           promoDiscount = Math.min(applicableSubtotal, amount);
         }

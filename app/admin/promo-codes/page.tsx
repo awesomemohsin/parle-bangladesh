@@ -17,6 +17,7 @@ interface Discount {
   allProducts: boolean;
   applicableProducts: string[];
   minOrderAmount: number;
+  maxDiscountAmount: number;
   expiresAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +46,7 @@ export default function DiscountsAdmin() {
   const [expiresAt, setExpiresAt] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [minOrderAmount, setMinOrderAmount] = useState('');
+  const [maxDiscountAmount, setMaxDiscountAmount] = useState('');
   const [allProducts, setAllProducts] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
@@ -92,6 +94,7 @@ export default function DiscountsAdmin() {
     setExpiresAt('');
     setIsActive(true);
     setMinOrderAmount('0');
+    setMaxDiscountAmount('0');
     setAllProducts(true);
     setSelectedProducts(products.map(p => p.id));
     setFormError('');
@@ -148,6 +151,7 @@ export default function DiscountsAdmin() {
       allProducts: isActuallyAllSelected,
       applicableProducts: isActuallyAllSelected ? [] : selectedProducts,
       minOrderAmount: Number(minOrderAmount),
+      maxDiscountAmount: Number(maxDiscountAmount),
       expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
     };
 
@@ -356,30 +360,43 @@ export default function DiscountsAdmin() {
                     </div>
                   )}
  
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${discountType === 'percentage' ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Value Type</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 text-[9px]">Type</label>
                       <select 
                         value={discountType}
                         onChange={(e) => setDiscountType(e.target.value as any)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-xs"
                       >
-                        <option value="fixed">Taka (৳)</option>
-                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">৳</option>
+                        <option value="percentage">%</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Amount *</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 text-[9px]">Value *</label>
                       <input
                         type="number"
                         required
                         min="1"
                         value={discountAmount}
                         onChange={(e) => setDiscountAmount(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold"
-                        placeholder={discountType === 'percentage' ? 'e.g. 10' : 'e.g. 50'}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-xs"
+                        placeholder={discountType === 'percentage' ? '10' : '50'}
                       />
                     </div>
+                    {discountType === 'percentage' && (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 text-[9px]">Max Cap</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={maxDiscountAmount}
+                          onChange={(e) => setMaxDiscountAmount(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-xs"
+                          placeholder="e.g. 100"
+                        />
+                      </div>
+                    )}
                   </div>
  
                   <div className="grid grid-cols-2 gap-4">

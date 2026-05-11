@@ -28,7 +28,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { code, type, discountType, discountAmount, maxUsage, expiresAt, isActive, allProducts, applicableProducts } = await req.json();
+    const body = await req.json();
+    const { code, type, discountType, discountAmount, maxUsage, expiresAt, isActive, allProducts, applicableProducts, minOrderAmount, maxDiscountAmount } = body;
 
     if (type === 'promo' && !code) {
       return NextResponse.json({ error: 'Code is required for promo type' }, { status: 400 });
@@ -59,6 +60,8 @@ export async function POST(req: Request) {
       status: 'pending',
       allProducts: allProducts !== undefined ? allProducts : false,
       applicableProducts: applicableProducts || [],
+      minOrderAmount: Number(minOrderAmount) || 0,
+      maxDiscountAmount: Number(maxDiscountAmount) || 0,
     });
 
     // Create approval request for ALL new promo codes

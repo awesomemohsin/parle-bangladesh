@@ -281,6 +281,7 @@ export async function POST(request: NextRequest) {
       discountAmount,
       ruleDiscount,
       promoDiscount,
+      isRestricted: totals.isRestricted,
       promoCode: body.promoCode,
       total,
       status: ORDER_STATUS.PENDING,
