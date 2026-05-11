@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Order } from "@/lib/models";
 import { getAuthUserFromRequest } from "@/lib/api-auth";
+import { notifyOrderReady, notifyCriticalEvent } from "@/lib/telegram";
+import { ORDER_STATUS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -157,6 +159,17 @@ export async function PUT(
     }
 
     await order.save();
+
+    // Telegram Notifications
+    try {
+      if (status === ORDER_STATUS.PROCESSING && oldStatus === ORDER_STATUS.PENDING) {
+        await notifyOrderReady(order);
+      } else if (["cancelled", "damaged", "lost"].includes(status) && oldStatus !== status) {
+        await notifyCriticalEvent(`Order ${status}`, order, statusReason);
+      }
+    } catch (notifyError) {
+      console.error("Failed to send status update notification:", notifyError);
+    }
 
     return NextResponse.json({ success: true, order });
   } catch (error: any) {

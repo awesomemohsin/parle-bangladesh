@@ -3,7 +3,7 @@ import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { ApprovalRequest, Product, Order, Category, Notification } from "@/lib/models";
-import { notifyOwnerApprovalRequired, notifyApprovalFinalized } from "@/lib/telegram";
+import { notifyOwnerApprovalRequired, notifyApprovalFinalized, notifyOrderReady, notifyCriticalEvent } from "@/lib/telegram";
 import { logAdminActivity } from "@/lib/activity";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -241,6 +241,17 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         changedAt: new Date(),
       });
       await order.save();
+
+      // Telegram Notifications
+      try {
+        if (newStatus === ORDER_STATUS.PROCESSING && oldStatus === ORDER_STATUS.PENDING) {
+          await notifyOrderReady(order);
+        } else if (["cancelled", "damaged", "lost"].includes(newStatus) && oldStatus !== newStatus) {
+          await notifyCriticalEvent(`Order ${newStatus}`, order, "Approved change");
+        }
+      } catch (notifyError) {
+        console.error("Failed to send status update notification from approval:", notifyError);
+      }
     }
   }
 }
