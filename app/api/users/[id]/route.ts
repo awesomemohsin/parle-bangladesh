@@ -119,8 +119,7 @@ export async function DELETE(
     const otpCode = searchParams.get("otp");
 
     // --- OTP VERIFICATION LOGIC ---
-    const { Admin: AdminModel } = require("@/lib/models");
-    const creator = await AdminModel.findById(currentUser.id);
+    const creator = await Admin.findById(currentUser.id);
     if (!creator) return NextResponse.json({ error: "Requester identity not found" }, { status: 404 });
 
     if (!otpCode) {

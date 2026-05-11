@@ -127,7 +127,7 @@ export default function AdminLayout({
             
             <div className="hidden lg:flex flex-col">
               <h1 className="text-xl font-black text-gray-900 uppercase tracking-tighter italic leading-none">Management Console</h1>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">System Administration Hub</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">System Admin Hub</p>
             </div>
 
             <div className="lg:hidden flex flex-col">

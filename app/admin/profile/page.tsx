@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Lock, ShieldCheck, Mail, CheckCircle2, User as UserIcon, Phone, ShieldAlert } from 'lucide-react'
+import { Lock, ShieldCheck, Mail, CheckCircle2, User as UserIcon, Phone, ShieldAlert, Edit3, Save, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -18,6 +18,13 @@ interface UserProfile {
 export default function AdminProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [step, setStep] = useState<'form' | 'otp'>('form')
+  
+  // Profile edit state
+  const [editName, setEditName] = useState('')
+  const [editMobile, setEditMobile] = useState('')
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+
+  // Password change state
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -25,26 +32,60 @@ export default function AdminProfilePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isFetching, setIsFetching] = useState(true)
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch('/api/admin/profile', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setProfile(data)
-        }
-      } catch (error) {
-        toast.error('Failed to load profile data')
-      } finally {
-        setIsFetching(false)
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch('/api/admin/profile', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setProfile(data)
+        setEditName(data.name)
+        setEditMobile(data.mobile)
       }
+    } catch (error) {
+      toast.error('Failed to load profile data')
+    } finally {
+      setIsFetching(false)
     }
+  }
+
+  useEffect(() => {
     fetchProfile()
   }, [])
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editName || !editMobile) {
+      toast.error('Name and Mobile are required')
+      return
+    }
+
+    setIsUpdatingProfile(true)
+    try {
+      const res = await fetch('/api/admin/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ name: editName, mobile: editMobile }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setProfile(data.user)
+        toast.success('Profile updated successfully')
+      } else {
+        toast.error(data.error || 'Failed to update profile')
+      }
+    } catch (error) {
+      toast.error('An error occurred while updating profile')
+    } finally {
+      setIsUpdatingProfile(false)
+    }
+  }
 
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,7 +168,7 @@ export default function AdminProfilePage() {
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Identity & Security</h1>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage your profile and administrative credentials</p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Manage your profile and admin credentials</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -146,7 +187,7 @@ export default function AdminProfilePage() {
               <div className="w-full mt-10 space-y-4 text-left">
                 <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
                   <Mail className="w-4 h-4 text-gray-500" />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col overflow-hidden w-full">
                     <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Email Identity</span>
                     <span className="text-[11px] font-bold truncate">{profile?.email}</span>
                   </div>
@@ -166,13 +207,75 @@ export default function AdminProfilePage() {
           <div className="p-6 bg-amber-50 border border-amber-100 rounded-3xl flex gap-4">
              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
              <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                Important: You need your current password and the email verification code to update your credentials. This ensures only the authorized owner can change security settings.
+                Important: Sensitive changes require validation. Ensure your information is accurate to maintain admin access.
              </p>
           </div>
         </div>
 
-        {/* Right Column: Security Controls */}
-        <div className="lg:col-span-8">
+        {/* Right Column: Profile & Security Controls */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* Profile Settings */}
+          <Card className="rounded-[2.5rem] border-none shadow-xl bg-white p-8 md:p-12 relative overflow-hidden">
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-lg font-black text-gray-900 uppercase italic tracking-tight">Personal Information</h3>
+                <div className={`p-2 rounded-xl bg-gray-50 text-gray-400`}>
+                  <Edit3 className="w-4 h-4" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                    <Input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Your Name"
+                      className="bg-gray-50 border-gray-100 focus:border-red-600 rounded-2xl h-14 pl-12 text-[13px] font-bold transition-all shadow-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Mobile Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                    <Input
+                      type="text"
+                      value={editMobile}
+                      onChange={(e) => setEditMobile(e.target.value)}
+                      placeholder="01XXXXXXXXX"
+                      className="bg-gray-50 border-gray-100 focus:border-red-600 rounded-2xl h-14 pl-12 text-[13px] font-bold transition-all shadow-none"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <Button 
+                  type="submit" 
+                  disabled={isUpdatingProfile}
+                  className="px-8 h-14 bg-red-600 hover:bg-gray-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-xl shadow-red-100 flex items-center gap-2"
+                >
+                  {isUpdatingProfile ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Update Profile
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
+
+          {/* Security Controls */}
           <Card className="rounded-[2.5rem] border-none shadow-xl bg-white p-8 md:p-12 relative overflow-hidden">
             <AnimatePresence mode="wait">
               {step === 'form' ? (

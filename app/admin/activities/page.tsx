@@ -143,7 +143,7 @@ export default function AdminActivitiesPage() {
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-0.5">
           <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter text-center sm:text-left">System Audit Log</h1>
-          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px] text-center sm:text-left italic">Administrative Activity Monitoring Protocol</p>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px] text-center sm:text-left italic">Admin Activity Monitoring Protocol</p>
         </div>
         {user?.role === 'owner' && (
           <Button 
