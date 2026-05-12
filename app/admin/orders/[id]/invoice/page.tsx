@@ -20,7 +20,7 @@ export default function OrderInvoicePage() {
         });
         if (res.ok) {
           const data = await res.json();
-          setOrder(data.order);
+          setOrder(data.order || data);
         } else {
           setError('Order not found or access denied');
         }
