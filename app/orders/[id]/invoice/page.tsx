@@ -17,7 +17,7 @@ export default function InvoicePage() {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           setOrder(data.order || data);
