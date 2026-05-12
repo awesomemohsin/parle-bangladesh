@@ -12,11 +12,21 @@ export default function InvoicePage() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await fetch(`/api/orders/${params.id}`);
-        const data = await res.json();
-        setOrder(data.order);
+        const res = await fetch(`/api/orders/${params.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setOrder(data.order || data);
+        } else {
+          setOrder(null);
+        }
       } catch (err) {
         console.error("Failed to fetch order:", err);
+        setOrder(null);
       } finally {
         setLoading(false);
       }
