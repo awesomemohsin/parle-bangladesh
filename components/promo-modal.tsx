@@ -123,6 +123,7 @@ export default function PromoModal() {
                             sizes="(max-width: 768px) 100vw, 512px"
                             className="object-cover"
                             priority
+                            loading="eager"
                             />
                         </Link>
                         </motion.div>

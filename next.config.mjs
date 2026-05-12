@@ -20,6 +20,15 @@ const nextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/cart',
+        destination: '/shop/cart',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

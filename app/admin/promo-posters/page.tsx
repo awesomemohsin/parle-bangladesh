@@ -139,7 +139,7 @@ export default function PromoPostersAdmin() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {posters.map((poster) => (
+          {posters.map((poster, index) => (
             <div 
               key={poster._id} 
               className={`group relative bg-white rounded-[40px] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 ${!poster.isActive ? 'opacity-75' : ''}`}
@@ -149,7 +149,10 @@ export default function PromoPostersAdmin() {
                   src={poster.imageUrl}
                   alt={poster.altText}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  priority={index < 2}
+                  loading={index < 2 ? "eager" : "lazy"}
                 />
                 {!poster.isActive && (
                   <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-[2px] flex items-center justify-center">

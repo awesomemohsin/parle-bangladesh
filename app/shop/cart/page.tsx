@@ -191,6 +191,7 @@ export default function CartPage() {
                             src={sanitizeProductImagePath(item.image || "")}
                             alt={item.productName}
                             fill
+                            sizes="96px"
                             className="object-contain p-2"
                           />
                         </div>
