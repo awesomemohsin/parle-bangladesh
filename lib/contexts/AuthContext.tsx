@@ -103,7 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (response.status === 401) {
-          console.log("[Auth] Session invalidated by server. Logging out...");
           logout();
         } else if (response.ok) {
           const contentType = response.headers.get("content-type");
@@ -117,7 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               serverUser.status !== localUser.status ||
               serverUser.email !== localUser.email
             ) {
-              console.log("[Auth] User profile updated, syncing local state...");
               updateAuth(serverUser, token);
             }
           } else {

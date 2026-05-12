@@ -94,7 +94,6 @@ export default function NotificationCenter() {
           }
           
           if (hasTasks) {
-            console.log("[NOTIF] Critical Tasks Detected. Triggering Alert Modal.");
             setShowFullAlert(true);
           }
         }

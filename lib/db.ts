@@ -26,9 +26,7 @@ async function connectDB() {
       heartbeatFrequencyMS: 10000,
     };
 
-    console.log("Connecting to Database...");
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log("Database Connected Successfully");
       return mongoose;
     });
   }
@@ -36,14 +34,12 @@ async function connectDB() {
   try {
     cached.conn = await cached.promise;
   } catch (e) {
-    console.error("Database Connection Error:", e);
     cached.promise = null; // Reset promise on error to allow retry
     throw e;
   }
 
   // Verify readyState
   if (mongoose.connection.readyState !== 1) {
-    console.warn("Database readyState is not 1 yet. State:", mongoose.connection.readyState);
     // Wait for a short bit if it's connecting
     if (mongoose.connection.readyState === 2) {
        await new Promise(resolve => setTimeout(resolve, 500));
