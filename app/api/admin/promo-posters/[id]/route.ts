@@ -33,11 +33,15 @@ export async function DELETE(
     // 1. Delete from Vercel Blob
     try {
       if (poster.imageUrl.includes('blob.vercel-storage.com')) {
-        await del(poster.imageUrl);
-        console.log(`[Admin] Deleted from Vercel Blob: ${poster.imageUrl}`);
+        console.log(`[Admin] Attempting to delete from Vercel Blob: ${poster.imageUrl}`);
+        const token = process.env.BLOB_READ_WRITE_TOKEN;
+        await del(poster.imageUrl, { token }); // Explicitly pass the token
+        console.log(`[Admin] Deleted from Vercel Blob successfully`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Admin] Failed to delete from Blob:', err);
+      // We continue even if blob deletion fails, to ensure DB is cleaned up
+      // but we log it.
     }
 
     // 2. Delete from MongoDB

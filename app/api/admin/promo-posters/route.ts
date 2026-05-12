@@ -37,23 +37,51 @@ export async function POST(req: Request) {
     }
 
     // 1. Upload to Vercel Blob
-    const blob = await put(`promo/${Date.now()}-${file.name}`, file, {
-      access: 'public',
-    });
+    console.log('[PromoPoster] Starting Blob upload...');
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    
+    if (!token) {
+      console.error('[PromoPoster] BLOB_READ_WRITE_TOKEN is missing from environment variables');
+      return NextResponse.json({ error: 'Configuration error: Blob token missing' }, { status: 500 });
+    }
+
+    let blob;
+    try {
+      blob = await put(`promo/${Date.now()}-${file.name}`, file, {
+        access: 'public',
+        token: token, // Explicitly pass the token
+      });
+      console.log('[PromoPoster] Blob uploaded successfully:', blob.url);
+    } catch (blobError: any) {
+      console.error('[PromoPoster] Vercel Blob upload failed:', blobError);
+      return NextResponse.json({ 
+        error: 'Blob upload failed', 
+        details: blobError.message 
+      }, { status: 500 });
+    }
 
     // 2. Save to MongoDB
-    await dbConnect();
-    const newPoster = await PromoPoster.create({
-      imageUrl: blob.url,
-      link: link || '/shop',
-      altText: altText || 'Special Promotion',
-      isActive: true,
-      order: 0
-    });
-
-    return NextResponse.json(newPoster);
-  } catch (error) {
+    console.log('[PromoPoster] Connecting to DB...');
+    try {
+      await dbConnect();
+      const newPoster = await PromoPoster.create({
+        imageUrl: blob.url,
+        link: link || '/shop',
+        altText: altText || 'Special Promotion',
+        isActive: true,
+        order: 0
+      });
+      console.log('[PromoPoster] Saved to DB:', newPoster._id);
+      return NextResponse.json(newPoster);
+    } catch (dbError: any) {
+      console.error('[PromoPoster] MongoDB save failed:', dbError);
+      return NextResponse.json({ 
+        error: 'Database operation failed', 
+        details: dbError.message 
+      }, { status: 500 });
+    }
+  } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Failed to upload poster' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to upload poster', details: error.message }, { status: 500 });
   }
 }
