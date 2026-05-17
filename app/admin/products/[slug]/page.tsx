@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { Upload, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Variation {
   weight?: string
@@ -60,6 +62,7 @@ export default function AdminProductFormPage() {
   const [activeDiscounts, setActiveDiscounts] = useState<Record<number, boolean>>({})
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
   const [stockAdditions, setStockAdditions] = useState<Record<number, number>>({})
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -472,18 +475,66 @@ export default function AdminProductFormPage() {
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end border-t border-gray-100 pt-6">
                       <div className="md:col-span-9 space-y-1">
                         <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">SKU Image URL</label>
-                        <Input
-                          type="text"
-                          value={variation.image || ''}
-                          onChange={(e) => {
-                            const vars = [...product.variations];
-                            vars[index].image = e.target.value;
-                            setProduct({ ...product, variations: vars });
-                          }}
-                          className="h-10 px-4 text-[11px] font-medium border-2 border-gray-50 rounded-lg focus:border-red-600 bg-gray-50/30"
-                          placeholder="e.g. /images/products/example.webp"
-                          disabled={isPending}
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={variation.image || ''}
+                            onChange={(e) => {
+                              const vars = [...product.variations];
+                              vars[index].image = e.target.value;
+                              setProduct({ ...product, variations: vars });
+                            }}
+                            className="flex-1 h-10 px-4 text-[11px] font-medium border-2 border-gray-50 rounded-lg focus:border-red-600 bg-gray-50/30"
+                            placeholder="e.g. /images/products/example.webp"
+                            disabled={isPending || uploadingIndex === index}
+                          />
+                          <div className="relative w-12 h-10 border-2 border-dashed border-gray-200 hover:border-red-600 rounded-lg flex items-center justify-center bg-gray-50/50 hover:bg-red-50/10 transition-colors cursor-pointer group">
+                            {uploadingIndex === index ? (
+                              <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+                            ) : (
+                              <>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  disabled={isPending || uploadingIndex !== null}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+
+                                    setUploadingIndex(index);
+                                    const formData = new FormData();
+                                    formData.append('file', file);
+                                    formData.append('folder', 'products');
+
+                                    try {
+                                      const res = await fetch('/api/admin/upload', {
+                                        method: 'POST',
+                                        body: formData,
+                                      });
+
+                                      if (res.ok) {
+                                        const data = await res.json();
+                                        const vars = [...product.variations];
+                                        vars[index].image = data.url;
+                                        setProduct({ ...product, variations: vars });
+                                        toast.success('SKU Image uploaded successfully!');
+                                      } else {
+                                        const errData = await res.json();
+                                        toast.error(errData.error || 'Upload failed');
+                                      }
+                                    } catch (err: any) {
+                                      toast.error('Upload failed: ' + err.message);
+                                    } finally {
+                                      setUploadingIndex(null);
+                                    }
+                                  }}
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                />
+                                <Upload className="w-4 h-4 text-gray-400 group-hover:text-red-600 transition-colors" />
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="md:col-span-3 flex justify-end gap-2 pb-0.5">

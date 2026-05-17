@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Upload, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Entity {
   id: string
@@ -27,6 +29,8 @@ export default function AdminCategorizationPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ name: '', description: '', image: '', category: '' })
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isNewItemUploading, setIsNewItemUploading] = useState(false)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -201,11 +205,58 @@ export default function AdminCategorizationPage() {
                     )}
                     <div className="space-y-1">
                       <label className="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Image URL</label>
-                      <Input 
-                        value={editForm.image} 
-                        onChange={(e) => setEditForm({...editForm, image: e.target.value})}
-                        className="h-10 text-[10px] font-medium border-2 border-gray-200 rounded-xl bg-white focus:border-red-500"
-                      />
+                      <div className="flex gap-2">
+                        <Input 
+                          value={editForm.image} 
+                          onChange={(e) => setEditForm({...editForm, image: e.target.value})}
+                          className="flex-1 h-10 text-[10px] font-medium border-2 border-gray-200 rounded-xl bg-white focus:border-red-500"
+                          disabled={uploadingId === item.id}
+                        />
+                        <div className="relative w-10 h-10 border-2 border-dashed border-gray-200 hover:border-red-500 rounded-xl flex items-center justify-center bg-gray-50/50 hover:bg-red-50/10 transition-colors cursor-pointer group">
+                          {uploadingId === item.id ? (
+                            <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
+                          ) : (
+                            <>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={uploadingId !== null}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+
+                                  setUploadingId(item.id);
+                                  const formData = new FormData();
+                                  formData.append('file', file);
+                                  formData.append('folder', 'categories');
+
+                                  try {
+                                    const res = await fetch('/api/admin/upload', {
+                                      method: 'POST',
+                                      body: formData,
+                                    });
+
+                                    if (res.ok) {
+                                      const data = await res.json();
+                                      setEditForm({ ...editForm, image: data.url });
+                                      toast.success('Image uploaded successfully!');
+                                    } else {
+                                      const errData = await res.json();
+                                      toast.error(errData.error || 'Upload failed');
+                                    }
+                                  } catch (err: any) {
+                                    toast.error('Upload failed: ' + err.message);
+                                  } finally {
+                                    setUploadingId(null);
+                                  }
+                                }}
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                              />
+                              <Upload className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Description</label>
@@ -347,13 +398,60 @@ export default function AdminCategorizationPage() {
 
               <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Thumbnail Path</label>
-                <Input
-                  type="text"
-                  value={newItem.image}
-                  onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
-                  placeholder="/images/example.webp"
-                  className="h-11 text-xs font-bold border-2 border-gray-50 rounded-xl focus:border-red-600 bg-gray-50/30"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={newItem.image}
+                    onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
+                    placeholder="/images/example.webp"
+                    className="flex-1 h-11 text-xs font-bold border-2 border-gray-50 rounded-xl focus:border-red-600 bg-gray-50/30"
+                    disabled={isNewItemUploading}
+                  />
+                  <div className="relative w-12 h-11 border-2 border-dashed border-gray-200 hover:border-red-600 rounded-xl flex items-center justify-center bg-gray-50/50 hover:bg-red-50/10 transition-colors cursor-pointer group">
+                    {isNewItemUploading ? (
+                      <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isNewItemUploading}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            setIsNewItemUploading(true);
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            formData.append('folder', 'categories');
+
+                            try {
+                              const res = await fetch('/api/admin/upload', {
+                                method: 'POST',
+                                body: formData,
+                              });
+
+                              if (res.ok) {
+                                const data = await res.json();
+                                setNewItem({ ...newItem, image: data.url });
+                                toast.success('Thumbnail uploaded successfully!');
+                              } else {
+                                const errData = await res.json();
+                                toast.error(errData.error || 'Upload failed');
+                              }
+                            } catch (err: any) {
+                              toast.error('Upload failed: ' + err.message);
+                            } finally {
+                              setIsNewItemUploading(false);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload className="w-4 h-4 text-gray-400 group-hover:text-red-600 transition-colors" />
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-1">Brief Description</label>
