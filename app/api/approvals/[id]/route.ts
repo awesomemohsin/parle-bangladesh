@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
         if (hasAnindo && hasSaiful) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          const isFinancialOrStock = ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field);
+          const isFinancialOrStock = ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order';
           
           if (!isFinancialOrStock) {
             // BASIC CONTENT: 2nd SuperAdmin is Final
@@ -259,6 +259,86 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         changedAt: new Date(),
       });
       await order.save();
+
+      // Adjust stock and log it upon approval of lost/damaged statuses
+      const restorableStatuses = ["cancelled", "damaged", "lost"];
+      if (restorableStatuses.includes(newStatus) && !restorableStatuses.includes(oldStatus)) {
+        for (const item of order.items) {
+          if (item.productId) {
+            const product = await Product.findById(item.productId);
+            if (product && product.variations) {
+              const varIndex = product.variations.findIndex((v: any) => {
+                const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+                const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+                return weightMatch && flavorMatch;
+              });
+              
+              if (varIndex !== -1) {
+                const variation = product.variations[varIndex];
+                const holdField = `variations.${varIndex}.holdStock`;
+                const stockField = `variations.${varIndex}.stock`;
+                const lostField = `variations.${varIndex}.lostCount`;
+                const damagedField = `variations.${varIndex}.damagedCount`;
+
+                const update: any = { $inc: {} };
+                
+                // Remove from hold anyway
+                update.$inc[holdField] = -item.quantity;
+
+                if (newStatus === "cancelled") {
+                  // Return to stock
+                  update.$inc[stockField] = item.quantity;
+
+                  await StockLog.create({
+                    productId: product._id,
+                    productName: product.name,
+                    variationIndex: varIndex,
+                    weight: item.weight,
+                    flavor: item.flavor,
+                    oldStock: variation.stock || 0,
+                    newStock: (variation.stock || 0) + item.quantity,
+                    amount: item.quantity,
+                    reason: `Order Cancelled - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                    adminEmail: approvalRequest.requesterEmail,
+                  });
+                } else if (newStatus === "lost") {
+                  update.$inc[lostField] = item.quantity;
+
+                  await StockLog.create({
+                    productId: product._id,
+                    productName: product.name,
+                    variationIndex: varIndex,
+                    weight: item.weight,
+                    flavor: item.flavor,
+                    oldStock: variation.stock || 0,
+                    newStock: variation.stock || 0,
+                    amount: -item.quantity,
+                    reason: `Order Lost - Approved consensus - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                    adminEmail: approvalRequest.requesterEmail,
+                  });
+                } else if (newStatus === "damaged") {
+                  update.$inc[damagedField] = item.quantity;
+
+                  await StockLog.create({
+                    productId: product._id,
+                    productName: product.name,
+                    variationIndex: varIndex,
+                    weight: item.weight,
+                    flavor: item.flavor,
+                    oldStock: variation.stock || 0,
+                    newStock: variation.stock || 0,
+                    amount: -item.quantity,
+                    reason: `Order Damaged - Approved consensus - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                    adminEmail: approvalRequest.requesterEmail,
+                  });
+                }
+
+                await Product.updateOne({ _id: product._id }, update);
+              }
+            }
+          }
+        }
+      }
 
       // Telegram Notifications
       try {

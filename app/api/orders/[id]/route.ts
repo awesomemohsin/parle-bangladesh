@@ -62,7 +62,7 @@ export async function PUT(
     const { status, statusReason } = body;
 
     const user = getAuthUserFromRequest(request);
-    if (!user || !["admin", "super_admin", "owner", "moderator"].includes(user.role)) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -71,11 +71,56 @@ export async function PUT(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
+    const isAdmin = ["admin", "super_admin", "owner", "moderator"].includes(user.role);
+    const isOrderOwner = order.userId && order.userId.toString() === user.id;
+
+    // A customer can cancel their own order ONLY if the order is currently pending
+    const isCustomerCancellingPending = isOrderOwner && status === "cancelled" && order.status === "pending";
+
+    if (!isAdmin && !isCustomerCancellingPending) {
+      return NextResponse.json({ error: "Unauthorized status change" }, { status: 401 });
+    }
+
     const oldStatus = order.status;
+    const terminalStatuses = ["cancelled", "damaged", "lost", "delivered"];
+    if (terminalStatuses.includes(oldStatus)) {
+      return NextResponse.json({ error: `Cannot change status of an already ${oldStatus} order` }, { status: 400 });
+    }
     
     // Moderators cannot move orders back to pending
     if (user.role === "moderator" && status === "pending") {
       return NextResponse.json({ error: "Moderators cannot move orders back to pending" }, { status: 403 });
+    }
+
+    // Intercept 'lost' and 'damaged' status transitions for Level 3 Consensus approval
+    const consensusRequiredStatuses = ["lost", "damaged"];
+    if (consensusRequiredStatuses.includes(status) && oldStatus !== status) {
+      const { ApprovalRequest } = await import("@/lib/models");
+      const { notifyNewApprovalRequest } = await import("@/lib/telegram");
+
+      const approvalRequest = new ApprovalRequest({
+        requesterEmail: user.email,
+        type: "order",
+        targetId: id,
+        targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
+        field: "status",
+        oldValue: oldStatus,
+        newValue: status,
+        statusReason: statusReason || `Order Status changed to ${status.toUpperCase()}`,
+        status: "pending",
+        stage: "superadmin",
+      });
+
+      await approvalRequest.save();
+
+      // Trigger Telegram notification
+      try {
+        await notifyNewApprovalRequest(approvalRequest.toObject ? approvalRequest.toObject() : approvalRequest);
+      } catch (tgError) {
+        console.error("Telegram notification failed for order status change approval request:", tgError);
+      }
+
+      return NextResponse.json({ success: true, pendingApproval: true, order });
     }
 
     // Update order

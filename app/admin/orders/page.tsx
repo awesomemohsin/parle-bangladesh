@@ -241,16 +241,20 @@ export default function AdminOrdersPage() {
 
       if (response.ok) {
         const data = await response.json()
-        if (data.pendingApproval) {
-          alert("✓ Sync Initiated: This status change has been queued for authoritative verification.");
-        }
         if (userRole === 'moderator' && newStatus !== 'processing') {
           setOrders(orders.filter(o => o.id !== orderId));
         } else {
           setOrders(
-            orders.map((o) => (o.id === orderId ? { ...o, ...data.order } : o))
+            orders.map((o) => (o.id === orderId ? { ...o, ...data.order, pendingApproval: data.pendingApproval ? true : o.pendingApproval } : o))
           )
         }
+        
+        if (data.pendingApproval) {
+          setTimeout(() => {
+            alert("✓ Sync Initiated: This status change has been queued for authoritative verification.");
+          }, 50);
+        }
+
         const newPending = { ...pendingChanges }
         delete newPending[orderId]
         setPendingChanges(newPending)
@@ -366,6 +370,14 @@ export default function AdminOrdersPage() {
                 className={`p-4 shadow-sm transition-all duration-300 ${
                   order.customerType === 'dealer' 
                     ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500' 
+                    : order.customerType === 'student'
+                    ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
+                    : order.customerType === 'influencer'
+                    ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
+                    : order.customerType === 'corporate'
+                    ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
+                    : order.customerType && order.customerType !== 'retailer'
+                    ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
                     : 'border-gray-100/60 hover:shadow-md'
                 }`}
               >
@@ -375,10 +387,18 @@ export default function AdminOrdersPage() {
                       <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">
                         Order ID: {order.id.slice(-8).toUpperCase()}
                       </h3>
-                      {order.customerType === 'dealer' && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-600 text-white rounded-lg shadow-sm">
+                      {order.customerType && order.customerType !== 'retailer' && (
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 text-white rounded-lg shadow-sm ${
+                          order.customerType === 'dealer' ? 'bg-amber-600' :
+                          order.customerType === 'student' ? 'bg-rose-600' :
+                          order.customerType === 'influencer' ? 'bg-violet-600' :
+                          order.customerType === 'corporate' ? 'bg-indigo-600' :
+                          'bg-teal-600'
+                        }`}>
                           <BellRing className="w-3 h-3 animate-pulse" />
-                          <span className="text-[8px] font-black uppercase tracking-widest">Dealer Order</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest">
+                            {order.customerType} Order
+                          </span>
                         </div>
                       )}
                     </div>
@@ -414,9 +434,9 @@ export default function AdminOrdersPage() {
                         <select
                           value={currentStatus}
                           onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                          disabled={order.pendingApproval || isSaving[order.id]}
+                          disabled={['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval || isSaving[order.id]}
                           className={`flex-1 sm:flex-none px-3 py-2 border rounded-lg text-xs font-black uppercase tracking-widest focus:outline-none transition-all ${hasChange ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                            } ${order.pendingApproval ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+                            } ${(['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval) ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
                         >
                           {userRole !== 'moderator' && <option value="pending">Pending</option>}
                           <option value="cancelled">Cancelled</option>
