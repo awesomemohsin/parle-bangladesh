@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedAuthUser, hasAnyRole, getAuthUserFromRequest } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product, Customer, PromoCode, ApprovalRequest, StockLog } from "@/lib/models";
+import { Order, Product, Customer, PromoCode, ApprovalRequest, StockLog, User } from "@/lib/models";
 import mongoose from "mongoose";
 import { notifyNewOrder } from "@/lib/telegram";
 import { calculateServerSideCart } from "@/lib/pricing";
@@ -165,7 +165,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Session expired or role updated. Please login again." }, { status: 401 });
     }
     
-    const isDealer = user?.customerType === "dealer";
+    let isDealer = false;
+    let userDiscount = undefined;
+    let customerTypeStr = "retailer";
+
+    if (user) {
+      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
+      if (dbUser) {
+        isDealer = dbUser.customerType === "dealer";
+        customerTypeStr = dbUser.customerType || "retailer";
+        const now = new Date();
+        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
+          userDiscount = {
+            percent: dbUser.flatDiscountPercent,
+            expiresAt: new Date(dbUser.flatDiscountExpiresAt)
+          };
+        }
+      }
+    }
 
     const items = [];
     const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
@@ -194,18 +211,6 @@ export async function POST(request: NextRequest) {
         if (variation) {
           const basePrice = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
           let effectiveVarDiscountPrice = variation.discountPrice;
-
-          // If there's a flat discount with NO minOrderAmount, it acts as a sale price
-          if (applicableFlat && (Number(applicableFlat.minOrderAmount) || 0) <= 0) {
-            const amount = Number(applicableFlat.discountAmount || 0);
-            let discounted = basePrice;
-            if (applicableFlat.discountType === 'percentage') {
-              discounted = basePrice - (basePrice * amount) / 100;
-            } else {
-              discounted = Math.max(0, basePrice - amount);
-            }
-            effectiveVarDiscountPrice = Math.round(discounted);
-          }
 
           items.push({
             productId: (product as any)._id.toString(),
@@ -254,7 +259,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    const totals = await calculateServerSideCart(items, body.promoCode);
+    const totals = await calculateServerSideCart(items, body.promoCode, userDiscount);
     const subtotal = totals.subtotal;
     const discountAmount = totals.discountAmount;
     const ruleDiscount = totals.ruleDiscount || 0;
@@ -308,7 +313,7 @@ export async function POST(request: NextRequest) {
       promoCode: body.promoCode,
       total,
       status: ORDER_STATUS.PENDING,
-      customerType: user?.customerType || "retailer",
+      customerType: customerTypeStr,
     });
 
     await order.save();

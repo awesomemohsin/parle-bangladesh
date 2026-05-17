@@ -229,18 +229,39 @@ export default function MyOrdersPage() {
                 className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group ${
                   order.customerType === 'dealer' 
                     ? "border-amber-200 hover:border-amber-500 bg-amber-50/5" 
+                    : order.customerType === 'student'
+                    ? "border-rose-200 hover:border-rose-500 bg-rose-50/5"
+                    : order.customerType === 'influencer'
+                    ? "border-violet-200 hover:border-violet-500 bg-violet-50/5"
+                    : order.customerType === 'corporate'
+                    ? "border-indigo-200 hover:border-indigo-500 bg-indigo-50/5"
+                    : order.customerType && order.customerType !== 'retailer'
+                    ? "border-teal-200 hover:border-teal-500 bg-teal-50/5"
                     : "border-gray-100 hover:border-red-600"
                 }`}
               >
                 {/* Header Bar - More Compact */}
                 <div className={`${
-                  order.customerType === 'dealer' ? "bg-amber-50" : "bg-slate-50/80"
+                  order.customerType === 'dealer' ? "bg-amber-50" :
+                  order.customerType === 'student' ? "bg-rose-50/50" :
+                  order.customerType === 'influencer' ? "bg-violet-50/50" :
+                  order.customerType === 'corporate' ? "bg-indigo-50/50" :
+                  order.customerType && order.customerType !== 'retailer' ? "bg-teal-50/50" :
+                  "bg-slate-50/80"
                 } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
                   <div className="flex items-center gap-3">
-                    {order.customerType === 'dealer' && (
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-600 text-white rounded-md">
+                    {order.customerType && order.customerType !== 'retailer' && (
+                      <div className={`flex items-center gap-1.5 px-2 py-0.5 text-white rounded-md ${
+                        order.customerType === 'dealer' ? 'bg-amber-600' :
+                        order.customerType === 'student' ? 'bg-rose-600' :
+                        order.customerType === 'influencer' ? 'bg-violet-600' :
+                        order.customerType === 'corporate' ? 'bg-indigo-600' :
+                        'bg-teal-600'
+                      }`}>
                         <ShieldCheck className="w-2.5 h-2.5" />
-                        <span className="text-[7px] font-black uppercase tracking-widest">Dealer Order</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">
+                          {order.customerType} Order
+                        </span>
                       </div>
                     )}
                     <div

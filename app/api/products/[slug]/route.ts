@@ -35,14 +35,17 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
     const user = await getVerifiedAuthUser(_);
     let isPrivileged = false;
     
+    let userFlatDiscountPercent = 0;
     if (user) {
-      if (user && [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
+      if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
         isPrivileged = true;
-      } 
-      else if (user.customerType === "dealer") {
-        const dbUser = await User.findById(user.id).select("customerType").lean();
-        if (dbUser && dbUser.customerType === "dealer") {
+      }
+      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
+      if (dbUser) {
+        if (dbUser.customerType === "dealer") {
           isPrivileged = true;
+        } else if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
+          userFlatDiscountPercent = dbUser.flatDiscountPercent;
         }
       }
     }
@@ -62,21 +65,52 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
           d.allProducts || (d.applicableProducts && d.applicableProducts.includes(sanitizedProduct.id))
         );
 
-        if (applicableFlat) {
-          const amount = Number(applicableFlat.discountAmount || 0);
+        if (applicableFlat || userFlatDiscountPercent > 0) {
           const originalPrice = Number(isPrivileged && variation.dealerPrice ? variation.dealerPrice : variation.price);
-          let discounted = originalPrice;
-          
-          if (applicableFlat.discountType === 'percentage') {
-            discounted = originalPrice - (originalPrice * amount) / 100;
-          } else {
-            discounted = Math.max(0, originalPrice - amount);
+          let bestSavings = 0;
+          let bestDiscountedPrice = originalPrice;
+          let bestDiscountAmount = 0;
+          let bestDiscountType = 'fixed';
+          let hasAnyDiscount = false;
+
+          // A. Account-specific flat discount candidate
+          if (userFlatDiscountPercent > 0) {
+            bestSavings = (originalPrice * userFlatDiscountPercent) / 100;
+            bestDiscountedPrice = originalPrice - bestSavings;
+            bestDiscountAmount = userFlatDiscountPercent;
+            bestDiscountType = 'percentage';
+            hasAnyDiscount = true;
           }
 
-          variation.flatDiscountPrice = Math.round(discounted);
-          variation.hasFlatDiscount = true;
-          variation.flatDiscountAmount = amount;
-          variation.flatDiscountType = applicableFlat.discountType;
+          // B. Campaign-specific flat discount candidate
+          if (applicableFlat) {
+            const amount = Number(applicableFlat.discountAmount || 0);
+            let currentDiscounted = originalPrice;
+            let currentSavings = 0;
+
+            if (applicableFlat.discountType === 'percentage') {
+              currentSavings = (originalPrice * amount) / 100;
+              currentDiscounted = originalPrice - currentSavings;
+            } else {
+              currentSavings = amount;
+              currentDiscounted = Math.max(0, originalPrice - amount);
+            }
+
+            if (currentSavings > bestSavings) {
+              bestSavings = currentSavings;
+              bestDiscountedPrice = currentDiscounted;
+              bestDiscountAmount = amount;
+              bestDiscountType = applicableFlat.discountType;
+              hasAnyDiscount = true;
+            }
+          }
+
+          if (hasAnyDiscount) {
+            variation.flatDiscountPrice = Math.round(bestDiscountedPrice);
+            variation.hasFlatDiscount = true;
+            variation.flatDiscountAmount = bestDiscountAmount;
+            variation.flatDiscountType = bestDiscountType;
+          }
         }
 
         if (!isPrivileged) {

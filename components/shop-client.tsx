@@ -14,6 +14,10 @@ interface Variation {
   price: number;
   dealerPrice?: number;
   discountPrice?: number;
+  flatDiscountPrice?: number;
+  hasFlatDiscount?: boolean;
+  flatDiscountAmount?: number;
+  flatDiscountType?: string;
   stock: number;
   image?: string;
   isDefault?: boolean;
@@ -296,19 +300,39 @@ export default function ShopClient({
               key={product.uiKey || product.id}
               {...product}
               priority={index < 12}
-              onAddToCart={(variation: Variation) =>
+              onAddToCart={(variation: Variation) => {
+                const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
+                const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+
+                let bestPrice = variation.price;
+                if (isDealer && variation.dealerPrice) {
+                  bestPrice = variation.dealerPrice;
+                } else {
+                  let candidates = [variation.price];
+                  if (variation.discountPrice && variation.discountPrice < variation.price) {
+                    candidates.push(variation.discountPrice);
+                  }
+                  if (variation.flatDiscountPrice) {
+                    candidates.push(variation.flatDiscountPrice);
+                  }
+                  if (isUserDiscountActive) {
+                    candidates.push(Math.round(variation.price * (1 - userDiscountPercent / 100)));
+                  }
+                  bestPrice = Math.min(...candidates);
+                }
+
                 addItem({
                   productId: product.id,
                   productSlug: product.slug,
                   productName: product.name,
-                  price: (isDealer && variation.dealerPrice) ? variation.dealerPrice : (variation.discountPrice || variation.price),
+                  price: bestPrice,
                   image: variation.image,
                   quantity: 1,
                   weight: variation.weight,
                   flavor: variation.flavor,
                   stock: variation.stock,
-                })
-              }
+                });
+              }}
             />
           ))}
         </div>

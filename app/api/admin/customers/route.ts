@@ -70,7 +70,9 @@ export async function GET(request: NextRequest) {
         ordersCount: stats.ordersCount,
         totalSpent: stats.totalSpent,
         totalProducts: stats.totalProducts,
-        isGuest: false
+        isGuest: false,
+        flatDiscountPercent: u.flatDiscountPercent,
+        flatDiscountExpiresAt: u.flatDiscountExpiresAt
       };
     });
 
@@ -164,10 +166,18 @@ export async function PATCH(request: NextRequest) {
 
     const oldType = customer.customerType;
     
-    if (customerType && ["retailer", "dealer"].includes(customerType)) {
+    if (customerType) {
       customer.customerType = customerType;
-      // Force logout by incrementing version
-      customer.tokenVersion = (customer.tokenVersion || 0) + 1;
+      
+      // If promoting to a flat-discount group (e.g. student, influencer, other custom)
+      if (!["retailer", "dealer"].includes(customerType)) {
+        customer.flatDiscountPercent = Number(body.flatDiscountPercent) || 0;
+        customer.flatDiscountExpiresAt = body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined;
+      } else {
+        // Clear discounts if retailer or dealer
+        customer.flatDiscountPercent = undefined;
+        customer.flatDiscountExpiresAt = undefined;
+      }
     }
     if (status && ["active", "disabled"].includes(status)) {
       customer.status = status;
@@ -189,7 +199,9 @@ export async function PATCH(request: NextRequest) {
       message: "Customer updated successfully",
       customer: {
         id: customer._id.toString(),
-        customerType: customer.customerType
+        customerType: customer.customerType,
+        flatDiscountPercent: customer.flatDiscountPercent,
+        flatDiscountExpiresAt: customer.flatDiscountExpiresAt
       }
     });
   } catch (error: any) {

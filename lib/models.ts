@@ -7,7 +7,7 @@ export interface IUser extends Document {
   password?: string;
   name: string;
   role: "customer" | "admin" | "moderator" | "super_admin" | "owner";
-  customerType: "retailer" | "dealer";
+  customerType: string;
   status: "active" | "disabled";
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
@@ -20,6 +20,8 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   tokenVersion: number;
+  flatDiscountPercent?: number;
+  flatDiscountExpiresAt?: Date;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -29,7 +31,7 @@ const UserSchema = new Schema<IUser>(
     password: { type: String }, // optional for oauth, required for credentials
     name: { type: String, required: true },
     role: { type: String, enum: ["customer", "admin", "moderator", "super_admin", "owner"], default: "customer" },
-    customerType: { type: String, enum: ["retailer", "dealer"], default: "retailer" },
+    customerType: { type: String, default: "retailer" },
     status: { type: String, enum: ["active", "disabled"], default: "active" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
@@ -40,6 +42,8 @@ const UserSchema = new Schema<IUser>(
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     tokenVersion: { type: Number, default: 0 },
+    flatDiscountPercent: { type: Number },
+    flatDiscountExpiresAt: { type: Date },
   },
   { timestamps: true }
 );

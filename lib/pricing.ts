@@ -10,7 +10,7 @@ import { PromoCode } from './models';
  * 2. Pick the ONE discount that saves the user the most money.
  * 3. Promo codes stack on top of the best flat discount.
  */
-export async function calculateServerSideCart(items: any[], promoCode?: string) {
+export async function calculateServerSideCart(items: any[], promoCode?: string, userDiscount?: { percent: number; expiresAt: Date }) {
   await connectDB();
   
   // 1. Fetch current active flat discounts
@@ -57,7 +57,14 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
     let bestRuleId = null;
     let bestDiscountForItem = 0;
 
-    // A. Consider campaign-based flat discounts from PromoCode collection
+    // A. Consider candidate discount from user's custom flat discount
+    if (userDiscount && userDiscount.percent > 0 && new Date(userDiscount.expiresAt) > new Date()) {
+      bestDiscountForItem = (itemEffectiveSubtotal * userDiscount.percent) / 100;
+      bestDiscountForItem = Math.min(itemEffectiveSubtotal, bestDiscountForItem);
+      bestRuleId = `user-flat-${userDiscount.percent}`;
+    }
+
+    // B. Consider campaign-based flat discounts from PromoCode collection
     flatDiscounts.forEach(rule => {
       // 1. Check product applicability
       const appliesToProduct = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
@@ -100,6 +107,13 @@ export async function calculateServerSideCart(items: any[], promoCode?: string) 
     if (maxCap > 0 && usedAmount > maxCap) {
       flatDiscountTotal += maxCap;
     } else {
+      flatDiscountTotal += usedAmount;
+    }
+  });
+
+  // Add non-global user-specific flat discounts
+  ruleUsage.forEach((usedAmount, ruleId) => {
+    if (ruleId.startsWith("user-flat-")) {
       flatDiscountTotal += usedAmount;
     }
   });

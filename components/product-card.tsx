@@ -79,27 +79,48 @@ export default function ProductCard({
 
   const productImg = sanitizeProductImagePath(defaultVariation.image || "");
 
+  const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
+  const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+
   const hasDealerPrice = isDealer && !!defaultVariation.dealerPrice && defaultVariation.dealerPrice > 0;
   
   // A product has a retail discount if it has a manual discountPrice OR a global flatDiscountPrice
   const hasManualDiscount = !hasDealerPrice && !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
   const hasFlatDiscount = !hasDealerPrice && !!defaultVariation.hasFlatDiscount && !!defaultVariation.flatDiscountPrice;
-  const hasAnyRetailDiscount = hasManualDiscount || hasFlatDiscount;
   
   let currentPrice = defaultVariation.price;
+  let discountPercentage = 0;
+  let hasAnyRetailDiscount = false;
+  let activeDiscountLabel = "Sale";
+
   if (hasDealerPrice) {
     currentPrice = defaultVariation.dealerPrice!;
-  } else if (hasFlatDiscount) {
-    currentPrice = defaultVariation.flatDiscountPrice!;
-  } else if (hasManualDiscount) {
-    currentPrice = defaultVariation.discountPrice!;
+  } else {
+    // Collect all candidates
+    let candidates = [{ price: defaultVariation.price, percent: 0, label: "" }];
+    
+    if (hasManualDiscount) {
+      const p = Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100);
+      candidates.push({ price: defaultVariation.discountPrice!, percent: p, label: "Sale" });
+    }
+    if (hasFlatDiscount) {
+      const p = defaultVariation.flatDiscountType === 'percentage' 
+        ? defaultVariation.flatDiscountAmount!
+        : Math.round(((defaultVariation.price - defaultVariation.flatDiscountPrice!) / defaultVariation.price) * 100);
+      candidates.push({ price: defaultVariation.flatDiscountPrice!, percent: p, label: "Campaign" });
+    }
+    if (isUserDiscountActive) {
+      const userPrice = Math.round(defaultVariation.price * (1 - userDiscountPercent / 100));
+      candidates.push({ price: userPrice, percent: userDiscountPercent, label: `${user.customerType?.toUpperCase() || 'Member'}` });
+    }
+
+    // Pick candidate with lowest price
+    const bestCandidate = candidates.reduce((best, current) => current.price < best.price ? current : best, candidates[0]);
+    currentPrice = bestCandidate.price;
+    discountPercentage = bestCandidate.percent;
+    activeDiscountLabel = bestCandidate.label;
+    hasAnyRetailDiscount = currentPrice < defaultVariation.price;
   }
-  
-  const discountPercentage = hasFlatDiscount 
-    ? (defaultVariation.flatDiscountType === 'percentage' 
-        ? defaultVariation.flatDiscountAmount 
-        : Math.round(((defaultVariation.price - defaultVariation.flatDiscountPrice!) / defaultVariation.price) * 100))
-    : (hasManualDiscount ? Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100) : 0);
 
   const cartItemKey = getItemKey({ productId: id || slug, weight: defaultVariation.weight, flavor: defaultVariation.flavor });
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
@@ -146,7 +167,9 @@ export default function ProductCard({
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
       {hasAnyRetailDiscount && (
         <div className="absolute top-4 left-4 z-10">
-          <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">Sale: {discountPercentage}% off</span>
+          <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">
+            {activeDiscountLabel}: {discountPercentage}% off
+          </span>
         </div>
       )}
       {/* Image Container */}

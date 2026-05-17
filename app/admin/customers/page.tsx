@@ -21,13 +21,15 @@ interface Customer {
   name: string;
   email: string;
   mobile: string;
-  customerType: "retailer" | "dealer" | "guest";
+  customerType: string;
   status: "active" | "disabled";
   createdAt: string;
   ordersCount: number;
   totalProducts: number;
   totalSpent: number;
   isGuest?: boolean;
+  flatDiscountPercent?: number;
+  flatDiscountExpiresAt?: string;
 }
 
 type SortField = "ordersCount" | "totalProducts" | "totalSpent" | "createdAt";
@@ -41,7 +43,7 @@ export default function AdminCustomersPage() {
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   
-  // Confirmation Modal State
+  // Demote Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     customer: Customer | null;
@@ -49,6 +51,20 @@ export default function AdminCustomersPage() {
     open: false,
     customer: null,
   });
+
+  // Promote Modal State
+  const [promoteModal, setPromoteModal] = useState<{
+    open: boolean;
+    customer: Customer | null;
+  }>({
+    open: false,
+    customer: null,
+  });
+
+  const [promoType, setPromoType] = useState<"dealer" | "student" | "influencer" | "corporate" | "other">("dealer");
+  const [customTypeName, setCustomTypeName] = useState("");
+  const [discountPercent, setDiscountPercent] = useState("10");
+  const [expirationDate, setExpirationDate] = useState("");
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -100,7 +116,7 @@ export default function AdminCustomersPage() {
       return;
     }
 
-    const newType = customer.customerType === "dealer" ? "retailer" : "dealer";
+    const newType = "retailer";
     setUpdatingId(customer.id);
     setConfirmModal({ ...confirmModal, open: false });
     
@@ -117,12 +133,89 @@ export default function AdminCustomersPage() {
 
       const contentType = response.headers.get("content-type");
       if (response.ok) {
-        setCustomers(customers.map(c => c.id === customer.id ? { ...c, customerType: newType } : c));
-        toast.success(newType === "dealer" ? "Promoted to Dealer" : "Demoted to Regular");
+        setCustomers(customers.map(c => c.id === customer.id ? { 
+          ...c, 
+          customerType: newType,
+          flatDiscountPercent: undefined,
+          flatDiscountExpiresAt: undefined
+        } : c));
+        toast.success("Demoted to Regular Customer");
       } else {
         if (contentType && contentType.includes("application/json")) {
           const data = await response.json();
           toast.error(data.error || "Update failed");
+        } else {
+          toast.error(`Server error: ${response.status}`);
+        }
+      }
+    } catch (error) {
+      toast.error("Network error or invalid response");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handlePromoteSubmit = async () => {
+    const { customer } = promoteModal;
+    if (!customer) return;
+
+    let finalType = promoType as string;
+    if (promoType === "other") {
+      if (!customTypeName.trim()) {
+        toast.error("Please enter a custom type name");
+        return;
+      }
+      finalType = customTypeName.trim().toLowerCase();
+    }
+
+    const payload: any = {
+      id: customer.id,
+      customerType: finalType
+    };
+
+    if (promoType !== "dealer") {
+      const percent = Number(discountPercent);
+      if (isNaN(percent) || percent <= 0 || percent > 100) {
+        toast.error("Please enter a valid discount percent between 1 and 100");
+        return;
+      }
+      if (!expirationDate) {
+        toast.error("Please select an expiration date");
+        return;
+      }
+      payload.flatDiscountPercent = percent;
+      payload.flatDiscountExpiresAt = new Date(expirationDate).toISOString();
+    }
+
+    setUpdatingId(customer.id);
+    setPromoteModal({ open: false, customer: null });
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/customers`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (response.ok) {
+        const data = await response.json();
+        const updated = data.customer;
+        setCustomers(customers.map(c => c.id === customer.id ? { 
+          ...c, 
+          customerType: updated.customerType,
+          flatDiscountPercent: updated.flatDiscountPercent,
+          flatDiscountExpiresAt: updated.flatDiscountExpiresAt
+        } : c));
+        toast.success(`Promoted successfully to ${updated.customerType}!`);
+      } else {
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          toast.error(data.error || "Promotion failed");
         } else {
           toast.error(`Server error: ${response.status}`);
         }
@@ -259,34 +352,59 @@ export default function AdminCustomersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${
-                        customer.customerType === 'dealer' 
-                          ? 'bg-amber-100 text-amber-700' 
-                          : customer.customerType === 'guest'
-                          ? 'bg-gray-100 text-gray-400'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {customer.customerType}
-                      </span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${
+                          customer.customerType === 'dealer' 
+                            ? 'bg-amber-100 text-amber-700' 
+                            : customer.customerType === 'guest'
+                            ? 'bg-gray-100 text-gray-400'
+                            : ['student', 'influencer', 'corporate'].includes(customer.customerType)
+                            ? 'bg-red-50 text-red-600 border border-red-100'
+                            : customer.customerType === 'retailer'
+                            ? 'bg-slate-100 text-slate-500'
+                            : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                        }`}>
+                          {customer.customerType}
+                        </span>
+                        {customer.flatDiscountPercent !== undefined && customer.flatDiscountPercent > 0 && (
+                          <div className="flex flex-col text-[9px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">
+                            <span className="text-red-600">{customer.flatDiscountPercent}% Flat Discount</span>
+                            {customer.flatDiscountExpiresAt && (
+                              <span className="text-[8px] font-medium opacity-80 flex items-center gap-1 mt-0.5">
+                                <Calendar className="w-2.5 h-2.5 text-gray-400" />
+                                Till {format(new Date(customer.flatDiscountExpiresAt), "MMM dd")}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       {!customer.isGuest && (
                         <Button
                           size="sm"
                           onClick={() => {
-                            setConfirmModal({ open: true, customer });
+                            if (customer.customerType !== "retailer") {
+                              setConfirmModal({ open: true, customer });
+                            } else {
+                              setPromoType("dealer");
+                              setCustomTypeName("");
+                              setDiscountPercent("10");
+                              setExpirationDate("");
+                              setPromoteModal({ open: true, customer });
+                            }
                           }}
                           disabled={updatingId === customer.id}
-                          variant={customer.customerType === "dealer" ? "outline" : "default"}
+                          variant={customer.customerType !== "retailer" ? "outline" : "default"}
                           className={`h-9 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                            customer.customerType === "dealer"
-                              ? "border-amber-200 text-amber-600 hover:bg-amber-50"
+                            customer.customerType !== "retailer"
+                              ? "border-gray-200 text-gray-500 hover:bg-gray-50"
                               : "bg-red-600 hover:bg-black text-white shadow-lg shadow-red-100"
                           }`}
                         >
                           {updatingId === customer.id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : customer.customerType === "dealer" ? (
+                          ) : customer.customerType !== "retailer" ? (
                             <>
                               <UserCheck className="w-3.5 h-3.5 mr-2" />
                               Demote
@@ -323,19 +441,17 @@ export default function AdminCustomersPage() {
       }}>
         <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white z-[200]">
           <div className="p-8 flex flex-col items-center text-center">
-             <div className={`w-16 h-16 rounded-2xl mb-6 flex items-center justify-center ${
-                confirmModal.customer?.customerType === 'dealer' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
-             }`}>
+             <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center bg-red-50 text-red-600">
                 <AlertCircle className="w-8 h-8" />
              </div>
              
              <DialogHeader className="flex flex-col items-center">
                <DialogTitle className="text-xl font-black text-gray-900 uppercase tracking-tighter italic leading-tight mb-2">
-                 {confirmModal.customer?.customerType === 'dealer' ? 'Confirm Demotion' : 'Confirm Promotion'}
+                 Confirm Demotion
                </DialogTitle>
                
                <DialogDescription className="text-[13px] font-bold text-gray-500 leading-relaxed px-4 mb-8">
-                 Are you sure you want to {confirmModal.customer?.customerType === 'dealer' ? 'remove' : 'grant'} dealer privileges for <span className="text-gray-900">{confirmModal.customer?.name}</span>?
+                 Are you sure you want to demote <span className="text-gray-900">{confirmModal.customer?.name}</span> back to a regular retail customer? This will remove all dealer pricing and account-level discounts.
                </DialogDescription>
              </DialogHeader>
              
@@ -349,12 +465,123 @@ export default function AdminCustomersPage() {
                 </Button>
                 <Button 
                   onClick={handleConfirmAction}
-                  className={`h-12 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg ${
-                    confirmModal.customer?.customerType === 'dealer' ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-100' : 'bg-red-600 hover:bg-red-700 shadow-red-100'
-                  }`}
+                  className="h-12 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg bg-red-600 hover:bg-red-700 shadow-red-100"
                 >
                   Confirm
                 </Button>
+             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Promotion Dialog */}
+      <Dialog open={promoteModal.open} onOpenChange={(open) => {
+        setPromoteModal(prev => ({ ...prev, open }));
+      }}>
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl bg-white z-[200]">
+          <div className="p-8 flex flex-col">
+             <div className="flex justify-between items-center mb-6">
+               <DialogHeader className="flex-1">
+                 <DialogTitle className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">
+                   Promote <span className="text-red-600">Customer</span>
+                 </DialogTitle>
+               </DialogHeader>
+               <button 
+                 onClick={() => setPromoteModal({ open: false, customer: null })}
+                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors ml-4"
+               >
+                 <X className="w-4 h-4 text-gray-400" />
+               </button>
+             </div>
+
+             <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-100 pb-4">
+               Customer: <span className="text-gray-900 font-black">{promoteModal.customer?.name} ({promoteModal.customer?.email})</span>
+             </div>
+
+             <div className="space-y-4 mb-8">
+               <div>
+                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                   Select Type
+                 </label>
+                 <div className="grid grid-cols-2 gap-2">
+                   {["dealer", "student", "influencer", "corporate", "other"].map((t) => (
+                     <button
+                       key={t}
+                       type="button"
+                       onClick={() => setPromoType(t as any)}
+                       className={`py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest text-center transition-all ${
+                          t === "other" ? "col-span-2" : ""
+                        } ${
+                         promoType === t
+                           ? "border-red-600 bg-red-50/50 text-red-600"
+                           : "border-gray-200 hover:border-gray-300 text-gray-500 hover:text-gray-900"
+                       }`}
+                     >
+                       {t === "other" ? "Others / Custom" : t === "corporate" ? "Corporate" : `${t}s`}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+
+               {promoType === "other" && (
+                 <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                     Custom Type Name
+                   </label>
+                   <Input
+                     value={customTypeName}
+                     onChange={(e) => setCustomTypeName(e.target.value)}
+                     placeholder="e.g. VIP, Corporate, Family"
+                     className="h-10 border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                   />
+                 </div>
+               )}
+
+               {promoType !== "dealer" && (
+                 <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                   <div>
+                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                       Flat Discount (%)
+                     </label>
+                     <Input
+                       type="number"
+                       value={discountPercent}
+                       onChange={(e) => setDiscountPercent(e.target.value)}
+                       min="1"
+                       max="100"
+                       placeholder="e.g. 5, 10, 20"
+                       className="h-10 border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                     />
+                   </div>
+                   <div>
+                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                       Expiration Date
+                     </label>
+                     <Input
+                       type="date"
+                       value={expirationDate}
+                       onChange={(e) => setExpirationDate(e.target.value)}
+                       className="h-10 border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                     />
+                   </div>
+                 </div>
+               )}
+             </div>
+
+             <div className="grid grid-cols-2 gap-3 w-full">
+                 <Button 
+                   variant="ghost" 
+                   onClick={() => setPromoteModal({ open: false, customer: null })}
+                   className="h-12 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                 >
+                   Cancel
+                 </Button>
+                 <Button 
+                   onClick={handlePromoteSubmit}
+                   className="h-12 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg bg-red-600 hover:bg-black shadow-red-100"
+                 >
+                   Promote Account
+                 </Button>
              </div>
           </div>
         </DialogContent>

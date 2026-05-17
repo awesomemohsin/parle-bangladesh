@@ -23,7 +23,7 @@ interface OrderState {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, applyPromo, removePromo } = useCart();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
@@ -558,6 +558,16 @@ export default function CheckoutPage() {
                   <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">Subtotal</span>
                   <span className="font-semibold text-gray-900">৳ {Math.round(productSubtotal)}</span>
                 </div>
+
+                {/* Automatic/Campaign Discount */}
+                {(ruleDiscount || 0) > 0 && (
+                  <div className="flex justify-between text-green-600 font-medium">
+                    <span className="font-bold uppercase text-[9px] tracking-widest">
+                      {user?.customerType ? `${user.customerType.toUpperCase()} Discount` : "Automatic Discount"}
+                    </span>
+                    <span className="font-semibold">- ৳ {Math.round(ruleDiscount || 0)}</span>
+                  </div>
+                )}
 
                 {/* Delivery Charge */}
                 <div className="flex justify-between">

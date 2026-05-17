@@ -77,9 +77,11 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
   
+  const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
+  const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+
   const hasFlatDiscount = !isDealer && !!selectedVariation?.hasFlatDiscount && !!selectedVariation?.flatDiscountPrice;
   const hasManualDiscount = !isDealer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
-  const hasAnyRetailDiscount = hasFlatDiscount || hasManualDiscount;
 
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
   
@@ -104,17 +106,39 @@ export default function ProductDetailsClient({ product, images }: { product: any
     return applies && (Number(rule.minOrderAmount) || 0) > 0;
   });
 
-  // Dealer Pricing Logic
-  const displayPrice = isDealer && selectedVariation?.dealerPrice 
-    ? selectedVariation.dealerPrice 
-    : (hasFlatDiscount ? selectedVariation.flatDiscountPrice : (selectedVariation?.discountPrice || selectedVariation?.price || product.price || 0));
-
   const originalPrice = selectedVariation?.price || product.price || 0;
   const displayStock = selectedVariation?.stock ?? product.stock ?? 0;
-  
-  const finalDiscountPercentage = hasFlatDiscount 
-    ? Math.round(((originalPrice - (selectedVariation?.flatDiscountPrice || 0)) / originalPrice) * 100)
-    : (hasManualDiscount ? Math.round(((originalPrice - (selectedVariation?.discountPrice || 0)) / originalPrice) * 100) : 0);
+
+  let displayPrice = originalPrice;
+  let finalDiscountPercentage = 0;
+  let hasAnyRetailDiscount = false;
+  let activeDiscountLabel = "Sale";
+
+  if (isDealer && selectedVariation?.dealerPrice) {
+    displayPrice = selectedVariation.dealerPrice;
+  } else if (selectedVariation) {
+    let candidates = [{ price: originalPrice, percent: 0, label: "" }];
+    
+    if (hasManualDiscount) {
+      const p = Math.round(((originalPrice - selectedVariation.discountPrice!) / originalPrice) * 100);
+      candidates.push({ price: selectedVariation.discountPrice!, percent: p, label: "Sale" });
+    }
+    if (hasFlatDiscount) {
+      const p = Math.round(((originalPrice - selectedVariation.flatDiscountPrice!) / originalPrice) * 100);
+      candidates.push({ price: selectedVariation.flatDiscountPrice!, percent: p, label: "Campaign" });
+    }
+    if (isUserDiscountActive) {
+      const userPrice = Math.round(originalPrice * (1 - userDiscountPercent / 100));
+      candidates.push({ price: userPrice, percent: userDiscountPercent, label: `${user.customerType?.toUpperCase() || 'Member'}` });
+    }
+
+    // Pick candidate with lowest price
+    const bestCandidate = candidates.reduce((best, current) => current.price < best.price ? current : best, candidates[0]);
+    displayPrice = bestCandidate.price;
+    finalDiscountPercentage = bestCandidate.percent;
+    activeDiscountLabel = bestCandidate.label;
+    hasAnyRetailDiscount = displayPrice < originalPrice;
+  }
 
   // Sync image with variation selection
   useEffect(() => {
@@ -261,7 +285,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                        </span>
                     </div>
                     <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
-                      {isDealer ? "Dealer Savings" : `${finalDiscountPercentage}% off`}
+                      {isDealer ? "Dealer Savings" : `${activeDiscountLabel}: ${finalDiscountPercentage}% off`}
                     </span>
                  </div>
                )}

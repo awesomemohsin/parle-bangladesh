@@ -61,15 +61,17 @@ export async function GET(request: NextRequest) {
     const user = await getVerifiedAuthUser(request);
     let isPrivileged = false;
     
+    let userFlatDiscountPercent = 0;
     if (user) {
       if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
         isPrivileged = true;
-      } 
-      else if (user.customerType === "dealer") {
-        // We already did a deep check in getVerifiedAuthUser, but we need to ensure the user is STILL a dealer in DB
-        const dbUser = await User.findById(user.id).select("customerType").lean();
-        if (dbUser && dbUser.customerType === "dealer") {
+      }
+      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
+      if (dbUser) {
+        if (dbUser.customerType === "dealer") {
           isPrivileged = true;
+        } else if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
+          userFlatDiscountPercent = dbUser.flatDiscountPercent;
         }
       }
     }
@@ -92,13 +94,24 @@ export async function GET(request: NextRequest) {
               d.allProducts || (d.applicableProducts && d.applicableProducts.includes(product.id))
             );
 
-            if (applicableFlats.length > 0) {
+            if (applicableFlats.length > 0 || userFlatDiscountPercent > 0) {
               const originalPrice = Number(isPrivileged && variation.dealerPrice ? variation.dealerPrice : variation.price);
               let bestSavings = 0;
               let bestDiscountedPrice = originalPrice;
               let bestDiscountAmount = 0;
               let bestDiscountType = 'fixed';
+              let hasAnyDiscount = false;
 
+              // A. Account-specific flat discount
+              if (userFlatDiscountPercent > 0) {
+                bestSavings = (originalPrice * userFlatDiscountPercent) / 100;
+                bestDiscountedPrice = originalPrice - bestSavings;
+                bestDiscountAmount = userFlatDiscountPercent;
+                bestDiscountType = 'percentage';
+                hasAnyDiscount = true;
+              }
+
+              // B. Global flat discounts
               applicableFlats.forEach(rule => {
                 const amount = Number(rule.discountAmount || 0);
                 let currentDiscounted = originalPrice;
@@ -117,13 +130,16 @@ export async function GET(request: NextRequest) {
                   bestDiscountedPrice = currentDiscounted;
                   bestDiscountAmount = amount;
                   bestDiscountType = rule.discountType;
+                  hasAnyDiscount = true;
                 }
               });
 
-              variation.flatDiscountPrice = Math.round(bestDiscountedPrice);
-              variation.hasFlatDiscount = true;
-              variation.flatDiscountAmount = bestDiscountAmount;
-              variation.flatDiscountType = bestDiscountType;
+              if (hasAnyDiscount) {
+                variation.flatDiscountPrice = Math.round(bestDiscountedPrice);
+                variation.hasFlatDiscount = true;
+                variation.flatDiscountAmount = bestDiscountAmount;
+                variation.flatDiscountType = bestDiscountType;
+              }
             }
 
             if (!isPrivileged) {

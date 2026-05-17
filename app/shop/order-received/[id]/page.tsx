@@ -37,6 +37,7 @@ interface Order {
   createdAt: string;
   promoCode?: string;
   isRestricted?: boolean;
+  customerType?: string;
 }
 
 export default function OrderReceivedPage() {
@@ -86,8 +87,8 @@ export default function OrderReceivedPage() {
   }
 
   // Pricing Logic to match the requested layout:
-  // Subtotal = Gross Subtotal - Flat/Rule Discounts
-  const displaySubtotal = (order.subtotal || 0) - (order.ruleDiscount || 0);
+  // Subtotal = Original Gross Subtotal (undiscounted)
+  const displaySubtotal = order.subtotal || 0;
   const displayShipping = order.shippingCost || 0;
   const displayPromoDiscount = order.promoDiscount || 0;
   const displayTotal = order.total;
@@ -120,6 +121,19 @@ export default function OrderReceivedPage() {
                     <span className="font-semibold text-gray-900 border-b border-dotted border-gray-300 flex-grow mx-4"></span>
                     <span className="font-bold text-gray-900">৳ {Math.round(displaySubtotal)}</span>
                   </div>
+
+                  {/* Automatic/Campaign Discount */}
+                  {(order.ruleDiscount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-sm text-green-600 font-medium">
+                      <span className="font-bold uppercase tracking-tight text-[11px]">
+                        {order.customerType && order.customerType !== "retailer" 
+                          ? `${order.customerType.toUpperCase()} DISCOUNT` 
+                          : "AUTOMATIC DISCOUNT"}
+                      </span>
+                      <span className="font-semibold text-green-100 border-b border-dotted border-green-100 flex-grow mx-4"></span>
+                      <span className="font-bold">- ৳ {Math.round(order.ruleDiscount)}</span>
+                    </div>
+                  )}
                   
                   {/* Delivery Charge */}
                   <div className="flex justify-between items-center text-sm">

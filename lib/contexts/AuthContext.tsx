@@ -8,8 +8,10 @@ export interface User {
   email: string;
   name: string;
   role: "customer" | "admin" | "moderator" | "super_admin" | "owner";
-  customerType?: "retailer" | "dealer";
+  customerType?: string;
   status?: "active" | "disabled";
+  flatDiscountPercent?: number;
+  flatDiscountExpiresAt?: string | Date;
 }
 
 export interface AuthState {
