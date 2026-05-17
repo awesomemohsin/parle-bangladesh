@@ -175,8 +175,8 @@ export default function AdminCustomersPage() {
 
     if (promoType !== "dealer") {
       const percent = Number(discountPercent);
-      if (isNaN(percent) || percent <= 0 || percent > 100) {
-        toast.error("Please enter a valid discount percent between 1 and 100");
+      if (isNaN(percent) || percent <= 0 || percent > 50) {
+        toast.error("Custom customer discounts cannot exceed 50%. Please enter a percent between 1 and 50.");
         return;
       }
       if (!expirationDate) {

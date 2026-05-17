@@ -171,7 +171,11 @@ export async function PATCH(request: NextRequest) {
       
       // If promoting to a flat-discount group (e.g. student, influencer, other custom)
       if (!["retailer", "dealer"].includes(customerType)) {
-        customer.flatDiscountPercent = Number(body.flatDiscountPercent) || 0;
+        const discountVal = Number(body.flatDiscountPercent) || 0;
+        if (discountVal > 50) {
+          return NextResponse.json({ error: "High-level discount limit exceeded: Custom customer flat discounts cannot exceed 50%." }, { status: 400 });
+        }
+        customer.flatDiscountPercent = discountVal;
         customer.flatDiscountExpiresAt = body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined;
       } else {
         // Clear discounts if retailer or dealer
