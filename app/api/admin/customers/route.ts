@@ -24,8 +24,16 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    const { Order } = await import("@/lib/models");
+    const { Order, ApprovalRequest } = await import("@/lib/models");
     const { ORDER_STATUS } = await import("@/lib/constants");
+
+    // Fetch all pending customer approval requests
+    const pendingPromotions = await ApprovalRequest.find({
+      type: "customer",
+      status: "pending"
+    }).select("targetId").lean();
+    
+    const pendingIds = new Set(pendingPromotions.map(p => p.targetId.toString()));
 
     // 1. Get all registered customers
     const registeredUsers = await User.find({ role: "customer" })
@@ -72,7 +80,8 @@ export async function GET(request: NextRequest) {
         totalProducts: stats.totalProducts,
         isGuest: false,
         flatDiscountPercent: u.flatDiscountPercent,
-        flatDiscountExpiresAt: u.flatDiscountExpiresAt
+        flatDiscountExpiresAt: u.flatDiscountExpiresAt,
+        pendingApproval: pendingIds.has(u._id.toString())
       };
     });
 
@@ -165,30 +174,82 @@ export async function PATCH(request: NextRequest) {
     }
 
     const oldType = customer.customerType;
+    let pendingApproval = false;
     
-    if (customerType) {
-      customer.customerType = customerType;
-      
-      // If promoting to a flat-discount group (e.g. student, influencer, other custom)
-      if (!["retailer", "dealer"].includes(customerType)) {
-        const discountVal = Number(body.flatDiscountPercent) || 0;
-        if (discountVal > 50) {
-          return NextResponse.json({ error: "High-level discount limit exceeded: Custom customer flat discounts cannot exceed 50%." }, { status: 400 });
-        }
-        customer.flatDiscountPercent = discountVal;
-        customer.flatDiscountExpiresAt = body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined;
-      } else {
-        // Clear discounts if retailer or dealer
+    if (customerType && customerType !== customer.customerType) {
+      if (customerType === "retailer") {
+        // DEMOTION: Applies instantly without approval
+        customer.customerType = "retailer";
         customer.flatDiscountPercent = undefined;
         customer.flatDiscountExpiresAt = undefined;
+      } else {
+        // PROMOTION: Requires Level 2 consensus approval (Anindo + Saiful)
+        const discountVal = Number(body.flatDiscountPercent) || 0;
+        if (!["retailer", "dealer"].includes(customerType) && discountVal > 50) {
+          return NextResponse.json({ error: "High-level discount limit exceeded: Custom customer flat discounts cannot exceed 50%." }, { status: 400 });
+        }
+
+        const { ApprovalRequest } = await import("@/lib/models");
+        const { notifyNewApprovalRequest } = await import("@/lib/telegram");
+
+        // Check if there is already a pending approval request for this promotion
+        const existing = await ApprovalRequest.findOne({
+          type: "customer",
+          targetId: id,
+          status: "pending"
+        });
+        if (existing) {
+          return NextResponse.json({ error: "A pending promotion consensus request already exists for this customer." }, { status: 400 });
+        }
+
+        // Store the targetDetails snapshot for consensus application
+        const targetDetails = {
+          customerType,
+          flatDiscountPercent: !["retailer", "dealer"].includes(customerType) ? discountVal : undefined,
+          flatDiscountExpiresAt: !["retailer", "dealer"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
+        };
+
+        const approval = await ApprovalRequest.create({
+          requesterEmail: currentUser.email,
+          type: "customer",
+          targetId: id,
+          targetName: customer.name,
+          field: "customerType",
+          oldValue: customer.customerType,
+          newValue: customerType,
+          targetDetails,
+          stage: "superadmin",
+          superadminApprovals: [],
+          ownerApproved: false
+        });
+
+        // Trigger Telegram alert to Superadmins
+        await notifyNewApprovalRequest(approval);
+        pendingApproval = true;
       }
     }
+
     if (status && ["active", "disabled"].includes(status)) {
       customer.status = status;
       // Force logout by incrementing version
       customer.tokenVersion = (customer.tokenVersion || 0) + 1;
     }
     
+    if (pendingApproval) {
+      await logAdminActivity({
+        adminEmail: currentUser.email,
+        action: "queue_customer_promotion",
+        targetId: customer._id.toString(),
+        targetName: customer.name,
+        details: `Queued promotion request for customer ${customer.email}: Type ${oldType}->${customerType}`
+      });
+
+      return NextResponse.json({ 
+        message: "Promotion queued for Superadmin consensus",
+        pendingApproval: true
+      });
+    }
+
     await customer.save();
 
     await logAdminActivity({

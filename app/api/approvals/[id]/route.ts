@@ -99,14 +99,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             // BASIC CONTENT: 2nd SuperAdmin is Final
             approvalRequest.status = 'approved';
             
-            // Notify Requester (Admin)
-            await Notification.create({
-              userId: approvalRequest.requesterEmail,
-              title: "Update Approved (Live)",
-              message: `Your catalog update for ${approvalRequest.targetName} has been approved by consensus and is now LIVE.`,
-              type: "system",
-              targetLink: `/admin/products`
-            });
+             let notificationTitle = "Update Approved (Live)";
+             let notificationMessage = `Your catalog update for ${approvalRequest.targetName} has been approved by consensus and is now LIVE.`;
+             let notificationLink = `/admin/products`;
+
+             if (approvalRequest.type === "customer") {
+               notificationTitle = "Customer Promotion Approved";
+               notificationMessage = `Customer ${approvalRequest.targetName} has been successfully promoted to ${approvalRequest.newValue} by consensus.`;
+               notificationLink = `/admin/customers`;
+             }
+
+             // Notify Requester (Admin)
+             await Notification.create({
+               userId: approvalRequest.requesterEmail,
+               title: notificationTitle,
+               message: notificationMessage,
+               type: "system",
+               targetLink: notificationLink
+             });
             
             await applyApprovedChanges(approvalRequest, userName, comment);
             await notifyApprovalFinalized(approvalRequest);
@@ -373,6 +383,16 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
       promoCode.status = 'approved';
       promoCode.isActive = true;
       await promoCode.save();
+    }
+  } else if (approvalRequest.type === 'customer') {
+    const { User } = await import("@/lib/models");
+    const customer = await User.findById(approvalRequest.targetId);
+    if (customer && approvalRequest.field === 'customerType' && approvalRequest.targetDetails) {
+      const details = approvalRequest.targetDetails;
+      customer.customerType = details.customerType;
+      customer.flatDiscountPercent = details.flatDiscountPercent;
+      customer.flatDiscountExpiresAt = details.flatDiscountExpiresAt ? new Date(details.flatDiscountExpiresAt) : undefined;
+      await customer.save();
     }
   }
 }

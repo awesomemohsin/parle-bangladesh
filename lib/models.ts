@@ -428,7 +428,7 @@ export interface IApprovalRequest extends Document {
 const ApprovalRequestSchema = new Schema<IApprovalRequest>(
   {
     requesterEmail: { type: String, required: true },
-    type: { type: String, enum: ["product", "order", "promo-code"], required: true },
+    type: { type: String, enum: ["product", "order", "promo-code", "customer"], required: true },
     targetId: { type: String, required: true },
     targetName: { type: String, required: true },
     targetSlug: { type: String }, // For products

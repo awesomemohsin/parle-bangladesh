@@ -30,6 +30,7 @@ interface Customer {
   isGuest?: boolean;
   flatDiscountPercent?: number;
   flatDiscountExpiresAt?: string;
+  pendingApproval?: boolean;
 }
 
 type SortField = "ordersCount" | "totalProducts" | "totalSpent" | "createdAt";
@@ -204,6 +205,11 @@ export default function AdminCustomersPage() {
       const contentType = response.headers.get("content-type");
       if (response.ok) {
         const data = await response.json();
+        if (data.pendingApproval) {
+          toast.success("✓ Sync Initiated: Promotion queued for Superadmin consensus!");
+          setCustomers(customers.map(c => c.id === customer.id ? { ...c, pendingApproval: true } : c));
+          return;
+        }
         const updated = data.customer;
         setCustomers(customers.map(c => c.id === customer.id ? { 
           ...c, 
@@ -366,6 +372,11 @@ export default function AdminCustomersPage() {
                         }`}>
                           {customer.customerType}
                         </span>
+                        {customer.pendingApproval && (
+                          <span className="text-[8px] font-black bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-widest animate-pulse mt-1">
+                            Pending Verification
+                          </span>
+                        )}
                         {customer.flatDiscountPercent !== undefined && customer.flatDiscountPercent > 0 && (
                           <div className="flex flex-col text-[9px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">
                             <span className="text-red-600">{customer.flatDiscountPercent}% Flat Discount</span>
@@ -394,16 +405,21 @@ export default function AdminCustomersPage() {
                               setPromoteModal({ open: true, customer });
                             }
                           }}
-                          disabled={updatingId === customer.id}
+                          disabled={updatingId === customer.id || customer.pendingApproval}
                           variant={customer.customerType !== "retailer" ? "outline" : "default"}
                           className={`h-9 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
                             customer.customerType !== "retailer"
                               ? "border-gray-200 text-gray-500 hover:bg-gray-50"
                               : "bg-red-600 hover:bg-black text-white shadow-lg shadow-red-100"
-                          }`}
+                          } ${customer.pendingApproval ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           {updatingId === customer.id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : customer.pendingApproval ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                              Verifying...
+                            </>
                           ) : customer.customerType !== "retailer" ? (
                             <>
                               <UserCheck className="w-3.5 h-3.5 mr-2" />
