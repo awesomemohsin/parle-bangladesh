@@ -662,3 +662,44 @@ PromoPosterSchema.index({ order: 1 });
 
 export const PromoPoster = mongoose.models?.PromoPoster || mongoose.model<IPromoPoster>("PromoPoster", PromoPosterSchema, "promo_posters");
 
+
+// --- STOCK LOG MODEL ---
+export interface IStockLog extends Document {
+  productId: mongoose.Types.ObjectId | string;
+  productName: string;
+  variationIndex?: number;
+  weight?: string;
+  flavor?: string;
+  oldStock: number;
+  newStock: number;
+  amount: number;
+  reason: string;
+  adminEmail?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const StockLogSchema = new Schema<IStockLog>(
+  {
+    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    productName: { type: String, required: true },
+    variationIndex: { type: Number },
+    weight: { type: String },
+    flavor: { type: String },
+    oldStock: { type: Number, required: true },
+    newStock: { type: Number, required: true },
+    amount: { type: Number, required: true },
+    reason: { type: String, required: true },
+    adminEmail: { type: String },
+  },
+  { timestamps: true }
+);
+
+StockLogSchema.index({ productId: 1 });
+StockLogSchema.index({ createdAt: -1 });
+StockLogSchema.index({ reason: 1 });
+StockLogSchema.index({ adminEmail: 1 });
+
+export const StockLog = mongoose.models?.StockLog || mongoose.model<IStockLog>("StockLog", StockLogSchema, "stock_logs");
+
+

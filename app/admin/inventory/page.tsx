@@ -180,6 +180,14 @@ export default function InventoryPage() {
           </div>
           
              <div className="flex items-center gap-3">
+               <button 
+                 onClick={() => router.push("/admin/stock-logs")}
+                 className="px-6 h-14 bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-900/10 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 shrink-0 italic"
+               >
+                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                 Audit Logs
+               </button>
+
                <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input 

@@ -224,6 +224,12 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                 </Button>
               </Link>
 
+              <Link href="/admin/stock-logs" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-rose-500">
+                  Stock Logs
+                </Button>
+              </Link>
+
               <Link href="/admin/categories" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
                   Categories
