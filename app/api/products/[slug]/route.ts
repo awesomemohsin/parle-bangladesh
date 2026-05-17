@@ -3,7 +3,7 @@ import { ProductSchema } from "@/lib/schemas";
 import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Product, User, ApprovalRequest, Notification, Category, PromoCode } from "@/lib/models";
+import { Product, User, ApprovalRequest, Notification, Category, PromoCode, StockLog } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 import { notifyNewApprovalRequest } from "@/lib/telegram";
 import fs from "fs";
@@ -86,7 +86,21 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
       });
     }
 
-    return NextResponse.json({ product: sanitizedProduct });
+    const pendingApprovals = await ApprovalRequest.find({
+      targetId: product._id.toString(),
+      status: "pending"
+    }).lean();
+
+    const mappedPendingApprovals = pendingApprovals.map((p: any) => ({
+      ...p,
+      id: p._id.toString(),
+      _id: undefined
+    }));
+
+    return NextResponse.json({ 
+      product: sanitizedProduct,
+      pendingApprovals: mappedPendingApprovals
+    });
   } catch (error) {
     console.error("Product Detail error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -110,47 +124,326 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!isStaff && !isHighLevel) return NextResponse.json({ error: "Restricted" }, { status: 403 });
 
+    const oldVariations = existingProduct.variations || [];
+    const newVariations = body.variations || [];
+    const approvalRequestsToCreate: any[] = [];
+    const variationsToSave: any[] = [];
+    const productChangesToApply: any = {};
+
+    // 1. Check product-level non-sensitive fields: name, description, category, brand
+    const productFields = ["name", "description", "category", "brand"];
+    for (const field of productFields) {
+      if (body[field] !== undefined && String(body[field]) !== String(existingProduct.get(field) || "")) {
+        if (isHighLevel) {
+          productChangesToApply[field] = body[field];
+        } else {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field,
+            oldValue: String(existingProduct.get(field) || ""),
+            newValue: String(body[field]),
+            targetDetails: {
+              brand: existingProduct.brand || "Parle",
+              category: existingProduct.category
+            }
+          });
+        }
+      }
+    }
+
+    // 2. Check variation fields
+    for (let index = 0; index < newVariations.length; index++) {
+      const newV = newVariations[index];
+      const oldV = oldVariations[index];
+
+      if (oldV) {
+        const variationToSave = { ...newV };
+
+        // Stock Addition (Sensitive) -> ALWAYS goes to approval, regardless of user role
+        const isStockAddition = newV.stock !== undefined && Number(newV.stock) > Number(oldV.stock);
+        if (isStockAddition) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "stock",
+            oldValue: String(oldV.stock || 0),
+            newValue: String(newV.stock),
+            weight: newV.weight || oldV.weight,
+            flavor: newV.flavor || oldV.flavor,
+            variationIndex: index,
+            targetDetails: {
+              brand: existingProduct.brand || "Parle",
+              category: existingProduct.category
+            }
+          });
+          variationToSave.stock = oldV.stock; // Hold back sensitive change
+        } else if (newV.stock !== undefined && Number(newV.stock) < Number(oldV.stock)) {
+          // Stock reduction is non-sensitive
+          if (!isHighLevel) {
+            approvalRequestsToCreate.push({
+              type: "product",
+              field: "stock",
+              oldValue: String(oldV.stock || 0),
+              newValue: String(newV.stock),
+              weight: newV.weight || oldV.weight,
+              flavor: newV.flavor || oldV.flavor,
+              variationIndex: index,
+              targetDetails: {
+                brand: existingProduct.brand || "Parle",
+                category: existingProduct.category
+              }
+            });
+            variationToSave.stock = oldV.stock;
+          }
+        }
+
+        // Price Change (Sensitive) -> ALWAYS goes to approval, regardless of user role
+        const isPriceChange = newV.price !== undefined && Number(newV.price) !== Number(oldV.price);
+        if (isPriceChange) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "price",
+            oldValue: String(oldV.price || 0),
+            newValue: String(newV.price),
+            weight: newV.weight || oldV.weight,
+            flavor: newV.flavor || oldV.flavor,
+            variationIndex: index,
+            targetDetails: {
+              brand: existingProduct.brand || "Parle",
+              category: existingProduct.category
+            }
+          });
+          variationToSave.price = oldV.price; // Hold back sensitive change
+        }
+
+        // Dealer Price Change (Sensitive) -> ALWAYS goes to approval, regardless of user role
+        const isDealerPriceChange = newV.dealerPrice !== undefined && Number(newV.dealerPrice || 0) !== Number(oldV.dealerPrice || 0);
+        if (isDealerPriceChange) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "dealerPrice",
+            oldValue: String(oldV.dealerPrice || 0),
+            newValue: String(newV.dealerPrice),
+            weight: newV.weight || oldV.weight,
+            flavor: newV.flavor || oldV.flavor,
+            variationIndex: index,
+            targetDetails: {
+              brand: existingProduct.brand || "Parle",
+              category: existingProduct.category
+            }
+          });
+          variationToSave.dealerPrice = oldV.dealerPrice; // Hold back sensitive change
+        }
+
+        // Discount Price Change (Sensitive) -> ALWAYS goes to approval, regardless of user role
+        const isDiscountPriceChange = newV.discountPrice !== undefined && Number(newV.discountPrice || 0) !== Number(oldV.discountPrice || 0);
+        if (isDiscountPriceChange) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "discountPrice",
+            oldValue: String(oldV.discountPrice || 0),
+            newValue: String(newV.discountPrice),
+            weight: newV.weight || oldV.weight,
+            flavor: newV.flavor || oldV.flavor,
+            variationIndex: index,
+            targetDetails: {
+              brand: existingProduct.brand || "Parle",
+              category: existingProduct.category
+            }
+          });
+          variationToSave.discountPrice = oldV.discountPrice; // Hold back sensitive change
+        }
+
+        // Non-sensitive variation fields: weight, flavor, image, isDefault, isBulk
+        const nonSensitiveVarFields = ["weight", "flavor", "image", "isDefault", "isBulk"];
+        for (const varField of nonSensitiveVarFields) {
+          if (newV[varField] !== undefined && String(newV[varField]) !== String(oldV[varField] || "")) {
+            if (!isHighLevel) {
+              approvalRequestsToCreate.push({
+                type: "product",
+                field: varField,
+                oldValue: String(oldV[varField] || ""),
+                newValue: String(newV[varField]),
+                weight: newV.weight || oldV.weight,
+                flavor: newV.flavor || oldV.flavor,
+                variationIndex: index,
+                targetDetails: {
+                  brand: existingProduct.brand || "Parle",
+                  category: existingProduct.category
+                }
+              });
+              variationToSave[varField] = oldV[varField];
+            }
+          }
+        }
+
+        variationsToSave.push(variationToSave);
+      } else {
+        // Brand new variation added!
+        const variationToSave = { 
+          ...newV, 
+          stock: 0, 
+          price: 0, 
+          dealerPrice: 0, 
+          discountPrice: 0 
+        };
+
+        if (!isHighLevel) {
+          variationToSave.weight = "";
+          variationToSave.flavor = "";
+          variationToSave.image = "";
+          
+          if (newV.weight) {
+            approvalRequestsToCreate.push({
+              type: "product",
+              field: "weight",
+              oldValue: "",
+              newValue: String(newV.weight),
+              variationIndex: index,
+              targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+            });
+          }
+          if (newV.flavor) {
+            approvalRequestsToCreate.push({
+              type: "product",
+              field: "flavor",
+              oldValue: "",
+              newValue: String(newV.flavor),
+              variationIndex: index,
+              targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+            });
+          }
+          if (newV.image) {
+            approvalRequestsToCreate.push({
+              type: "product",
+              field: "image",
+              oldValue: "",
+              newValue: String(newV.image),
+              variationIndex: index,
+              targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+            });
+          }
+        }
+
+        // Sensitive fields require approval for EVERYONE
+        if (newV.price !== undefined && Number(newV.price) > 0) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "price",
+            oldValue: "0",
+            newValue: String(newV.price),
+            weight: newV.weight,
+            flavor: newV.flavor,
+            variationIndex: index,
+            targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+          });
+        }
+        
+        if (newV.stock !== undefined && Number(newV.stock) > 0) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "stock",
+            oldValue: "0",
+            newValue: String(newV.stock),
+            weight: newV.weight,
+            flavor: newV.flavor,
+            variationIndex: index,
+            targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+          });
+        }
+
+        if (newV.dealerPrice !== undefined && Number(newV.dealerPrice) > 0) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "dealerPrice",
+            oldValue: "0",
+            newValue: String(newV.dealerPrice),
+            weight: newV.weight,
+            flavor: newV.flavor,
+            variationIndex: index,
+            targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+          });
+        }
+
+        if (newV.discountPrice !== undefined && Number(newV.discountPrice) > 0) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "discountPrice",
+            oldValue: "0",
+            newValue: String(newV.discountPrice),
+            weight: newV.weight,
+            flavor: newV.flavor,
+            variationIndex: index,
+            targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+          });
+        }
+
+        variationsToSave.push(variationToSave);
+      }
+    }
+
+    // Apply direct non-sensitive updates for Super Admins / Owners
     if (isHighLevel) {
-       Object.assign(existingProduct, body);
-       await existingProduct.save();
-       await logAdminActivity({
-         adminEmail: user.email,
-         action: "update_product_direct",
-         targetId: existingProduct._id.toString(),
-         targetName: existingProduct.name,
-         details: `Directly updated product: ${existingProduct.name}`
-       });
-       return NextResponse.json({ product: existingProduct });
+      if (Object.keys(productChangesToApply).length > 0) {
+        Object.assign(existingProduct, productChangesToApply);
+      }
+      existingProduct.variations = variationsToSave;
+      await existingProduct.save();
+
+      await logAdminActivity({
+        adminEmail: user.email,
+        action: "update_product_direct",
+        targetId: existingProduct._id.toString(),
+        targetName: existingProduct.name,
+        details: `Directly updated non-sensitive fields of product: ${existingProduct.name}`
+      });
     }
 
-    // Moderators/Admins create approval requests
-    const approvalRequest = new ApprovalRequest({
-      type: "product_update",
-      targetId: existingProduct._id.toString(),
-      targetName: existingProduct.name,
-      requestedBy: user.name || user.email,
-      requestedByEmail: user.email,
-      changes: body,
-      currentData: existingProduct.toObject(),
-      stage: "superadmin"
-    });
+    // Save and queue all approval requests
+    if (approvalRequestsToCreate.length > 0) {
+      const savedRequests = await Promise.all(
+        approvalRequestsToCreate.map((req) => {
+          const approvalRequest = new ApprovalRequest({
+            requesterEmail: user.email,
+            type: req.type,
+            targetId: existingProduct._id.toString(),
+            targetName: existingProduct.name,
+            targetSlug: existingProduct.slug,
+            field: req.field,
+            oldValue: req.oldValue,
+            newValue: req.newValue,
+            weight: req.weight,
+            flavor: req.flavor,
+            variationIndex: req.variationIndex,
+            targetDetails: req.targetDetails,
+            stage: "superadmin"
+          });
+          return approvalRequest.save();
+        })
+      );
 
-    await approvalRequest.save();
+      // Create a notification target
+      await Notification.create({
+        title: "Sensitive Updates Queued",
+        message: `${user.name} queued ${approvalRequestsToCreate.length} sensitive updates (Price/Stock) for ${existingProduct.name}`,
+        type: "approval",
+        targetLink: `/admin/approvals`
+      });
 
-    await Notification.create({
-      title: "Product Update Request",
-      message: `${user.name} requested changes for ${existingProduct.name}`,
-      type: "approval",
-      targetLink: `/admin/approvals`
-    });
-
-    try {
-      await notifyNewApprovalRequest(approvalRequest.toObject());
-    } catch (e) {
-      console.error("Telegram notification failed", e);
+      // Send Telegram consensus updates
+      try {
+        for (const req of savedRequests) {
+          await notifyNewApprovalRequest(req.toObject());
+        }
+      } catch (tgError) {
+        console.error("Telegram notification failed for sensitive approval requests:", tgError);
+      }
     }
 
-    return NextResponse.json({ message: "Approval request submitted" });
+    const hasPending = approvalRequestsToCreate.length > 0;
+    return NextResponse.json({
+      product: existingProduct,
+      pendingApproval: hasPending
+    });
 
   } catch (error) {
     console.error("Product PUT error:", error);
