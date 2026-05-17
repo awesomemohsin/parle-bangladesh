@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedAuthUser, hasAnyRole, getAuthUserFromRequest } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product, Customer, PromoCode, ApprovalRequest } from "@/lib/models";
+import { Order, Product, Customer, PromoCode, ApprovalRequest, StockLog } from "@/lib/models";
 import mongoose from "mongoose";
 import { notifyNewOrder } from "@/lib/telegram";
 import { calculateServerSideCart } from "@/lib/pricing";
@@ -343,6 +343,22 @@ export async function POST(request: NextRequest) {
             const holdField = `variations.${varIndex}.holdStock`;
             const stockField = `variations.${varIndex}.stock`;
             
+            const variation = product.variations[varIndex];
+            const oldStockVal = variation.stock || 0;
+            const newStockVal = oldStockVal - item.quantity;
+
+            await StockLog.create({
+              productId: product._id,
+              productName: product.name,
+              variationIndex: varIndex,
+              weight: item.weight,
+              flavor: item.flavor,
+              oldStock: oldStockVal,
+              newStock: newStockVal,
+              amount: -item.quantity,
+              reason: `Order Placed (Hold Reserved) - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+            });
+
             await Product.updateOne(
               { _id: product._id },
               { 

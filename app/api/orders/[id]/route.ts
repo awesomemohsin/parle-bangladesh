@@ -95,7 +95,7 @@ export async function PUT(
     // If status changed to cancelled, damaged, or lost, restore stock
     const restorableStatuses = ["cancelled", "damaged", "lost"];
     if (restorableStatuses.includes(status) && !restorableStatuses.includes(oldStatus)) {
-      const { Product } = await import("@/lib/models");
+      const { Product, StockLog } = await import("@/lib/models");
       for (const item of order.items) {
         if (item.productId) {
           const product = await Product.findById(item.productId);
@@ -107,6 +107,7 @@ export async function PUT(
             });
             
             if (varIndex !== -1) {
+              const variation = product.variations[varIndex];
               const holdField = `variations.${varIndex}.holdStock`;
               const stockField = `variations.${varIndex}.stock`;
               const lostField = `variations.${varIndex}.lostCount`;
@@ -120,6 +121,19 @@ export async function PUT(
               if (status === "cancelled") {
                 // Return to stock
                 update.$inc[stockField] = item.quantity;
+
+                await StockLog.create({
+                  productId: product._id,
+                  productName: product.name,
+                  variationIndex: varIndex,
+                  weight: item.weight,
+                  flavor: item.flavor,
+                  oldStock: variation.stock || 0,
+                  newStock: (variation.stock || 0) + item.quantity,
+                  amount: item.quantity,
+                  reason: `Order Cancelled - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                  adminEmail: user.email,
+                });
               } else if (status === "lost") {
                 update.$inc[lostField] = item.quantity;
               } else if (status === "damaged") {

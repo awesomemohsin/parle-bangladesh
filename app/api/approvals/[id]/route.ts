@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { ApprovalRequest, Product, Order, Category, Notification, PromoCode } from "@/lib/models";
+import { ApprovalRequest, Product, Order, Category, Notification, PromoCode, StockLog } from "@/lib/models";
 import { notifyOwnerApprovalRequired, notifyApprovalFinalized, notifyOrderReady, notifyCriticalEvent } from "@/lib/telegram";
 import { logAdminActivity } from "@/lib/activity";
 
@@ -209,6 +209,19 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
               reason: "Inventory Replenishment (Approved)"
             });
           }
+          
+          await StockLog.create({
+            productId: product._id,
+            productName: product.name,
+            variationIndex: varIndex,
+            weight: variation.weight,
+            flavor: variation.flavor,
+            oldStock: oldVal,
+            newStock: newValNumeric,
+            amount: newValNumeric - oldVal,
+            reason: newValNumeric > oldVal ? "Inventory Replenishment (Approved)" : "Manual Stock Adjustment (Approved)",
+            adminEmail: approvalRequest.requesterEmail,
+          });
         }
         
         // Use Database .set() for deep path reliability

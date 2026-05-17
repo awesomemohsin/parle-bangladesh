@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { ApprovalRequest, Product, Order } from "@/lib/models";
+import { ApprovalRequest, Product, Order, StockLog } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -47,7 +47,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
              if (product.variations[varIndex]) {
                 // Revert to oldValue
                 if (approvalRequest.field === 'price') product.variations[varIndex].price = Number(approvalRequest.oldValue);
-                if (approvalRequest.field === 'stock') product.variations[varIndex].stock = Number(approvalRequest.oldValue);
+                if (approvalRequest.field === 'stock') {
+                  const currentStock = product.variations[varIndex].stock;
+                  const undoneStock = Number(approvalRequest.oldValue);
+                  product.variations[varIndex].stock = undoneStock;
+                  
+                  await StockLog.create({
+                    productId: product._id,
+                    productName: product.name,
+                    variationIndex: varIndex,
+                    weight: product.variations[varIndex].weight,
+                    flavor: product.variations[varIndex].flavor,
+                    oldStock: currentStock,
+                    newStock: undoneStock,
+                    amount: undoneStock - currentStock,
+                    reason: `Approval Undo by Owner (${user.email})`,
+                    adminEmail: user.email,
+                  });
+                }
              }
           } else {
              (product as any)[approvalRequest.field] = Number(approvalRequest.oldValue);
