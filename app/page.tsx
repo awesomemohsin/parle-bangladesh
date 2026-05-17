@@ -114,7 +114,7 @@ export default async function HomePage() {
                 >
                   <div className="relative w-full aspect-[16/10] bg-slate-50 overflow-hidden">
                     <Image
-                      src={`/images/${cat.slug}/${cat.slug}.webp`}
+                      src={cat.image || `/images/${cat.slug}/${cat.slug}.webp`}
                       alt={cat.name}
                       fill
                       priority={i < 2}

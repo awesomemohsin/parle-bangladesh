@@ -6,7 +6,12 @@ import { twMerge } from 'tailwind-merge'
 export const sanitizeProductImagePath = (path: string) => {
   if (!path) return "/placeholder.svg";
 
-  let newPath = path.trim().replace(/\\/g, '/');
+  const trimmed = path.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+
+  let newPath = trimmed.replace(/\\/g, '/');
 
   // Basic cleanup: remove extra slashes
   newPath = newPath.replace(/\/+/g, '/');

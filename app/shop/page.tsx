@@ -49,7 +49,7 @@ export default async function ShopPage({
             {/* The scaling wrapper with right-side origin to push growth inward */}
             <div className="relative w-full h-full flex items-center justify-end transition-transform duration-1000 group-hover:scale-[1.04] origin-right">
               <img
-                src={activeCategory ? `/images/${activeCategory.slug}/${activeCategory.slug}-cover.webp` : "/images/parle-cover.webp"}
+                src={activeCategory?.image || (activeCategory ? `/images/${activeCategory.slug}/${activeCategory.slug}-cover.webp` : "/images/parle-cover.webp")}
                 alt={pageTitle}
                 className="w-full h-full object-contain object-right opacity-95 drop-shadow-2xl scale-[1.2] md:scale-[1.4] origin-right"
               />
