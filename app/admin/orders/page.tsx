@@ -79,6 +79,8 @@ export default function AdminOrdersPage() {
     return 'all'
   })
   const [sortBy, setSortBy] = useState('newest')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -127,7 +129,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     setPage(1)
     isFirstLoad.current = true // Reset for new filter context
-  }, [debouncedSearch, statusFilter, sortBy])
+  }, [debouncedSearch, statusFilter, sortBy, startDate, endDate])
 
   useEffect(() => {
     fetchOrders(false, page > 1) // isBackground=false, isAppend=page > 1
@@ -138,7 +140,7 @@ export default function AdminOrdersPage() {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [debouncedSearch, statusFilter, page, sortBy])
+  }, [debouncedSearch, statusFilter, page, sortBy, startDate, endDate])
 
   const handlePrint = (id: string) => {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
@@ -150,6 +152,8 @@ export default function AdminOrdersPage() {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('q', debouncedSearch)
       if (statusFilter !== 'all') params.append('status', statusFilter)
+      if (startDate) params.append('startDate', startDate)
+      if (endDate) params.append('endDate', endDate)
       params.append('sort', sortBy)
       // If we are refreshing in background, we might want to fetch all current items
       // but for simplicity, we'll just fetch the first page to check for new ones.
@@ -360,6 +364,39 @@ export default function AdminOrdersPage() {
             <option value="total-low">Price: Low to High</option>
           </select>
         </div>
+      </div>
+
+      {/* Date Range Calendar Filter Block */}
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-4 text-sm">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest min-w-[70px]">From Date</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full sm:w-44 px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 bg-gray-50/50"
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest min-w-[70px]">To Date</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-full sm:w-44 px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 bg-gray-50/50"
+          />
+        </div>
+        {(startDate || endDate) && (
+          <button
+            onClick={() => {
+              setStartDate('');
+              setEndDate('');
+            }}
+            className="w-full sm:w-auto text-[10px] font-black text-red-600 hover:text-red-800 uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-50/50 transition-colors flex items-center justify-center gap-1 shrink-0 sm:ml-auto"
+          >
+            Clear Dates <X className="w-3 h-3" />
+          </button>
+        )}
       </div>
 
       <div className="space-y-3">

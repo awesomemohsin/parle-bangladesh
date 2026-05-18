@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
+    const startDateQuery = searchParams.get("startDate");
+    const endDateQuery = searchParams.get("endDate");
+
     const productIdQuery = searchParams.get("productId");
     const productSlugQuery = searchParams.get("productSlug");
     const weightQuery = searchParams.get("weight");
@@ -74,6 +77,19 @@ export async function GET(request: NextRequest) {
         } else {
           matchStage.status = statusQuery;
         }
+      }
+    }
+
+    // Apply date range filtering
+    if (startDateQuery || endDateQuery) {
+      matchStage.createdAt = {};
+      if (startDateQuery) {
+        matchStage.createdAt.$gte = new Date(startDateQuery);
+      }
+      if (endDateQuery) {
+        const end = new Date(endDateQuery);
+        end.setHours(23, 59, 59, 999);
+        matchStage.createdAt.$lte = end;
       }
     }
 
