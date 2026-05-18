@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Check, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,29 @@ interface OrderState {
   error?: string;
 }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const [sslEnabled, setSslEnabled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isFeatureFlagTrue = process.env.NEXT_PUBLIC_ENABLE_SSLCOMMERZ === "true";
+      const isTestUrlParam = searchParams.get("payment_test") === "true";
+      const isLocalTestAuthorized = localStorage.getItem("ssl_payment_test") === "true";
+
+      if (isTestUrlParam) {
+        localStorage.setItem("ssl_payment_test", "true");
+        setSslEnabled(true);
+        // Clean URL parameter
+        router.replace("/shop/checkout");
+      } else if (isFeatureFlagTrue || isLocalTestAuthorized) {
+        setSslEnabled(true);
+      }
+    }
+  }, [searchParams, router]);
+
   const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, applyPromo, removePromo } = useCart();
   const { user, logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
@@ -236,7 +257,12 @@ export default function CheckoutPage() {
 
       const order = await response.json();
       clearCart();
-      router.push(`/shop/order-received/${order.id}`);
+      
+      if (order.paymentMethod === "sslcommerz" && order.gatewayUrl) {
+        window.location.href = order.gatewayUrl;
+      } else {
+        router.push(`/shop/order-received/${order.id}`);
+      }
     } catch (error: any) {
       const message = error instanceof Error ? error.message : 'An error occurred';
       setOrderState({
@@ -663,19 +689,38 @@ export default function CheckoutPage() {
             {/* Payment Method & Submit */}
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-2">Payment Method</h2>
-              <label className="flex items-center p-3 border border-red-200 bg-red-50/50 rounded-lg cursor-pointer mb-4">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="cash_on_delivery"
-                  checked={formData.paymentMethod === 'cash_on_delivery'}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-red-600 accent-red-600"
-                />
-                <div className="ml-3">
-                  <span className="block font-bold text-gray-900 text-sm">Cash on Delivery</span>
-                </div>
-              </label>
+              <div className="space-y-3 mb-4">
+                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.paymentMethod === 'cash_on_delivery' ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cash_on_delivery"
+                    checked={formData.paymentMethod === 'cash_on_delivery'}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 text-red-600 accent-red-600 focus:ring-red-600"
+                  />
+                  <div className="ml-3">
+                    <span className="block font-bold text-gray-900 text-sm">Cash on Delivery</span>
+                  </div>
+                </label>
+
+                {sslEnabled && (
+                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.paymentMethod === 'sslcommerz' ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="sslcommerz"
+                      checked={formData.paymentMethod === 'sslcommerz'}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-red-600 accent-red-600 focus:ring-red-600"
+                    />
+                    <div className="ml-3">
+                      <span className="block font-bold text-gray-900 text-sm">Online Payment (Cards/MFS)</span>
+                      <span className="block text-[10px] text-gray-500 font-medium">SSLCommerz secure local gateway</span>
+                    </div>
+                  </label>
+                )}
+              </div>
 
               <Button
                 type="submit"
@@ -689,5 +734,18 @@ export default function CheckoutPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 font-sans">
+        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-4">Loading Checkout...</p>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
