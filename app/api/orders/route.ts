@@ -392,6 +392,71 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SSLCommerz payment initiation logic
+    if (body.paymentMethod === "sslcommerz") {
+      try {
+        const storeId = process.env.SSLCOMMERZ_STORE_ID;
+        const storePasswd = process.env.SSLCOMMERZ_STORE_PASSWORD;
+        const isSandbox = process.env.SSLCOMMERZ_IS_SANDBOX === "true";
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+        const sslInitUrl = isSandbox 
+          ? "https://sandbox.sslcommerz.com/gwprocess/v1/api.php" 
+          : "https://securepay.sslcommerz.com/gwprocess/v1/api.php";
+
+        const payload = new URLSearchParams({
+          store_id: storeId || "",
+          store_passwd: storePasswd || "",
+          total_amount: total.toFixed(2),
+          currency: "BDT",
+          tran_id: order._id.toString(),
+          success_url: `${appUrl}/api/payment/sslcommerz/success`,
+          fail_url: `${appUrl}/api/payment/sslcommerz/fail`,
+          cancel_url: `${appUrl}/api/payment/sslcommerz/cancel`,
+          ipn_url: `${appUrl}/api/payment/sslcommerz/ipn`,
+          cus_name: customerName,
+          cus_email: customerEmail,
+          cus_add1: address,
+          cus_city: city,
+          cus_postcode: postalCode,
+          cus_country: "Bangladesh",
+          cus_phone: customerPhone,
+          shipping_method: "YES",
+          num_of_item: items.length.toString(),
+          product_name: "Parle Biscuits & Snacks",
+          product_category: "Food",
+          product_profile: "physical-goods",
+        });
+
+        const sslRes = await fetch(sslInitUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: payload.toString(),
+        });
+
+        // SSLCommerz API responses are returned as JSON
+        const sslData = await sslRes.json();
+
+        if (sslData.status === "SUCCESS" && sslData.GatewayPageURL) {
+          return NextResponse.json({
+            id: order._id.toString(),
+            paymentMethod: "sslcommerz",
+            gatewayUrl: sslData.GatewayPageURL,
+          }, { status: 201 });
+        } else {
+          console.error("SSLCommerz initiation response failed:", sslData);
+          return NextResponse.json({ 
+            error: "Payment gateway initiation failed: " + (sslData.failedreason || "Unknown response from SSLCommerz") 
+          }, { status: 400 });
+        }
+      } catch (err: any) {
+        console.error("SSLCommerz fetch initiation error:", err);
+        return NextResponse.json({ 
+          error: "Failed to connect to payment gateway. Please try Cash on Delivery or retry." 
+        }, { status: 500 });
+      }
+    }
+
     const mappedOrder = order.toObject();
     mappedOrder.id = mappedOrder._id.toString();
     delete mappedOrder._id;
