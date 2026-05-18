@@ -707,3 +707,61 @@ StockLogSchema.index({ adminEmail: 1 });
 export const StockLog = mongoose.models?.StockLog || mongoose.model<IStockLog>("StockLog", StockLogSchema, "stock_logs");
 
 
+// --- VERIFICATION BATCH MODEL ---
+export interface IVerificationBatch extends Document {
+  productId: mongoose.Types.ObjectId | string;
+  productName: string;
+  count: number;
+  generatedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const VerificationBatchSchema = new Schema<IVerificationBatch>(
+  {
+    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    productName: { type: String, required: true },
+    count: { type: Number, required: true },
+    generatedBy: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
+VerificationBatchSchema.index({ createdAt: -1 });
+
+export const VerificationBatch = mongoose.models?.VerificationBatch || mongoose.model<IVerificationBatch>("VerificationBatch", VerificationBatchSchema, "verification_batches");
+
+
+// --- VERIFICATION CODE MODEL ---
+export interface IVerificationCode extends Document {
+  code: string;
+  batchId: mongoose.Types.ObjectId | string;
+  productId: mongoose.Types.ObjectId | string;
+  productName: string;
+  isVerified: boolean;
+  verifiedAt?: Date;
+  verifiedByIP?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const VerificationCodeSchema = new Schema<IVerificationCode>(
+  {
+    code: { type: String, required: true, unique: true, index: true },
+    batchId: { type: Schema.Types.ObjectId, ref: "VerificationBatch", required: true },
+    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    productName: { type: String, required: true },
+    isVerified: { type: Boolean, default: false },
+    verifiedAt: { type: Date },
+    verifiedByIP: { type: String },
+  },
+  { timestamps: true }
+);
+
+VerificationCodeSchema.index({ batchId: 1 });
+VerificationCodeSchema.index({ isVerified: 1 });
+
+export const VerificationCode = mongoose.models?.VerificationCode || mongoose.model<IVerificationCode>("VerificationCode", VerificationCodeSchema, "verification_codes");
+
+
+
