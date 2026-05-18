@@ -251,6 +251,13 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
               </div>
               <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Admins</Button></Link>
+              {user?.email === 'mdmohsin.work@gmail.com' && (
+                <Link href="/admin/verify-codes" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-emerald-400 hover:text-white hover:bg-emerald-600/10 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                    🛡️ Product Verification
+                  </Button>
+                </Link>
+              )}
               <Link href="/admin/customers" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">Customer Hub</Button></Link>
               <Link href="/admin/careers/circulars" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Circulars</Button></Link>
               <Link href="/admin/promo-codes" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Discounts</Button></Link>
