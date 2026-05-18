@@ -389,7 +389,7 @@ export default function AdminOrdersPage() {
               <option value="lost">Lost</option>
             </select>
           </div>
-          <div className="flex-1 sm:w-36 relative">
+          <div className="flex-1 sm:w-48 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <select
               value={sortBy}
@@ -398,8 +398,8 @@ export default function AdminOrdersPage() {
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
-              <option value="total-high">Price: H-L</option>
-              <option value="total-low">Price: L-H</option>
+              <option value="total-high">Price: (High to Low)</option>
+              <option value="total-low">Price: (Low to High)</option>
             </select>
           </div>
         </div>
