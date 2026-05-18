@@ -40,6 +40,9 @@ interface Order {
   promoCode?: string
   discountAmount?: number
   deliveryMethod?: string
+  paymentMethod?: string
+  paymentStatus?: string
+  paymentDetails?: any
   subtotal?: number
   shippingCost?: number
   ruleDiscount?: number
@@ -407,7 +410,34 @@ export default function AdminOrdersPage() {
                     </p>
                   </div>
 
-                  <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-none pt-4 sm:pt-0">
+                  {/* Middle Column: Payment Details (shows on the left of total amount) */}
+                  <div className="flex-1 text-left sm:text-right sm:pr-8 flex flex-col justify-center sm:items-end gap-1.5 border-t sm:border-t-0 sm:border-r border-gray-100 pt-3 sm:pt-0">
+                    <div className="flex items-center gap-2 justify-start sm:justify-end flex-wrap">
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Payment:</span>
+                      <span className="text-[10px] font-black uppercase text-gray-900">
+                        {order.paymentMethod === 'sslcommerz' ? '💳 Online' : '💵 COD'}
+                      </span>
+                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border
+                        ${(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered'))
+                          ? 'bg-green-50 text-green-700 border-green-100' 
+                          : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                        {(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'PAID ✅' : 'UNPAID ⏳'}
+                      </span>
+                    </div>
+                    {order.paymentMethod === 'sslcommerz' && order.paymentStatus === 'paid' && (
+                      <div className="text-[9px] font-bold text-gray-500 uppercase tracking-tight flex flex-col items-start sm:items-end leading-normal gap-0.5">
+                        <div><span className="text-gray-400">Transaction ID:</span> <span className="font-mono font-black text-emerald-600">{order.id}</span></div>
+                        {order.paymentDetails?.card_brand && (
+                          <div><span className="text-gray-400">Payment Mode:</span> <span className="font-black text-blue-600 uppercase">{order.paymentDetails.card_brand}</span></div>
+                        )}
+                        {order.paymentDetails?.verifiedAt && (
+                          <div><span className="text-gray-400">Payment Time:</span> <span className="font-black text-gray-700">{new Date(order.paymentDetails.verifiedAt).toLocaleString()}</span></div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-none pt-4 sm:pt-0 shrink-0">
                     <p className="text-2xl font-black text-gray-900 tracking-tighter">
                       ৳{order.total.toFixed(0)}
                     </p>
@@ -434,9 +464,9 @@ export default function AdminOrdersPage() {
                         <select
                           value={currentStatus}
                           onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                          disabled={['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval || isSaving[order.id]}
+                          disabled={['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval || isSaving[order.id] || (order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid')}
                           className={`flex-1 sm:flex-none px-3 py-2 border rounded-lg text-xs font-black uppercase tracking-widest focus:outline-none transition-all ${hasChange ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                            } ${(['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval) ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+                            } ${(['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval || (order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid')) ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
                         >
                           {userRole !== 'moderator' && <option value="pending">Pending</option>}
                           <option value="cancelled">Cancelled</option>
@@ -527,6 +557,22 @@ export default function AdminOrdersPage() {
                       {order.address}, {order.city} - {order.postalCode}
                     </p>
                   </div>
+                  {order.paymentMethod === 'sslcommerz' && order.paymentDetails && (
+                    <div className="sm:col-span-2 lg:col-span-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Payment Metadata</p>
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1 text-[11px] font-medium text-gray-600 leading-tight">
+                        <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Transaction ID:</span> <span className="font-mono font-black text-emerald-600">{order.id}</span></div>
+                        <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Bank Transaction ID:</span> <span className="font-mono font-black text-red-600">{order.paymentDetails.bank_tran_id || 'N/A'}</span></div>
+                        <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Validation ID:</span> <span className="font-mono font-black text-purple-600">{order.paymentDetails.val_id || 'N/A'}</span></div>
+                        {order.paymentDetails.verifiedAt && (
+                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Paid At:</span> <span className="text-gray-700 font-black">{new Date(order.paymentDetails.verifiedAt).toLocaleString()}</span></div>
+                        )}
+                        {order.paymentDetails.card_brand && (
+                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Card Used:</span> <span className="text-blue-600 font-black uppercase">{order.paymentDetails.card_brand}</span></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2.5 pt-2.5 border-t border-dashed border-gray-100">

@@ -77,6 +77,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Auto-cancel unpaid online orders older than 30 minutes
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    await Order.updateMany(
+      {
+        paymentMethod: "sslcommerz",
+        paymentStatus: { $ne: "paid" },
+        status: { $nin: ["cancelled", "lost", "damaged", "delivered"] },
+        createdAt: { $lt: thirtyMinutesAgo }
+      },
+      {
+        $set: { 
+          status: "cancelled", 
+          cancelReason: "Not paid in 30 minutes",
+          statusReason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes." 
+        }
+      }
+    );
+
     // Get total count
     const total = await Order.countDocuments(matchStage);
 
@@ -462,7 +480,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const mappedOrder = order.toObject();
+    const mappedOrder = order.toObject() as any;
     mappedOrder.id = mappedOrder._id.toString();
     delete mappedOrder._id;
     delete mappedOrder.__v;

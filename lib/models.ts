@@ -282,6 +282,8 @@ export interface IOrder extends Document {
   city: string;
   postalCode: string;
   paymentMethod: string;
+  paymentStatus?: string;
+  paymentDetails?: any;
   items: IOrderItem[];
   subtotal: number;
   shippingCost: number;
@@ -335,6 +337,8 @@ const OrderSchema = new Schema<IOrder>(
     city: { type: String, required: true },
     postalCode: { type: String, required: true },
     paymentMethod: { type: String, required: true },
+    paymentStatus: { type: String, default: "pending" },
+    paymentDetails: { type: Schema.Types.Mixed },
     items: { type: [OrderItemSchema], default: [] },
     subtotal: { type: Number, required: true },
     shippingCost: { type: Number, required: true },
@@ -365,7 +369,10 @@ OrderSchema.index({ status: 1 });
 OrderSchema.index({ userId: 1 });
 OrderSchema.index({ createdAt: -1 });
 
-export const Order = mongoose.models?.Order || mongoose.model<IOrder>("Order", OrderSchema);
+if (mongoose.models && mongoose.models.Order) {
+  delete mongoose.models.Order;
+}
+export const Order = mongoose.model<IOrder>("Order", OrderSchema);
  
 // --- ADMIN ACTIVITY MODEL ---
 export interface IAdminActivity extends Document {

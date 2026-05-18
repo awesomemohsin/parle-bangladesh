@@ -19,7 +19,27 @@ export async function GET(
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
     }
 
-    const order = await Order.findById(id).lean();
+    // Auto-cancel if unpaid online order is older than 30 minutes
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: id,
+        paymentMethod: "sslcommerz",
+        paymentStatus: { $ne: "paid" },
+        status: { $nin: ["cancelled", "lost", "damaged", "delivered"] },
+        createdAt: { $lt: thirtyMinutesAgo }
+      },
+      {
+        $set: { 
+          status: "cancelled", 
+          cancelReason: "Not paid in 30 minutes",
+          statusReason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes." 
+        }
+      },
+      { new: true }
+    ).lean();
+
+    const order = updatedOrder || await Order.findById(id).lean();
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
