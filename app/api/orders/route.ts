@@ -401,8 +401,8 @@ export async function POST(request: NextRequest) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
         const sslInitUrl = isSandbox 
-          ? "https://sandbox.sslcommerz.com/gwprocess/v1/api.php" 
-          : "https://securepay.sslcommerz.com/gwprocess/v1/api.php";
+          ? "https://sandbox.sslcommerz.com/gwprocess/v4/api.php" 
+          : "https://securepay.sslcommerz.com/gwprocess/v4/api.php";
 
         const payload = new URLSearchParams({
           store_id: storeId || "",
