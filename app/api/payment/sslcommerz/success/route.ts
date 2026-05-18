@@ -39,29 +39,33 @@ export async function POST(req: Request) {
         return NextResponse.redirect(new URL("/shop/checkout?payment_status=failed", appUrl), 303);
       }
 
-      // Check if amount matches to prevent tampering
+      // Check if amount matches to prevent tampering (strictly fetch from SSLCommerz server response)
       const orderTotal = Number(order.total);
-      const paidAmount = Number(amount || verifyData.amount);
+      const paidAmount = Number(verifyData.amount);
 
       if (Math.abs(orderTotal - paidAmount) > 0.1) {
-        console.error(`SSLCommerz verification amount mismatch! Expected ${orderTotal}, Paid: ${paidAmount}`);
+        console.error(`SSLCommerz verification amount mismatch! Expected ${orderTotal}, Verified: ${paidAmount}`);
         return NextResponse.redirect(new URL("/shop/checkout?payment_status=failed", appUrl), 303);
       }
 
-      // Update Order to paid status
-      order.paymentStatus = "paid";
-      order.paymentDetails = {
-        val_id: val_id,
-        bank_tran_id: formData.get("bank_tran_id")?.toString(),
-        card_type: formData.get("card_type")?.toString(),
-        card_brand: formData.get("card_brand")?.toString(),
-        amount: paidAmount,
-        verifiedAt: new Date()
-      };
-      
-      // Update order state to processing since payment was received
-      order.status = "processing";
-      await order.save();
+      // Update Order to paid status using updateOne to bypass Mongoose document schema validation in hot-reload memory
+      await Order.updateOne(
+        { _id: tran_id },
+        {
+          $set: {
+            paymentStatus: "paid",
+            status: "processing",
+            paymentDetails: {
+              val_id: val_id,
+              bank_tran_id: formData.get("bank_tran_id")?.toString(),
+              card_type: formData.get("card_type")?.toString(),
+              card_brand: formData.get("card_brand")?.toString(),
+              amount: paidAmount,
+              verifiedAt: new Date()
+            }
+          }
+        }
+      );
 
       console.log(`Order #${tran_id} successfully paid via SSLCommerz!`);
       return NextResponse.redirect(new URL(`/shop/order-received/${tran_id}?payment=success`, appUrl), 303);

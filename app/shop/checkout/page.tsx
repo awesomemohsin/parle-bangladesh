@@ -23,34 +23,62 @@ interface OrderState {
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [sslEnabled, setSslEnabled] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const isFeatureFlagTrue = process.env.NEXT_PUBLIC_ENABLE_SSLCOMMERZ === "true";
-      const isTestUrlParam = searchParams.get("payment_test") === "true";
-      const isLocalTestAuthorized = localStorage.getItem("ssl_payment_test") === "true";
-
-      if (isTestUrlParam) {
-        localStorage.setItem("ssl_payment_test", "true");
-        setSslEnabled(true);
-        // Clean URL parameter
-        router.replace("/shop/checkout");
-      } else if (isFeatureFlagTrue || isLocalTestAuthorized) {
+      if (isFeatureFlagTrue) {
         setSslEnabled(true);
       }
     }
-  }, [searchParams, router]);
+  }, []);
+
+  /*
+ // ==========================================
+ // BACKUP / DEVELOPER TESTING BACKDOOR:
+ // ==========================================
+ // Uncomment this block below if you want management/developers to secretly test 
+ // online payments on a live server using a URL parameter:
+ //   -> https://yourwebsite.com/shop/checkout?payment_test=true
+ 
+ const isTestUrlParam = searchParams.get("payment_test") === "true";
+ const isLocalTestAuthorized = localStorage.getItem("ssl_payment_test") === "true";
+
+ if (isTestUrlParam) {
+   localStorage.setItem("ssl_payment_test", "true");
+   setSslEnabled(true);
+   router.replace("/shop/checkout"); // Clean URL parameter
+ } else if (isLocalTestAuthorized) {
+   setSslEnabled(true);
+ }
+ */
+
+
+
 
   const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, applyPromo, removePromo } = useCart();
   const { user, logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
+  const [confirmingStep, setConfirmingStep] = useState(0);
+
+  useEffect(() => {
+    if (orderState.status === 'confirming') {
+      const interval = setInterval(() => {
+        setConfirmingStep(prev => (prev < 3 ? prev + 1 : prev));
+      }, 700);
+      return () => clearInterval(interval);
+    } else {
+      setConfirmingStep(0);
+    }
+  }, [orderState.status]);
+
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
-  
+
   useEffect(() => {
     const fetchActiveDiscounts = async () => {
       try {
@@ -65,16 +93,16 @@ function CheckoutContent() {
     };
     fetchActiveDiscounts();
   }, []);
-  
+
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return;
     setPromoError('');
-    
+
     try {
       const pIds = items.map(item => item.productId).join(',');
       const res = await fetch(`/api/promo-codes/validate?code=${promoInput.toUpperCase()}&subtotal=${subtotal}&productIds=${pIds}`);
       const data = await res.json();
-      
+
       if (res.ok) {
         applyPromo(data);
         setPromoInput('');
@@ -156,6 +184,55 @@ function CheckoutContent() {
     );
   }
 
+  if (orderState.status === 'confirming') {
+    const steps = [
+      "Validating cart items...",
+      "Allocating warehouse stock...",
+      "Securing connection with SSLCommerz...",
+      "Finalizing invoice details..."
+    ];
+
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 font-sans">
+        <div className="relative flex items-center justify-center mb-8">
+          <div className="w-24 h-24 border-8 border-red-50 rounded-full animate-pulse" />
+          <div className="w-24 h-24 border-8 border-red-600 border-t-transparent rounded-full animate-spin absolute" />
+        </div>
+        <h1 className="text-xl sm:text-2xl font-black text-gray-900 uppercase tracking-tight text-center mb-6">
+          Processing Your Order
+        </h1>
+        <div className="w-full max-w-sm bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm">
+          {steps.map((step, idx) => {
+            const isCompleted = confirmingStep > idx;
+            const isActive = confirmingStep === idx;
+            return (
+              <div key={idx} className="flex items-center gap-3 transition-all duration-300">
+                {isCompleted ? (
+                  <span className="flex items-center justify-center w-5 h-5 bg-green-500 text-white rounded-full text-[10px] font-black shrink-0">✓</span>
+                ) : isActive ? (
+                  <span className="flex h-5 w-5 relative shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-red-600 text-white items-center justify-center text-[10px] font-bold">➔</span>
+                  </span>
+                ) : (
+                  <span className="w-5 h-5 rounded-full border border-gray-200 bg-white shrink-0" />
+                )}
+                <span className={`text-xs font-bold transition-colors ${isCompleted ? 'text-gray-400 line-through' :
+                  isActive ? 'text-gray-900 font-black' : 'text-gray-300'
+                  }`}>
+                  {step}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-gray-400 font-bold uppercase text-[9px] tracking-widest mt-8 text-center max-w-xs leading-relaxed">
+          Please do not close this window or hit back. We are coordinating securely with central databases.
+        </p>
+      </div>
+    );
+  }
+
   if (items.length === 0 && orderState.status !== 'success') {
     return (
       <div className="min-h-screen bg-white font-sans p-8">
@@ -184,7 +261,7 @@ function CheckoutContent() {
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
-  
+
   // The final total should be (subtotal - ruleDiscount - promoDiscount) + shippingCost
   const grandTotal = Math.max(0, (subtotal - (ruleDiscount || 0) - (promoDiscount || 0)) + currentShippingCost);
   const displayPromoDiscount = promoDiscount || 0;
@@ -257,7 +334,7 @@ function CheckoutContent() {
 
       const order = await response.json();
       clearCart();
-      
+
       if (order.paymentMethod === "sslcommerz" && order.gatewayUrl) {
         window.location.href = order.gatewayUrl;
       } else {
@@ -539,10 +616,10 @@ function CheckoutContent() {
                   // Only show rules that are NOT already met
                   const minOrder = Number(rule.minOrderAmount || 0);
                   if (minOrder <= 0 || subtotal >= minOrder) return false;
-                  
+
                   // Only show rules that COULD apply to current items
-                  const hasApplicableItem = items.some(item => 
-                    rule.allProducts || 
+                  const hasApplicableItem = items.some(item =>
+                    rule.allProducts ||
                     (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
                   );
                   return hasApplicableItem;
@@ -600,7 +677,7 @@ function CheckoutContent() {
                   <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">Delivery Charge</span>
                   <span className="font-semibold text-gray-900">৳ {Math.round(shippingCost)}</span>
                 </div>
-                
+
                 {/* Coupon Discount */}
                 {promoCode && (
                   <div className="border-t border-gray-100 py-2">
@@ -609,14 +686,14 @@ function CheckoutContent() {
                         Coupon ({promoCode}):
                       </span>
                       <div className="flex items-center gap-2">
-                         <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
-                         <button 
-                          type="button" 
-                          onClick={removePromo} 
+                        <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
+                        <button
+                          type="button"
+                          onClick={removePromo}
                           className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1"
-                         >
-                           [Remove] <X className="w-2.5 h-2.5" />
-                         </button>
+                        >
+                          [Remove] <X className="w-2.5 h-2.5" />
+                        </button>
                       </div>
                     </div>
                     {isRestricted && (
@@ -632,23 +709,23 @@ function CheckoutContent() {
                   <div className="py-3 border-y border-gray-100 my-2">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Have a Discount Code?</label>
                     <div className="flex gap-1.5">
-                       <input 
-                         type="text" 
-                         placeholder="Code"
-                         value={promoInput}
-                         onChange={(e) => setPromoInput(e.target.value)}
-                         className="flex-1 bg-white border border-gray-200 focus:border-red-600 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
-                       />
-                       <button 
-                         type="button"
-                         onClick={handleApplyPromo}
-                         className="bg-gray-900 text-white px-3 rounded text-[9px] font-black uppercase hover:bg-red-600 transition-colors active:scale-95"
-                       >
-                         Apply
-                       </button>
+                      <input
+                        type="text"
+                        placeholder="Code"
+                        value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value)}
+                        className="flex-1 bg-white border border-gray-200 focus:border-red-600 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        className="bg-gray-900 text-white px-3 rounded text-[9px] font-black uppercase hover:bg-red-600 transition-colors active:scale-95"
+                      >
+                        Apply
+                      </button>
                     </div>
                     {promoError && (
-                       <p className="mt-1.5 text-[8px] font-black text-red-600 uppercase tracking-widest">{promoError}</p>
+                      <p className="mt-1.5 text-[8px] font-black text-red-600 uppercase tracking-widest">{promoError}</p>
                     )}
                   </div>
                 )}
@@ -656,19 +733,19 @@ function CheckoutContent() {
 
               <div className="flex justify-between border-t border-gray-200 pt-3 items-end">
                 <div>
-                   <div className="flex items-center gap-2 mb-0.5">
-                     <span className="font-bold text-gray-900 text-lg">Grand Total</span>
-                     {(discountAmount || 0) > 0 && (
-                       <span className="text-[10px] font-black text-white bg-green-600 px-2 py-1 rounded uppercase tracking-tighter shadow-sm animate-bounce-slow">
-                         Saved ৳{Math.round(discountAmount || 0)}
-                       </span>
-                     )}
-                   </div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-bold text-gray-900 text-lg">Grand Total</span>
+                    {(discountAmount || 0) > 0 && (
+                      <span className="text-[10px] font-black text-white bg-green-600 px-2 py-1 rounded uppercase tracking-tighter shadow-sm animate-bounce-slow">
+                        Saved ৳{Math.round(discountAmount || 0)}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
-                   <span className="text-2xl font-bold text-red-600 leading-none">
-                     ৳ {Math.round(grandTotal)}
-                   </span>
+                  <span className="text-2xl font-bold text-red-600 leading-none">
+                    ৳ {Math.round(grandTotal)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -724,10 +801,10 @@ function CheckoutContent() {
 
               <Button
                 type="submit"
-                disabled={orderState.status === 'confirming'}
+                disabled={(orderState.status as any) === 'confirming'}
                 className="w-full py-3 font-bold text-lg uppercase tracking-wide shadow-md hover:shadow-lg transition-all border-b-4 border-red-800 active:border-b-0 active:translate-y-1"
               >
-                {orderState.status === 'confirming' ? 'Placing Order...' : 'Place Order'}
+                {(orderState.status as any) === 'confirming' ? 'Placing Order...' : 'Place Order'}
               </Button>
             </div>
           </div>

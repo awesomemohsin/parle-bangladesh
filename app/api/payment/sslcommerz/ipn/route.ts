@@ -14,30 +14,52 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required transaction parameters" }, { status: 400 });
     }
 
-    if (status === "VALID" || status === "VALIDATED") {
+    // Call SSLCommerz Validator API server-to-server to prevent spoofed/fake IPN payloads
+    const storeId = process.env.SSLCOMMERZ_STORE_ID;
+    const storePasswd = process.env.SSLCOMMERZ_STORE_PASSWORD;
+    const isSandbox = process.env.SSLCOMMERZ_IS_SANDBOX === "true";
+
+    const validateUrl = isSandbox
+      ? `https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?val_id=${val_id}&store_id=${storeId}&store_passwd=${storePasswd}&v=1&format=json`
+      : `https://securepay.sslcommerz.com/validator/api/validationserverAPI.php?val_id=${val_id}&store_id=${storeId}&store_passwd=${storePasswd}&v=1&format=json`;
+
+    const verifyRes = await fetch(validateUrl, { method: "GET" });
+    const verifyData = await verifyRes.json();
+
+    if (verifyData.status === "VALID" || verifyData.status === "VALIDATED") {
       await connectDB();
       const order = await Order.findById(tran_id);
 
       if (order && order.paymentStatus !== "paid") {
         const orderTotal = Number(order.total);
-        const paidAmount = Number(amount);
+        const paidAmount = Number(verifyData.amount);
 
-        // Verify total matches paid amount
+        // Verify total matches paid amount fetched directly from SSLCommerz API
         if (Math.abs(orderTotal - paidAmount) <= 0.1) {
-          order.paymentStatus = "paid";
-          order.paymentDetails = {
-            val_id: val_id,
-            bank_tran_id: formData.get("bank_tran_id")?.toString(),
-            card_type: formData.get("card_type")?.toString(),
-            card_brand: formData.get("card_brand")?.toString(),
-            amount: paidAmount,
-            verifiedAt: new Date()
-          };
-          order.status = "processing";
-          await order.save();
-          console.log(`IPN notification: Order #${tran_id} updated securely to PAID status.`);
+          await Order.updateOne(
+            { _id: tran_id },
+            {
+              $set: {
+                paymentStatus: "paid",
+                status: "processing",
+                paymentDetails: {
+                  val_id: val_id,
+                  bank_tran_id: verifyData.bank_tran_id || formData.get("bank_tran_id")?.toString(),
+                  card_type: verifyData.card_type || formData.get("card_type")?.toString(),
+                  card_brand: verifyData.card_brand || formData.get("card_brand")?.toString(),
+                  amount: paidAmount,
+                  verifiedAt: new Date()
+                }
+              }
+            }
+          );
+          console.log(`IPN notification: Order #${tran_id} updated securely to PAID status after backend verification.`);
+        } else {
+          console.error(`IPN notification: Mismatch between order total (${orderTotal}) and verified paid amount (${paidAmount})!`);
         }
       }
+    } else {
+      console.error("IPN notification: SSLCommerz validation failed or invalid signature:", verifyData);
     }
 
     return NextResponse.json({ status: "SUCCESS" });

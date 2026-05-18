@@ -174,13 +174,38 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
               <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
             </div>
             <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-              <span className="font-bold text-gray-500 uppercase tracking-widest">Payment :</span>
-              <span className="font-black text-gray-900 uppercase italic text-[8px]">{order.paymentMethod || 'Cash on Delivery'}</span>
+              <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Method :</span>
+              <span className="font-black text-gray-900 uppercase italic text-[8px]">
+                {order.paymentMethod === 'sslcommerz' ? 'Online Payment' : (order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : order.paymentMethod)}
+              </span>
             </div>
+            {order.paymentMethod === 'sslcommerz' && (
+              <>
+                <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+                  <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Status :</span>
+                  <span className={`font-black uppercase tracking-widest text-[8px] ${order.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {order.paymentStatus === 'paid' ? 'PAID ✅' : 'PENDING ⏳'}
+                  </span>
+                </div>
+                {order.paymentStatus === 'paid' && (
+                  <div className="flex flex-col gap-1 py-1.5 px-1 border-t border-gray-100 text-[9px] text-gray-500 leading-normal font-bold">
+                    <div><span className="uppercase tracking-tight text-gray-400">Transaction ID:</span> <span className="font-mono text-gray-900 font-black text-[9px]">{order.id}</span></div>
+                    {order.paymentDetails?.card_brand && (
+                      <div><span className="uppercase tracking-tight text-gray-400">Payment Mode:</span> <span className="text-blue-600 uppercase font-black text-[9px]">{order.paymentDetails.card_brand}</span></div>
+                    )}
+                    {order.paymentDetails?.verifiedAt && (
+                      <div><span className="uppercase tracking-tight text-gray-400">Payment Time:</span> <span className="text-gray-950 font-black text-[9px]">{new Date(order.paymentDetails.verifiedAt).toLocaleString()}</span></div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="mt-2 flex items-center justify-between bg-red-600 px-3 py-2.5 text-white rounded-sm">
               <span className="text-[10px] font-black uppercase tracking-[0.1em] italic">TOTAL DUE :</span>
-              <span className="text-sm font-black italic">৳{order.total.toFixed(0)}</span>
+              <span className="text-sm font-black italic">
+                ৳{order.paymentMethod === 'sslcommerz' && order.paymentStatus === 'paid' ? '0' : order.total.toFixed(0)}
+              </span>
             </div>
           </div>
         </div>

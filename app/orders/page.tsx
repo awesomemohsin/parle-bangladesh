@@ -14,6 +14,40 @@ import { motion, AnimatePresence } from "framer-motion";
 const formatCurrency = (val: number) => `৳${val.toFixed(2)}`;
 const formatDate = (dateString: string) => new Date(dateString).toLocaleString()
 
+const OrderTimer = ({ createdAt, onTimeout }: { createdAt: string; onTimeout: () => void }) => {
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const createdTime = new Date(createdAt).getTime();
+      const expireTime = createdTime + 30 * 60 * 1000;
+      const difference = Math.floor((expireTime - Date.now()) / 1000);
+      return difference > 0 ? difference : 0;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        onTimeout();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [createdAt, onTimeout]);
+
+  if (timeLeft === null || timeLeft <= 0) return null;
+
+  return (
+    <span className="font-mono font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[8px] animate-pulse">
+      ⏳ Pay within {Math.floor(timeLeft / 60)}m {timeLeft % 60}s
+    </span>
+  );
+};
+
 interface OrderItem {
   productId: string;
   productSlug: string;
@@ -36,6 +70,8 @@ interface Order {
   status: string;
   deliveryMethod?: string;
   paymentMethod?: string;
+  paymentStatus?: string;
+  paymentDetails?: any;
   instruction?: string;
   cancelReason?: string;
   statusReason?: string;
@@ -103,6 +139,11 @@ export default function MyOrdersPage() {
 
     fetchOrders();
   }, [search, status]);
+
+  const handleOrderTimeout = (orderId: string) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', statusReason: 'Payment timeout: Unpaid order cancelled automatically after 30 minutes.' } : o));
+    setPreviewOrder(prev => prev && prev.id === orderId ? { ...prev, status: 'cancelled', statusReason: 'Payment timeout: Unpaid order cancelled automatically after 30 minutes.' } : prev);
+  };
 
   const handleCancel = async (orderId: string) => {
     try {
@@ -282,10 +323,21 @@ export default function MyOrdersPage() {
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
                       {new Date(order.createdAt).toLocaleDateString()}
                     </span>
+                    {(order.paymentMethod === 'sslcommerz' || order.paymentMethod === 'cash_on_delivery') && (
+                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border
+                        ${(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered'))
+                          ? 'bg-green-50 text-green-700 border-green-100' 
+                          : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                        {(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'PAID ✅' : 'UNPAID ⏳'}
+                      </span>
+                    )}
+                    {order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                      <OrderTimer createdAt={order.createdAt} onTimeout={() => handleOrderTimeout(order.id)} />
+                    )}
                     <span className={`px-2.5 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
                       ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-100' :
                         order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-100' :
@@ -295,6 +347,35 @@ export default function MyOrdersPage() {
                                 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                       {order.status}
                     </span>
+                  </div>
+                  <div className="flex flex-col gap-1 border-t border-gray-50 pt-2 mt-2 w-full text-[10px] text-gray-500 font-medium">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Payment Method:</span>
+                      <span className="font-black text-gray-950 uppercase text-[9px] tracking-tight">
+                        {order.paymentMethod === 'sslcommerz' ? '💳 Online Payment (SSLCommerz)' : '💵 Cash on Delivery'}
+                      </span>
+                      {order.paymentMethod === 'sslcommerz' && order.paymentStatus === 'paid' && (
+                        <>
+                          <span className="text-gray-300">|</span>
+                          <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Transaction ID:</span>
+                          <span className="font-black text-emerald-600 font-mono text-[9px]">{order.id}</span>
+                          {order.paymentDetails?.card_brand && (
+                            <>
+                              <span className="text-gray-300">|</span>
+                              <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Payment Mode:</span>
+                              <span className="font-black text-blue-600 uppercase text-[9px] tracking-tight">{order.paymentDetails.card_brand}</span>
+                            </>
+                          )}
+                          {order.paymentDetails?.verifiedAt && (
+                            <>
+                              <span className="text-gray-300">|</span>
+                              <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Payment Time:</span>
+                              <span className="font-black text-gray-750 text-[9px]">{new Date(order.paymentDetails.verifiedAt).toLocaleString()}</span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -392,11 +473,26 @@ export default function MyOrdersPage() {
                         </button>
 
                         {!isAdmin && (
-                          <Link href="/shop" onClick={(e) => e.stopPropagation()}>
-                            <button className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 hover:text-red-600 h-8 px-2 flex items-center gap-1">
-                              Buy Again
-                            </button>
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            <Link href="/shop" onClick={(e) => e.stopPropagation()}>
+                              <button className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 hover:text-red-600 h-8 px-2 flex items-center gap-1">
+                                Buy Again
+                              </button>
+                            </Link>
+                          </div>
+                        )}
+
+                        {order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              window.location.href = `/api/orders/${order.id}/pay`;
+                            }}
+                            className="text-[9px] font-black uppercase tracking-[0.15em] text-white bg-green-600 hover:bg-green-700 px-3.5 py-1.5 rounded-md shadow-lg shadow-green-600/10 transition-all active:scale-95 flex items-center gap-1.5 h-8 animate-pulse"
+                          >
+                            💳 Pay Now
+                          </button>
                         )}
 
                         {!isAdmin && order.status === 'pending' && (
@@ -494,8 +590,67 @@ export default function MyOrdersPage() {
 
             {/* Scrollable Area - 2-Column Grid Responsive */}
             <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-slate-50/30 custom-scrollbar">
-              <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+              <div className="max-w-7xl mx-auto space-y-4">
+                {/* Premium Order & Payment Summary Headers */}
+                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Order Information</h4>
+                    <div className="space-y-1.5 text-[11px] text-gray-700 leading-tight">
+                      <div><span className="font-bold text-gray-400">Order ID:</span> <span className="font-mono font-black text-gray-900">{previewOrder?.id}</span></div>
+                      <div><span className="font-bold text-gray-400">Placement Date:</span> <span className="font-black text-gray-900">{previewOrder?.createdAt ? new Date(previewOrder.createdAt).toLocaleString() : ''}</span></div>
+                      <div><span className="font-bold text-gray-400">Delivery Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.deliveryMethod || 'Standard Delivery'}</span></div>
+                      <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.address}, {previewOrder?.city} {previewOrder?.postalCode}</span></div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Payment Details</h4>
+                    <div className="space-y-1.5 text-[11px] text-gray-700 leading-tight">
+                      <div><span className="font-bold text-gray-400">Payment Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.paymentMethod === 'sslcommerz' ? '💳 Online Payment (SSLCommerz)' : '💵 Cash on Delivery'}</span></div>
+                      <div>
+                        <span className="font-bold text-gray-400">Payment Status:</span>{' '}
+                        <span className={`px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
+                          ${(previewOrder?.paymentStatus === 'paid' || (previewOrder?.paymentMethod === 'cash_on_delivery' && previewOrder?.status === 'delivered'))
+                            ? 'bg-green-50 text-green-700 border-green-100' 
+                            : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                          {(previewOrder?.paymentStatus === 'paid' || (previewOrder?.paymentMethod === 'cash_on_delivery' && previewOrder?.status === 'delivered')) ? 'PAID ✅' : 'UNPAID ⏳'}
+                        </span>
+                      </div>
+                      {previewOrder?.paymentMethod === 'sslcommerz' && previewOrder?.paymentStatus !== 'paid' && previewOrder?.status !== 'cancelled' && (
+                        <div className="pt-1 flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-amber-500 uppercase tracking-tighter">Timeout:</span>
+                          <OrderTimer createdAt={previewOrder.createdAt} onTimeout={() => handleOrderTimeout(previewOrder.id)} />
+                        </div>
+                      )}
+                      {previewOrder?.paymentMethod === 'sslcommerz' && previewOrder?.paymentStatus !== 'paid' && previewOrder?.status !== 'cancelled' && (
+                        <div className="pt-2">
+                          <button
+                            onClick={() => {
+                              window.location.href = `/api/orders/${previewOrder.id}/pay`;
+                            }}
+                            className="w-full sm:w-auto text-[10px] font-black uppercase tracking-[0.15em] text-white bg-green-600 hover:bg-green-700 px-4 py-2.5 rounded-lg shadow-lg shadow-green-600/10 transition-all active:scale-95 flex items-center justify-center gap-1.5 animate-pulse"
+                          >
+                            💳 Pay Now
+                          </button>
+                        </div>
+                      )}
+                      {previewOrder?.paymentMethod === 'sslcommerz' && previewOrder?.paymentDetails && (
+                        <div className="space-y-1.5 mt-2.5 p-3 bg-slate-50 rounded-lg border border-slate-100 text-[10px] font-medium text-gray-600">
+                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Transaction ID:</span> <span className="font-mono font-black text-emerald-600">{previewOrder.id}</span></div>
+                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Bank Transaction ID:</span> <span className="font-mono font-black text-red-600">{previewOrder.paymentDetails.bank_tran_id || 'N/A'}</span></div>
+                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Validation ID:</span> <span className="font-mono font-black text-purple-600">{previewOrder.paymentDetails.val_id || 'N/A'}</span></div>
+                          {previewOrder.paymentDetails.verifiedAt && (
+                            <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Paid At:</span> <span className="text-gray-700 font-black">{new Date(previewOrder.paymentDetails.verifiedAt).toLocaleString()}</span></div>
+                          )}
+                          {previewOrder.paymentDetails.card_brand && (
+                            <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Card Used:</span> <span className="text-blue-600 font-black uppercase">{previewOrder.paymentDetails.card_brand}</span></div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 mt-4">
                   {previewOrder?.items.map((item, idx) => (
                     <div key={idx} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:border-red-600 transition-all duration-300 flex flex-col group h-full">
                       {/* Image Container - Highly compact */}

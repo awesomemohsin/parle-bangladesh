@@ -27,6 +27,7 @@ interface Order {
   shippingCity: string;
   deliveryMethod: string;
   paymentMethod: string;
+  paymentStatus?: string;
   items: OrderItem[];
   subtotal: number;
   ruleDiscount: number;
@@ -38,6 +39,7 @@ interface Order {
   promoCode?: string;
   isRestricted?: boolean;
   customerType?: string;
+  status?: string;
 }
 
 export default function OrderReceivedPage() {
@@ -45,6 +47,7 @@ export default function OrderReceivedPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -62,6 +65,36 @@ export default function OrderReceivedPage() {
 
     if (id) fetchOrder();
   }, [id]);
+
+  useEffect(() => {
+    if (!order || order.paymentMethod !== 'sslcommerz' || order.paymentStatus === 'paid') return;
+
+    const calculateTimeLeft = () => {
+      const createdTime = new Date(order.createdAt).getTime();
+      const expireTime = createdTime + 30 * 60 * 1000; // 30 minutes in ms
+      const now = Date.now();
+      const difference = Math.floor((expireTime - now) / 1000);
+      return difference > 0 ? difference : 0;
+    };
+
+    const initial = calculateTimeLeft();
+    setTimeLeft(initial);
+    if (initial <= 0 && order.status !== 'cancelled') {
+      setOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        setOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [order]);
 
   if (isLoading) {
     return (
@@ -181,14 +214,72 @@ export default function OrderReceivedPage() {
           <div className="p-8 lg:p-12 bg-gray-50 flex flex-col justify-between">
             <div className="space-y-6">
               {/* Payment Card */}
-              <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
-                <h3 className="text-red-900 font-bold text-base mb-2 flex items-center gap-2">
-                  Payment: Cash on Delivery
-                </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Please keep exact change ready. Payment is due strictly upon physical receipt of order.
-                </p>
-              </div>
+              {order.paymentMethod === 'sslcommerz' ? (
+                <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm">
+                  <h3 className="text-green-900 font-bold text-base mb-2 flex items-center gap-2">
+                    Payment: Online Payment (SSLCommerz)
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-2">
+                    Status:{' '}
+                    <span className={`font-black ${
+                      order.status === 'cancelled'
+                        ? 'text-red-600'
+                        : order.paymentStatus === 'paid'
+                        ? 'text-green-600'
+                        : 'text-amber-600'
+                    }`}>
+                      {order.status === 'cancelled'
+                        ? 'CANCELLED ❌'
+                        : order.paymentStatus === 'paid'
+                        ? 'PAID ✅'
+                        : 'UNPAID ⏳'}
+                    </span>
+                  </p>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {order.status === 'cancelled'
+                      ? 'This order has been automatically cancelled due to payment timeout.'
+                      : order.paymentStatus === 'paid'
+                      ? 'Your payment was successfully received and verified online. Your remaining due amount is ৳0.'
+                      : 'Your online payment transaction has not been completed or verified yet.'}
+                  </p>
+
+                  {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && timeLeft !== null && timeLeft > 0 && (
+                    <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-xs font-bold leading-normal">
+                      ⚠️ <span className="uppercase tracking-widest text-[10px] font-black">PAYMENT TIMEOUT:</span> Please complete your payment within{' '}
+                      <span className="font-mono font-black text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded text-[11px]">
+                        {Math.floor(timeLeft / 60)}m {timeLeft % 60}s
+                      </span>{' '}
+                      or the order will be automatically cancelled.
+                    </div>
+                  )}
+
+                  {order.status === 'cancelled' && (
+                    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs font-bold leading-normal">
+                      ❌ <span className="uppercase tracking-widest text-[10px] font-black">ORDER CANCELLED:</span> This order has been automatically cancelled due to payment timeout (30 minutes expired).
+                    </div>
+                  )}
+
+                  {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                    <button
+                      onClick={() => {
+                        window.location.href = `/api/orders/${order.id}/pay`;
+                      }}
+                      className="w-full text-xs font-black uppercase tracking-[0.15em] text-white bg-green-600 hover:bg-green-700 py-3 rounded-xl shadow-lg shadow-green-600/10 transition-all active:scale-95 flex items-center justify-center gap-1.5 animate-pulse"
+                    >
+                      💳 Pay Now
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                  <h3 className="text-red-900 font-bold text-base mb-2 flex items-center gap-2">
+                    Payment: Cash on Delivery
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    Please keep exact change ready. Payment is due strictly upon physical receipt of order.
+                  </p>
+                </div>
+              )}
 
               {/* Verification Steps */}
               <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm">
