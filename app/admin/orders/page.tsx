@@ -314,15 +314,16 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 relative">
+      <div className="flex flex-col xl:flex-row gap-4 items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+        {/* Search Input - Left side */}
+        <div className="w-full xl:flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search by ID, Customer Name, Phone, or Email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
+            className="w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold bg-gray-50/20"
           />
           {searchTerm && (
             <button
@@ -334,69 +335,74 @@ export default function AdminOrdersPage() {
             </button>
           )}
         </div>
-        <div className="w-full md:w-48 relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
-          >
-            <option value="all">All Orders</option>
-            {userRole !== 'moderator' && <option value="pending">Pending</option>}
-            <option value="cancelled">Cancelled</option>
-            <option value="processing">Processing</option>
-            <option value="shipped">Shipped</option>
-            <option value="delivered">Delivered</option>
-            <option value="damaged">Damaged</option>
-            <option value="lost">Lost</option>
-          </select>
-        </div>
-        <div className="w-full md:w-48 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold uppercase"
-          >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="total-high">Price: High to Low</option>
-            <option value="total-low">Price: Low to High</option>
-          </select>
-        </div>
-      </div>
 
-      {/* Date Range Calendar Filter Block */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-4 text-sm">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest min-w-[70px]">From Date</span>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full sm:w-44 px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 bg-gray-50/50"
-          />
+        {/* Date Filter Inputs - Center-Right */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest shrink-0">From</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full sm:w-36 px-2.5 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-gray-700 bg-gray-50/50"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest shrink-0">To</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full sm:w-36 px-2.5 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-gray-700 bg-gray-50/50"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="text-[9px] font-black text-red-600 hover:text-red-800 uppercase tracking-wider px-2 py-1.5 rounded-lg border border-red-100 hover:bg-red-50/50 transition-colors flex items-center gap-1 shrink-0"
+              title="Clear dates"
+            >
+              Clear <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest min-w-[70px]">To Date</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full sm:w-44 px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 bg-gray-50/50"
-          />
+
+        {/* Dropdown Filters - Right side */}
+        <div className="flex gap-3 w-full xl:w-auto">
+          <div className="flex-1 sm:w-36 relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-xs font-bold uppercase bg-white cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              {userRole !== 'moderator' && <option value="pending">Pending</option>}
+              <option value="cancelled">Cancelled</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered</option>
+              <option value="damaged">Damaged</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+          <div className="flex-1 sm:w-36 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-xs font-bold uppercase bg-white cursor-pointer"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="total-high">Price: H-L</option>
+              <option value="total-low">Price: L-H</option>
+            </select>
+          </div>
         </div>
-        {(startDate || endDate) && (
-          <button
-            onClick={() => {
-              setStartDate('');
-              setEndDate('');
-            }}
-            className="w-full sm:w-auto text-[10px] font-black text-red-600 hover:text-red-800 uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-50/50 transition-colors flex items-center justify-center gap-1 shrink-0 sm:ml-auto"
-          >
-            Clear Dates <X className="w-3 h-3" />
-          </button>
-        )}
       </div>
 
       <div className="space-y-3">
