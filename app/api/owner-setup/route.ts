@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
-import { Admin } from "@/lib/models";
 import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
@@ -14,13 +13,21 @@ export async function GET(request: NextRequest) {
     }
     const adminCollection = mongo.collection("admins");
     
-    const ownerEmail = "owner@parle.com";
-    const password = "owner123";
-    const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+    // Load credentials from environment variables securely
+    const ownerEmail = process.env.INITIAL_OWNER_EMAIL;
+    const ownerPassword = process.env.INITIAL_OWNER_PASSWORD;
+    const superAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
+    const superAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+
+    // Fail-safe: Block execution if environment variables are not configured (especially in production)
+    if (!ownerEmail || !ownerPassword || !superAdminEmail || !superAdminPassword) {
+      return NextResponse.json(
+        { error: "Setup credentials are not configured in environment variables." },
+        { status: 400 }
+      );
+    }
     
-    // New Super Admin Setup
-    const superAdminEmail = "mdmohsin.work@gmail.com";
-    const superAdminPassword = "SuperAdmin@Parle2026!";
+    const passwordHash = crypto.createHash("sha256").update(ownerPassword).digest("hex");
     const superAdminPasswordHash = crypto.createHash("sha256").update(superAdminPassword).digest("hex");
     
     // UPSERT directly using collection to bypass Database enums
@@ -61,9 +68,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
         message: "Accounts successfully forced into Database collection via raw query", 
         accounts: [
-           { email: ownerEmail, pass: password, role: "owner" },
-           { email: superAdminEmail, pass: superAdminPassword, role: "super_admin" }
-        ],
+           { email: ownerEmail, pass: "[HIDDEN - CHECK ENV]", role: "owner" },
+           { email: superAdminEmail, pass: "[HIDDEN - CHECK ENV]", role: "super_admin" }
+         ],
         info: "Try logging in now."
     });
   } catch (error: any) {
@@ -71,3 +78,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
