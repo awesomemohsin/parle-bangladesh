@@ -157,13 +157,13 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
               </div>
             </div>
             <div className="w-56 text-[9px]">
-              <div className="flex justify-between py-1 px-1">
-                <span className="font-black text-red-600 uppercase tracking-widest">SUBTOTAL :</span>
-                <span className="font-black text-red-600">৳{(order.subtotal || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0))).toFixed(0)}</span>
+              <div className="flex justify-between py-1 px-1 text-black">
+                <span className="font-black uppercase tracking-widest">SUBTOTAL :</span>
+                <span className="font-black">৳{(order.subtotal || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0))).toFixed(0)}</span>
               </div>
-              <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                <span className="font-bold text-gray-500 uppercase tracking-widest">Delivery Fee :</span>
-                <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
+              <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-amber-500">
+                <span className="font-bold uppercase tracking-widest">Delivery Fee :</span>
+                <span className="font-bold">৳{(order.shippingCost || 0).toFixed(0)}</span>
               </div>
               <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                 <div className="flex flex-col">
@@ -174,9 +174,9 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                 </div>
                 <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
               </div>
-              <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                <span className="font-black text-gray-950 uppercase tracking-widest">Total Amount :</span>
-                <span className="font-black text-gray-950">৳{order.total.toFixed(0)}</span>
+              <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-[10px] text-red-600">
+                <span className="font-black uppercase tracking-widest">Total Amount :</span>
+                <span className="font-black">৳{order.total.toFixed(0)}</span>
               </div>
               <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                 <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Method :</span>
@@ -461,13 +461,13 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   </div>
                 </div>
                 <div className="w-56 text-[9px]">
-                  <div className="flex justify-between py-1 px-1">
-                    <span className="font-black text-red-600 uppercase tracking-widest">SUBTOTAL :</span>
-                    <span className="font-black text-red-600">৳{(order.subtotal || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0))).toFixed(0)}</span>
+                  <div className="flex justify-between py-1 px-1 text-black">
+                    <span className="font-black uppercase tracking-widest">SUBTOTAL :</span>
+                    <span className="font-black">৳{(order.subtotal || (order.total - (order.shippingCost || 0) + (order.discountAmount || 0))).toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                    <span className="font-bold text-gray-500 uppercase tracking-widest">Delivery Fee :</span>
-                    <span className="font-bold text-gray-900">৳{(order.shippingCost || 0).toFixed(0)}</span>
+                  <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-amber-500">
+                    <span className="font-bold uppercase tracking-widest">Delivery Fee :</span>
+                    <span className="font-bold">৳{(order.shippingCost || 0).toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                     <div className="flex flex-col">
@@ -478,9 +478,9 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     </div>
                     <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                    <span className="font-black text-gray-950 uppercase tracking-widest">Total Amount :</span>
-                    <span className="font-black text-gray-950">৳{order.total.toFixed(0)}</span>
+                  <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-[10px] text-red-600">
+                    <span className="font-black uppercase tracking-widest">Total Amount :</span>
+                    <span className="font-black">৳{order.total.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                     <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Method :</span>
