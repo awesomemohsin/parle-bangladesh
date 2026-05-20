@@ -46,6 +46,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const { user } = useAuth();
   
   const isDealer = user?.customerType === "dealer";
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
   
   const searchParams = useSearchParams();
   const targetWeight = searchParams.get('weight');
@@ -353,9 +354,36 @@ export default function ProductDetailsClient({ product, images }: { product: any
               >
                 <Minus className="w-4 h-4 stroke-[3]" />
               </button>
-              <div className="w-12 h-full flex items-center justify-center text-lg font-bold text-gray-900 tabular-nums">
-                {quantity}
-              </div>
+              {canInputManualQty ? (
+                <input
+                  type="number"
+                  value={quantity === 0 ? "" : quantity}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setQuantity(0);
+                      return;
+                    }
+                    const parsed = parseInt(val, 10);
+                    if (!isNaN(parsed)) {
+                      setQuantity(Math.max(0, Math.min(displayStock, parsed)));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (quantity < 1) {
+                      setQuantity(1);
+                    }
+                  }}
+                  className="w-12 h-full bg-transparent text-center text-lg font-bold text-gray-900 tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={1}
+                  max={displayStock}
+                  disabled={displayStock === 0}
+                />
+              ) : (
+                <div className="w-12 h-full flex items-center justify-center text-lg font-bold text-gray-900 tabular-nums">
+                  {quantity}
+                </div>
+              )}
               <button 
                 onClick={() => setQuantity(Math.min(displayStock, quantity + 1))}
                 className="w-10 h-full flex items-center justify-center text-gray-300 hover:text-red-600 transition-colors disabled:opacity-20"
