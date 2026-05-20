@@ -175,6 +175,10 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                 <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
               </div>
               <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+                <span className="font-black text-gray-950 uppercase tracking-widest">Total Amount :</span>
+                <span className="font-black text-gray-950">৳{order.total.toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                 <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Method :</span>
                 <span className="font-black text-gray-900 uppercase italic text-[8px]">
                   {order.paymentMethod === 'sslcommerz' ? 'Online Payment' : (order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : order.paymentMethod)}
@@ -473,6 +477,10 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                       )}
                     </div>
                     <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+                    <span className="font-black text-gray-950 uppercase tracking-widest">Total Amount :</span>
+                    <span className="font-black text-gray-950">৳{order.total.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                     <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Method :</span>
