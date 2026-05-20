@@ -72,9 +72,9 @@ export default function OrderInvoicePage() {
              background: white !important;
              margin: 0 !important;
              padding: 0 !important;
-             height: 100vh !important;
+             height: ${order.items?.length <= 13 ? '100vh !important' : 'auto !important'};
              width: 100% !important;
-             overflow: hidden !important;
+             overflow: ${order.items?.length <= 13 ? 'hidden !important' : 'visible !important'};
              -webkit-print-color-adjust: exact !important;
              print-color-adjust: exact !important;
           }
