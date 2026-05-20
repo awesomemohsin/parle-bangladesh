@@ -180,12 +180,12 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   {order.paymentMethod === 'sslcommerz' ? 'Online Payment' : (order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : order.paymentMethod)}
                 </span>
               </div>
-              {order.paymentMethod === 'sslcommerz' && (
+              {(order.paymentMethod === 'sslcommerz' || order.paymentMethod === 'cash_on_delivery') && (
                 <>
                   <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                     <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Status :</span>
-                    <span className={`font-black uppercase tracking-widest text-[8px] ${order.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-                      {order.paymentStatus === 'paid' ? 'PAID ✅' : 'PENDING ⏳'}
+                    <span className={`font-black uppercase tracking-widest text-[8px] ${(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'text-green-600' : 'text-amber-600'}`}>
+                      {(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'PAID ✅' : 'PENDING ⏳'}
                     </span>
                   </div>
                   {order.paymentStatus === 'paid' && (
@@ -205,7 +205,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
               <div className="mt-2 flex items-center justify-between bg-red-600 px-3 py-2.5 text-white rounded-sm">
                 <span className="text-[10px] font-black uppercase tracking-[0.1em] italic">TOTAL DUE :</span>
                 <span className="text-sm font-black italic">
-                  ৳{order.paymentMethod === 'sslcommerz' && order.paymentStatus === 'paid' ? '0' : order.total.toFixed(0)}
+                  ৳{(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? '0' : order.total.toFixed(0)}
                 </span>
               </div>
             </div>
@@ -480,12 +480,12 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                       {order.paymentMethod === 'sslcommerz' ? 'Online Payment' : (order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : order.paymentMethod)}
                     </span>
                   </div>
-                  {order.paymentMethod === 'sslcommerz' && (
+                  {(order.paymentMethod === 'sslcommerz' || order.paymentMethod === 'cash_on_delivery') && (
                     <>
                       <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                         <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Status :</span>
-                        <span className={`font-black uppercase tracking-widest text-[8px] ${order.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-                          {order.paymentStatus === 'paid' ? 'PAID ✅' : 'PENDING ⏳'}
+                        <span className={`font-black uppercase tracking-widest text-[8px] ${(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'text-green-600' : 'text-amber-600'}`}>
+                          {(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'PAID ✅' : 'PENDING ⏳'}
                         </span>
                       </div>
                       {order.paymentStatus === 'paid' && (
@@ -505,7 +505,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   <div className="mt-2 flex items-center justify-between bg-red-600 px-3 py-2.5 text-white rounded-sm">
                     <span className="text-[10px] font-black uppercase tracking-[0.1em] italic">TOTAL DUE :</span>
                     <span className="text-sm font-black italic">
-                      ৳{order.paymentMethod === 'sslcommerz' && order.paymentStatus === 'paid' ? '0' : order.total.toFixed(0)}
+                      ৳{(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? '0' : order.total.toFixed(0)}
                     </span>
                   </div>
                 </div>
