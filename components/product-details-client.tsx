@@ -73,7 +73,11 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   const [selectedVarIndex, setSelectedVarIndex] = useState<number>(initialVarIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState(product.variations[initialVarIndex]?.stock > 0 ? 1 : 0);
+  const [quantity, setQuantity] = useState(
+    product.variations[initialVarIndex]?.stock > 0 
+      ? 1 
+      : (canInputManualQty ? 1 : 0)
+  );
   const [isFlying, setIsFlying] = useState(false);
 
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
@@ -350,7 +354,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
               <button 
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="w-10 h-full flex items-center justify-center text-gray-300 hover:text-red-600 transition-colors disabled:opacity-20"
-                disabled={quantity <= 1 || displayStock === 0}
+                disabled={quantity <= 1 || (displayStock === 0 && !canInputManualQty)}
               >
                 <Minus className="w-4 h-4 stroke-[3]" />
               </button>
@@ -366,7 +370,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                     }
                     const parsed = parseInt(val, 10);
                     if (!isNaN(parsed)) {
-                      setQuantity(Math.max(0, Math.min(displayStock, parsed)));
+                      setQuantity(Math.max(0, canInputManualQty ? parsed : Math.min(displayStock, parsed)));
                     }
                   }}
                   onBlur={() => {
@@ -376,8 +380,8 @@ export default function ProductDetailsClient({ product, images }: { product: any
                   }}
                   className="w-12 h-full bg-transparent text-center text-lg font-bold text-gray-900 tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   min={1}
-                  max={displayStock}
-                  disabled={displayStock === 0}
+                  max={canInputManualQty ? undefined : displayStock}
+                  disabled={displayStock === 0 && !canInputManualQty}
                 />
               ) : (
                 <div className="w-12 h-full flex items-center justify-center text-lg font-bold text-gray-900 tabular-nums">
@@ -385,9 +389,9 @@ export default function ProductDetailsClient({ product, images }: { product: any
                 </div>
               )}
               <button 
-                onClick={() => setQuantity(Math.min(displayStock, quantity + 1))}
+                onClick={() => setQuantity(canInputManualQty ? quantity + 1 : Math.min(displayStock, quantity + 1))}
                 className="w-10 h-full flex items-center justify-center text-gray-300 hover:text-red-600 transition-colors disabled:opacity-20"
-                disabled={quantity >= displayStock || displayStock === 0}
+                disabled={(!canInputManualQty && quantity >= displayStock) || (displayStock === 0 && !canInputManualQty)}
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
               </button>
@@ -406,7 +410,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={handleBuyNow}
-              disabled={displayStock === 0}
+              disabled={displayStock === 0 && !canInputManualQty}
               className="h-14 bg-red-600 hover:bg-black text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest shadow-xl shadow-red-100 flex items-center justify-center gap-3 text-xs"
             >
               Buy Now
@@ -414,7 +418,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
             <div className="relative">
               <button
                 onClick={handleAddToCart}
-                disabled={displayStock === 0}
+                disabled={displayStock === 0 && !canInputManualQty}
                 className="w-full h-14 bg-white border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-30 uppercase tracking-widest flex items-center justify-center gap-3 text-xs group"
               >
                 <ShoppingCart className="w-4 h-4 group-hover:scale-110 transition-transform" />

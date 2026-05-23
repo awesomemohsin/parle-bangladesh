@@ -38,6 +38,8 @@ export default function CartPage() {
     isLoading
   } = useCart();
   const { user } = useAuth();
+  const isDealer = user?.customerType === "dealer";
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
@@ -240,7 +242,7 @@ export default function CartPage() {
                               <button
                                 onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
-                                disabled={item.stock !== undefined && item.quantity >= item.stock}
+                                disabled={!canInputManualQty && item.stock !== undefined && item.quantity >= item.stock}
                               >
                                 <Plus className="w-3 h-3" />
                               </button>

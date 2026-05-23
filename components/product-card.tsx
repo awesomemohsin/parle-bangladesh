@@ -126,11 +126,13 @@ export default function ProductCard({
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
   const cartQuantity = existingCartItem?.quantity || 0;
   
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
+
   // Resilience: If stock is missing, assume it's available (or treat as out of stock? 
   // Let's assume a large number if missing to avoid blocking)
   const actualStock = defaultVariation.stock !== undefined ? defaultVariation.stock : 999;
   const isOutOfStock = actualStock === 0;
-  const isAtMax = actualStock > 0 && cartQuantity >= actualStock;
+  const isAtMax = !canInputManualQty && actualStock > 0 && cartQuantity >= actualStock;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();

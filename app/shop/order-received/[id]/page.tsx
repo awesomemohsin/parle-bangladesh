@@ -295,7 +295,7 @@ export default function OrderReceivedPage() {
                   </li>
                   <li className="flex items-center gap-3 text-gray-700 text-sm">
                     <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <span>Estimated delivery: 3-5 business days</span>
+                    <span>Estimated delivery: 3-5 days after confirming the order</span>
                   </li>
                 </ul>
               </div>

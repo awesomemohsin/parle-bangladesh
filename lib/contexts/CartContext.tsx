@@ -59,6 +59,7 @@ interface CartContextType {
   isRestricted?: boolean;
   applicableSubtotal?: number;
   isLoading: boolean;
+  isSyncing: boolean;
   addItem: (item: AddCartItemInput, quantity?: number) => void;
   removeItem: (key: string) => void;
   updateQuantity: (key: string, quantity: number) => void;
@@ -110,6 +111,7 @@ export function itemMatchesKey(item: CartItem, key: string): boolean {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -260,8 +262,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // If nothing significant changed since last request, skip
       if (currentRequestData === lastRequestData.current) return;
 
+      let lastPromo = undefined;
+      try {
+        if (lastRequestData.current) {
+          const parsedLast = JSON.parse(lastRequestData.current);
+          lastPromo = parsedLast.promo;
+        }
+      } catch (e) {}
+
+      const promoChanged = cart.promoCode !== lastPromo;
+      const delay = promoChanged ? 50 : 1000;
+
+      setIsSyncing(true);
+
+      // Use a cancelled flag instead of AbortController to avoid surfacing
+      // false-positive AbortErrors in Next.js dev mode when cleanup fires
+      // before the timer callback executes.
+      let cancelled = false;
       const abortController = new AbortController();
+
       const timer = setTimeout(async () => {
+        if (cancelled) {
+          setIsSyncing(false);
+          return;
+        }
         try {
           const res = await fetch("/api/cart", {
             method: "POST",
@@ -275,8 +299,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               promoCode: cart.promoCode
             })
           });
+          if (cancelled) return;
           if (res.ok) {
             const data = await res.json();
+            if (cancelled) return;
             // Update lastRequestData ONLY after successful sync to prevent loops
             lastRequestData.current = currentRequestData;
             
@@ -330,9 +356,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (err.name !== 'AbortError') {
             console.error("DB Save failed:", err);
           }
+        } finally {
+          if (!cancelled) setIsSyncing(false);
         }
-      }, 1000);
+      }, delay);
+
       return () => {
+        cancelled = true;
         clearTimeout(timer);
         abortController.abort();
       };
@@ -346,16 +376,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const itemKey = getItemKey(normalized);
       const existingIdx = prev.items.findIndex(i => itemMatchesKey(i, itemKey));
       let newItems = [...prev.items];
+      
+      const isDealerUser = user?.customerType === "dealer";
+      const canInputManual = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealerUser);
+      const maxAllowed = canInputManual ? 999999 : (normalized.stock || 999);
+
       if (existingIdx > -1) {
         const existing = newItems[existingIdx];
-        newItems[existingIdx] = { ...existing, quantity: Math.min(normalized.stock || 999, existing.quantity + normalized.quantity) };
+        newItems[existingIdx] = { ...existing, quantity: Math.min(maxAllowed, existing.quantity + normalized.quantity) };
       } else {
-        newItems.push({ ...normalized, quantity: Math.min(normalized.stock || 999, normalized.quantity) });
+        newItems.push({ ...normalized, quantity: Math.min(maxAllowed, normalized.quantity) });
       }
       const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { ...prev, items: newItems, itemCount: newItemCount };
     });
-  }, []);
+  }, [user]);
 
   const removeItem = useCallback((key: string) => {
     setCart(prev => {
@@ -367,13 +402,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const updateQuantity = useCallback((key: string, quantity: number) => {
     setCart(prev => {
+      const isDealerUser = user?.customerType === "dealer";
+      const canInputManual = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealerUser);
+
       const newItems = quantity <= 0 
         ? prev.items.filter(i => !itemMatchesKey(i, key))
-        : prev.items.map(i => itemMatchesKey(i, key) ? { ...i, quantity: Math.min(i.stock || 999, quantity) } : i);
+        : prev.items.map(i => {
+            if (itemMatchesKey(i, key)) {
+              const itemMaxAllowed = canInputManual ? 999999 : (i.stock || 999);
+              return { ...i, quantity: Math.min(itemMaxAllowed, quantity) };
+            }
+            return i;
+          });
       const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { ...prev, items: newItems, itemCount: newItemCount };
     });
-  }, []);
+  }, [user]);
 
   const applyPromo = useCallback((details: PromoDetails) => {
     setCart(prev => ({ 
@@ -410,6 +454,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     isRestricted: cart.isRestricted,
     applicableSubtotal: cart.applicableSubtotal,
     isLoading: !isMounted || isLoading,
+    isSyncing: isMounted ? isSyncing : false,
     addItem,
     removeItem,
     updateQuantity,
