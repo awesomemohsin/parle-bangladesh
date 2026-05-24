@@ -121,6 +121,7 @@ export default function ProductApprovalsPage() {
     const hasAnindo = request.superadminApprovals.some(a => a.toLowerCase().includes('anindo'))
     const hasSaiful = request.superadminApprovals.some(a => a.toLowerCase().includes('saiful'))
     const hasRazu = request.ownerApproved
+    const isLevel3 = ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(request.field)
 
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -130,9 +131,11 @@ export default function ProductApprovalsPage() {
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasSaiful ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
           Superadmin: Saiful {hasSaiful && '✓'}
         </div>
-        <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-          Finalized: Razu {hasRazu && '✓'}
-        </div>
+        {isLevel3 && (
+          <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
+            Finalized: Mahbub Alam Razu {hasRazu && '✓'}
+          </div>
+        )}
       </div>
     )
   }
@@ -247,7 +250,7 @@ export default function ProductApprovalsPage() {
                       <div className="flex items-center gap-6">
                         <div className="flex-1 flex flex-col items-center">
                            <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">
-                             {request.field === 'stock' ? 'Current Stock' : 'Legacy Data'}
+                             {request.field === 'stock' ? 'Current Stock' : 'Old / previous value'}
                            </span>
                            <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
                              {request.field === 'price' && "৳"}{request.oldValue}
@@ -258,7 +261,7 @@ export default function ProductApprovalsPage() {
                         </div>
                         <div className="flex-1 flex flex-col items-center">
                            <span className={`text-[7px] font-black border px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white ${request.field === 'price' ? 'text-green-600 border-green-100' : 'text-amber-600 border-amber-100'}`}>
-                             {request.field === 'stock' ? 'Stock Amount Requested' : 'Target Update'}
+                             {request.field === 'stock' ? 'Stock Amount Requested' : 'New Value'}
                            </span>
                            <span className={`text-2xl font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
                              {request.field === 'stock' 

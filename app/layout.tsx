@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased min-h-screen flex flex-col overflow-x-hidden`}>
+      <body className={`${inter.className} antialiased min-h-screen flex flex-col overflow-x-hidden`} suppressHydrationWarning>
         <AuthProvider>
           <CartProvider>
             <Toaster position="top-center" richColors />

@@ -158,7 +158,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         await Notification.create({
           userId: approvalRequest.requesterEmail,
           title: "Request Approved (Final)",
-          message: `Your sensitive change for ${approvalRequest.targetName} has been fully approved by Anindo, Saiful, and Razu.`,
+          message: `Your sensitive change for ${approvalRequest.targetName} has been fully approved by Anindo, Saiful, and Mahbub Alam Razu.`,
           type: "system",
           targetLink: `/admin/products`
         });

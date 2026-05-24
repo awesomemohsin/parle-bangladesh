@@ -516,6 +516,7 @@ export interface IPromoCode extends Document {
   minOrderAmount: number;
   maxDiscountAmount?: number;
   expiresAt?: Date;
+  createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -535,6 +536,7 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     minOrderAmount: { type: Number, default: 0 },
     maxDiscountAmount: { type: Number, default: 0 },
     expiresAt: { type: Date },
+    createdBy: { type: String },
   },
   { timestamps: true }
 );
@@ -544,7 +546,10 @@ PromoCodeSchema.index({ status: 1 });
 PromoCodeSchema.index({ expiresAt: 1 });
 PromoCodeSchema.index({ type: 1 });
 
-export const PromoCode = mongoose.models?.PromoCode || mongoose.model<IPromoCode>("PromoCode", PromoCodeSchema, "promo_codes"); 
+if (mongoose.models && mongoose.models.PromoCode) {
+  delete mongoose.models.PromoCode;
+}
+export const PromoCode = mongoose.model<IPromoCode>("PromoCode", PromoCodeSchema, "promo_codes"); 
 
 // --- CONTACT SUBMISSION MODEL ---
 export interface IContactSubmission extends Document {

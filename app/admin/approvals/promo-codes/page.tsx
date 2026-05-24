@@ -110,7 +110,6 @@ export default function PromoCodeApprovalsPage() {
   const getConsentStatus = (request: ApprovalRequest) => {
     const hasAnindo = request.superadminApprovals.some(a => a.toLowerCase().includes('anindo'))
     const hasSaiful = request.superadminApprovals.some(a => a.toLowerCase().includes('saiful'))
-    const hasRazu = request.ownerApproved
 
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -119,9 +118,6 @@ export default function PromoCodeApprovalsPage() {
         </div>
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasSaiful ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
           L2: Saiful {hasSaiful && '✓'}
-        </div>
-        <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-          Final: Razu {hasRazu && '✓'}
         </div>
       </div>
     )

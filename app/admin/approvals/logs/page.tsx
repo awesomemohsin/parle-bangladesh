@@ -254,14 +254,14 @@ export default function ApprovalLogsPage() {
                       <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-6">
                         <div className="flex-1 flex items-center gap-4">
                           <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">Legacy</span>
+                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">Old / previous value</span>
                             <span className="text-sm font-black text-gray-400 line-through tracking-tighter">
                               {request.field === 'price' && "৳"}{request.oldValue}
                             </span>
                           </div>
                           <div className="text-gray-200 font-transparent shrink-0">→</div>
                           <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">Live</span>
+                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">New Value</span>
                             <span className={`text-base font-black tracking-tighter italic ${request.status === 'approved' ? 'text-emerald-600' :
                                 request.status === 'pending' ? 'text-amber-600' :
                                   'text-rose-600'}`}>
@@ -277,8 +277,12 @@ export default function ApprovalLogsPage() {
                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mr-2">Authorization Trace:</span>
                       <SignatureBadge name="Anindo" status={request.status === 'approved' || request.superadminApprovals?.some(a => a.toLowerCase().includes('anindo'))} />
                       <SignatureBadge name="Saiful" status={request.status === 'approved' || request.superadminApprovals?.some(a => a.toLowerCase().includes('saiful'))} />
-                      <div className="w-px h-4 bg-gray-200 mx-1"></div>
-                      <SignatureBadge name="Razu" status={request.ownerApproved} />
+                      {(request.type === 'order' || ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(request.field)) && (
+                        <>
+                          <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                          <SignatureBadge name="Mahbub Alam Razu" status={request.ownerApproved} />
+                        </>
+                      )}
                     </div>
                   </div>
 

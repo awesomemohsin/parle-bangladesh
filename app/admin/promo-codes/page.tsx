@@ -19,6 +19,7 @@ interface Discount {
   minOrderAmount: number;
   maxDiscountAmount: number;
   expiresAt?: string;
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +30,14 @@ interface ProductInfo {
 }
 
 export default function DiscountsAdmin() {
+  const getTodayDateString = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +99,7 @@ export default function DiscountsAdmin() {
     setType('promo');
     setDiscountType('fixed');
     setDiscountAmount('');
-    setMaxUsage('50');
+    setMaxUsage('10');
     setExpiresAt('');
     setIsActive(true);
     setMinOrderAmount('0');
@@ -232,6 +241,7 @@ export default function DiscountsAdmin() {
                 <th className="p-4">Min Order</th>
                 <th className="p-4">Applicability</th>
                 <th className="p-4">Usage</th>
+                <th className="p-4">Requested By</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right rounded-tr-2xl">Actions</th>
               </tr>
@@ -239,7 +249,7 @@ export default function DiscountsAdmin() {
             <tbody className="divide-y divide-gray-100">
               {discounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500 text-sm">
+                  <td colSpan={8} className="p-8 text-center text-gray-500 text-sm">
                     No discounts active. Click "Add Discount" to create one.
                   </td>
                 </tr>
@@ -275,6 +285,23 @@ export default function DiscountsAdmin() {
                         {discount.currentUsage >= discount.maxUsage && (
                           <span className="text-[10px] text-red-500 font-bold uppercase">Limit Reached</span>
                         )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-gray-700 truncate max-w-[150px]" title={discount.createdBy || 'System'}>
+                          {discount.createdBy || 'System'}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-medium">
+                          {new Date(discount.createdAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </span>
                       </div>
                     </td>
                     <td className="p-4">
@@ -435,6 +462,7 @@ export default function DiscountsAdmin() {
                       type="date"
                       value={expiresAt}
                       onChange={(e) => setExpiresAt(e.target.value)}
+                      min={getTodayDateString()}
                       className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-gray-700"
                     />
                   </div>

@@ -89,7 +89,7 @@ export default function AdminActivitiesPage() {
 
   const handleDelete = async (id: string) => {
     if (user?.role !== 'owner') {
-      alert('Access Denied: Only the Head Authorizer (Razu) can delete audit records.')
+      alert('Access Denied: Only the Head Authorizer (Mahbub Alam Razu) can delete audit records.')
       return
     }
     if (!confirm('Permanent delete this log entry?')) return
@@ -110,7 +110,7 @@ export default function AdminActivitiesPage() {
 
   const handleClearAll = async () => {
     if (user?.role !== 'owner') {
-      alert('Access Denied: Only the Head Authorizer (Razu) can clear the total audit log.')
+      alert('Access Denied: Only the Head Authorizer (Mahbub Alam Razu) can clear the total audit log.')
       return
     }
     if (!confirm('EXTREME WARNING: This will permanently clear ALL activity logs. Proceed?')) return

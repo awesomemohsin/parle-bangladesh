@@ -13,8 +13,32 @@ export async function GET(req: Request) {
     }
 
     await dbConnect();
-    const promoCodes = await PromoCode.find().sort({ createdAt: -1 });
-    return NextResponse.json(promoCodes);
+    const promoCodes = await PromoCode.find().sort({ createdAt: -1 }).lean();
+    
+    // Self-healing migration: resolve creators from ApprovalRequest if createdBy is empty
+    const resolvedPromoCodes = await Promise.all(
+      promoCodes.map(async (promo) => {
+        if (!promo.createdBy) {
+          const approval = await ApprovalRequest.findOne({
+            targetId: promo._id.toString(),
+            type: 'promo-code'
+          }).select('requesterEmail').lean();
+          
+          if (approval?.requesterEmail) {
+            promo.createdBy = approval.requesterEmail;
+            // Persist migrated value back to DB for future speed
+            PromoCode.updateOne({ _id: promo._id }, { createdBy: approval.requesterEmail }).catch(err => 
+              console.error(`Failed to persist migrated createdBy for ${promo._id}:`, err)
+            );
+          } else {
+            promo.createdBy = 'System';
+          }
+        }
+        return promo;
+      })
+    );
+
+    return NextResponse.json(resolvedPromoCodes);
   } catch (error: any) {
     console.error('Error fetching promo codes:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
@@ -62,6 +86,7 @@ export async function POST(req: Request) {
       applicableProducts: applicableProducts || [],
       minOrderAmount: Number(minOrderAmount) || 0,
       maxDiscountAmount: Number(maxDiscountAmount) || 0,
+      createdBy: user.name || user.email,
     });
 
     // Create approval request for ALL new promo codes

@@ -124,7 +124,7 @@ export default function OrderApprovalsPage() {
           Superadmin: Saiful {hasSaiful && '✓'}
         </div>
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-          Finalized: Razu {hasRazu && '✓'}
+          Finalized: Mahbub Alam Razu {hasRazu && '✓'}
         </div>
       </div>
     )
