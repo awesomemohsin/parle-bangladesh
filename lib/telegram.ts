@@ -235,7 +235,7 @@ export async function notifyNewApprovalRequest(request: any) {
         const obj = JSON.parse(val);
         // Extract meaningful info for summary
         const summaryParts = [];
-        if (obj.code) summaryParts.push(`Code: ${obj.code}`);
+        if (obj.code) summaryParts.push(`Code: [Hidden]`);
         if (obj.discountAmount) summaryParts.push(`Amt: ${obj.discountAmount}${obj.discountType === 'percentage' ? '%' : '৳'}`);
         if (obj.minOrderAmount) summaryParts.push(`Min: ৳${obj.minOrderAmount}`);
         if (obj.maxDiscountAmount) summaryParts.push(`Cap: ৳${obj.maxDiscountAmount}`);
@@ -250,15 +250,62 @@ export async function notifyNewApprovalRequest(request: any) {
   const formattedOld = formatValue(request.oldValue);
   const formattedNew = request.newValue === 'updated_configuration' ? '<b>[New Configuration]</b>' : `<b>${request.newValue}</b>`;
   
+  let targetName = request.targetName;
+  if (request.type === 'promo-code' && targetName.startsWith('Promo: ')) {
+    targetName = 'Promo Code [Hidden]';
+  }
+
+  let detailMessage = "";
+  if (request.type === 'promo-code' && request.targetDetails) {
+    const details = request.targetDetails;
+    const isUpdate = request.field === 'update';
+    
+    if (isUpdate) {
+      const summaryParts = [];
+      if (details.code !== undefined) summaryParts.push(`▫️ <b>NEW CODE:</b> <code>[Hidden]</code>`);
+      if (details.discountAmount !== undefined) {
+        const isPercentage = details.discountType === 'percentage' || 
+          (details.discountType === undefined && request.oldValue.toLowerCase().includes('percentage'));
+        const discountSign = isPercentage ? '%' : '৳';
+        summaryParts.push(`▫️ <b>NEW RATE:</b> <b>${details.discountAmount}${discountSign}</b>`);
+      }
+      if (details.maxUsage !== undefined) summaryParts.push(`▫️ <b>NEW MAX USAGE:</b> ${details.maxUsage}`);
+      if (details.minOrderAmount !== undefined) summaryParts.push(`▫️ <b>NEW MIN ORDER:</b> ৳${details.minOrderAmount}`);
+      if (details.maxDiscountAmount !== undefined) summaryParts.push(`▫️ <b>NEW MAX DISCOUNT CAP:</b> ৳${details.maxDiscountAmount}`);
+      if (details.expiresAt !== undefined) summaryParts.push(`▫️ <b>NEW EXPIRATION:</b> ${details.expiresAt ? new Date(details.expiresAt).toLocaleDateString() : 'Never'}`);
+      
+      if (summaryParts.length > 0) {
+        detailMessage = `
+🎟️ <b>UPDATED CONFIGURATION:</b>
+${summaryParts.join('\n')}
+`;
+      }
+    } else {
+      // Creation
+      const discountSign = details.discountType === 'percentage' ? '%' : '৳';
+      const discountDisplay = `${details.discountAmount}${discountSign}`;
+      const promoType = details.type === 'promo' ? 'Promo Code' : 'Flat Discount';
+      
+      detailMessage = `
+🎟️ <b>DISCOUNT DETAILS:</b>
+▫️ <b>TYPE:</b> ${promoType}
+${details.code ? `▫️ <b>CODE:</b> <code>[Hidden]</code>\n` : ""}▫️ <b>RATE:</b> <b>${discountDisplay}</b>
+▫️ <b>MAX USAGE:</b> ${details.maxUsage}
+▫️ <b>MIN ORDER AMOUNT:</b> ৳${details.minOrderAmount || 0}
+${details.discountType === 'percentage' && details.maxDiscountAmount ? `▫️ <b>MAX DISCOUNT CAP:</b> ৳${details.maxDiscountAmount}\n` : ""}▫️ <b>EXPIRES AT:</b> ${details.expiresAt ? new Date(details.expiresAt).toLocaleDateString() : 'Never'}
+`;
+    }
+  }
+  
   const message = `
 <b>${typeIcon} NEW APPROVAL REQUEST</b>
 <b>PRIORITY:</b> ${level}
 ━━━━━━━━━━━━━━━━━━
 👤 <b>REQUESTER:</b> ${request.requesterEmail}
-🎯 <b>TARGET:</b> ${request.targetName}
+🎯 <b>TARGET:</b> ${targetName}
 ${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
 🔄 <b>VALUE:</b> ${formattedOld} ➡️ ${formattedNew}
-
+${detailMessage}
 📢 <b>ACTION:</b> 2 Superadmins must approve to proceed.
 ━━━━━━━━━━━━━━━━━━
 🔗 <a href="${BASE_URL}/admin/approvals">⚡ OPEN APPROVAL DASHBOARD</a>
@@ -306,10 +353,15 @@ export async function notifyApprovalFinalized(request: any) {
   const isApproved = request.status === 'approved';
   const icon = isApproved ? '✅' : '❌';
   
+  let targetName = request.targetName;
+  if (request.type === 'promo-code' && targetName.startsWith('Promo: ')) {
+    targetName = 'Promo Code [Hidden]';
+  }
+
   const message = `
 <b>${icon} REQUEST ${request.status.toUpperCase()}</b>
-━━━━━━━━━━━━━━━━━━
-🎯 <b>TARGET:</b> ${request.targetName}
+<b>━━━━━━━━━━━━━━━━━━</b>
+🎯 <b>TARGET:</b> ${targetName}
 📝 <b>FIELD:</b> <code>${request.field}</code>
 👤 <b>FINALIZED BY:</b> ${isApproved ? 'Authorization Consensus' : request.declinedBy}
 
