@@ -29,10 +29,7 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
     
-    // Determine the base app URL dynamically from the request headers
-    const host = request.headers.get("host") || "parlebangladesh.com";
-    const protocol = request.headers.get("x-forwarded-proto") || "https";
-    const appUrl = `${protocol}://${host}`;
+    const appUrl = "https://parlebangladesh.com";
 
     const products = await Product.find({}).lean();
 
