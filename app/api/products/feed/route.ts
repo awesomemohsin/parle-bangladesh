@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     for (const p of products) {
       const brand = p.brand || 'Parle';
       const category = p.category || 'Biscuits';
-      const baseLink = `${appUrl}/shop/${p.slug}`;
+      const baseLink = `${appUrl}/shop/products/${p.slug}`;
       const description = p.description || `${p.name} - Premium quality biscuit from Parle Bangladesh.`;
 
       if (p.variations && p.variations.length > 0) {
