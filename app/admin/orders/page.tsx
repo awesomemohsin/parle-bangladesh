@@ -151,7 +151,17 @@ export default function AdminOrdersPage() {
     try {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('q', debouncedSearch)
-      if (statusFilter !== 'all') params.append('status', statusFilter)
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'attention') {
+          if (userRole === 'moderator') {
+            params.append('status', 'processing,shipped')
+          } else {
+            params.append('status', 'pending,processing,shipped')
+          }
+        } else {
+          params.append('status', statusFilter)
+        }
+      }
       if (startDate) params.append('startDate', startDate)
       if (endDate) params.append('endDate', endDate)
       params.append('sort', sortBy)
@@ -373,13 +383,26 @@ export default function AdminOrdersPage() {
         {/* Dropdown Filters - Right side */}
         <div className="flex gap-3 w-full xl:w-auto">
           <div className="flex-1 sm:w-36 relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Filter className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
+              statusFilter === 'attention' ? 'text-amber-600' : 'text-gray-400'
+            }`} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-xs font-bold uppercase bg-white cursor-pointer"
+              className={`w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none text-xs font-bold uppercase cursor-pointer transition-all ${
+                statusFilter === 'attention'
+                  ? 'border-amber-500 bg-amber-50 text-amber-800 font-black shadow-sm ring-1 ring-amber-500'
+                  : 'border-gray-200 bg-white text-gray-700'
+              }`}
             >
               <option value="all">All Statuses</option>
+              <option 
+                value="attention"
+                className="bg-amber-50 text-amber-700 font-bold"
+                style={{ backgroundColor: '#fef3c7', color: '#b45309', fontWeight: 'bold' }}
+              >
+                Needs Actions
+              </option>
               {userRole !== 'moderator' && <option value="pending">Pending</option>}
               <option value="cancelled">Cancelled</option>
               <option value="processing">Processing</option>
