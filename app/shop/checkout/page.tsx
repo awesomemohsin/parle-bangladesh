@@ -154,7 +154,7 @@ function CheckoutContent() {
         setPrefilled({
           name: !!user.name,
           email: !!user.email,
-          phone: !!user.mobile
+          phone: false
         });
       } catch (e) { }
     }
