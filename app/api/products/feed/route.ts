@@ -61,7 +61,14 @@ export async function GET(request: NextRequest) {
       if (p.variations && p.variations.length > 0) {
         p.variations.forEach((v: any, index: number) => {
           const variantId = `${p._id.toString()}-${index}`;
-          const title = `${p.name} - ${v.weight || ''} ${v.flavor ? '(' + v.flavor + ')' : ''}`.trim();
+          let title = p.name;
+          if (v.flavor) {
+            title += ` - ${v.flavor}`;
+          }
+          if (v.weight) {
+            title += ` (${v.weight})`;
+          }
+          title = title.trim();
           
           let imageLink = '';
           if (v.image) {
