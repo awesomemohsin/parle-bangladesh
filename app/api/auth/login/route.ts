@@ -23,7 +23,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const identifier = parsed.data.email.trim().toLowerCase();
+    let identifier = parsed.data.email.trim().toLowerCase();
+    
+    // Normalize Bangladeshi phone numbers to standard 11-digit format (e.g. 017xxxxxxxx)
+    if (!identifier.includes("@")) {
+      // Remove all non-numeric characters (spaces, hyphens, +, etc.)
+      let digits = identifier.replace(/\D/g, "");
+      
+      // If starts with 880 (e.g. 88017...), strip the leading '88' to make it '01...'
+      if (digits.startsWith("880") && digits.length === 13) {
+        digits = digits.slice(2);
+      }
+      
+      // If entered without the leading zero (e.g. 17... instead of 017...), prepend the '0'
+      if (digits.length === 10 && digits.startsWith("1")) {
+        digits = "0" + digits;
+      }
+      
+      identifier = digits;
+    }
+
     const passwordHash = hashPassword(parsed.data.password);
     
     // Extract IP and User-Agent for audit and security
