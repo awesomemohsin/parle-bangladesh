@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
       
       if (user.failedLoginAttempts >= 5) {
-        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // Lock for 15 minutes
+        user.lockUntil = new Date(Date.now() + 5 * 60 * 1000); // Lock for 5 minutes
       }
       await user.save();
       
