@@ -120,6 +120,9 @@ const CartSchema = new Schema<ICart>(
   { timestamps: true }
 );
 
+// Automatically delete carts that have not been updated in 30 days
+CartSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
 export const Cart = mongoose.models?.Cart || mongoose.model<ICart>("Cart", CartSchema);
 
 

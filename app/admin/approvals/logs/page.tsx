@@ -26,6 +26,7 @@ interface ApprovalRequest {
   ownerApproved?: boolean
   ownerEmail?: string
   ownerComment?: string
+  comments?: { user: string; text: string; date: string }[]
   targetDetails?: any
   createdAt: string
   updatedAt: string
@@ -304,6 +305,25 @@ export default function ApprovalLogsPage() {
                     <div className="bg-slate-50 p-4 rounded-[1.5rem] border border-dashed border-slate-200">
                       <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Authoritative Note</div>
                       <p className="text-[11px] font-bold text-slate-600 italic leading-relaxed">"{request.ownerComment}"</p>
+                    </div>
+                  )}
+
+                  {request.comments && request.comments.length > 0 && (
+                    <div className="space-y-2 py-2 border-t border-gray-50 mt-2">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Consensus Comments / History</p>
+                      <div className="space-y-2">
+                        {request.comments.map((c, i) => (
+                          <div key={i} className="bg-gray-50/50 p-2.5 rounded-xl border border-gray-100 flex justify-between items-center shadow-inner">
+                            <p className="text-[10px] font-medium text-gray-600">
+                              <span className="font-black uppercase text-red-600 text-[9px]">{c.user}: </span> 
+                              {c.text}
+                            </p>
+                            <span className="text-[8px] text-gray-400 font-bold bg-white px-2 py-0.5 rounded border border-gray-100">
+                              {new Date(c.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
