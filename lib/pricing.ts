@@ -20,7 +20,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   }).lean();
 
   // 2. Fetch promo code if provided
-  let promoDetails = null;
+  let promoDetails: any = null;
   if (promoCode) {
     const promo = await PromoCode.findOne({ 
       code: promoCode.toUpperCase(), 
@@ -41,6 +41,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     return sum + effectivePrice * (Number(item.quantity || item.q) || 0);
   }, 0);
 
+  let freeShippingGranted = false;
   let flatDiscountTotal = 0;
   const ruleUsage = new Map<string, number>();
 
@@ -88,6 +89,11 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
         if (currentDiscount > bestDiscountForItem) {
           bestDiscountForItem = currentDiscount;
           bestRuleId = rule._id.toString();
+        }
+
+        // Track free shipping granted by active, qualified flat rules
+        if (rule.freeShipping) {
+          freeShippingGranted = true;
         }
       }
     });
@@ -179,6 +185,11 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
         promoDiscount = Math.min(remainingTotal, promoDiscount);
       }
     }
+
+    // If promoDetails grants free shipping, set it to true!
+    if (promoDetails.freeShipping) {
+      freeShippingGranted = true;
+    }
   }
 
   const totalDiscount = flatDiscountTotal + promoDiscount;
@@ -194,7 +205,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     promoCode: promoDetails ? promoDetails.code : null,
     promoDetails: promoDetails ? JSON.parse(JSON.stringify(promoDetails)) : null,
     isRestricted: promoDetails ? !promoDetails.allProducts : false,
-    applicableSubtotal: Number(applicableSubtotal) || 0
+    applicableSubtotal: Number(applicableSubtotal) || 0,
+    freeShippingGranted: freeShippingGranted
   };
 
   return result;

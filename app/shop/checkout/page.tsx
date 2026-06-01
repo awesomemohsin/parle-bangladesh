@@ -58,7 +58,7 @@ function CheckoutContent() {
 
 
 
-  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo } = useCart();
+  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted } = useCart();
   const { user, logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [confirmingStep, setConfirmingStep] = useState(0);
@@ -261,7 +261,7 @@ function CheckoutContent() {
 
   // Use the synchronized values from the CartContext (server-side calculation)
   // Note: we might need to handle shipping cost locally as it depends on the form
-  const isFreeDelivery = subtotal >= 1000;
+  const isFreeDelivery = subtotal >= 1000 || !!freeShippingGranted;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);

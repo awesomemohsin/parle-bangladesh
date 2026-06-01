@@ -23,6 +23,7 @@ export interface PromoDetails {
   maxDiscountAmount?: number;
   allProducts: boolean;
   applicableProducts: string[];
+  freeShipping?: boolean;
 }
 
 export interface Cart {
@@ -37,6 +38,7 @@ export interface Cart {
   ruleDiscount?: number;
   isRestricted?: boolean;
   applicableSubtotal?: number;
+  freeShippingGranted?: boolean;
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -58,6 +60,7 @@ interface CartContextType {
   promoDetails?: PromoDetails;
   isRestricted?: boolean;
   applicableSubtotal?: number;
+  freeShippingGranted?: boolean;
   isLoading: boolean;
   isSyncing: boolean;
   addItem: (item: AddCartItemInput, quantity?: number) => void;
@@ -137,14 +140,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             promoDiscount: parsed.promoDiscount,
             ruleDiscount: parsed.ruleDiscount,
             isRestricted: parsed.isRestricted,
-            applicableSubtotal: parsed.applicableSubtotal
+            applicableSubtotal: parsed.applicableSubtotal,
+            freeShippingGranted: parsed.freeShippingGranted
           };
         } catch (e) {
           console.error("Cart initial parse failed:", e);
         }
       }
     }
-    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0 };
+    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0, freeShippingGranted: false };
   });
 
   const syncFromStorage = useCallback(() => {
@@ -168,7 +172,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           promoDiscount: parsed.promoDiscount,
           ruleDiscount: parsed.ruleDiscount,
           isRestricted: parsed.isRestricted,
-          applicableSubtotal: parsed.applicableSubtotal
+          applicableSubtotal: parsed.applicableSubtotal,
+          freeShippingGranted: parsed.freeShippingGranted
         });
       } catch (e) {
         console.error("Cart sync parse failed:", e);
@@ -229,6 +234,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 ruleDiscount: data.ruleDiscount || 0,
                 isRestricted: data.isRestricted,
                 applicableSubtotal: data.applicableSubtotal,
+                freeShippingGranted: data.freeShippingGranted,
                 promoCode: prev.promoCode || data.promoCode, 
                 promoDetails: prev.promoDetails || data.promoDetails
               };
@@ -347,6 +353,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 ruleDiscount: data.ruleDiscount,
                 isRestricted: data.isRestricted,
                 applicableSubtotal: data.applicableSubtotal,
+                freeShippingGranted: data.freeShippingGranted,
                 promoCode: data.promoCode,
                 promoDetails: data.promoDetails
               };
@@ -364,7 +371,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return () => {
         cancelled = true;
         clearTimeout(timer);
-        abortController.abort();
       };
     }
   }, [cart.items, cart.promoCode, isInitialized]);
@@ -428,7 +434,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       discountAmount: 0,
       ruleDiscount: 0,
       isRestricted: !details.allProducts,
-      applicableSubtotal: 0
+      applicableSubtotal: 0,
+      freeShippingGranted: details.freeShipping || false
     }));
   }, []);
 
@@ -437,7 +444,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearCart = useCallback(() => {
-    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0 });
+    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false });
   }, []);
 
   const contextValue: CartContextType = {
@@ -453,6 +460,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     promoDetails: cart.promoDetails,
     isRestricted: cart.isRestricted,
     applicableSubtotal: cart.applicableSubtotal,
+    freeShippingGranted: isMounted ? (cart.freeShippingGranted || false) : false,
     isLoading: !isMounted || isLoading,
     isSyncing: isMounted ? isSyncing : false,
     addItem,

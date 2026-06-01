@@ -60,55 +60,7 @@ export async function GET(request: NextRequest) {
 
     const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount);
 
-    // Apply flat discounts to item prices for UI consistency ONLY if thresholds are met
-    for (const item of refreshedItems) {
-      const pId = item.productId || item.id;
-      const basePrice = Number(item.price);
 
-      // A. Account flat discount candidate
-      let bestDiscountedPrice = basePrice;
-      let bestSavings = 0;
-      let hasAnyDiscount = false;
-
-      if (userDiscount && userDiscount.percent > 0) {
-        bestSavings = (basePrice * userDiscount.percent) / 100;
-        bestDiscountedPrice = basePrice - bestSavings;
-        hasAnyDiscount = true;
-      }
-
-      // B. Global flat discount candidate
-      const applicableFlat = flatDiscounts.find(d => 
-        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === pId))
-      );
-      
-      if (applicableFlat) {
-        const minOrder = Number(applicableFlat.minOrderAmount || 0);
-        const maxCap = Number(applicableFlat.maxDiscountAmount || 0);
-        if (totals.subtotal >= minOrder && maxCap <= 0) {
-          const amount = Number(applicableFlat.discountAmount || 0);
-          let currentDiscounted = basePrice;
-          let currentSavings = 0;
-
-          if (applicableFlat.discountType === 'percentage') {
-            currentSavings = (basePrice * amount) / 100;
-            currentDiscounted = basePrice - currentSavings;
-          } else {
-            currentSavings = amount;
-            currentDiscounted = Math.max(0, basePrice - amount);
-          }
-
-          if (currentSavings > bestSavings) {
-            bestSavings = currentSavings;
-            bestDiscountedPrice = currentDiscounted;
-            hasAnyDiscount = true;
-          }
-        }
-      }
-
-      if (hasAnyDiscount) {
-        item.price = Math.round(bestDiscountedPrice);
-      }
-    }
 
     return NextResponse.json({
       items: refreshedItems,
@@ -174,57 +126,7 @@ export async function POST(request: NextRequest) {
 
     const totals = await calculateServerSideCart(refreshedItems, promoCode, userDiscount);
 
-    // Update item prices for display ONLY if thresholds are met
-    for (const item of refreshedItems) {
-      const pId = item.productId || item.id;
-      const basePrice = Number(item.price);
 
-      // A. Account flat discount candidate
-      let bestDiscountedPrice = basePrice;
-      let bestSavings = 0;
-      let hasAnyDiscount = false;
-
-      if (userDiscount && userDiscount.percent > 0) {
-        bestSavings = (basePrice * userDiscount.percent) / 100;
-        bestDiscountedPrice = basePrice - bestSavings;
-        hasAnyDiscount = true;
-      }
-
-      // B. Global flat discount candidate
-      const applicableFlat = flatDiscounts.find(d => 
-        d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === pId))
-      );
-      
-      if (applicableFlat) {
-        const minOrder = Number(applicableFlat.minOrderAmount || 0);
-        const maxCap = Number(applicableFlat.maxDiscountAmount || 0);
-        // Only override price for display if the threshold is met AND there is NO max cap
-        // (Capped discounts are shown at the bottom to avoid confusion)
-        if (totals.subtotal >= minOrder && maxCap <= 0) {
-          const amount = Number(applicableFlat.discountAmount || 0);
-          let currentDiscounted = basePrice;
-          let currentSavings = 0;
-
-          if (applicableFlat.discountType === 'percentage') {
-            currentSavings = (basePrice * amount) / 100;
-            currentDiscounted = basePrice - currentSavings;
-          } else {
-            currentSavings = amount;
-            currentDiscounted = Math.max(0, basePrice - amount);
-          }
-
-          if (currentSavings > bestSavings) {
-            bestSavings = currentSavings;
-            bestDiscountedPrice = currentDiscounted;
-            hasAnyDiscount = true;
-          }
-        }
-      }
-
-      if (hasAnyDiscount) {
-        item.price = Math.round(bestDiscountedPrice);
-      }
-    }
 
     const cart = await Cart.findOneAndUpdate(
       { userId: user.id },

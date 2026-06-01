@@ -378,6 +378,8 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         
         promoCode.allProducts = details.allProducts !== undefined ? details.allProducts : promoCode.allProducts;
         promoCode.applicableProducts = details.applicableProducts || promoCode.applicableProducts;
+
+        if (details.freeShipping !== undefined) promoCode.freeShipping = details.freeShipping;
       }
       
       promoCode.status = 'approved';

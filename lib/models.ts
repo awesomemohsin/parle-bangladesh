@@ -520,6 +520,7 @@ export interface IPromoCode extends Document {
   maxDiscountAmount?: number;
   expiresAt?: Date;
   createdBy?: string;
+  freeShipping?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -540,6 +541,7 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     maxDiscountAmount: { type: Number, default: 0 },
     expiresAt: { type: Date },
     createdBy: { type: String },
+    freeShipping: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

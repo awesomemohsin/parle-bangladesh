@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
       discountAmount: promo.discountAmount,
       allProducts: promo.allProducts,
       applicableProducts: promo.applicableProducts,
-      minOrderAmount: promo.minOrderAmount
+      minOrderAmount: promo.minOrderAmount,
+      freeShipping: promo.freeShipping
     });
 
   } catch (error: any) {
@@ -121,7 +122,8 @@ export async function POST(req: Request) {
       allProducts: promo.allProducts,
       applicableProducts: promo.applicableProducts,
       minOrderAmount: promo.minOrderAmount,
-      maxDiscountAmount: promo.maxDiscountAmount
+      maxDiscountAmount: promo.maxDiscountAmount,
+      freeShipping: promo.freeShipping
     });
 
   } catch (error: any) {

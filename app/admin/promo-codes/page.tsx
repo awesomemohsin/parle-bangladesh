@@ -20,6 +20,7 @@ interface Discount {
   maxDiscountAmount: number;
   expiresAt?: string;
   createdBy?: string;
+  freeShipping?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +59,7 @@ export default function DiscountsAdmin() {
   const [maxDiscountAmount, setMaxDiscountAmount] = useState('');
   const [allProducts, setAllProducts] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [freeShipping, setFreeShipping] = useState(false);
   
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,6 +108,7 @@ export default function DiscountsAdmin() {
     setMaxDiscountAmount('0');
     setAllProducts(true);
     setSelectedProducts(products.map(p => p.id));
+    setFreeShipping(false);
     setFormError('');
     setIsModalOpen(true);
   };
@@ -120,6 +123,7 @@ export default function DiscountsAdmin() {
     setMinOrderAmount(discount.minOrderAmount?.toString() || '0');
     setMaxDiscountAmount(discount.maxDiscountAmount?.toString() || '0');
     setAllProducts(discount.allProducts || false);
+    setFreeShipping(discount.freeShipping || false);
     
     // If allProducts was true, we might not have a list of IDs in DB, 
     // so we should populate it for the UI to show everything as ticked.
@@ -162,7 +166,8 @@ export default function DiscountsAdmin() {
       applicableProducts: isActuallyAllSelected ? [] : selectedProducts,
       minOrderAmount: Number(minOrderAmount),
       maxDiscountAmount: Number(maxDiscountAmount),
-      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      freeShipping
     };
 
     try {
@@ -465,6 +470,19 @@ export default function DiscountsAdmin() {
                       min={getTodayDateString()}
                       className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-gray-700"
                     />
+                  </div>
+ 
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100 mt-2">
+                    <input
+                      type="checkbox"
+                      id="freeShipping"
+                      checked={freeShipping}
+                      onChange={(e) => setFreeShipping(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <label htmlFor="freeShipping" className="text-xs font-black uppercase tracking-widest text-gray-700 cursor-pointer">
+                      Grant Free Shipping
+                    </label>
                   </div>
  
                   <div className="flex items-center gap-2 pt-2">
