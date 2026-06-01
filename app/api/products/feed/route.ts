@@ -19,6 +19,14 @@ function escapeCSV(val: any) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const secret = searchParams.get("secret");
+    const feedSecret = process.env.FEED_SECRET_KEY || "parle_secure_feed_2026_key";
+
+    if (secret !== feedSecret) {
+      return NextResponse.json({ error: "Unauthorized: Invalid secret key" }, { status: 401 });
+    }
+
     await connectDB();
     
     // Determine the base app URL dynamically from the request headers
