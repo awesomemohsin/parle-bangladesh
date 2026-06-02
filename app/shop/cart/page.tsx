@@ -173,8 +173,8 @@ export default function CartPage() {
   };
 
   // Calculate cart-only totals (ignoring coupon)
-  // We use items.reduce to ensure we're summing the prices as shown in the list (which include flat discounts)
-  const cartDisplayTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // We sum the discounted totals of each row to match the item listing
+  const cartDisplayTotal = items.reduce((sum, item) => sum + getItemDiscountedTotal(item, subtotal, activeDiscounts), 0);
   const cartDisplaySaved = ruleDiscount || 0;
 
   return (
