@@ -122,6 +122,11 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       const currentRuleTotal = ruleUsage.get(bestRuleId) || 0;
       ruleUsage.set(bestRuleId, currentRuleTotal + bestDiscountForItem);
     }
+
+    // Attach server-calculated discount info directly to item object
+    item.discountAmount = bestDiscountForItem;
+    item.discountedPrice = itemQuantity > 0 ? Math.round((itemEffectiveSubtotal - bestDiscountForItem) / itemQuantity) : effectivePrice;
+    item.discountedTotal = Math.round(itemEffectiveSubtotal - bestDiscountForItem);
   });
     
   // Apply max caps to each rule's total discount
@@ -215,6 +220,61 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   const totalDiscount = flatDiscountTotal + promoDiscount;
   const total = subtotal - totalDiscount;
 
+  // Calculate dynamic campaign progress notices on the server side
+  const campaignNotices: Array<{ offer: string; action: string; unlocked?: boolean }> = [];
+
+  flatDiscounts.forEach(rule => {
+    const minOrder = Number(rule.minOrderAmount || 0);
+    if (minOrder <= 0) return;
+
+    // Find if the cart has any items targeted by this rule
+    const targetedItems = items.filter(item => {
+      const pId = (item.productId || item.id || item._id)?.toString();
+      return rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId));
+    });
+
+    if (targetedItems.length === 0) return;
+
+    // Calculate dynamic campaign parameters
+    const sampleItem = targetedItems[0];
+    const productName = sampleItem.productName || "packs";
+    const unitPrice = Number(sampleItem.price) || 150;
+    
+    const targetQty = Math.round(minOrder / unitPrice);
+    const originalTotal = targetQty * unitPrice;
+    
+    let totalDiscount = 0;
+    if (rule.discountType === 'percentage') {
+      totalDiscount = (originalTotal * Number(rule.discountAmount)) / 100;
+      const maxCap = Number(rule.maxDiscountAmount || 0);
+      if (maxCap > 0 && totalDiscount > maxCap) {
+        totalDiscount = maxCap;
+      }
+    } else {
+      totalDiscount = Number(rule.discountAmount) * targetQty;
+    }
+    
+    const discountedTotal = Math.round(originalTotal - totalDiscount);
+    const currentQty = targetedItems.reduce((sum, item) => sum + Number(item.quantity || item.q || 0), 0);
+    
+    const isMet = currentQty >= targetQty;
+    const freeShippingText = rule.freeShipping ? " + Free Shipping" : "";
+
+    if (isMet) {
+      campaignNotices.push({
+        offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
+        action: `✓ Offer Unlocked! You saved ৳${Math.round(totalDiscount)}!`,
+        unlocked: true
+      });
+    } else {
+      const remainingQty = Math.max(0, targetQty - currentQty);
+      campaignNotices.push({
+        offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
+        action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`,
+        unlocked: false
+      });
+    }
+  });
 
   const result = {
     subtotal: Number(subtotal) || 0,
@@ -226,7 +286,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     promoDetails: promoDetails ? JSON.parse(JSON.stringify(promoDetails)) : null,
     isRestricted: promoDetails ? !promoDetails.allProducts : false,
     applicableSubtotal: Number(applicableSubtotal) || 0,
-    freeShippingGranted: freeShippingGranted
+    freeShippingGranted: freeShippingGranted,
+    campaignNotices: campaignNotices
   };
 
   return result;
