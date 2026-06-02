@@ -410,7 +410,8 @@ export default function DiscountsAdmin() {
                       <input
                         type="number"
                         required
-                        min="1"
+                        step="any"
+                        min="0.01"
                         value={discountAmount}
                         onChange={(e) => setDiscountAmount(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-xs"
