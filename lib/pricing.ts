@@ -45,6 +45,25 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   let flatDiscountTotal = 0;
   const ruleUsage = new Map<string, number>();
 
+  // Pre-calculate subtotal of targeted products for each flat discount rule
+  const ruleSubtotals = new Map<string, number>();
+  flatDiscounts.forEach(rule => {
+    let ruleSubtotal = 0;
+    items.forEach(item => {
+      const pId = (item.productId || item.id || item._id)?.toString();
+      const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId));
+      if (applies) {
+        const itemPrice = Number(item.price) || 0;
+        const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+          ? item.variationDiscountPrice
+          : itemPrice;
+        const qty = Number(item.quantity || item.q) || 0;
+        ruleSubtotal += effectivePrice * qty;
+      }
+    });
+    ruleSubtotals.set(rule._id.toString(), ruleSubtotal);
+  });
+
   // Calculate Best Flat Discount per item (Campaign-based only, since variation discounts are now part of subtotal)
   items.forEach(item => {
     const productId = (item.productId || item.id || item._id)?.toString();
@@ -70,8 +89,9 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       // 1. Check product applicability
       const appliesToProduct = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
       
-      // 2. Check minimum order amount
-      const minOrderMet = subtotal >= (Number(rule.minOrderAmount) || 0);
+      // 2. Check minimum order amount (enforced only on targeted products)
+      const applicableSubtotal = ruleSubtotals.get(rule._id.toString()) || 0;
+      const minOrderMet = applicableSubtotal >= (Number(rule.minOrderAmount) || 0);
 
       if (appliesToProduct && minOrderMet) {
         let currentDiscount = 0;

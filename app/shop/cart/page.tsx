@@ -29,12 +29,15 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
     (rule.discountAmount === 12.5 || rule.discountAmount === 12) && 
     rule.discountType === 'fixed';
 
+  // Calculate targeted subtotal for this rule
+  const targetedItems = items.filter(item => 
+    rule.allProducts || 
+    (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
+  );
+  const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
   if (isWaferCampaign) {
-    const waferItems = items.filter(item => 
-      rule.allProducts || 
-      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
-    );
-    const currentQty = waferItems.reduce((sum, item) => sum + item.quantity, 0);
+    const currentQty = targetedItems.reduce((sum, item) => sum + item.quantity, 0);
     const targetQty = 4;
     const remainingQty = targetQty - currentQty;
 
@@ -46,7 +49,7 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
     }
   }
 
-  const needed = Math.round(Number(rule.minOrderAmount) - subtotal);
+  const needed = Math.round(Number(rule.minOrderAmount) - ruleSubtotal);
   const estQty = Math.round(rule.minOrderAmount / 150);
   const estTotalDiscount = rule.discountType === 'percentage'
     ? (rule.minOrderAmount * rule.discountAmount) / 100
@@ -57,7 +60,7 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
   if (rule.discountType === 'fixed' && estQty > 0) {
     return {
       offer: `Buy ${estQty} packs for ৳${totalWithDiscount} instead of ৳${rule.minOrderAmount}${rule.freeShipping ? ' + Free Shipping' : ''}!`,
-      action: `Add ৳${needed} more to unlock this offer!`
+      action: `Add ৳${needed} more of these products to unlock this offer!`
     };
   }
 
@@ -67,7 +70,7 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
   };
 }
 
-function getItemDiscountedTotal(item: any, subtotal: number, activeDiscounts: any[]) {
+function getItemDiscountedTotal(item: any, subtotal: number, activeDiscounts: any[], items: any[]) {
   const originalTotal = item.price * item.quantity;
   let bestDiscount = 0;
 
@@ -77,7 +80,14 @@ function getItemDiscountedTotal(item: any, subtotal: number, activeDiscounts: an
     const appliesToProduct = rule.allProducts || 
       (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId));
 
-    const minOrderMet = subtotal >= (Number(rule.minOrderAmount) || 0);
+    // Calculate subtotal of only targeted products for this rule
+    const targetedItems = items.filter(cartItem => 
+      rule.allProducts || 
+      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === cartItem.productId))
+    );
+    const ruleSubtotal = targetedItems.reduce((sum, cartItem) => sum + (cartItem.price * cartItem.quantity), 0);
+
+    const minOrderMet = ruleSubtotal >= (Number(rule.minOrderAmount) || 0);
 
     if (appliesToProduct && minOrderMet) {
       let currentDiscount = 0;
@@ -174,7 +184,7 @@ export default function CartPage() {
 
   // Calculate cart-only totals (ignoring coupon)
   // We sum the discounted totals of each row to match the item listing
-  const cartDisplayTotal = items.reduce((sum, item) => sum + getItemDiscountedTotal(item, subtotal, activeDiscounts), 0);
+  const cartDisplayTotal = items.reduce((sum, item) => sum + getItemDiscountedTotal(item, subtotal, activeDiscounts, items), 0);
   const cartDisplaySaved = ruleDiscount || 0;
 
   return (
@@ -228,13 +238,17 @@ export default function CartPage() {
               {/* Flat Discount Requirement Notice */}
               {activeDiscounts.filter(rule => {
                 const minOrder = Number(rule.minOrderAmount || 0);
-                if (minOrder <= 0 || subtotal >= minOrder) return false;
+                if (minOrder <= 0) return false;
                 
-                const hasApplicableItem = items.some(item => 
+                // Calculate targeted subtotal for this rule
+                const targetedItems = items.filter(item => 
                   rule.allProducts || 
                   (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
                 );
-                return hasApplicableItem;
+                const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                
+                // Only show notice if we have targeted items in the cart and requirement is not met yet
+                return targetedItems.length > 0 && ruleSubtotal < minOrder;
               }).map((rule, idx) => {
                 const msg = getRuleOfferMessage(rule, subtotal, items);
                 return (
@@ -338,7 +352,7 @@ export default function CartPage() {
 
                             {(() => {
                               const originalTotal = item.price * item.quantity;
-                              const discountedTotal = getItemDiscountedTotal(item, subtotal, activeDiscounts);
+                              const discountedTotal = getItemDiscountedTotal(item, subtotal, activeDiscounts, items);
                               return (
                                 <div className="text-right">
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">

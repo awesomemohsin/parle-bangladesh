@@ -26,12 +26,15 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
     (rule.discountAmount === 12.5 || rule.discountAmount === 12) && 
     rule.discountType === 'fixed';
 
+  // Calculate targeted subtotal for this rule
+  const targetedItems = items.filter(item => 
+    rule.allProducts || 
+    (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
+  );
+  const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
   if (isWaferCampaign) {
-    const waferItems = items.filter(item => 
-      rule.allProducts || 
-      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
-    );
-    const currentQty = waferItems.reduce((sum, item) => sum + item.quantity, 0);
+    const currentQty = targetedItems.reduce((sum, item) => sum + item.quantity, 0);
     const targetQty = 4;
     const remainingQty = targetQty - currentQty;
 
@@ -43,7 +46,7 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
     }
   }
 
-  const needed = Math.round(Number(rule.minOrderAmount) - subtotal);
+  const needed = Math.round(Number(rule.minOrderAmount) - ruleSubtotal);
   const estQty = Math.round(rule.minOrderAmount / 150);
   const estTotalDiscount = rule.discountType === 'percentage'
     ? (rule.minOrderAmount * rule.discountAmount) / 100
@@ -54,7 +57,7 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
   if (rule.discountType === 'fixed' && estQty > 0) {
     return {
       offer: `Buy ${estQty} packs for ৳${totalWithDiscount} instead of ৳${rule.minOrderAmount}${rule.freeShipping ? ' + Free Shipping' : ''}!`,
-      action: `Add ৳${needed} more to unlock this offer!`
+      action: `Add ৳${needed} more of these products to unlock this offer!`
     };
   }
 
@@ -674,16 +677,18 @@ function CheckoutContent() {
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {/* Flat Discount Requirement Notice */}
                 {activeDiscounts.filter(rule => {
-                  // Only show rules that are NOT already met
                   const minOrder = Number(rule.minOrderAmount || 0);
-                  if (minOrder <= 0 || subtotal >= minOrder) return false;
+                  if (minOrder <= 0) return false;
 
-                  // Only show rules that COULD apply to current items
-                  const hasApplicableItem = items.some(item =>
-                    rule.allProducts ||
+                  // Calculate targeted subtotal for this rule
+                  const targetedItems = items.filter(item => 
+                    rule.allProducts || 
                     (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
                   );
-                  return hasApplicableItem;
+                  const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+                  // Only show notice if we have targeted items in the cart and requirement is not met yet
+                  return targetedItems.length > 0 && ruleSubtotal < minOrder;
                 }).map((rule, idx) => {
                   const msg = getRuleOfferMessage(rule, subtotal, items);
                   return (
