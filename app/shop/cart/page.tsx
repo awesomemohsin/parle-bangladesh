@@ -24,49 +24,46 @@ import { sanitizeProductImagePath } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
-  // Check if this is the Parle's Wafers buy 4 offer
-  const isWaferCampaign = rule.minOrderAmount === 600 && 
-    (rule.discountAmount === 12.5 || rule.discountAmount === 12) && 
-    rule.discountType === 'fixed';
-
-  // Calculate targeted subtotal for this rule
+  // Find items in the cart targeted by this rule
   const targetedItems = items.filter(item => 
     rule.allProducts || 
     (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
   );
-  const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  if (targetedItems.length === 0) {
+    return { offer: "", action: "" };
+  }
 
-  if (isWaferCampaign) {
-    const currentQty = targetedItems.reduce((sum, item) => sum + item.quantity, 0);
-    const targetQty = 4;
-    const remainingQty = targetQty - currentQty;
-
-    if (remainingQty > 0) {
-      return {
-        offer: "Buy 4 packs of Parle's Wafers for ৳550 instead of ৳600 + Free Shipping!",
-        action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to your cart to unlock this offer!`
-      };
+  // Get dynamic product info from cart items
+  const sampleItem = targetedItems[0];
+  const productName = sampleItem.productName || "packs";
+  const unitPrice = Number(sampleItem.price) || 150;
+  
+  // Calculate quantity and prices dynamically
+  const targetQty = Math.round(Number(rule.minOrderAmount) / unitPrice);
+  const originalTotal = targetQty * unitPrice;
+  
+  let totalDiscount = 0;
+  if (rule.discountType === 'percentage') {
+    totalDiscount = (originalTotal * Number(rule.discountAmount)) / 100;
+    const maxCap = Number(rule.maxDiscountAmount || 0);
+    if (maxCap > 0 && totalDiscount > maxCap) {
+      totalDiscount = maxCap;
     }
+  } else {
+    totalDiscount = Number(rule.discountAmount) * targetQty;
   }
-
-  const needed = Math.round(Number(rule.minOrderAmount) - ruleSubtotal);
-  const estQty = Math.round(rule.minOrderAmount / 150);
-  const estTotalDiscount = rule.discountType === 'percentage'
-    ? (rule.minOrderAmount * rule.discountAmount) / 100
-    : rule.discountAmount * estQty;
-
-  const totalWithDiscount = rule.minOrderAmount - estTotalDiscount;
-
-  if (rule.discountType === 'fixed' && estQty > 0) {
-    return {
-      offer: `Buy ${estQty} packs for ৳${totalWithDiscount} instead of ৳${rule.minOrderAmount}${rule.freeShipping ? ' + Free Shipping' : ''}!`,
-      action: `Add ৳${needed} more of these products to unlock this offer!`
-    };
-  }
+  
+  const discountedTotal = Math.round(originalTotal - totalDiscount);
+  
+  const currentQty = targetedItems.reduce((sum, item) => sum + item.quantity, 0);
+  const remainingQty = Math.max(0, targetQty - currentQty);
+  
+  const freeShippingText = rule.freeShipping ? " + Free Shipping" : "";
 
   return {
-    offer: `Get ${rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`} off on orders of ৳${rule.minOrderAmount} or more${rule.freeShipping ? ' + Free Shipping' : ''}!`,
-    action: `Add ৳${needed} more to get this offer!`
+    offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
+    action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to your cart to unlock this offer!`
   };
 }
 
