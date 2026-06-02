@@ -13,6 +13,9 @@ export interface CartItem {
   weight?: string;
   flavor?: string;
   stock?: number;
+  discountAmount?: number;
+  discountedPrice?: number;
+  discountedTotal?: number;
 }
 
 export interface PromoDetails {
@@ -39,6 +42,7 @@ export interface Cart {
   isRestricted?: boolean;
   applicableSubtotal?: number;
   freeShippingGranted?: boolean;
+  campaignNotices?: Array<{ offer: string; action: string }>;
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -61,6 +65,7 @@ interface CartContextType {
   isRestricted?: boolean;
   applicableSubtotal?: number;
   freeShippingGranted?: boolean;
+  campaignNotices: Array<{ offer: string; action: string }>;
   isLoading: boolean;
   isSyncing: boolean;
   addItem: (item: AddCartItemInput, quantity?: number) => void;
@@ -95,6 +100,9 @@ function normalizeItem(item: any): CartItem | null {
     weight: item.weight || "",
     flavor: item.flavor || "",
     stock: item.stock !== undefined ? Number(item.stock) : undefined,
+    discountAmount: item.discountAmount !== undefined ? Number(item.discountAmount) : undefined,
+    discountedPrice: item.discountedPrice !== undefined ? Number(item.discountedPrice) : undefined,
+    discountedTotal: item.discountedTotal !== undefined ? Number(item.discountedTotal) : undefined,
   };
 }
 
@@ -141,7 +149,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ruleDiscount: parsed.ruleDiscount,
             isRestricted: parsed.isRestricted,
             applicableSubtotal: parsed.applicableSubtotal,
-            freeShippingGranted: parsed.freeShippingGranted
+            freeShippingGranted: parsed.freeShippingGranted,
+            campaignNotices: parsed.campaignNotices || []
           };
         } catch (e) {
           console.error("Cart initial parse failed:", e);
@@ -173,7 +182,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ruleDiscount: parsed.ruleDiscount,
           isRestricted: parsed.isRestricted,
           applicableSubtotal: parsed.applicableSubtotal,
-          freeShippingGranted: parsed.freeShippingGranted
+          freeShippingGranted: parsed.freeShippingGranted,
+          campaignNotices: parsed.campaignNotices || []
         });
       } catch (e) {
         console.error("Cart sync parse failed:", e);
@@ -218,7 +228,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               const updatedLocalItems = prev.items.map(item => {
                 const key = getItemKey(item);
                 const dbItem = dbItemMap.get(key) as CartItem | undefined;
-                return dbItem ? { ...item, price: dbItem.price, stock: dbItem.stock } : item;
+                return dbItem ? { 
+                  ...item, 
+                  price: dbItem.price, 
+                  stock: dbItem.stock,
+                  discountAmount: dbItem.discountAmount,
+                  discountedPrice: dbItem.discountedPrice,
+                  discountedTotal: dbItem.discountedTotal
+                } : item;
               });
               const uniqueDBItems = dbItems.filter((i: CartItem) => !localKeys.has(getItemKey(i)));
               const mergedItems = [...updatedLocalItems, ...uniqueDBItems];
@@ -236,7 +253,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 applicableSubtotal: data.applicableSubtotal,
                 freeShippingGranted: data.freeShippingGranted,
                 promoCode: prev.promoCode || data.promoCode, 
-                promoDetails: prev.promoDetails || data.promoDetails
+                promoDetails: prev.promoDetails || data.promoDetails,
+                campaignNotices: data.campaignNotices || []
               };
             });
           }
@@ -277,7 +295,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
 
       const promoChanged = cart.promoCode !== lastPromo;
-      const delay = promoChanged ? 50 : 1000;
+      const delay = promoChanged ? 50 : 300;
 
       setIsSyncing(true);
 
@@ -329,7 +347,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     ...item,
                     price: dbItem.price,
                     stock: dbItem.stock,
-                    quantity: newQuantity
+                    quantity: newQuantity,
+                    discountAmount: dbItem.discountAmount,
+                    discountedPrice: dbItem.discountedPrice,
+                    discountedTotal: dbItem.discountedTotal
                   };
                 }
                 return item;
@@ -355,7 +376,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 applicableSubtotal: data.applicableSubtotal,
                 freeShippingGranted: data.freeShippingGranted,
                 promoCode: data.promoCode,
-                promoDetails: data.promoDetails
+                promoDetails: data.promoDetails,
+                campaignNotices: data.campaignNotices || []
               };
             });
           }
@@ -389,12 +411,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (existingIdx > -1) {
         const existing = newItems[existingIdx];
-        newItems[existingIdx] = { ...existing, quantity: Math.min(maxAllowed, existing.quantity + normalized.quantity) };
+        newItems[existingIdx] = { 
+          ...existing, 
+          quantity: Math.min(maxAllowed, existing.quantity + normalized.quantity),
+          // ONLY clear stale discounts on this mutated item!
+          discountAmount: undefined,
+          discountedPrice: undefined,
+          discountedTotal: undefined
+        };
       } else {
-        newItems.push({ ...normalized, quantity: Math.min(maxAllowed, normalized.quantity) });
+        newItems.push({ 
+          ...normalized, 
+          quantity: Math.min(maxAllowed, normalized.quantity),
+          // ONLY clear stale discounts on this mutated item!
+          discountAmount: undefined,
+          discountedPrice: undefined,
+          discountedTotal: undefined
+        });
       }
+
       const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-      return { ...prev, items: newItems, itemCount: newItemCount };
+      return { 
+        ...prev, 
+        items: newItems, 
+        itemCount: newItemCount
+      };
     });
   }, [user]);
 
@@ -402,7 +443,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCart(prev => {
       const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
       const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-      return { ...prev, items: newItems, itemCount: newItemCount };
+      return { 
+        ...prev, 
+        items: newItems, 
+        itemCount: newItemCount
+      };
     });
   }, []);
 
@@ -416,12 +461,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         : prev.items.map(i => {
             if (itemMatchesKey(i, key)) {
               const itemMaxAllowed = canInputManual ? 999999 : (i.stock || 999);
-              return { ...i, quantity: Math.min(itemMaxAllowed, quantity) };
+              return { 
+                ...i, 
+                quantity: Math.min(itemMaxAllowed, quantity),
+                // ONLY clear stale discounts on this mutated item!
+                discountAmount: undefined,
+                discountedPrice: undefined,
+                discountedTotal: undefined
+              };
             }
             return i;
           });
+
       const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-      return { ...prev, items: newItems, itemCount: newItemCount };
+      return { 
+        ...prev, 
+        items: newItems, 
+        itemCount: newItemCount
+      };
     });
   }, [user]);
 
@@ -461,6 +518,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     isRestricted: cart.isRestricted,
     applicableSubtotal: cart.applicableSubtotal,
     freeShippingGranted: isMounted ? (cart.freeShippingGranted || false) : false,
+    campaignNotices: cart.campaignNotices || [],
     isLoading: !isMounted || isLoading,
     isSyncing: isMounted ? isSyncing : false,
     addItem,
