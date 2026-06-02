@@ -20,49 +20,7 @@ interface OrderState {
   error?: string;
 }
 
-function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
-  // Find items in the cart targeted by this rule
-  const targetedItems = items.filter(item => 
-    rule.allProducts || 
-    (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
-  );
-  
-  if (targetedItems.length === 0) {
-    return { offer: "", action: "" };
-  }
-
-  // Get dynamic product info from cart items
-  const sampleItem = targetedItems[0];
-  const productName = sampleItem.productName || "packs";
-  const unitPrice = Number(sampleItem.price) || 150;
-  
-  // Calculate quantity and prices dynamically
-  const targetQty = Math.round(Number(rule.minOrderAmount) / unitPrice);
-  const originalTotal = targetQty * unitPrice;
-  
-  let totalDiscount = 0;
-  if (rule.discountType === 'percentage') {
-    totalDiscount = (originalTotal * Number(rule.discountAmount)) / 100;
-    const maxCap = Number(rule.maxDiscountAmount || 0);
-    if (maxCap > 0 && totalDiscount > maxCap) {
-      totalDiscount = maxCap;
-    }
-  } else {
-    totalDiscount = Number(rule.discountAmount) * targetQty;
-  }
-  
-  const discountedTotal = Math.round(originalTotal - totalDiscount);
-  
-  const currentQty = targetedItems.reduce((sum, item) => sum + item.quantity, 0);
-  const remainingQty = Math.max(0, targetQty - currentQty);
-  
-  const freeShippingText = rule.freeShipping ? " + Free Shipping" : "";
-
-  return {
-    offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
-    action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`
-  };
-}
+// Pricing and discount calculations are now computed strictly on the server side.
 
 function CheckoutContent() {
   const router = useRouter();
@@ -102,7 +60,7 @@ function CheckoutContent() {
 
 
 
-  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted } = useCart();
+  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices } = useCart();
   const { user, logout } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [confirmingStep, setConfirmingStep] = useState(0);
@@ -122,22 +80,7 @@ function CheckoutContent() {
   const [promoError, setPromoError] = useState('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchActiveDiscounts = async () => {
-      try {
-        const res = await fetch('/api/discounts/active');
-        if (res.ok) {
-          const data = await res.json();
-          setActiveDiscounts(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch active discounts", err);
-      }
-    };
-    fetchActiveDiscounts();
-  }, []);
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim() || isValidatingPromo) return;
@@ -305,13 +248,13 @@ function CheckoutContent() {
 
   // Use the synchronized values from the CartContext (server-side calculation)
   // Note: we might need to handle shipping cost locally as it depends on the form
-  const isFreeDelivery = subtotal >= 1000 || !!freeShippingGranted;
+  const isFreeDelivery = total >= 1000 || !!freeShippingGranted;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
 
-  // The final total should be (subtotal - ruleDiscount - promoDiscount) + shippingCost
-  const grandTotal = Math.max(0, (subtotal - (ruleDiscount || 0) - (promoDiscount || 0)) + currentShippingCost);
+  // The final total should be server-side net total + shippingCost
+  const grandTotal = Math.max(0, total + currentShippingCost);
   const displayPromoDiscount = promoDiscount || 0;
   const shippingCost = currentShippingCost;
   const productSubtotal = subtotal;
@@ -671,38 +614,42 @@ function CheckoutContent() {
                 )}
               </AnimatePresence>
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Order Summary</h2>
-              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {/* Flat Discount Requirement Notice */}
-                {activeDiscounts.filter(rule => {
-                  const minOrder = Number(rule.minOrderAmount || 0);
-                  if (minOrder <= 0) return false;
-
-                  // Calculate targeted subtotal for this rule
-                  const targetedItems = items.filter(item =>
-                    rule.allProducts ||
-                    (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
-                  );
-                  const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-                  // Only show notice if we have targeted items in the cart and requirement is not met yet
-                  return targetedItems.length > 0 && ruleSubtotal < minOrder;
-                }).map((rule, idx) => {
-                  const msg = getRuleOfferMessage(rule, subtotal, items);
-                  return (
-                    <div key={idx} className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3 flex items-start gap-2.5 shadow-sm">
-                      <Tag className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-[10px] font-black text-amber-900 uppercase tracking-tight italic leading-tight">
-                          {msg.offer}
-                        </p>
-                        <p className="text-[9px] font-bold text-amber-600/80 uppercase tracking-widest mt-1">
-                          {msg.action}
-                        </p>
+              {campaignNotices && campaignNotices.length > 0 && (
+                <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {/* Flat Discount Requirement Notice */}
+                  {campaignNotices.map((notice, idx) => {
+                    const isUnlocked = !!(notice as any).unlocked;
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`border rounded-md p-3 mb-3 flex items-start gap-2.5 shadow-sm transition-colors duration-300 ${
+                          isUnlocked 
+                            ? "bg-emerald-50 border-emerald-200" 
+                            : "bg-amber-50 border-amber-200"
+                        }`}
+                      >
+                        {isUnlocked ? (
+                          <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <Tag className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className={`text-[10px] font-black uppercase tracking-tight italic leading-tight transition-colors duration-300 ${
+                            isUnlocked ? "text-emerald-900" : "text-amber-900"
+                          }`}>
+                            {notice.offer}
+                          </p>
+                          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300 ${
+                            isUnlocked ? "text-emerald-600" : "text-amber-600/80"
+                          }`}>
+                            {notice.action}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                 {items.map(item => {

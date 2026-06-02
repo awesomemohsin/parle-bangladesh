@@ -14,7 +14,8 @@ import {
   Truck,
   Package,
   ShieldCheck,
-  Tag
+  Tag,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart, getItemKey } from "@/hooks/useCart";
@@ -22,95 +23,9 @@ import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
 import { sanitizeProductImagePath } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import ShopLoading from "../loading";
 
-function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
-  // Find items in the cart targeted by this rule
-  const targetedItems = items.filter(item => 
-    rule.allProducts || 
-    (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
-  );
-  
-  if (targetedItems.length === 0) {
-    return { offer: "", action: "" };
-  }
-
-  // Get dynamic product info from cart items
-  const sampleItem = targetedItems[0];
-  const productName = sampleItem.productName || "packs";
-  const unitPrice = Number(sampleItem.price) || 150;
-  
-  // Calculate quantity and prices dynamically
-  const targetQty = Math.round(Number(rule.minOrderAmount) / unitPrice);
-  const originalTotal = targetQty * unitPrice;
-  
-  let totalDiscount = 0;
-  if (rule.discountType === 'percentage') {
-    totalDiscount = (originalTotal * Number(rule.discountAmount)) / 100;
-    const maxCap = Number(rule.maxDiscountAmount || 0);
-    if (maxCap > 0 && totalDiscount > maxCap) {
-      totalDiscount = maxCap;
-    }
-  } else {
-    totalDiscount = Number(rule.discountAmount) * targetQty;
-  }
-  
-  const discountedTotal = Math.round(originalTotal - totalDiscount);
-  
-  const currentQty = targetedItems.reduce((sum, item) => sum + item.quantity, 0);
-  const remainingQty = Math.max(0, targetQty - currentQty);
-  
-  const freeShippingText = rule.freeShipping ? " + Free Shipping" : "";
-
-  return {
-    offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
-    action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to your cart to unlock this offer!`
-  };
-}
-
-function getItemDiscountedTotal(item: any, subtotal: number, activeDiscounts: any[], items: any[]) {
-  const originalTotal = item.price * item.quantity;
-  let bestDiscount = 0;
-
-  activeDiscounts.forEach(rule => {
-    if (rule.type !== 'flat') return;
-
-    const appliesToProduct = rule.allProducts || 
-      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId));
-
-    // Calculate subtotal of only targeted products for this rule
-    const targetedItems = items.filter(cartItem => 
-      rule.allProducts || 
-      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === cartItem.productId))
-    );
-    const ruleSubtotal = targetedItems.reduce((sum, cartItem) => sum + (cartItem.price * cartItem.quantity), 0);
-
-    const minOrderMet = ruleSubtotal >= (Number(rule.minOrderAmount) || 0);
-
-    if (appliesToProduct && minOrderMet) {
-      let currentDiscount = 0;
-      const amount = Number(rule.discountAmount || 0);
-
-      if (rule.discountType === 'percentage') {
-        currentDiscount = (originalTotal * amount) / 100;
-      } else {
-        currentDiscount = amount * item.quantity;
-      }
-
-      const maxCap = Number(rule.maxDiscountAmount || 0);
-      if (maxCap > 0 && currentDiscount > maxCap) {
-        currentDiscount = maxCap;
-      }
-
-      currentDiscount = Math.min(originalTotal, currentDiscount);
-
-      if (currentDiscount > bestDiscount) {
-        bestDiscount = currentDiscount;
-      }
-    }
-  });
-
-  return Math.round(originalTotal - bestDiscount);
-}
+// Pricing and discount calculations are now computed strictly on the server side.
 
 export default function CartPage() {
   const router = useRouter();
@@ -124,30 +39,43 @@ export default function CartPage() {
     ruleDiscount,
     promoDiscount,
     clearCart,
-    isLoading
+    isLoading,
+    campaignNotices,
+    freeShippingGranted,
+    isSyncing
   } = useCart();
   const { user } = useAuth();
   const isDealer = user?.customerType === "dealer";
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
+  const [updatingKeys, setUpdatingKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setMounted(true);
-    const fetchActiveDiscounts = async () => {
-      try {
-        const res = await fetch('/api/discounts/active');
-        if (res.ok) {
-          const data = await res.json();
-          setActiveDiscounts(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch active discounts", err);
-      }
-    };
-    fetchActiveDiscounts();
   }, []);
+
+  useEffect(() => {
+    if (!isSyncing) {
+      setUpdatingKeys(new Set());
+    }
+  }, [isSyncing]);
+
+  const handleUpdateQuantity = (key: string, newQty: number) => {
+    setUpdatingKeys(prev => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    updateQuantity(key, newQty);
+  };
+
+  const handleLinkClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    setIsNavigating(true);
+    router.push(href);
+  };
 
   // Modal states
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -180,12 +108,25 @@ export default function CartPage() {
   };
 
   // Calculate cart-only totals (ignoring coupon)
-  // We sum the discounted totals of each row to match the item listing
-  const cartDisplayTotal = items.reduce((sum, item) => sum + getItemDiscountedTotal(item, subtotal, activeDiscounts, items), 0);
+  // Use the server-side calculated totals directly
+  const cartDisplayTotal = total;
   const cartDisplaySaved = ruleDiscount || 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
+    <div className="min-h-screen bg-slate-50 font-sans pb-20 relative">
+      <AnimatePresence>
+        {(isCheckingOut || isNavigating) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999]"
+          >
+            <ShopLoading />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -201,11 +142,11 @@ export default function CartPage() {
             </div>
           </div>
 
-          <Link href="/shop">
+          <a href="/shop" onClick={(e) => handleLinkClick(e, '/shop')}>
             <Button variant="ghost" className="text-[9px] font-black uppercase tracking-widest hover:text-red-600 gap-2">
               Continue Shopping <ArrowRight className="w-3 h-3" />
             </Button>
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -222,48 +163,49 @@ export default function CartPage() {
             <p className="text-gray-400 font-medium mb-10 max-w-xs mx-auto text-sm leading-relaxed">
               Your bag is waiting for some delicious snacks. Let's fill it up!
             </p>
-            <Link href="/shop">
+            <a href="/shop" onClick={(e) => handleLinkClick(e, '/shop')}>
               <Button className="h-14 px-10 rounded-2xl bg-gray-900 hover:bg-red-600 text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200 active:scale-95 text-[10px]">
                 Browse Shop
               </Button>
-            </Link>
+            </a>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             {/* Items Column */}
             <div className="lg:col-span-8 space-y-4">
               {/* Flat Discount Requirement Notice */}
-              {activeDiscounts.filter(rule => {
-                const minOrder = Number(rule.minOrderAmount || 0);
-                if (minOrder <= 0) return false;
-                
-                // Calculate targeted subtotal for this rule
-                const targetedItems = items.filter(item => 
-                  rule.allProducts || 
-                  (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
-                );
-                const ruleSubtotal = targetedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                
-                // Only show notice if we have targeted items in the cart and requirement is not met yet
-                return targetedItems.length > 0 && ruleSubtotal < minOrder;
-              }).map((rule, idx) => {
-                const msg = getRuleOfferMessage(rule, subtotal, items);
+              {campaignNotices?.map((notice, idx) => {
+                const isUnlocked = !!(notice as any).unlocked;
                 return (
                   <motion.div 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     key={idx} 
-                    className="bg-amber-50 border border-amber-200 rounded-[24px] p-4 flex items-center gap-4 shadow-sm"
+                    className={`border rounded-[24px] p-4 flex items-center gap-4 shadow-sm transition-colors duration-300 ${
+                      isUnlocked 
+                        ? "bg-emerald-50 border-emerald-200" 
+                        : "bg-amber-50 border-amber-200"
+                    }`}
                   >
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Tag className="w-5 h-5 text-amber-600" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
+                      isUnlocked ? "bg-emerald-100" : "bg-amber-100"
+                    }`}>
+                      {isUnlocked ? (
+                        <Check className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <Tag className="w-5 h-5 text-amber-600" />
+                      )}
                     </div>
                     <div>
-                      <p className="text-[11px] font-black text-amber-800 uppercase tracking-tight italic">
-                        {msg.offer}
+                      <p className={`text-[11px] font-black uppercase tracking-tight italic transition-colors duration-300 ${
+                        isUnlocked ? "text-emerald-800" : "text-amber-800"
+                      }`}>
+                        {notice.offer}
                       </p>
-                      <p className="text-[9px] font-bold text-amber-600/60 uppercase tracking-widest mt-0.5">
-                        {msg.action}
+                      <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 transition-colors duration-300 ${
+                        isUnlocked ? "text-emerald-600" : "text-amber-600/60"
+                      }`}>
+                        {notice.action}
                       </p>
                     </div>
                   </motion.div>
@@ -274,7 +216,7 @@ export default function CartPage() {
                 <AnimatePresence mode="popLayout">
                   {items.map((item) => {
                     const itemKey = getItemKey(item);
-                    const productLink = `/shop/${item.productSlug}?weight=${encodeURIComponent(item.weight || '')}&flavor=${encodeURIComponent(item.flavor || '')}`;
+                    const productLink = `/shop/products/${item.productSlug}?weight=${encodeURIComponent(item.weight || '')}&flavor=${encodeURIComponent(item.flavor || '')}`;
                     return (
                       <motion.div
                         layout
@@ -285,7 +227,11 @@ export default function CartPage() {
                         className="group bg-white rounded-3xl p-5 flex items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border border-transparent hover:border-gray-100"
                       >
                         {/* Product Image */}
-                        <Link href={productLink} className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform cursor-pointer">
+                        <a 
+                          href={productLink} 
+                          onClick={(e) => handleLinkClick(e, productLink)} 
+                          className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform cursor-pointer"
+                        >
                           <Image
                             src={sanitizeProductImagePath(item.image || "")}
                             alt={item.productName}
@@ -293,17 +239,21 @@ export default function CartPage() {
                             sizes="96px"
                             className="object-contain p-2"
                           />
-                        </Link>
+                        </a>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <Link href={productLink} className="hover:text-red-600 transition-colors">
+                              <a 
+                                href={productLink} 
+                                onClick={(e) => handleLinkClick(e, productLink)} 
+                                className="hover:text-red-600 transition-colors"
+                              >
                                 <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-1 cursor-pointer pr-2">
                                   {item.productName}
                                 </h3>
-                              </Link>
+                              </a>
                               <div className="flex flex-wrap gap-2 mt-1">
                                 {item.weight && (
                                   <span className="text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 uppercase tracking-widest">
@@ -329,7 +279,7 @@ export default function CartPage() {
                           <div className="flex items-center justify-between mt-4">
                             <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-100">
                               <button
-                                onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                                onClick={() => handleUpdateQuantity(itemKey, item.quantity - 1)}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
                                 disabled={item.quantity <= 1}
                               >
@@ -339,7 +289,7 @@ export default function CartPage() {
                                 {item.quantity}
                               </span>
                               <button
-                                onClick={() => updateQuantity(itemKey, item.quantity + 1)}
+                                onClick={() => handleUpdateQuantity(itemKey, item.quantity + 1)}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
                                 disabled={!canInputManualQty && item.stock !== undefined && item.quantity >= item.stock}
                               >
@@ -349,14 +299,19 @@ export default function CartPage() {
 
                             {(() => {
                               const originalTotal = item.price * item.quantity;
-                              const discountedTotal = getItemDiscountedTotal(item, subtotal, activeDiscounts, items);
+                              const discountedTotal = item.discountedTotal;
                               return (
-                                <div className="text-right">
+                                <div className="text-right min-w-[80px]">
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                                     {item.quantity > 1 ? `৳${item.price} x ${item.quantity}` : 'Price'}
                                   </p>
-                                  <div className="flex flex-col items-end">
-                                    {discountedTotal < originalTotal ? (
+                                  <div className="flex flex-col items-end justify-center min-h-[40px]">
+                                    {isSyncing && updatingKeys.has(itemKey) ? (
+                                      <div className="flex flex-col items-end gap-1.5 py-1">
+                                        <div className="h-4 w-12 bg-slate-100 animate-pulse rounded" />
+                                        <div className="h-3 w-8 bg-slate-50 animate-pulse rounded" />
+                                      </div>
+                                    ) : discountedTotal !== undefined && discountedTotal < originalTotal ? (
                                       <>
                                         <div className="flex items-center gap-1 font-bold text-gray-400 text-xs line-through">
                                           <span>৳</span>
@@ -412,41 +367,49 @@ export default function CartPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-[32px] p-6 shadow-xl shadow-slate-200/50 border border-gray-50 overflow-hidden relative"
               >
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${cartDisplayTotal >= 1000 ? 'bg-green-600 shadow-lg shadow-green-100 rotate-6' : 'bg-red-600 shadow-lg shadow-red-100'}`}>
-                      <Truck className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight italic">
-                        {cartDisplayTotal >= 1000 ? 'Free Delivery Unlocked!' : 'Free Delivery'}
-                      </h3>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                        {cartDisplayTotal >= 1000 ? 'Your snacks ship for free' : `Spend ৳${Math.max(1000 - cartDisplayTotal, 0)} more`}
-                      </p>
-                    </div>
-                  </div>
-                  {cartDisplayTotal < 1000 && (
-                    <div className="text-right">
-                      <span className="text-[10px] font-black text-red-600 italic tracking-tighter bg-red-50 px-2 py-1 rounded-lg">
-                        {Math.round(Math.min((cartDisplayTotal / 1000) * 100, 100))}%
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((cartDisplayTotal / 1000) * 100, 100)}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className={`absolute top-0 left-0 h-full rounded-full ${
-                      cartDisplayTotal >= 1000 ? 'bg-green-500' : 'bg-red-600'
-                    }`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                  </motion.div>
-                </div>
+                {(() => {
+                  const isFreeDelivery = cartDisplayTotal >= 1000 || !!freeShippingGranted;
+                  const progressPercent = isFreeDelivery ? 100 : Math.min((cartDisplayTotal / 1000) * 100, 100);
+                  return (
+                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${isFreeDelivery ? 'bg-green-600 shadow-lg shadow-green-100 rotate-6' : 'bg-red-600 shadow-lg shadow-red-100'}`}>
+                            <Truck className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight italic">
+                              {isFreeDelivery ? 'Free Delivery Unlocked!' : 'Free Delivery'}
+                            </h3>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                              {isFreeDelivery ? 'Your snacks ship for free' : `Spend ৳${Math.max(1000 - cartDisplayTotal, 0)} more`}
+                            </p>
+                          </div>
+                        </div>
+                        {!isFreeDelivery && (
+                          <div className="text-right">
+                            <span className="text-[10px] font-black text-red-600 italic tracking-tighter bg-red-50 px-2 py-1 rounded-lg">
+                              {Math.round(progressPercent)}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPercent}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                          className={`absolute top-0 left-0 h-full rounded-full ${
+                            isFreeDelivery ? 'bg-green-500' : 'bg-red-600'
+                          }`}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                        </motion.div>
+                      </div>
+                    </>
+                  );
+                })()}
               </motion.div>
 
               <div className="bg-white rounded-[32px] p-8 shadow-2xl shadow-slate-200/50 border border-gray-50 flex flex-col gap-8 relative overflow-hidden">
@@ -481,18 +444,31 @@ export default function CartPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic text-right">
                       <span className="text-xl text-red-600 not-italic">৳</span>
-                      <span>{Math.round(cartDisplayTotal)}</span>
+                      {isSyncing ? (
+                        <span className="text-2xl text-slate-300 animate-pulse">...</span>
+                      ) : (
+                        <span>{Math.round(cartDisplayTotal)}</span>
+                      )}
                     </div>
                   </div>
 
                   <Button
                     onClick={handleCheckout}
-                    disabled={isCheckingOut}
-                    className="w-full h-16 rounded-2xl bg-gray-900 hover:bg-red-600 text-white font-black uppercase tracking-[0.2em] transition-all shadow-2xl shadow-slate-200 active:scale-95 text-xs group"
+                    disabled={isCheckingOut || isSyncing}
+                    className="w-full h-16 rounded-2xl bg-gray-900 hover:bg-red-600 text-white font-black uppercase tracking-[0.2em] transition-all shadow-2xl shadow-slate-200 active:scale-95 text-xs group disabled:opacity-75 disabled:cursor-not-allowed"
                   >
                     <span className="flex items-center gap-3">
-                      Proceed to Checkout
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      {isSyncing ? (
+                        <>
+                          Recalculating
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                        </>
+                      ) : (
+                        <>
+                          Proceed to Checkout
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </>
+                      )}
                     </span>
                   </Button>
                 </div>
