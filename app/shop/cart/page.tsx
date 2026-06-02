@@ -263,6 +263,7 @@ export default function CartPage() {
                 <AnimatePresence mode="popLayout">
                   {items.map((item) => {
                     const itemKey = getItemKey(item);
+                    const productLink = `/shop/${item.productSlug}?weight=${encodeURIComponent(item.weight || '')}&flavor=${encodeURIComponent(item.flavor || '')}`;
                     return (
                       <motion.div
                         layout
@@ -273,7 +274,7 @@ export default function CartPage() {
                         className="group bg-white rounded-3xl p-5 flex items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border border-transparent hover:border-gray-100"
                       >
                         {/* Product Image */}
-                        <div className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform">
+                        <Link href={productLink} className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform cursor-pointer">
                           <Image
                             src={sanitizeProductImagePath(item.image || "")}
                             alt={item.productName}
@@ -281,15 +282,17 @@ export default function CartPage() {
                             sizes="96px"
                             className="object-contain p-2"
                           />
-                        </div>
+                        </Link>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-1">
-                                {item.productName}
-                              </h3>
+                              <Link href={productLink} className="hover:text-red-600 transition-colors">
+                                <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-1 cursor-pointer">
+                                  {item.productName}
+                                </h3>
+                              </Link>
                               <div className="flex flex-wrap gap-2 mt-1">
                                 {item.weight && (
                                   <span className="text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 uppercase tracking-widest">
