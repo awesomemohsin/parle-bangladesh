@@ -23,6 +23,50 @@ import Image from "next/image";
 import { sanitizeProductImagePath } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
+function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
+  // Check if this is the Parle's Wafers buy 4 offer
+  const isWaferCampaign = rule.minOrderAmount === 600 && 
+    (rule.discountAmount === 12.5 || rule.discountAmount === 12) && 
+    rule.discountType === 'fixed';
+
+  if (isWaferCampaign) {
+    const waferItems = items.filter(item => 
+      rule.allProducts || 
+      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
+    );
+    const currentQty = waferItems.reduce((sum, item) => sum + item.quantity, 0);
+    const targetQty = 4;
+    const remainingQty = targetQty - currentQty;
+
+    if (remainingQty > 0) {
+      return {
+        offer: "Buy 4 packs of Parle's Wafers for ৳550 instead of ৳600 + Free Shipping!",
+        action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to your cart to unlock this offer!`
+      };
+    }
+  }
+
+  const needed = Math.round(Number(rule.minOrderAmount) - subtotal);
+  const estQty = Math.round(rule.minOrderAmount / 150);
+  const estTotalDiscount = rule.discountType === 'percentage'
+    ? (rule.minOrderAmount * rule.discountAmount) / 100
+    : rule.discountAmount * estQty;
+
+  const totalWithDiscount = rule.minOrderAmount - estTotalDiscount;
+
+  if (rule.discountType === 'fixed' && estQty > 0) {
+    return {
+      offer: `Buy ${estQty} packs for ৳${totalWithDiscount} instead of ৳${rule.minOrderAmount}${rule.freeShipping ? ' + Free Shipping' : ''}!`,
+      action: `Add ৳${needed} more to unlock this offer!`
+    };
+  }
+
+  return {
+    offer: `Get ${rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`} off on orders of ৳${rule.minOrderAmount} or more${rule.freeShipping ? ' + Free Shipping' : ''}!`,
+    action: `Add ৳${needed} more to get this offer!`
+  };
+}
+
 export default function CartPage() {
   const router = useRouter();
   const {
@@ -153,26 +197,29 @@ export default function CartPage() {
                   (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
                 );
                 return hasApplicableItem;
-              }).map((rule, idx) => (
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  key={idx} 
-                  className="bg-amber-50 border border-amber-200 rounded-[24px] p-4 flex items-center gap-4 shadow-sm"
-                >
-                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Tag className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-black text-amber-800 uppercase tracking-tight italic">
-                      Add ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} more for automatic {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} discount{rule.freeShipping ? ' + Free Shipping' : ''}!
-                    </p>
-                    <p className="text-[9px] font-bold text-amber-600/60 uppercase tracking-widest mt-0.5">
-                      Minimum order required: ৳{rule.minOrderAmount}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+              }).map((rule, idx) => {
+                const msg = getRuleOfferMessage(rule, subtotal, items);
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    key={idx} 
+                    className="bg-amber-50 border border-amber-200 rounded-[24px] p-4 flex items-center gap-4 shadow-sm"
+                  >
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Tag className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black text-amber-800 uppercase tracking-tight italic">
+                        {msg.offer}
+                      </p>
+                      <p className="text-[9px] font-bold text-amber-600/60 uppercase tracking-widest mt-0.5">
+                        {msg.action}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
 
               <div className="flex flex-col gap-4">
                 <AnimatePresence mode="popLayout">

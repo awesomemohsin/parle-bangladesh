@@ -20,6 +20,50 @@ interface OrderState {
   error?: string;
 }
 
+function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
+  // Check if this is the Parle's Wafers buy 4 offer
+  const isWaferCampaign = rule.minOrderAmount === 600 && 
+    (rule.discountAmount === 12.5 || rule.discountAmount === 12) && 
+    rule.discountType === 'fixed';
+
+  if (isWaferCampaign) {
+    const waferItems = items.filter(item => 
+      rule.allProducts || 
+      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
+    );
+    const currentQty = waferItems.reduce((sum, item) => sum + item.quantity, 0);
+    const targetQty = 4;
+    const remainingQty = targetQty - currentQty;
+
+    if (remainingQty > 0) {
+      return {
+        offer: "Buy 4 packs of Parle's Wafers for ৳550 instead of ৳600 + Free Shipping!",
+        action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`
+      };
+    }
+  }
+
+  const needed = Math.round(Number(rule.minOrderAmount) - subtotal);
+  const estQty = Math.round(rule.minOrderAmount / 150);
+  const estTotalDiscount = rule.discountType === 'percentage'
+    ? (rule.minOrderAmount * rule.discountAmount) / 100
+    : rule.discountAmount * estQty;
+
+  const totalWithDiscount = rule.minOrderAmount - estTotalDiscount;
+
+  if (rule.discountType === 'fixed' && estQty > 0) {
+    return {
+      offer: `Buy ${estQty} packs for ৳${totalWithDiscount} instead of ৳${rule.minOrderAmount}${rule.freeShipping ? ' + Free Shipping' : ''}!`,
+      action: `Add ৳${needed} more to unlock this offer!`
+    };
+  }
+
+  return {
+    offer: `Get ${rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`} off on orders of ৳${rule.minOrderAmount} or more${rule.freeShipping ? ' + Free Shipping' : ''}!`,
+    action: `Add ৳${needed} more to get this offer!`
+  };
+}
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -640,15 +684,22 @@ function CheckoutContent() {
                     (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId))
                   );
                   return hasApplicableItem;
-                }).map((rule, idx) => (
-                  <div key={idx} className="bg-amber-50 border border-amber-200 rounded-md p-2 mb-3 flex items-start gap-2 shadow-sm">
-                    <Tag className="w-3.5 h-3.5 text-amber-600 mt-0.5" />
-                    <p className="text-[9px] font-bold text-amber-800 leading-tight">
-                      ADD ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} MORE TO AVAIL {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} AUTOMATIC DISCOUNT{rule.freeShipping ? ' + FREE SHIPPING' : ''}!
-                      <span className="block text-[8px] font-medium opacity-70 mt-0.5">Minimum order required: ৳{rule.minOrderAmount}</span>
-                    </p>
-                  </div>
-                ))}
+                }).map((rule, idx) => {
+                  const msg = getRuleOfferMessage(rule, subtotal, items);
+                  return (
+                    <div key={idx} className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3 flex items-start gap-2.5 shadow-sm">
+                      <Tag className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-black text-amber-900 uppercase tracking-tight italic leading-tight">
+                          {msg.offer}
+                        </p>
+                        <p className="text-[9px] font-bold text-amber-600/80 uppercase tracking-widest mt-1">
+                          {msg.action}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
