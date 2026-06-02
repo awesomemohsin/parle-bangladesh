@@ -67,6 +67,44 @@ function getRuleOfferMessage(rule: any, subtotal: number, items: any[]) {
   };
 }
 
+function getItemDiscountedTotal(item: any, subtotal: number, activeDiscounts: any[]) {
+  const originalTotal = item.price * item.quantity;
+  let bestDiscount = 0;
+
+  activeDiscounts.forEach(rule => {
+    if (rule.type !== 'flat') return;
+
+    const appliesToProduct = rule.allProducts || 
+      (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === item.productId));
+
+    const minOrderMet = subtotal >= (Number(rule.minOrderAmount) || 0);
+
+    if (appliesToProduct && minOrderMet) {
+      let currentDiscount = 0;
+      const amount = Number(rule.discountAmount || 0);
+
+      if (rule.discountType === 'percentage') {
+        currentDiscount = (originalTotal * amount) / 100;
+      } else {
+        currentDiscount = amount * item.quantity;
+      }
+
+      const maxCap = Number(rule.maxDiscountAmount || 0);
+      if (maxCap > 0 && currentDiscount > maxCap) {
+        currentDiscount = maxCap;
+      }
+
+      currentDiscount = Math.min(originalTotal, currentDiscount);
+
+      if (currentDiscount > bestDiscount) {
+        bestDiscount = currentDiscount;
+      }
+    }
+  });
+
+  return Math.round(originalTotal - bestDiscount);
+}
+
 export default function CartPage() {
   const router = useRouter();
   const {
@@ -295,17 +333,43 @@ export default function CartPage() {
                               </button>
                             </div>
 
-                            <div className="text-right">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                                {item.quantity > 1 ? `৳${item.price} x ${item.quantity}` : 'Price'}
-                              </p>
-                              <div className="flex items-center gap-1 font-black text-gray-900">
-                                <span className="text-[10px] text-red-600">৳</span>
-                                <span className="text-lg tracking-tighter tabular-nums">
-                                  {Math.round(item.price * item.quantity)}
-                                </span>
-                              </div>
-                            </div>
+                            {(() => {
+                              const originalTotal = item.price * item.quantity;
+                              const discountedTotal = getItemDiscountedTotal(item, subtotal, activeDiscounts);
+                              return (
+                                <div className="text-right">
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                                    {item.quantity > 1 ? `৳${item.price} x ${item.quantity}` : 'Price'}
+                                  </p>
+                                  <div className="flex flex-col items-end">
+                                    {discountedTotal < originalTotal ? (
+                                      <>
+                                        <div className="flex items-center gap-1 font-bold text-gray-400 text-xs line-through">
+                                          <span>৳</span>
+                                          <span>{originalTotal}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 font-black text-green-600">
+                                          <span className="text-[10px]">৳</span>
+                                          <span className="text-lg tracking-tighter tabular-nums">
+                                            {discountedTotal}
+                                          </span>
+                                        </div>
+                                        <span className="text-[8px] font-black text-white bg-green-500 px-1.5 py-0.5 rounded uppercase tracking-tighter mt-1">
+                                          Saved ৳{originalTotal - discountedTotal}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-1 font-black text-gray-900">
+                                        <span className="text-[10px] text-red-600">৳</span>
+                                        <span className="text-lg tracking-tighter tabular-nums">
+                                          {originalTotal}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </motion.div>
