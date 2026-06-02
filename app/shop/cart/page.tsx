@@ -289,7 +289,7 @@ export default function CartPage() {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <Link href={productLink} className="hover:text-red-600 transition-colors">
-                                <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-1 cursor-pointer">
+                                <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-1 cursor-pointer pr-2">
                                   {item.productName}
                                 </h3>
                               </Link>
