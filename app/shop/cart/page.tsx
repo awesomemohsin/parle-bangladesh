@@ -165,7 +165,7 @@ export default function CartPage() {
                   </div>
                   <div>
                     <p className="text-[11px] font-black text-amber-800 uppercase tracking-tight italic">
-                      Add ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} more for automatic {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} discount!
+                      Add ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} more for automatic {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} discount{rule.freeShipping ? ' + Free Shipping' : ''}!
                     </p>
                     <p className="text-[9px] font-bold text-amber-600/60 uppercase tracking-widest mt-0.5">
                       Minimum order required: ৳{rule.minOrderAmount}

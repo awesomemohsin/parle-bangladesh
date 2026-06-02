@@ -644,7 +644,7 @@ function CheckoutContent() {
                   <div key={idx} className="bg-amber-50 border border-amber-200 rounded-md p-2 mb-3 flex items-start gap-2 shadow-sm">
                     <Tag className="w-3.5 h-3.5 text-amber-600 mt-0.5" />
                     <p className="text-[9px] font-bold text-amber-800 leading-tight">
-                      ADD ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} MORE TO AVAIL {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} AUTOMATIC DISCOUNT!
+                      ADD ৳{Math.round(Number(rule.minOrderAmount) - subtotal)} MORE TO AVAIL {(rule.discountType === 'percentage' ? `${rule.discountAmount}%` : `৳${rule.discountAmount}`)} AUTOMATIC DISCOUNT{rule.freeShipping ? ' + FREE SHIPPING' : ''}!
                       <span className="block text-[8px] font-medium opacity-70 mt-0.5">Minimum order required: ৳{rule.minOrderAmount}</span>
                     </p>
                   </div>
