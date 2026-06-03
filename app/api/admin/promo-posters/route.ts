@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     const file = formData.get('file') as File;
     const link = formData.get('link') as string;
     const altText = formData.get('altText') as string;
+    const placement = (formData.get('placement') as string) || 'slider';
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -69,7 +70,8 @@ export async function POST(req: Request) {
         link: link || '/shop',
         altText: altText || 'Special Promotion',
         isActive: true,
-        order: 0
+        order: 0,
+        placement: placement
       });
       console.log('[PromoPoster] Saved to DB:', newPoster._id);
       return NextResponse.json(newPoster);

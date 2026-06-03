@@ -6,6 +6,8 @@ import { ArrowRight, Star, Truck, ShieldCheck, Banknote, Zap } from 'lucide-reac
 import { getProducts, getCategories } from '@/lib/data'
 import { HomeHero, MotionDiv } from '@/components/home-client'
 import HomeProductSection from '@/components/home/product-section'
+import connectDB from '@/lib/db'
+import { PromoPoster } from '@/lib/models'
 
 export const metadata = {
   title: 'Home | Parle Bangladesh',
@@ -13,11 +15,17 @@ export const metadata = {
 }
 
 export default async function HomePage() {
-  const [categories, recentProducts, bestSellers] = await Promise.all([
+  await connectDB();
+  const [categories, recentProducts, bestSellers, posters] = await Promise.all([
     getCategories(),
     getProducts({ limit: 12 }), 
-    getProducts({ sort: { ordersCount: -1 }, limit: 12 }) 
+    getProducts({ sort: { ordersCount: -1 }, limit: 12 }),
+    PromoPoster.find({ isActive: true }).sort({ order: 1 }).lean()
   ]);
+
+  const serializedPosters = JSON.parse(JSON.stringify(posters));
+  const categoryBottomPoster = serializedPosters.find((p: any) => p.placement === 'category_bottom');
+  const bestSellersBottomPoster = serializedPosters.find((p: any) => p.placement === 'bestsellers_bottom');
 
   return (
     <div className="min-h-screen bg-white selection:bg-red-50">
@@ -140,6 +148,23 @@ export default async function HomePage() {
               </MotionDiv>
             ))}
           </div>
+
+          {categoryBottomPoster && (
+            <MotionDiv className="relative w-full rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-12">
+              <Link href={categoryBottomPoster.link}>
+                <div className="relative w-full aspect-[4.5/1] md:aspect-[7/1] cursor-pointer bg-slate-100">
+                  <Image
+                    src={categoryBottomPoster.imageUrl}
+                    alt={categoryBottomPoster.altText}
+                    fill
+                    sizes="100vw"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-[1.03] group-hover:brightness-[1.02]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
+                </div>
+              </Link>
+            </MotionDiv>
+          )}
         </div>
       </section>
 
@@ -196,6 +221,23 @@ export default async function HomePage() {
                 No Best Sellers Yet
               </p>
             </div>
+          )}
+
+          {bestSellersBottomPoster && (
+            <MotionDiv className="relative w-full rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-16">
+              <Link href={bestSellersBottomPoster.link}>
+                <div className="relative w-full aspect-[4.5/1] md:aspect-[7/1] cursor-pointer bg-slate-100">
+                  <Image
+                    src={bestSellersBottomPoster.imageUrl}
+                    alt={bestSellersBottomPoster.altText}
+                    fill
+                    sizes="100vw"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-[1.03] group-hover:brightness-[1.02]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
+                </div>
+              </Link>
+            </MotionDiv>
           )}
 
           <div className="mt-16 text-center">

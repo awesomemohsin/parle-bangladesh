@@ -11,6 +11,7 @@ interface Poster {
   link: string;
   altText: string;
   isActive: boolean;
+  placement?: string;
   createdAt: string;
 }
 
@@ -21,6 +22,7 @@ export default function PromoPostersAdmin() {
   const [file, setFile] = useState<File | null>(null);
   const [link, setLink] = useState('/shop');
   const [altText, setAltText] = useState('');
+  const [placement, setPlacement] = useState('slider');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -47,24 +49,26 @@ export default function PromoPostersAdmin() {
 
     setIsUploading(true);
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('link', link);
-    formData.append('altText', altText);
+        formData.append('file', file);
+        formData.append('link', link);
+        formData.append('altText', altText);
+        formData.append('placement', placement);
 
-    try {
-      const res = await fetch('/api/admin/promo-posters', {
-        method: 'POST',
-        body: formData,
-      });
+        try {
+          const res = await fetch('/api/admin/promo-posters', {
+            method: 'POST',
+            body: formData,
+          });
 
-      if (res.ok) {
-        fetchPosters();
-        setIsModalOpen(false);
-        setFile(null);
-        setLink('/shop');
-        setAltText('');
-      }
-    } catch (err) {
+          if (res.ok) {
+            fetchPosters();
+            setIsModalOpen(false);
+            setFile(null);
+            setLink('/shop');
+            setAltText('');
+            setPlacement('slider');
+          }
+        } catch (err) {
       console.error('Upload failed', err);
     } finally {
       setIsUploading(false);
@@ -180,7 +184,12 @@ export default function PromoPostersAdmin() {
                 </div>
               </div>
               <div className="p-6">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{poster.altText}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{poster.altText}</p>
+                  <span className="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 shrink-0">
+                    {poster.placement === 'category_bottom' ? 'Category Bottom' : poster.placement === 'bestsellers_bottom' ? 'Best Sellers' : 'Hero Slider'}
+                  </span>
+                </div>
                 <p className="text-xs text-gray-600 font-mono truncate">{poster.link}</p>
               </div>
             </div>
@@ -235,6 +244,21 @@ export default function PromoPostersAdmin() {
                   placeholder="/shop"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Placement Area</label>
+                <select
+                  value={placement}
+                  onChange={(e) => setPlacement(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all cursor-pointer"
+                  required
+                  disabled={isUploading}
+                >
+                  <option value="slider">Main Home Hero Slider</option>
+                  <option value="category_bottom">Homepage Bottom of Categories</option>
+                  <option value="bestsellers_bottom">Homepage Bottom of Best Sellers</option>
+                </select>
               </div>
 
               <div className="space-y-2">
