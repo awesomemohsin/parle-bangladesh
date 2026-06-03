@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     
     const appUrl = "https://parlebangladesh.com";
 
-    const products = await Product.find({}).lean();
+    const products = await Product.find({}).sort({ serial: 1, createdAt: -1 }).lean();
 
     const headers = [
       'id',

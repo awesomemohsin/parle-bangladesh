@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       category: 1,
       brand: 1,
       variations: 1
-    }).sort({ createdAt: -1 });
+    }).sort({ serial: 1, createdAt: -1 });
 
     return NextResponse.json(products);
   } catch (error) {

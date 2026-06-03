@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    let sort: any = { createdAt: -1 };
+    let sort: any = { serial: 1, createdAt: -1 };
     if (sortParam === "orders") {
       sort = { ordersCount: -1 };
     } else if (sortParam === "price_asc") {

@@ -54,7 +54,7 @@ async function applyFlatDiscounts(products: any[]) {
 // Optimized fetching with projection and lean
 async function fetchProductsRaw(options: GetProductsOptions = {}) {
     await connectDB();
-    const { query = {}, sort = { createdAt: -1 }, limit = 0 } = options;
+    const { query = {}, sort = { serial: 1, createdAt: -1 }, limit = 0 } = options;
     
     // Explicitly select only necessary fields for shop cards
     let databaseQuery = Product.find(query, { 

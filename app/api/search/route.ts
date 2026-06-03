@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         { description: regex },
         { category: regex }
       ]
-    }).lean();
+    }).sort({ serial: 1, createdAt: -1 }).lean();
 
     return NextResponse.json({ 
       products: products.map(p => { 

@@ -195,6 +195,7 @@ export interface IVariation {
   description?: string; // Dynamic description for this variation
   isDefault?: boolean;
   isBulk?: boolean;
+  serial?: number;
 }
 
 export interface IProduct extends Document {
@@ -206,6 +207,7 @@ export interface IProduct extends Document {
   ordersCount: number;
   brand?: string;
   isBulk?: boolean;
+  serial?: number;
   price?: number; // legacy fallback
   stock?: number; // legacy fallback
   createdAt: Date;
@@ -232,6 +234,7 @@ const VariationSchema = new Schema<IVariation>({
   description: { type: String },
   isDefault: { type: Boolean, default: false },
   isBulk: { type: Boolean, default: false },
+  serial: { type: Number },
 });
 
 const ProductSchema = new Schema<IProduct>(
@@ -244,6 +247,7 @@ const ProductSchema = new Schema<IProduct>(
     ordersCount: { type: Number, default: 0 },
     brand: { type: String },
     isBulk: { type: Boolean, default: false },
+    serial: { type: Number, default: 0 },
     price: { type: Number },
     stock: { type: Number },
   },
@@ -663,6 +667,7 @@ export interface IPromoPoster extends Document {
   altText: string;
   isActive: boolean;
   order: number;
+  placement?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -674,12 +679,14 @@ const PromoPosterSchema = new Schema<IPromoPoster>(
     altText: { type: String, default: "Special Promotion" },
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
+    placement: { type: String, default: "slider" },
   },
   { timestamps: true }
 );
 
 PromoPosterSchema.index({ isActive: 1 });
 PromoPosterSchema.index({ order: 1 });
+PromoPosterSchema.index({ placement: 1 });
 
 export const PromoPoster = mongoose.models?.PromoPoster || mongoose.model<IPromoPoster>("PromoPoster", PromoPosterSchema, "promo_posters");
 
