@@ -72,29 +72,43 @@ async function fetchProductsRaw(options: GetProductsOptions = {}) {
 }
 
 export async function getProducts(options: GetProductsOptions = {}) {
-    // Force a cache refresh for testing by setting revalidate to 1
-    if (!options.query && options.limit) {
+    const isCacheable = !options.query;
+    if (isCacheable) {
+       const limit = options.limit || 0;
+       const sortStr = JSON.stringify(options.sort || {});
        return unstable_cache(
          () => fetchProductsRaw(options),
-         [`products-list-v2-limit-${options.limit}-${JSON.stringify(options.sort)}`], // Changed key to v2
-         { revalidate: 1, tags: ["products"] }
+         [`products-list-v3-${limit}-${sortStr}`],
+         { revalidate: 60, tags: ["products"] }
        )();
     }
     return fetchProductsRaw(options);
 }
 
 export async function getProductBySlug(slug: string) {
-    await connectDB();
-    const result = await Product.findOne({ slug }).lean();
-    if (!result) return null;
-    
-    const productsWithDiscounts = await applyFlatDiscounts([result]);
-    return JSON.parse(JSON.stringify(productsWithDiscounts[0]));
+    return unstable_cache(
+      async () => {
+        await connectDB();
+        const result = await Product.findOne({ slug }).lean();
+        if (!result) return null;
+        
+        const productsWithDiscounts = await applyFlatDiscounts([result]);
+        return JSON.parse(JSON.stringify(productsWithDiscounts[0]));
+      },
+      [`product-by-slug-${slug}`],
+      { revalidate: 60, tags: [`product-${slug}`, "products"] }
+    )();
 }
 
 export async function getCategoryBySlug(slug: string) {
-  await connectDB();
-  return await Category.findOne({ slug }).lean();
+  return unstable_cache(
+    async () => {
+      await connectDB();
+      return await Category.findOne({ slug }).lean();
+    },
+    [`category-by-slug-${slug}`],
+    { revalidate: 3600, tags: [`category-${slug}`, "categories"] }
+  )();
 }
 
 export const getCategories = unstable_cache(
