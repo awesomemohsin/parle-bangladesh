@@ -121,6 +121,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     if (bestRuleId && bestDiscountForItem > 0) {
       const currentRuleTotal = ruleUsage.get(bestRuleId) || 0;
       ruleUsage.set(bestRuleId, currentRuleTotal + bestDiscountForItem);
+      (item as any)._appliedRuleId = bestRuleId;
     }
 
     // Attach server-calculated discount info directly to item object
@@ -129,7 +130,9 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     item.discountedTotal = Math.round(itemEffectiveSubtotal - bestDiscountForItem);
   });
     
-  // Apply max caps to each rule's total discount
+  // Apply max caps to each rule's total discount and prepare scaling factors
+  const capScalingFactors = new Map<string, number>();
+
   flatDiscounts.forEach(rule => {
     const ruleId = rule._id.toString();
     const usedAmount = ruleUsage.get(ruleId) || 0;
@@ -137,9 +140,30 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     
     if (maxCap > 0 && usedAmount > maxCap) {
       flatDiscountTotal += maxCap;
+      capScalingFactors.set(ruleId, maxCap / usedAmount);
     } else {
       flatDiscountTotal += usedAmount;
     }
+  });
+
+  // Scale down item-level discounts if the rule cap was exceeded
+  items.forEach(item => {
+    const ruleId = (item as any)._appliedRuleId;
+    if (ruleId && capScalingFactors.has(ruleId)) {
+      const scale = capScalingFactors.get(ruleId)!;
+      item.discountAmount = item.discountAmount * scale;
+
+      const itemPrice = Number(item.price) || 0;
+      const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+        ? item.variationDiscountPrice
+        : itemPrice;
+      const itemQuantity = Number(item.quantity || item.q) || 0;
+      const itemEffectiveSubtotal = effectivePrice * itemQuantity;
+
+      item.discountedPrice = itemQuantity > 0 ? Math.round((itemEffectiveSubtotal - item.discountAmount) / itemQuantity) : effectivePrice;
+      item.discountedTotal = Math.round(itemEffectiveSubtotal - item.discountAmount);
+    }
+    delete (item as any)._appliedRuleId;
   });
 
   // Add non-global user-specific flat discounts
@@ -261,9 +285,11 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     const freeShippingText = rule.freeShipping ? " + Free Shipping" : "";
 
     if (isMet) {
+      const usedAmount = ruleUsage.get(rule._id.toString()) || 0;
+      const actualSaved = usedAmount > 0 ? Math.min(usedAmount, Number(rule.maxDiscountAmount || 99999999)) : totalDiscount;
       campaignNotices.push({
         offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
-        action: `✓ Offer Unlocked! You saved ৳${Math.round(totalDiscount)}!`,
+        action: `✓ Offer Unlocked! You saved ৳${Math.round(actualSaved)}!`,
         unlocked: true
       });
     } else {

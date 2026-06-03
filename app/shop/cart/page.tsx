@@ -15,7 +15,8 @@ import {
   Package,
   ShieldCheck,
   Tag,
-  Check
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart, getItemKey } from "@/hooks/useCart";
@@ -26,6 +27,63 @@ import { motion, AnimatePresence } from "framer-motion";
 import ShopLoading from "../loading";
 
 // Pricing and discount calculations are now computed strictly on the server side.
+
+function CollapsibleOffers({ notices }: { notices: any[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border border-amber-200 bg-amber-50/20 rounded-[24px] overflow-hidden transition-all duration-300 shadow-sm">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-4 flex items-center justify-between text-left text-amber-900 font-black uppercase text-[10px] tracking-widest hover:bg-amber-50/40 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <Tag className="w-4 h-4 text-amber-600 animate-pulse" />
+          Unlock More Offers ({notices.length} available)
+        </span>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <ChevronDown className="w-4 h-4 text-amber-600" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="border-t border-amber-100 bg-white/50"
+          >
+            <div className="p-4 space-y-3">
+              {notices.map((notice, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white/80 border border-amber-100/50 rounded-xl p-3.5 flex items-start gap-3 shadow-sm"
+                >
+                  <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Tag className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-tight text-amber-900 leading-normal italic">
+                      {notice.offer}
+                    </p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-amber-500 mt-0.5">
+                      {notice.action}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function CartPage() {
   const router = useRouter();
@@ -150,7 +208,7 @@ export default function CartPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 mt-10">
+      <div className="max-w-6xl mx-auto px-6 mt-4">
         {items.length === 0 ? (
           <div className="bg-white rounded-[40px] p-20 text-center shadow-xl shadow-slate-200/50 border border-gray-50 max-w-2xl mx-auto mt-10">
             <div className="w-24 h-24 bg-slate-50 rounded-[35px] flex items-center justify-center mx-auto mb-8 relative">
@@ -173,44 +231,35 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             {/* Items Column */}
             <div className="lg:col-span-8 space-y-4">
-              {/* Flat Discount Requirement Notice */}
-              {campaignNotices?.map((notice, idx) => {
-                const isUnlocked = !!(notice as any).unlocked;
-                return (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    key={idx} 
-                    className={`border rounded-[24px] p-4 flex items-center gap-4 shadow-sm transition-colors duration-300 ${
-                      isUnlocked 
-                        ? "bg-emerald-50 border-emerald-200" 
-                        : "bg-amber-50 border-amber-200"
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
-                      isUnlocked ? "bg-emerald-100" : "bg-amber-100"
-                    }`}>
-                      {isUnlocked ? (
-                        <Check className="w-5 h-5 text-emerald-600" />
-                      ) : (
-                        <Tag className="w-5 h-5 text-amber-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className={`text-[11px] font-black uppercase tracking-tight italic transition-colors duration-300 ${
-                        isUnlocked ? "text-emerald-800" : "text-amber-800"
-                      }`}>
-                        {notice.offer}
-                      </p>
-                      <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 transition-colors duration-300 ${
-                        isUnlocked ? "text-emerald-600" : "text-amber-600/60"
-                      }`}>
-                        {notice.action}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
+              {/* Unlocked Campaign Alerts */}
+              {campaignNotices?.filter(notice => (notice as any).unlocked).map((notice, idx) => (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  key={`unlocked-${idx}`} 
+                  className="border rounded-[24px] p-4 flex items-center gap-4 shadow-sm bg-emerald-50 border-emerald-200"
+                >
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-tight italic text-emerald-800">
+                      {notice.offer}
+                    </p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 mt-0.5">
+                      {notice.action}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Collapsible Locked Campaign Alerts */}
+              {(() => {
+                const lockedNotices = campaignNotices?.filter(notice => !(notice as any).unlocked) || [];
+                return lockedNotices.length > 0 ? (
+                  <CollapsibleOffers notices={lockedNotices} />
+                ) : null;
+              })()}
 
               <div className="flex flex-col gap-4">
                 <AnimatePresence mode="popLayout">
