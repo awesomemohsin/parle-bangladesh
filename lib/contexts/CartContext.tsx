@@ -275,126 +275,128 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
 
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Create a simplified version of items for comparison (only things that represent user intent)
-      const currentRequestData = JSON.stringify({
-        items: cart.items.map(i => ({ id: i.productId, q: i.quantity, w: i.weight, f: i.flavor })),
-        promo: cart.promoCode
-      });
+    // Create a simplified version of items for comparison (only things that represent user intent)
+    const currentRequestData = JSON.stringify({
+      items: cart.items.map(i => ({ id: i.productId, q: i.quantity, w: i.weight, f: i.flavor })),
+      promo: cart.promoCode
+    });
 
-      // If nothing significant changed since last request, skip
-      if (currentRequestData === lastRequestData.current) return;
+    // If nothing significant changed since last request, skip
+    if (currentRequestData === lastRequestData.current) return;
 
-      let lastPromo = undefined;
+    let lastPromo = undefined;
+    try {
+      if (lastRequestData.current) {
+        const parsedLast = JSON.parse(lastRequestData.current);
+        lastPromo = parsedLast.promo;
+      }
+    } catch (e) {}
+
+    const promoChanged = cart.promoCode !== lastPromo;
+    const delay = promoChanged ? 50 : 200;
+
+    setIsSyncing(true);
+
+    // Use a cancelled flag instead of AbortController to avoid surfacing
+    // false-positive AbortErrors in Next.js dev mode when cleanup fires
+    // before the timer callback executes.
+    let cancelled = false;
+    const abortController = new AbortController();
+
+    const timer = setTimeout(async () => {
+      if (cancelled) {
+        setIsSyncing(false);
+        return;
+      }
       try {
-        if (lastRequestData.current) {
-          const parsedLast = JSON.parse(lastRequestData.current);
-          lastPromo = parsedLast.promo;
+        const token = localStorage.getItem("token");
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
         }
-      } catch (e) {}
 
-      const promoChanged = cart.promoCode !== lastPromo;
-      const delay = promoChanged ? 50 : 300;
-
-      setIsSyncing(true);
-
-      // Use a cancelled flag instead of AbortController to avoid surfacing
-      // false-positive AbortErrors in Next.js dev mode when cleanup fires
-      // before the timer callback executes.
-      let cancelled = false;
-      const abortController = new AbortController();
-
-      const timer = setTimeout(async () => {
-        if (cancelled) {
-          setIsSyncing(false);
-          return;
-        }
-        try {
-          const res = await fetch("/api/cart", {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            },
-            signal: abortController.signal,
-            body: JSON.stringify({ 
-              items: cart.items,
-              promoCode: cart.promoCode
-            })
-          });
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers,
+          signal: abortController.signal,
+          body: JSON.stringify({ 
+            items: cart.items,
+            promoCode: cart.promoCode
+          })
+        });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
           if (cancelled) return;
-          if (res.ok) {
-            const data = await res.json();
-            if (cancelled) return;
-            // Update lastRequestData ONLY after successful sync to prevent loops
-            lastRequestData.current = currentRequestData;
+          // Update lastRequestData ONLY after successful sync to prevent loops
+          lastRequestData.current = currentRequestData;
+          
+          setCart(prev => {
+            const dbItems = data.items || [];
+            const dbItemMap = new Map(dbItems.map((i: any) => [getItemKey(i), i]));
             
-            setCart(prev => {
-              const dbItems = data.items || [];
-              const dbItemMap = new Map(dbItems.map((i: any) => [getItemKey(i), i]));
-              
-              let hasChanged = false;
-              const mergedItems = prev.items.map(item => {
-                const key = getItemKey(item);
-                const dbItem = dbItemMap.get(key) as CartItem | undefined;
-                if (dbItem) {
-                  const newQuantity = Math.min(item.quantity, dbItem.quantity || item.quantity);
-                  if (item.price !== dbItem.price || item.stock !== dbItem.stock || item.quantity !== newQuantity) {
-                    hasChanged = true;
-                  }
-                  return {
-                    ...item,
-                    price: dbItem.price,
-                    stock: dbItem.stock,
-                    quantity: newQuantity,
-                    discountAmount: dbItem.discountAmount,
-                    discountedPrice: dbItem.discountedPrice,
-                    discountedTotal: dbItem.discountedTotal
-                  };
+            let hasChanged = false;
+            const mergedItems = prev.items.map(item => {
+              const key = getItemKey(item);
+              const dbItem = dbItemMap.get(key) as CartItem | undefined;
+              if (dbItem) {
+                const newQuantity = Math.min(item.quantity, dbItem.quantity || item.quantity);
+                if (item.price !== dbItem.price || item.stock !== dbItem.stock || item.quantity !== newQuantity) {
+                  hasChanged = true;
                 }
-                return item;
-              });
-
-              // Only update state if data is actually different to avoid extra renders/loops
-              if (!hasChanged && 
-                  prev.subtotal === data.subtotal && 
-                  prev.total === data.total &&
-                  prev.promoCode === data.promoCode) {
-                return prev;
+                return {
+                  ...item,
+                  price: dbItem.price,
+                  stock: dbItem.stock,
+                  quantity: newQuantity,
+                  discountAmount: dbItem.discountAmount,
+                  discountedPrice: dbItem.discountedPrice,
+                  discountedTotal: dbItem.discountedTotal
+                };
               }
-
-              return {
-                ...prev,
-                items: mergedItems,
-                subtotal: data.subtotal,
-                total: data.total,
-                discountAmount: data.discountAmount,
-                promoDiscount: data.promoDiscount,
-                ruleDiscount: data.ruleDiscount,
-                isRestricted: data.isRestricted,
-                applicableSubtotal: data.applicableSubtotal,
-                freeShippingGranted: data.freeShippingGranted,
-                promoCode: data.promoCode,
-                promoDetails: data.promoDetails,
-                campaignNotices: data.campaignNotices || []
-              };
+              return item;
             });
-          }
-        } catch (err: any) {
-          if (err.name !== 'AbortError') {
-            console.error("DB Save failed:", err);
-          }
-        } finally {
-          if (!cancelled) setIsSyncing(false);
-        }
-      }, delay);
 
-      return () => {
-        cancelled = true;
-        clearTimeout(timer);
-      };
-    }
+            // Only update state if data is actually different to avoid extra renders/loops
+            if (!hasChanged && 
+                prev.subtotal === data.subtotal && 
+                prev.total === data.total &&
+                prev.promoCode === data.promoCode) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              items: mergedItems,
+              subtotal: data.subtotal,
+              total: data.total,
+              discountAmount: data.discountAmount,
+              promoDiscount: data.promoDiscount,
+              ruleDiscount: data.ruleDiscount,
+              isRestricted: data.isRestricted,
+              applicableSubtotal: data.applicableSubtotal,
+              freeShippingGranted: data.freeShippingGranted,
+              promoCode: data.promoCode,
+              promoDetails: data.promoDetails,
+              campaignNotices: data.campaignNotices || []
+            };
+          });
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error("DB Save failed:", err);
+        }
+      } finally {
+        if (!cancelled) setIsSyncing(false);
+      }
+    }, delay);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [cart.items, cart.promoCode, isInitialized]);
 
   const addItem = useCallback((item: AddCartItemInput, quantity: number = 1) => {
