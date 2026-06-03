@@ -26,9 +26,13 @@ export async function GET(request: NextRequest) {
     const refreshedItems = [];
     const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
 
+    const productIds = (cart.items || []).map((item: any) => item.productId).filter(Boolean);
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
     for (const item of (cart.items || [])) {
       try {
-        const product = await Product.findById(item.productId).lean() as any;
+        const product = productMap.get(item.productId);
         if (product) {
           const productIdStr = product._id?.toString();
           // Find if any flat discount applies to this product (regardless of minOrder for now)
@@ -77,25 +81,38 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const user = await getVerifiedAuthUser(request);
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { items, promoCode } = await request.json();
 
     if (!items || items.length === 0) {
-      await Cart.deleteOne({ userId: user.id });
+      if (user) {
+        await Cart.deleteOne({ userId: user.id });
+      }
       return NextResponse.json({ success: true, items: [], subtotal: 0, total: 0, discountAmount: 0 });
     }
 
     const refreshedItems = [];
-    const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-    const isDealer = dbUser?.customerType === "dealer";
+    let isDealer = false;
+    let userDiscount = undefined;
+
+    if (user) {
+      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
+      isDealer = dbUser?.customerType === "dealer";
+      
+      const now = new Date();
+      if (dbUser && dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
+        userDiscount = { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) };
+      }
+    }
+
     const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
     
+    const productIds = items.map((item: any) => item.productId || item.id).filter(Boolean);
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
     for (const item of items) {
-      const pId = item.productId || item.id;
-      const product = await Product.findById(pId).lean() as any;
+      const pId = (item.productId || item.id)?.toString();
+      const product = productMap.get(pId);
       if (product) {
         const productIdStr = product._id?.toString();
         // Find if any flat discount applies to this product (regardless of minOrder for now, 
@@ -119,29 +136,23 @@ export async function POST(request: NextRequest) {
       refreshedItems.push(item);
     }
 
-    const now = new Date();
-    const userDiscount = (dbUser && dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now)
-      ? { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) }
-      : undefined;
-
     const totals = await calculateServerSideCart(refreshedItems, promoCode, userDiscount);
 
-
-
-    const cart = await Cart.findOneAndUpdate(
-      { userId: user.id },
-      {
-        $set: {
-          items: refreshedItems,
-          promoCode: totals.promoCode,
-          discountAmount: totals.discountAmount,
-          promoDetails: totals.promoDetails,
-          updatedAt: new Date()
-        }
-      },
-      { upsert: true, returnDocument: 'after', runValidators: true }
-    );
-
+    if (user) {
+      await Cart.findOneAndUpdate(
+        { userId: user.id },
+        {
+          $set: {
+            items: refreshedItems,
+            promoCode: totals.promoCode,
+            discountAmount: totals.discountAmount,
+            promoDetails: totals.promoDetails,
+            updatedAt: new Date()
+          }
+        },
+        { upsert: true, returnDocument: 'after', runValidators: true }
+      );
+    }
 
     return NextResponse.json({
       success: true,

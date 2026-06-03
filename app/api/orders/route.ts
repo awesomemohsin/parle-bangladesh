@@ -221,13 +221,26 @@ export async function POST(request: NextRequest) {
     const items = [];
     const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
     
+    const productIds = rawItems.map((item: any) => item.productId).filter(Boolean);
+    const productSlugs = rawItems.map((item: any) => item.productSlug).filter(Boolean);
+    
+    const products = await Product.find({
+      $or: [
+        { _id: { $in: productIds } },
+        { slug: { $in: productSlugs } }
+      ]
+    }).lean();
+    
+    const productMapById = new Map(products.map(p => [p._id.toString(), p]));
+    const productMapBySlug = new Map(products.map(p => [p.slug, p]));
+
     for (const item of rawItems) {
       const quantity = Number(item.quantity || 0);
       if (quantity <= 0) continue;
 
       const product = item.productId 
-        ? await Product.findById(item.productId).lean()
-        : (item.productSlug ? await Product.findOne({ slug: item.productSlug }).lean() : null);
+        ? productMapById.get(item.productId)
+        : (item.productSlug ? productMapBySlug.get(item.productSlug) : null);
 
       if (product) {
         const productIdStr = (product as any)._id?.toString();
