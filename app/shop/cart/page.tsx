@@ -306,35 +306,32 @@ export default function CartPage() {
                                     {item.quantity > 1 ? `৳${item.price} x ${item.quantity}` : 'Price'}
                                   </p>
                                   <div className="flex flex-col items-end justify-center min-h-[40px]">
-                                    {isSyncing && updatingKeys.has(itemKey) ? (
-                                      <div className="flex flex-col items-end gap-1.5 py-1">
-                                        <div className="h-4 w-12 bg-slate-100 animate-pulse rounded" />
-                                        <div className="h-3 w-8 bg-slate-50 animate-pulse rounded" />
-                                      </div>
-                                    ) : discountedTotal !== undefined && discountedTotal < originalTotal ? (
-                                      <>
-                                        <div className="flex items-center gap-1 font-bold text-gray-400 text-xs line-through">
-                                          <span>৳</span>
-                                          <span>{originalTotal}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 font-black text-green-600">
-                                          <span className="text-[10px]">৳</span>
+                                    <div className={`transition-opacity duration-200 ${isSyncing && updatingKeys.has(itemKey) ? 'opacity-50' : 'opacity-100'}`}>
+                                      {discountedTotal !== undefined && discountedTotal < originalTotal ? (
+                                        <>
+                                          <div className="flex items-center gap-1 font-bold text-gray-400 text-xs line-through">
+                                            <span>৳</span>
+                                            <span>{originalTotal}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1 font-black text-green-600">
+                                            <span className="text-[10px]">৳</span>
+                                            <span className="text-lg tracking-tighter tabular-nums">
+                                              {discountedTotal}
+                                            </span>
+                                          </div>
+                                          <span className="text-[8px] font-black text-white bg-green-500 px-1.5 py-0.5 rounded uppercase tracking-tighter mt-1">
+                                            Saved ৳{originalTotal - discountedTotal}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center gap-1 font-black text-gray-900">
+                                          <span className="text-[10px] text-red-600">৳</span>
                                           <span className="text-lg tracking-tighter tabular-nums">
-                                            {discountedTotal}
+                                            {originalTotal}
                                           </span>
                                         </div>
-                                        <span className="text-[8px] font-black text-white bg-green-500 px-1.5 py-0.5 rounded uppercase tracking-tighter mt-1">
-                                          Saved ৳{originalTotal - discountedTotal}
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <div className="flex items-center gap-1 font-black text-gray-900">
-                                        <span className="text-[10px] text-red-600">৳</span>
-                                        <span className="text-lg tracking-tighter tabular-nums">
-                                          {originalTotal}
-                                        </span>
-                                      </div>
-                                    )}
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -444,11 +441,9 @@ export default function CartPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic text-right">
                       <span className="text-xl text-red-600 not-italic">৳</span>
-                      {isSyncing ? (
-                        <span className="text-2xl text-slate-300 animate-pulse">...</span>
-                      ) : (
-                        <span>{Math.round(cartDisplayTotal)}</span>
-                      )}
+                      <span className={`transition-opacity duration-200 ${isSyncing ? 'opacity-50' : 'opacity-100'}`}>
+                        {Math.round(cartDisplayTotal)}
+                      </span>
                     </div>
                   </div>
 
