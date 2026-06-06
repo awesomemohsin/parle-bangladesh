@@ -34,11 +34,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
 
   const subtotal = items.reduce((sum, item) => {
     const itemPrice = Number(item.price) || 0;
-    // Use variationDiscountPrice if available, otherwise original price
-    const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
-      ? item.variationDiscountPrice
-      : itemPrice;
-    return sum + effectivePrice * (Number(item.quantity || item.q) || 0);
+    return sum + itemPrice * (Number(item.quantity || item.q) || 0);
   }, 0);
 
   let freeShippingGranted = false;
@@ -61,39 +57,49 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     ruleSubtotals.set(rule._id.toString(), ruleSubtotal);
   });
 
-  // Calculate Best Flat Discount per item (Campaign-based only, since variation discounts are now part of subtotal)
+  // Calculate Best Flat Discount per item (Mutually exclusive: variation vs user vs campaign flat)
   items.forEach(item => {
     const productId = (item.productId || item.id || item._id)?.toString();
     const itemPrice = Number(item.price) || 0;
-    const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
-      ? item.variationDiscountPrice
-      : itemPrice;
     const itemQuantity = Number(item.quantity || item.q) || 0;
-    const itemEffectiveSubtotal = effectivePrice * itemQuantity;
+    const originalItemSubtotal = itemPrice * itemQuantity;
+
+    // 1. Candidate A: Variation Discount
+    const variationDiscountAmount = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+      ? (itemPrice - item.variationDiscountPrice) * itemQuantity
+      : 0;
+
+    // 2. Candidate B: User Discount
+    let userDiscountAmount = 0;
+    if (userDiscount && userDiscount.percent > 0 && new Date(userDiscount.expiresAt) > new Date()) {
+      userDiscountAmount = (originalItemSubtotal * userDiscount.percent) / 100;
+      userDiscountAmount = Math.min(originalItemSubtotal, userDiscountAmount);
+    }
 
     let bestRuleId = null;
     let bestDiscountForItem = 0;
 
-    // A. Consider candidate discount from user's custom flat discount
-    if (userDiscount && userDiscount.percent > 0 && new Date(userDiscount.expiresAt) > new Date()) {
-      bestDiscountForItem = (itemEffectiveSubtotal * userDiscount.percent) / 100;
-      bestDiscountForItem = Math.min(itemEffectiveSubtotal, bestDiscountForItem);
+    // Initialize with Variation Discount
+    if (variationDiscountAmount > 0) {
+      bestDiscountForItem = variationDiscountAmount;
+      bestRuleId = 'variation-discount';
+    }
+
+    // Compare with User Discount
+    if (userDiscountAmount > bestDiscountForItem) {
+      bestDiscountForItem = userDiscountAmount;
       bestRuleId = `user-flat-${userDiscount.percent}`;
     }
 
-    // B. Consider campaign-based flat discounts from PromoCode collection
+    // Compare with Campaign-based Flat Discounts
     flatDiscounts.forEach(rule => {
-      // 1. Check product applicability
       const appliesToProduct = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
-      
-      // 2. Check minimum order amount (enforced only on targeted products)
       const applicableSubtotal = ruleSubtotals.get(rule._id.toString()) || 0;
       const minOrderMet = applicableSubtotal >= (Number(rule.minOrderAmount) || 0);
 
       if (appliesToProduct && minOrderMet) {
         let currentDiscount = 0;
         const amount = Number(rule.discountAmount || 0);
-        const originalItemSubtotal = itemPrice * itemQuantity;
 
         if (rule.discountType === 'percentage') {
           currentDiscount = (originalItemSubtotal * amount) / 100;
@@ -101,8 +107,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
           currentDiscount = amount * itemQuantity;
         }
         
-        // Ensure discount doesn't exceed item subtotal after product-level discounts
-        currentDiscount = Math.min(itemEffectiveSubtotal, currentDiscount);
+        currentDiscount = Math.min(originalItemSubtotal, currentDiscount);
 
         if (currentDiscount > bestDiscountForItem) {
           bestDiscountForItem = currentDiscount;
@@ -117,15 +122,19 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     });
     
     if (bestRuleId && bestDiscountForItem > 0) {
-      const currentRuleTotal = ruleUsage.get(bestRuleId) || 0;
-      ruleUsage.set(bestRuleId, currentRuleTotal + bestDiscountForItem);
-      (item as any)._appliedRuleId = bestRuleId;
+      if (bestRuleId === 'variation-discount' || bestRuleId.startsWith('user-flat-')) {
+        flatDiscountTotal += bestDiscountForItem;
+      } else {
+        const currentRuleTotal = ruleUsage.get(bestRuleId) || 0;
+        ruleUsage.set(bestRuleId, currentRuleTotal + bestDiscountForItem);
+        (item as any)._appliedRuleId = bestRuleId;
+      }
     }
 
     // Attach server-calculated discount info directly to item object
     item.discountAmount = bestDiscountForItem;
-    item.discountedPrice = itemQuantity > 0 ? Math.round((itemEffectiveSubtotal - bestDiscountForItem) / itemQuantity) : effectivePrice;
-    item.discountedTotal = Math.round(itemEffectiveSubtotal - bestDiscountForItem);
+    item.discountedPrice = itemQuantity > 0 ? Math.round((originalItemSubtotal - bestDiscountForItem) / itemQuantity) : itemPrice;
+    item.discountedTotal = Math.round(originalItemSubtotal - bestDiscountForItem);
   });
     
   // Apply max caps to each rule's total discount and prepare scaling factors
@@ -152,23 +161,13 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       item.discountAmount = item.discountAmount * scale;
 
       const itemPrice = Number(item.price) || 0;
-      const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
-        ? item.variationDiscountPrice
-        : itemPrice;
       const itemQuantity = Number(item.quantity || item.q) || 0;
-      const itemEffectiveSubtotal = effectivePrice * itemQuantity;
+      const originalItemSubtotal = itemPrice * itemQuantity;
 
-      item.discountedPrice = itemQuantity > 0 ? Math.round((itemEffectiveSubtotal - item.discountAmount) / itemQuantity) : effectivePrice;
-      item.discountedTotal = Math.round(itemEffectiveSubtotal - item.discountAmount);
+      item.discountedPrice = itemQuantity > 0 ? Math.round((originalItemSubtotal - item.discountAmount) / itemQuantity) : itemPrice;
+      item.discountedTotal = Math.round(originalItemSubtotal - item.discountAmount);
     }
     delete (item as any)._appliedRuleId;
-  });
-
-  // Add non-global user-specific flat discounts
-  ruleUsage.forEach((usedAmount, ruleId) => {
-    if (ruleId.startsWith("user-flat-")) {
-      flatDiscountTotal += usedAmount;
-    }
   });
 
   // Calculate Promo Discount (stacks on top of remaining total)
@@ -201,11 +200,9 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
           
           const isMatch = possibleIds.some(id => restrictedIds.includes(id));
           if (isMatch) {
-            const itemPrice = Number(item.price) || 0;
-            const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
-              ? item.variationDiscountPrice
-              : itemPrice;
-            applicableSubtotal += effectivePrice * (Number(item.quantity || item.q) || 0);
+             const itemPrice = Number(item.price) || 0;
+             const itemDiscountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : itemPrice;
+             applicableSubtotal += itemDiscountedPrice * (Number(item.quantity || item.q) || 0);
           }
         });
       } else {
