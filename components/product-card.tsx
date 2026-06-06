@@ -202,21 +202,51 @@ export default function ProductCard({
       {/* Image Container */}
       <Link href={productUrl}>
         <div className="relative w-full h-56 bg-white overflow-hidden flex items-center justify-center p-4">
-          <Image
-            src={productImg}
-            alt={name}
-            fill
-            priority={priority}
-            className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key={activeVarIndex}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.04 }}
+              transition={{ duration: 0.45, ease: "easeInOut" }}
+              className="absolute inset-0 p-4 flex items-center justify-center"
+            >
+              <div className="relative w-full h-full">
+                <Image
+                  src={productImg}
+                  alt={name}
+                  fill
+                  priority={priority}
+                  className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          {/* Flavor badge overlay with eye-catching premium gradient */}
+          <AnimatePresence mode="popLayout">
+            {activeVariation.flavor && (
+              <motion.div
+                key={activeVariation.flavor}
+                initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 8 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="absolute bottom-3 right-3 z-20"
+              >
+                <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-[9.5px] uppercase tracking-widest px-3 py-1 rounded-full shadow-lg border border-white/20 select-none">
+                  {activeVariation.flavor}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {isOutOfStock && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20 backdrop-blur-[1px]">
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30 backdrop-blur-[1px]">
               <span className="bg-white text-gray-900 border-2 border-red-600 px-4 py-1 font-black text-sm uppercase tracking-tighter">Out of Stock</span>
             </div>
           )}
           {isAtMax && !isOutOfStock && (
-            <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-20">
+            <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-30">
                <span className="bg-white text-amber-600 border border-amber-500 px-2 py-1 font-black text-xs uppercase tracking-tighter shadow-sm">Max in Cart</span>
             </div>
           )}
@@ -230,31 +260,51 @@ export default function ProductCard({
             {name}
           </h3>
         </Link>
-        <div className="flex items-center justify-between mb-3 min-h-[1.5rem]">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-            {activeVariation.weight || activeVariation.flavor || "Standard"}
-          </span>
+        <div className="flex items-center justify-between mb-3 min-h-[1.5rem] overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={activeVarIndex}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="text-xs font-bold text-gray-500 uppercase tracking-widest"
+            >
+              {activeVariation.weight || (!activeVariation.flavor ? "Standard" : "")}
+            </motion.span>
+          </AnimatePresence>
         </div>
 
-          <div className="flex flex-col gap-0.5 mb-4">
-          <div className="flex items-center gap-1.5">
-            <span className={`text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>৳</span>
-            <span className={`text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>
-              {Math.round(currentPrice)}
-            </span>
-            {hasDealerPrice && (
-              <div className="ml-2 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
-                <ShieldCheck className="w-2.5 h-2.5 text-amber-600" />
-                <span className="text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer Rate</span>
+        <div className="flex flex-col gap-0.5 mb-4 min-h-[3rem] justify-center overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeVarIndex}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="flex flex-col gap-0.5"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className={`text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>৳</span>
+                <span className={`text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>
+                  {Math.round(currentPrice)}
+                </span>
+                {hasDealerPrice && (
+                  <div className="ml-2 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                    <ShieldCheck className="w-2.5 h-2.5 text-amber-600" />
+                    <span className="text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer Rate</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {(hasAnyRetailDiscount || hasDealerPrice) && (
-            <div className="flex items-center gap-1 opacity-40">
-               <span className="text-[10px] font-bold text-gray-500">৳</span>
-               <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
-            </div>
-          )}
+              {(hasAnyRetailDiscount || hasDealerPrice) && (
+                <div className="flex items-center gap-1 opacity-40">
+                   <span className="text-[10px] font-bold text-gray-500">৳</span>
+                   <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Button */}
