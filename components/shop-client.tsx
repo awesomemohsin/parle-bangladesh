@@ -41,12 +41,24 @@ interface Category {
   slug: string;
 }
 
+interface PromoPoster {
+  _id: string;
+  imageUrl: string;
+  link: string;
+  altText: string;
+  isActive: boolean;
+  placement?: string;
+  buttonText?: string;
+}
+
 export default function ShopClient({ 
   initialProducts, 
-  categories 
+  categories,
+  promoPosters = []
 }: { 
   initialProducts: Product[], 
-  categories: Category[] 
+  categories: Category[],
+  promoPosters?: PromoPoster[]
 }) {
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -57,6 +69,11 @@ export default function ShopClient({
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "best-match");
+
+  // Extract relevant promos
+  const topBanner = useMemo(() => promoPosters.find(p => p.placement === 'shop_top_banner'), [promoPosters]);
+  const gridPromo1 = useMemo(() => promoPosters.find(p => p.placement === 'shop_grid_1'), [promoPosters]);
+  const gridPromo2 = useMemo(() => promoPosters.find(p => p.placement === 'shop_grid_2'), [promoPosters]);
 
   // Get unique brands for the selected category or all
   const availableBrands = useMemo(() => {
@@ -279,6 +296,27 @@ export default function ShopClient({
         </div>
       )}
 
+      {/* Top Banner Promotional Section */}
+      {topBanner && (
+        <div className="mb-8 relative w-full h-[100px] sm:h-[140px] md:h-[180px] rounded-[2rem] overflow-hidden bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
+          <Link href={topBanner.link} className="block relative w-full h-full">
+            <img
+              src={topBanner.imageUrl}
+              alt={topBanner.altText}
+              className="w-full h-full object-cover transition-transform duration-[1000ms] group-hover:scale-[1.03]"
+            />
+            {/* CTA Overlay */}
+            <div className="absolute right-6 sm:right-10 md:right-16 top-1/2 -translate-y-1/2 flex items-center z-10">
+              <span className="bg-white px-5 sm:px-8 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black text-gray-900 uppercase tracking-[0.25em] shadow-2xl flex items-center gap-2 group-hover:bg-amber-400 group-hover:text-gray-950 transition-all active:scale-95">
+                {topBanner.buttonText || 'Shop Now'}
+              </span>
+            </div>
+            {/* Dark gradient overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-transparent pointer-events-none" />
+          </Link>
+        </div>
+      )}
+
       {filteredProducts.length === 0 ? (
         <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center">
            <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-8 border border-white shadow-inner">
@@ -293,50 +331,118 @@ export default function ShopClient({
              Reset Filters
            </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8 lg:gap-x-10 lg:gap-y-16">
-          {filteredProducts.map((product: any, index: number) => (
-            <ProductCard
-              key={product.uiKey || product.id}
-              {...product}
-              priority={index < 12}
-              onAddToCart={(variation: Variation) => {
-                const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
-                const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+      ) : (() => {
+        // Construct array containing products and inline promo cards at indices 3 and 7
+        const hasPromo1 = !!gridPromo1;
+        const hasPromo2 = !!gridPromo2;
+        const gridItems: Array<{ type: 'product'; data: any } | { type: 'promo'; data: any }> = [];
+        let productIdx = 0;
 
-                let bestPrice = variation.price;
-                if (isDealer && variation.dealerPrice) {
-                  bestPrice = variation.dealerPrice;
-                } else {
-                  let candidates = [variation.price];
-                  if (variation.discountPrice && variation.discountPrice < variation.price) {
-                    candidates.push(variation.discountPrice);
-                  }
-                  if (variation.flatDiscountPrice) {
-                    candidates.push(variation.flatDiscountPrice);
-                  }
-                  if (isUserDiscountActive) {
-                    candidates.push(Math.round(variation.price * (1 - userDiscountPercent / 100)));
-                  }
-                  bestPrice = Math.min(...candidates);
-                }
+        const totalLength = filteredProducts.length + (hasPromo1 ? 1 : 0) + (hasPromo2 ? 1 : 0);
 
-                addItem({
-                  productId: product.id,
-                  productSlug: product.slug,
-                  productName: product.name,
-                  price: bestPrice,
-                  image: variation.image,
-                  quantity: 1,
-                  weight: variation.weight,
-                  flavor: variation.flavor,
-                  stock: variation.stock,
-                });
-              }}
-            />
-          ))}
-        </div>
-      )}
+        for (let i = 0; i < totalLength; i++) {
+          if (i === 3 && hasPromo1) {
+            gridItems.push({ type: 'promo', data: gridPromo1 });
+          } else if (i === 7 && hasPromo2) {
+            gridItems.push({ type: 'promo', data: gridPromo2 });
+          } else {
+            if (productIdx < filteredProducts.length) {
+              gridItems.push({ type: 'product', data: filteredProducts[productIdx] });
+              productIdx++;
+            }
+          }
+        }
+
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8 lg:gap-x-10 lg:gap-y-16">
+            {gridItems.map((item, index) => {
+              if (item.type === 'promo') {
+                const promo = item.data;
+                return (
+                  <div 
+                    key={promo._id} 
+                    className="bg-gradient-to-br from-red-600 via-rose-600 to-red-700 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between text-white p-5 border border-red-500/10 min-h-[360px]"
+                  >
+                    <Link href={promo.link} className="absolute inset-0 z-10" />
+                    
+                    <div className="space-y-4">
+                      {/* Badge Tag */}
+                      <span className="inline-block bg-white/20 text-white font-black text-[8px] uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/20 backdrop-blur-md">
+                        Special Offer
+                      </span>
+                      
+                      {/* Visual Banner Preview inside the card */}
+                      <div className="relative w-full h-36 flex items-center justify-center overflow-hidden rounded-xl bg-black/10 border border-white/10">
+                        <img
+                          src={promo.imageUrl}
+                          alt={promo.altText}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+
+                      {/* Header content */}
+                      <div className="space-y-1">
+                        <h3 className="font-black text-[16px] md:text-[18px] uppercase tracking-tighter leading-tight line-clamp-2 italic text-white/95">
+                          {promo.altText}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <div className="mt-4">
+                      <span className="w-full py-2.5 px-4 bg-white text-gray-900 font-black uppercase tracking-widest text-[10px] rounded-lg shadow-md flex items-center justify-center gap-2 group-hover:bg-amber-400 group-hover:text-gray-950 transition-colors">
+                        {promo.buttonText || 'Shop Now'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              const product = item.data;
+              return (
+                <ProductCard
+                  key={product.uiKey || product.id}
+                  {...product}
+                  priority={index < 12}
+                  onAddToCart={(variation: Variation) => {
+                    const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
+                    const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+
+                    let bestPrice = variation.price;
+                    if (isDealer && variation.dealerPrice) {
+                      bestPrice = variation.dealerPrice;
+                    } else {
+                      let candidates = [variation.price];
+                      if (variation.discountPrice && variation.discountPrice < variation.price) {
+                        candidates.push(variation.discountPrice);
+                      }
+                      if (variation.flatDiscountPrice) {
+                        candidates.push(variation.flatDiscountPrice);
+                      }
+                      if (isUserDiscountActive) {
+                        candidates.push(Math.round(variation.price * (1 - userDiscountPercent / 100)));
+                      }
+                      bestPrice = Math.min(...candidates);
+                    }
+
+                    addItem({
+                      productId: product.id,
+                      productSlug: product.slug,
+                      productName: product.name,
+                      price: bestPrice,
+                      image: variation.image,
+                      quantity: 1,
+                      weight: variation.weight,
+                      flavor: variation.flavor,
+                      stock: variation.stock,
+                    });
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
     </>
   );
 }

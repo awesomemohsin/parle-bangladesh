@@ -2,6 +2,8 @@ import { getProducts, getCategories } from "@/lib/data";
 import ShopClient from "@/components/shop-client";
 import { Metadata } from "next";
 import { Suspense } from "react";
+import { PromoPoster } from "@/lib/models";
+import dbConnect from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Shop | Parle Bangladesh",
@@ -17,9 +19,11 @@ export default async function ShopPage({
   searchParams: Promise<{ category?: string }>
 }) {
   const params = await searchParams;
-  const [products, categories] = await Promise.all([
+  await dbConnect();
+  const [products, categories, promoPosters] = await Promise.all([
     getProducts(),
     getCategories(),
+    PromoPoster.find({ isActive: true }).sort({ order: 1 })
   ]);
 
   const activeCategory = categories.find((c: any) => c.slug === params.category);
@@ -37,6 +41,16 @@ export default async function ShopPage({
   const serializedCategories = categories.map((c: any) => ({
     ...JSON.parse(JSON.stringify(c)),
     id: c._id.toString()
+  }));
+
+  const serializedPromos = promoPosters.map((p: any) => ({
+    _id: p._id.toString(),
+    imageUrl: p.imageUrl,
+    link: p.link,
+    altText: p.altText,
+    isActive: p.isActive,
+    placement: p.placement || 'slider',
+    buttonText: p.buttonText || 'Shop Now'
   }));
 
   return (
@@ -71,6 +85,7 @@ export default async function ShopPage({
           <ShopClient
             initialProducts={serializedProducts}
             categories={serializedCategories}
+            promoPosters={serializedPromos}
           />
         </Suspense>
       </main>
