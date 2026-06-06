@@ -374,7 +374,11 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         if (details.maxUsage) promoCode.maxUsage = details.maxUsage;
         if (details.minOrderAmount !== undefined) promoCode.minOrderAmount = details.minOrderAmount;
         if (details.maxDiscountAmount !== undefined) promoCode.maxDiscountAmount = details.maxDiscountAmount;
-        if (details.expiresAt) promoCode.expiresAt = new Date(details.expiresAt);
+        if (details.expiresAt) {
+          promoCode.expiresAt = new Date(details.expiresAt);
+        } else {
+          promoCode.expiresAt = undefined;
+        }
         
         promoCode.allProducts = details.allProducts !== undefined ? details.allProducts : promoCode.allProducts;
         promoCode.applicableProducts = details.applicableProducts || promoCode.applicableProducts;

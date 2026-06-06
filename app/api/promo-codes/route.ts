@@ -15,6 +15,20 @@ export async function GET(req: Request) {
     await dbConnect();
     const promoCodes = await PromoCode.find().sort({ createdAt: -1 }).lean();
     
+    // Fetch all pending approval requests for promo-codes
+    const pendingApprovals = await ApprovalRequest.find({
+      type: 'promo-code',
+      status: 'pending'
+    }).lean();
+
+    // Map targetId to targetDetails updates
+    const pendingMap = new Map();
+    for (const appReq of pendingApprovals) {
+      if (appReq.targetDetails) {
+        pendingMap.set(appReq.targetId.toString(), appReq.targetDetails);
+      }
+    }
+
     // Self-healing migration: resolve creators from ApprovalRequest if createdBy is empty
     const resolvedPromoCodes = await Promise.all(
       promoCodes.map(async (promo) => {
@@ -34,6 +48,13 @@ export async function GET(req: Request) {
             promo.createdBy = 'System';
           }
         }
+
+        // Merge pending updates so the admin discounts page displays the latest edited configuration
+        const pendingUpdates = pendingMap.get(promo._id.toString());
+        if (pendingUpdates) {
+          Object.assign(promo, pendingUpdates);
+        }
+
         return promo;
       })
     );

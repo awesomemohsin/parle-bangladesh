@@ -42,20 +42,54 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     existingPromo.isActive = false;
     await existingPromo.save();
 
-    // Create the approval request with the NEW values in targetDetails
-    const approvalRequest = new ApprovalRequest({
-      requesterEmail: user.email,
-      type: "promo-code",
+    // Create the full merged configuration for high-fidelity rendering
+    const mergedDetails = {
+      ...existingPromo.toObject(),
+      ...updates
+    };
+    if (updates.$unset && updates.$unset.expiresAt) {
+      delete mergedDetails.expiresAt;
+    }
+
+    // Check if there is already a pending approval request for this targetId and type
+    let approvalRequest = await ApprovalRequest.findOne({
       targetId: id,
-      targetName: existingPromo.type === 'promo' ? `Promo: ${existingPromo.code}` : `Flat Discount: ${existingPromo.discountAmount}${existingPromo.discountType === 'percentage' ? '%' : '৳'}`,
-      field: "update",
-      oldValue: JSON.stringify(existingPromo.toObject()),
-      newValue: "updated_configuration",
-      status: "pending",
-      stage: "superadmin",
-      targetDetails: updates, // Store the new values to be applied
+      type: 'promo-code',
+      status: 'pending'
     });
-    await approvalRequest.save();
+
+    if (approvalRequest) {
+      // Update existing request in-place instead of creating a duplicate
+      approvalRequest.requesterEmail = user.email;
+      approvalRequest.targetName = existingPromo.type === 'promo' ? `Promo: ${mergedDetails.code || existingPromo.code}` : `Flat Discount: ${mergedDetails.discountAmount || existingPromo.discountAmount}${mergedDetails.discountType === 'percentage' ? '%' : '৳'}`;
+      
+      const newDetails = { ...approvalRequest.targetDetails, ...updates };
+      if (updates.$unset && updates.$unset.expiresAt) {
+        delete newDetails.expiresAt;
+      }
+      approvalRequest.targetDetails = newDetails;
+      
+      approvalRequest.superadminApprovals = [];
+      approvalRequest.ownerApproved = false;
+      approvalRequest.stage = 'superadmin';
+      approvalRequest.updatedAt = new Date();
+      await approvalRequest.save();
+    } else {
+      // Create new approval request with the full configuration details
+      approvalRequest = new ApprovalRequest({
+        requesterEmail: user.email,
+        type: "promo-code",
+        targetId: id,
+        targetName: existingPromo.type === 'promo' ? `Promo: ${existingPromo.code}` : `Flat Discount: ${existingPromo.discountAmount}${existingPromo.discountType === 'percentage' ? '%' : '৳'}`,
+        field: "update",
+        oldValue: JSON.stringify(existingPromo.toObject()),
+        newValue: "updated_configuration",
+        status: "pending",
+        stage: "superadmin",
+        targetDetails: mergedDetails,
+      });
+      await approvalRequest.save();
+    }
 
     // Create notification for Level 2 admins
     await Notification.create({
