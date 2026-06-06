@@ -4,10 +4,9 @@ import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
 
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Variation {
   weight?: string;
@@ -33,6 +32,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<{name: string, slug: string}[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 500)
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -40,7 +40,7 @@ export default function AdminProductsPage() {
   // Pagination state
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const limit = 20
+  const limit = 50
 
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'category' | 'price' | 'stock', direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' })
 
@@ -53,7 +53,7 @@ export default function AdminProductsPage() {
   }, [debouncedSearch, selectedCategory])
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts(page > 1)
   }, [debouncedSearch, selectedCategory, page])
 
   const fetchCategories = async () => {
@@ -68,8 +68,12 @@ export default function AdminProductsPage() {
     }
   }
 
-  const fetchProducts = async () => {
-    setIsLoading(true)
+  const fetchProducts = async (isAppend = false) => {
+    if (!isAppend) {
+      setIsLoading(true)
+    } else {
+      setIsFetchingMore(true)
+    }
     try {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('q', debouncedSearch)
@@ -81,13 +85,23 @@ export default function AdminProductsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setProducts(data.products || [])
+        const newProducts = data.products || []
+        if (isAppend) {
+          setProducts(prev => {
+            const existingIds = new Set(prev.map(p => p.id))
+            const filteredNew = newProducts.filter((p: Product) => !existingIds.has(p.id))
+            return [...prev, ...filteredNew]
+          })
+        } else {
+          setProducts(newProducts)
+        }
         setTotalPages(data.pagination?.totalPages || 1)
       }
     } catch (error) {
       console.error('Failed to fetch products:', error)
     } finally {
       setIsLoading(false)
+      setIsFetchingMore(false)
     }
   }
 
@@ -317,53 +331,23 @@ export default function AdminProductsPage() {
         )}
       </Card>
       
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center bg-white p-4 border-2 border-gray-100 rounded-xl shadow-sm">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            Page {page} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => {
-              const p = i + 1;
-              // Only show a limited number of page buttons
-              if (p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2)) {
-                return (
-                  <Button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    variant={page === p ? 'default' : 'outline'}
-                    size="sm"
-                    className={`h-8 w-8 p-0 text-[10px] font-black ${page === p ? 'bg-red-600 text-white' : ''}`}
-                  >
-                    {p}
-                  </Button>
-                );
-              }
-              if (p === page - 3 || p === page + 3) {
-                return <span key={p} className="text-gray-300">...</span>;
-              }
-              return null;
-            })}
-            <Button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+      {/* Pagination / Show More Controls */}
+      {page < totalPages && (
+        <div className="flex justify-center mt-8 pb-10">
+          <Button
+            onClick={() => setPage(p => p + 1)}
+            disabled={isFetchingMore}
+            variant="outline"
+            className="rounded-xl font-black uppercase text-[10px] tracking-widest px-12 py-6 border-2 border-blue-100 text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm flex items-center gap-2"
+          >
+            {isFetchingMore && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
+            {isFetchingMore ? 'Loading More...' : 'Show More Products'}
+          </Button>
+        </div>
+      )}
+      {page === totalPages && products.length > 0 && (
+        <div className="text-center py-10 text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">
+          End of products list
         </div>
       )}
     </div>
