@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import { Product } from "@/lib/models";
+import { Product, PromoCode } from "@/lib/models";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
     
     const appUrl = "https://parlebangladesh.com";
 
+    // Load active flat discounts to apply globally in feed
+    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
     const products = await Product.find({}).sort({ serial: 1, createdAt: -1 }).lean();
 
     const headers = [
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
       'image_link',
       'availability',
       'price',
+      'sale_price',
       'condition',
       'brand',
       'category'
@@ -87,6 +90,34 @@ export async function GET(request: NextRequest) {
           const price = `${v.price || 0} BDT`;
           const availability = (v.stock || 0) > 0 ? 'in stock' : 'out of stock';
 
+          // Resolve discount prices (variation-specific or global flat campaigns)
+          let salePriceVal = v.discountPrice || 0;
+          const productIdStr = p._id.toString();
+          const applicableFlat = flatDiscounts.find(d => 
+            d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
+          );
+
+          if (applicableFlat) {
+            const amount = Number(applicableFlat.discountAmount || 0);
+            const originalPrice = Number(v.price || 0);
+            let flatDiscounted = originalPrice;
+            
+            if (applicableFlat.discountType === 'percentage') {
+              flatDiscounted = originalPrice - (originalPrice * amount) / 100;
+            } else {
+              flatDiscounted = Math.max(0, originalPrice - amount);
+            }
+            flatDiscounted = Math.round(flatDiscounted);
+
+            if (flatDiscounted < (salePriceVal || v.price)) {
+              salePriceVal = flatDiscounted;
+            }
+          }
+
+          const salePrice = (salePriceVal > 0 && salePriceVal < v.price) 
+            ? `${salePriceVal} BDT` 
+            : '';
+
           const row = [
             variantId,
             p._id.toString(),
@@ -96,6 +127,7 @@ export async function GET(request: NextRequest) {
             imageLink,
             availability,
             price,
+            salePrice,
             'new',
             brand,
             category
@@ -108,6 +140,34 @@ export async function GET(request: NextRequest) {
         const availability = (p.stock || 0) > 0 ? 'in stock' : 'out of stock';
         const imageLink = `${appUrl}/logo.png`;
 
+        // Resolve discount prices (product-level or global flat campaigns)
+        let salePriceVal = p.discountPrice || 0;
+        const productIdStr = p._id.toString();
+        const applicableFlat = flatDiscounts.find(d => 
+          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
+        );
+
+        if (applicableFlat) {
+          const amount = Number(applicableFlat.discountAmount || 0);
+          const originalPrice = Number(p.price || 0);
+          let flatDiscounted = originalPrice;
+          
+          if (applicableFlat.discountType === 'percentage') {
+            flatDiscounted = originalPrice - (originalPrice * amount) / 100;
+          } else {
+            flatDiscounted = Math.max(0, originalPrice - amount);
+          }
+          flatDiscounted = Math.round(flatDiscounted);
+
+          if (flatDiscounted < (salePriceVal || p.price)) {
+            salePriceVal = flatDiscounted;
+          }
+        }
+
+        const salePrice = (salePriceVal > 0 && salePriceVal < p.price) 
+          ? `${salePriceVal} BDT` 
+          : '';
+
         const row = [
           p._id.toString(),
           p._id.toString(),
@@ -117,6 +177,7 @@ export async function GET(request: NextRequest) {
           imageLink,
           availability,
           price,
+          salePrice,
           'new',
           brand,
           category
