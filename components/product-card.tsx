@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeProductImagePath } from "@/lib/utils";
 import { useCart, getItemKey } from "@/hooks/useCart";
@@ -58,59 +58,84 @@ export default function ProductCard({
   const isDealer = user?.customerType === "dealer";
 
   // Intelligent Default Selection: Skip out-of-stock items for the main display
-  const primaryVar = variations.find(v => v.isDefault);
-  const v = (primaryVar && primaryVar.stock > 0) 
-    ? primaryVar 
-    : (variations.find(v => v.stock > 0) || variations[0]);
-    
-  const defaultVariation = {
-    ...v,
-    price: v?.price || price,
-    discountPrice: v?.discountPrice || 0,
-    flatDiscountPrice: v?.flatDiscountPrice || 0,
-    hasFlatDiscount: !!v?.hasFlatDiscount,
-    flatDiscountAmount: v?.flatDiscountAmount || 0,
-    flatDiscountType: v?.flatDiscountType || '',
-    stock: v?.stock !== undefined ? v.stock : stock,
-    weight: v?.weight || "",
-    flavor: v?.flavor || "",
-    image: v?.image || ""
+  const defaultIndex = useMemo(() => {
+    if (!variations || variations.length === 0) return 0;
+    const primaryVar = variations.find(v => v.isDefault);
+    const target = (primaryVar && primaryVar.stock > 0) 
+      ? primaryVar 
+      : (variations.find(v => v.stock > 0) || variations[0]);
+    const idx = variations.indexOf(target);
+    return idx !== -1 ? idx : 0;
+  }, [variations]);
+
+  const [activeVarIndex, setActiveVarIndex] = useState(defaultIndex);
+
+  // Sync index when defaultIndex changes
+  useEffect(() => {
+    setActiveVarIndex(defaultIndex);
+  }, [defaultIndex]);
+
+  // Automatically cycle through variations every 3 seconds if there are multiple variations
+  useEffect(() => {
+    if (!variations || variations.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setActiveVarIndex((prev) => (prev + 1) % variations.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [variations.length]);
+
+  const fallbackImg = (variations && variations.find(varObj => varObj.image)?.image) || "";
+  const currentVar = (variations && variations[activeVarIndex]) || (variations && variations[0]) || {};
+  const activeVariation = {
+    ...currentVar,
+    price: currentVar.price || price,
+    discountPrice: currentVar.discountPrice || 0,
+    flatDiscountPrice: currentVar.flatDiscountPrice || 0,
+    hasFlatDiscount: !!currentVar.hasFlatDiscount,
+    flatDiscountAmount: currentVar.flatDiscountAmount || 0,
+    flatDiscountType: currentVar.flatDiscountType || '',
+    stock: currentVar.stock !== undefined ? currentVar.stock : stock,
+    weight: currentVar.weight || "",
+    flavor: currentVar.flavor || "",
+    image: currentVar.image || fallbackImg
   };
 
-  const productImg = sanitizeProductImagePath(defaultVariation.image || "");
+  const productImg = sanitizeProductImagePath(activeVariation.image);
 
   const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
   const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
-  const hasDealerPrice = isDealer && !!defaultVariation.dealerPrice && defaultVariation.dealerPrice > 0;
+  const hasDealerPrice = isDealer && !!activeVariation.dealerPrice && activeVariation.dealerPrice > 0;
   
   // A product has a retail discount if it has a manual discountPrice OR a global flatDiscountPrice
-  const hasManualDiscount = !hasDealerPrice && !!defaultVariation.discountPrice && defaultVariation.discountPrice < defaultVariation.price;
-  const hasFlatDiscount = !hasDealerPrice && !!defaultVariation.hasFlatDiscount && !!defaultVariation.flatDiscountPrice;
+  const hasManualDiscount = !hasDealerPrice && !!activeVariation.discountPrice && activeVariation.discountPrice < activeVariation.price;
+  const hasFlatDiscount = !hasDealerPrice && !!activeVariation.hasFlatDiscount && !!activeVariation.flatDiscountPrice;
   
-  let currentPrice = defaultVariation.price;
+  let currentPrice = activeVariation.price;
   let discountPercentage = 0;
   let hasAnyRetailDiscount = false;
   let activeDiscountLabel = "Sale";
 
   if (hasDealerPrice) {
-    currentPrice = defaultVariation.dealerPrice!;
+    currentPrice = activeVariation.dealerPrice!;
   } else {
     // Collect all candidates
-    let candidates = [{ price: defaultVariation.price, percent: 0, label: "" }];
+    let candidates = [{ price: activeVariation.price, percent: 0, label: "" }];
     
     if (hasManualDiscount) {
-      const p = Math.round(((defaultVariation.price - defaultVariation.discountPrice!) / defaultVariation.price) * 100);
-      candidates.push({ price: defaultVariation.discountPrice!, percent: p, label: "Sale" });
+      const p = Math.round(((activeVariation.price - activeVariation.discountPrice!) / activeVariation.price) * 100);
+      candidates.push({ price: activeVariation.discountPrice!, percent: p, label: "Sale" });
     }
     if (hasFlatDiscount) {
-      const p = defaultVariation.flatDiscountType === 'percentage' 
-        ? defaultVariation.flatDiscountAmount!
-        : Math.round(((defaultVariation.price - defaultVariation.flatDiscountPrice!) / defaultVariation.price) * 100);
-      candidates.push({ price: defaultVariation.flatDiscountPrice!, percent: p, label: "Campaign" });
+      const p = activeVariation.flatDiscountType === 'percentage' 
+        ? activeVariation.flatDiscountAmount!
+        : Math.round(((activeVariation.price - activeVariation.flatDiscountPrice!) / activeVariation.price) * 100);
+      candidates.push({ price: activeVariation.flatDiscountPrice!, percent: p, label: "Campaign" });
     }
     if (isUserDiscountActive) {
-      const userPrice = Math.round(defaultVariation.price * (1 - userDiscountPercent / 100));
+      const userPrice = Math.round(activeVariation.price * (1 - userDiscountPercent / 100));
       candidates.push({ price: userPrice, percent: userDiscountPercent, label: `${user.customerType?.toUpperCase() || 'Member'}` });
     }
 
@@ -119,10 +144,10 @@ export default function ProductCard({
     currentPrice = bestCandidate.price;
     discountPercentage = bestCandidate.percent;
     activeDiscountLabel = bestCandidate.label;
-    hasAnyRetailDiscount = currentPrice < defaultVariation.price;
+    hasAnyRetailDiscount = currentPrice < activeVariation.price;
   }
 
-  const cartItemKey = getItemKey({ productId: id || slug, weight: defaultVariation.weight, flavor: defaultVariation.flavor });
+  const cartItemKey = getItemKey({ productId: id || slug, weight: activeVariation.weight, flavor: activeVariation.flavor });
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
   const cartQuantity = existingCartItem?.quantity || 0;
   
@@ -130,7 +155,7 @@ export default function ProductCard({
 
   // Resilience: If stock is missing, assume it's available (or treat as out of stock? 
   // Let's assume a large number if missing to avoid blocking)
-  const actualStock = defaultVariation.stock !== undefined ? defaultVariation.stock : 999;
+  const actualStock = activeVariation.stock !== undefined ? activeVariation.stock : 999;
   const isOutOfStock = actualStock === 0;
   const isAtMax = !canInputManualQty && actualStock > 0 && cartQuantity >= actualStock;
 
@@ -140,7 +165,7 @@ export default function ProductCard({
 
     if (actualStock > 0 && !isAtMax) {
       if (onAddToCart) {
-        onAddToCart(defaultVariation);
+        onAddToCart(activeVariation);
       } else {
         // Fallback to direct cart add if no custom handler is provided
         addItem({
@@ -148,9 +173,9 @@ export default function ProductCard({
           productName: name,
           productSlug: slug,
           price: currentPrice,
-          image: defaultVariation.image,
-          weight: defaultVariation.weight,
-          flavor: defaultVariation.flavor,
+          image: activeVariation.image,
+          weight: activeVariation.weight,
+          flavor: activeVariation.flavor,
           stock: actualStock,
         });
       }
@@ -161,8 +186,8 @@ export default function ProductCard({
   };
 
   const variationParams = new URLSearchParams();
-  if (defaultVariation.weight) variationParams.set('weight', defaultVariation.weight);
-  if (defaultVariation.flavor) variationParams.set('flavor', defaultVariation.flavor);
+  if (activeVariation.weight) variationParams.set('weight', activeVariation.weight);
+  if (activeVariation.flavor) variationParams.set('flavor', activeVariation.flavor);
   const productUrl = `/shop/products/${slug}${variationParams.toString() ? `?${variationParams.toString()}` : ''}`;
 
   return (
@@ -207,7 +232,7 @@ export default function ProductCard({
         </Link>
         <div className="flex items-center justify-between mb-3 min-h-[1.5rem]">
           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-            {defaultVariation.weight || defaultVariation.flavor || "Standard"}
+            {activeVariation.weight || activeVariation.flavor || "Standard"}
           </span>
         </div>
 
@@ -227,7 +252,7 @@ export default function ProductCard({
           {(hasAnyRetailDiscount || hasDealerPrice) && (
             <div className="flex items-center gap-1 opacity-40">
                <span className="text-[10px] font-bold text-gray-500">৳</span>
-               <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(defaultVariation.price)}</span>
+               <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
             </div>
           )}
         </div>
