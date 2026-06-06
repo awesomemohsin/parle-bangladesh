@@ -668,6 +668,7 @@ export interface IPromoPoster extends Document {
   isActive: boolean;
   order: number;
   placement?: string;
+  buttonText?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -680,6 +681,7 @@ const PromoPosterSchema = new Schema<IPromoPoster>(
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
     placement: { type: String, default: "slider" },
+    buttonText: { type: String, default: "Shop Now" },
   },
   { timestamps: true }
 );
@@ -688,7 +690,10 @@ PromoPosterSchema.index({ isActive: 1 });
 PromoPosterSchema.index({ order: 1 });
 PromoPosterSchema.index({ placement: 1 });
 
-export const PromoPoster = mongoose.models?.PromoPoster || mongoose.model<IPromoPoster>("PromoPoster", PromoPosterSchema, "promo_posters");
+if (mongoose.models && mongoose.models.PromoPoster) {
+  delete mongoose.models.PromoPoster;
+}
+export const PromoPoster = mongoose.model<IPromoPoster>("PromoPoster", PromoPosterSchema, "promo_posters");
 
 
 // --- STOCK LOG MODEL ---

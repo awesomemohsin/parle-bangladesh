@@ -5,13 +5,7 @@ import { PromoPoster } from '@/lib/models';
 export async function GET() {
   try {
     await dbConnect();
-    const posters = await PromoPoster.find({ 
-      isActive: true,
-      $or: [
-        { placement: "slider" },
-        { placement: { $exists: false } }
-      ]
-    }).sort({ order: 1 });
+    const posters = await PromoPoster.find({ isActive: true }).sort({ order: 1 });
     
     // Map to match the frontend expectations
     const formattedPosters = posters.map(p => ({
@@ -19,7 +13,8 @@ export async function GET() {
       image: p.imageUrl,
       link: p.link,
       alt: p.altText,
-      placement: p.placement || 'slider'
+      placement: p.placement || 'slider',
+      buttonText: p.buttonText || 'Shop Now'
     }));
 
     return NextResponse.json(formattedPosters);
