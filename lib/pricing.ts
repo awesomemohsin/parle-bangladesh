@@ -45,7 +45,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   let flatDiscountTotal = 0;
   const ruleUsage = new Map<string, number>();
 
-  // Pre-calculate subtotal of targeted products for each flat discount rule
+  // Pre-calculate subtotal of targeted products for each flat discount rule based on original MRP
   const ruleSubtotals = new Map<string, number>();
   flatDiscounts.forEach(rule => {
     let ruleSubtotal = 0;
@@ -54,11 +54,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId));
       if (applies) {
         const itemPrice = Number(item.price) || 0;
-        const effectivePrice = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
-          ? item.variationDiscountPrice
-          : itemPrice;
         const qty = Number(item.quantity || item.q) || 0;
-        ruleSubtotal += effectivePrice * qty;
+        ruleSubtotal += itemPrice * qty;
       }
     });
     ruleSubtotals.set(rule._id.toString(), ruleSubtotal);
@@ -96,14 +93,15 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       if (appliesToProduct && minOrderMet) {
         let currentDiscount = 0;
         const amount = Number(rule.discountAmount || 0);
+        const originalItemSubtotal = itemPrice * itemQuantity;
 
         if (rule.discountType === 'percentage') {
-          currentDiscount = (itemEffectiveSubtotal * amount) / 100;
+          currentDiscount = (originalItemSubtotal * amount) / 100;
         } else {
           currentDiscount = amount * itemQuantity;
         }
         
-        // Ensure discount doesn't exceed item subtotal
+        // Ensure discount doesn't exceed item subtotal after product-level discounts
         currentDiscount = Math.min(itemEffectiveSubtotal, currentDiscount);
 
         if (currentDiscount > bestDiscountForItem) {
