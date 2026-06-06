@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { del } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 import dbConnect from '@/lib/db';
 import { PromoPoster } from '@/lib/models';
 import { getAuthUserFromRequest, hasAnyRole } from '@/lib/api-auth';
@@ -61,7 +61,7 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params;
-        console.log(`[Admin] Toggling status for poster: ${id}`);
+        console.log(`[Admin] Updating poster: ${id}`);
         const user = getAuthUserFromRequest(req as any);
         if (!user) {
             console.error('[Admin] Patch Failed: No user found in request');
@@ -72,13 +72,61 @@ export async function PATCH(
             return NextResponse.json({ error: 'Permission denied' }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { isActive } = body;
-
         await dbConnect();
+
+        const contentType = req.headers.get('content-type') || '';
+        const updateData: any = {};
+
+        if (contentType.includes('multipart/form-data')) {
+            const formData = await req.formData();
+            const file = formData.get('file') as File | null;
+            const link = formData.get('link') as string | null;
+            const altText = formData.get('altText') as string | null;
+            const placement = formData.get('placement') as string | null;
+            const buttonText = formData.get('buttonText') as string | null;
+
+            if (link !== null) updateData.link = link;
+            if (altText !== null) updateData.altText = altText;
+            if (placement !== null) updateData.placement = placement;
+            if (buttonText !== null) updateData.buttonText = buttonText;
+
+            if (file) {
+                // Fetch the existing poster to delete old blob
+                const existingPoster = await PromoPoster.findById(id);
+                if (existingPoster && existingPoster.imageUrl.includes('blob.vercel-storage.com')) {
+                    try {
+                        const token = process.env.BLOB_READ_WRITE_TOKEN;
+                        await del(existingPoster.imageUrl, { token });
+                    } catch (delError) {
+                        console.error('[Admin] Failed to delete old blob:', delError);
+                    }
+                }
+
+                // Upload new file to Vercel Blob
+                const token = process.env.BLOB_READ_WRITE_TOKEN;
+                if (!token) {
+                    return NextResponse.json({ error: 'Configuration error: Blob token missing' }, { status: 500 });
+                }
+
+                const blob = await put(`promo/${Date.now()}-${file.name}`, file, {
+                    access: 'public',
+                    token: token,
+                });
+                updateData.imageUrl = blob.url;
+            }
+        } else {
+            const body = await req.json();
+            const { isActive, link, altText, placement, buttonText } = body;
+            if (isActive !== undefined) updateData.isActive = isActive;
+            if (link !== undefined) updateData.link = link;
+            if (altText !== undefined) updateData.altText = altText;
+            if (placement !== undefined) updateData.placement = placement;
+            if (buttonText !== undefined) updateData.buttonText = buttonText;
+        }
+
         const poster = await PromoPoster.findByIdAndUpdate(
             id,
-            { isActive },
+            updateData,
             { new: true }
         );
 
@@ -86,10 +134,10 @@ export async function PATCH(
             return NextResponse.json({ error: 'Poster not found' }, { status: 404 });
         }
 
-        console.log(`[Admin] Poster ${id} active status set to: ${isActive}`);
+        console.log(`[Admin] Poster ${id} updated successfully:`, updateData);
         return NextResponse.json(poster);
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Admin] PATCH error:', error);
-        return NextResponse.json({ error: 'Failed to update poster' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to update poster', details: error.message }, { status: 500 });
     }
 }

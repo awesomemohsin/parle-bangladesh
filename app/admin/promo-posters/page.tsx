@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Upload, Trash2, Eye, EyeOff, Plus, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Eye, EyeOff, Plus, Loader2, Image as ImageIcon, AlertTriangle, CheckCircle2, Info, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 
@@ -12,18 +12,110 @@ interface Poster {
   altText: string;
   isActive: boolean;
   placement?: string;
+  buttonText?: string;
   createdAt: string;
 }
+
+const PLACEMENT_INFO = {
+  slider: {
+    label: 'Main Home Hero Slider',
+    width: 1080,
+    height: 1350,
+    aspectRatio: 1080 / 1350,
+    ratioString: '4:5 (Portrait)',
+    description: 'Welcome popup modal shown to visitors on the homepage.'
+  },
+  category_bottom: {
+    label: 'Homepage Bottom of Categories',
+    width: 1400,
+    height: 200,
+    aspectRatio: 1400 / 200,
+    ratioString: '7:1 (Landscape Banner)',
+    description: 'Horizontal banner displayed underneath the Categories section.'
+  },
+  bestsellers_bottom: {
+    label: 'Homepage Bottom of Best Sellers',
+    width: 1400,
+    height: 200,
+    aspectRatio: 1400 / 200,
+    ratioString: '7:1 (Landscape Banner)',
+    description: 'Horizontal banner displayed underneath the Best Sellers section.'
+  },
+  shop_top_banner: {
+    label: 'Shop Page Top Banner',
+    width: 1400,
+    height: 300,
+    aspectRatio: 1400 / 300,
+    ratioString: '14:3 (Landscape Banner)',
+    description: 'Horizontal banner displayed below filters and above the product list on the Shop page.'
+  },
+  shop_grid_1: {
+    label: 'Shop Page Grid Card 1 (Position 4)',
+    width: 400,
+    height: 500,
+    aspectRatio: 400 / 500,
+    ratioString: '4:5 (Portrait Card)',
+    description: 'Inline promotional card displayed as the 4th item in the Shop product grid.'
+  },
+  shop_grid_2: {
+    label: 'Shop Page Grid Card 2 (Position 8)',
+    width: 400,
+    height: 500,
+    aspectRatio: 400 / 500,
+    ratioString: '4:5 (Portrait Card)',
+    description: 'Inline promotional card displayed as the 8th item in the Shop product grid.'
+  }
+};
 
 export default function PromoPostersAdmin() {
   const [posters, setPosters] = useState<Poster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [selectedResolution, setSelectedResolution] = useState<{ width: number; height: number } | null>(null);
   const [link, setLink] = useState('/shop');
   const [altText, setAltText] = useState('');
+  const [buttonText, setButtonText] = useState('Shop Now');
   const [placement, setPlacement] = useState('slider');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPosterId, setEditingPosterId] = useState<string | null>(null);
+
+  // Clean up object URL when component unmounts or preview url changes
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrl && filePreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(filePreviewUrl);
+      }
+    };
+  }, [filePreviewUrl]);
+
+  const resetUploadState = () => {
+    setFile(null);
+    if (filePreviewUrl) {
+      if (filePreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(filePreviewUrl);
+      }
+      setFilePreviewUrl(null);
+    }
+    setSelectedResolution(null);
+    setLink('/shop');
+    setAltText('');
+    setButtonText('Shop Now');
+    setPlacement('slider');
+    setEditingPosterId(null);
+  };
+
+  const handleEditClick = (poster: Poster) => {
+    setEditingPosterId(poster._id);
+    setLink(poster.link);
+    setAltText(poster.altText);
+    setButtonText(poster.buttonText || 'Shop Now');
+    setPlacement(poster.placement || 'slider');
+    setFilePreviewUrl(poster.imageUrl);
+    setSelectedResolution(null);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchPosters();
@@ -43,33 +135,63 @@ export default function PromoPostersAdmin() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0] || null;
+    setFile(selectedFile);
+    
+    if (filePreviewUrl) {
+      URL.revokeObjectURL(filePreviewUrl);
+      setFilePreviewUrl(null);
+    }
+    setSelectedResolution(null);
+
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setFilePreviewUrl(url);
+
+      const img = new window.Image();
+      img.src = url;
+      img.onload = () => {
+        setSelectedResolution({ width: img.width, height: img.height });
+      };
+    }
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file && !editingPosterId) return;
 
     setIsUploading(true);
     const formData = new FormData();
-        formData.append('file', file);
-        formData.append('link', link);
-        formData.append('altText', altText);
-        formData.append('placement', placement);
+    if (file) {
+      formData.append('file', file);
+    }
+    formData.append('link', link);
+    formData.append('altText', altText);
+    formData.append('placement', placement);
+    formData.append('buttonText', buttonText);
 
-        try {
-          const res = await fetch('/api/admin/promo-posters', {
-            method: 'POST',
-            body: formData,
-          });
+    try {
+      const url = editingPosterId 
+        ? `/api/admin/promo-posters/${editingPosterId}`
+        : '/api/admin/promo-posters';
+      const method = editingPosterId ? 'PATCH' : 'POST';
 
-          if (res.ok) {
-            fetchPosters();
-            setIsModalOpen(false);
-            setFile(null);
-            setLink('/shop');
-            setAltText('');
-            setPlacement('slider');
-          }
-        } catch (err) {
-      console.error('Upload failed', err);
+      const res = await fetch(url, {
+        method,
+        body: formData,
+      });
+
+      if (res.ok) {
+        fetchPosters();
+        setIsModalOpen(false);
+        resetUploadState();
+      } else {
+        const errorData = await res.json();
+        alert(`Operation failed: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Operation failed', err);
     } finally {
       setIsUploading(false);
     }
@@ -118,7 +240,7 @@ export default function PromoPostersAdmin() {
           <p className="text-gray-500 text-sm font-medium mt-1">Manage homepage welcome carousel banners</p>
         </div>
         <Button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => { resetUploadState(); setIsModalOpen(true); }}
           className="bg-gray-900 hover:bg-gray-800 text-white rounded-2xl px-6 py-6 h-auto flex items-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95"
         >
           <Plus className="w-5 h-5" />
@@ -142,160 +264,304 @@ export default function PromoPostersAdmin() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {posters.map((poster, index) => (
-            <div 
-              key={poster._id} 
-              className={`group relative bg-white rounded-[40px] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 ${!poster.isActive ? 'opacity-75' : ''}`}
-            >
-              <div className="relative aspect-[1080/1350] overflow-hidden">
-                <Image
-                  src={poster.imageUrl}
-                  alt={poster.altText}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  priority={index < 2}
-                  loading={index < 2 ? "eager" : "lazy"}
-                />
-                {!poster.isActive && (
-                  <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-[2px] flex items-center justify-center">
-                    <span className="bg-white/10 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/20">Inactive</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+          {posters.map((poster, index) => {
+            const isBanner = poster.placement === 'category_bottom' || poster.placement === 'bestsellers_bottom' || poster.placement === 'shop_top_banner';
+            return (
+              <div 
+                key={poster._id} 
+                className={`group relative bg-white rounded-[40px] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 ${
+                  !poster.isActive ? 'opacity-75' : ''
+                } ${isBanner ? 'col-span-1 md:col-span-2' : 'col-span-1'}`}
+              >
+                <div className={`relative overflow-hidden bg-slate-50 ${isBanner ? 'aspect-[7/2]' : 'aspect-[1080/1350]'}`}>
+                  <Image
+                    src={poster.imageUrl}
+                    alt={poster.altText}
+                    fill
+                    sizes={isBanner ? "100vw" : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    priority={index < 2}
+                    loading={index < 2 ? "eager" : "lazy"}
+                  />
+                  {!poster.isActive && (
+                    <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-[2px] flex items-center justify-center z-10">
+                      <span className="bg-white/10 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/20">Inactive</span>
+                    </div>
+                  )}
+                  
+                  {/* Action Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-8 gap-4 z-10">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleStatus(poster._id, poster.isActive)}
+                        className="flex-1 bg-white hover:bg-gray-100 text-gray-900 h-12 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 font-bold text-[10px] uppercase tracking-wider"
+                      >
+                        {poster.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {poster.isActive ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        onClick={() => handleEditClick(poster)}
+                        className="w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl flex items-center justify-center transition-all active:scale-95"
+                        title="Edit Poster"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => deletePoster(poster._id)}
+                        className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center transition-all active:scale-95"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                )}
-                
-                {/* Action Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-8 gap-4">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => toggleStatus(poster._id, poster.isActive)}
-                      className="flex-1 bg-white hover:bg-gray-100 text-gray-900 h-12 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 font-bold text-[10px] uppercase tracking-wider"
-                    >
-                      {poster.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      {poster.isActive ? 'Disable' : 'Enable'}
-                    </button>
-                    <button
-                      onClick={() => deletePoster(poster._id)}
-                      className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center transition-all active:scale-95"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{poster.altText}</p>
+                    <span className="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 shrink-0">
+                      {poster.placement === 'category_bottom' 
+                        ? 'Category Bottom' 
+                        : poster.placement === 'bestsellers_bottom' 
+                        ? 'Best Sellers' 
+                        : poster.placement === 'shop_top_banner'
+                        ? 'Shop Top Banner'
+                        : poster.placement === 'shop_grid_1'
+                        ? 'Shop Grid Pos 4'
+                        : poster.placement === 'shop_grid_2'
+                        ? 'Shop Grid Pos 8'
+                        : 'Hero Slider'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 mt-2">
+                    <p className="text-xs text-gray-600 font-mono truncate">{poster.link}</p>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 shrink-0 border border-slate-100 rounded px-1.5 py-0.5 bg-slate-50">
+                      {poster.placement === 'shop_top_banner' 
+                        ? '1400x300 (14:3)' 
+                        : poster.placement === 'shop_grid_1' || poster.placement === 'shop_grid_2'
+                        ? '400x500 (4:5)'
+                        : isBanner 
+                        ? '1400x200 (7:1)' 
+                        : '1080x1350 (4:5)'}
+                    </span>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Button Text (CTA):</p>
+                    <p className="text-xs font-bold text-gray-750 uppercase">{poster.buttonText || 'Shop Now'}</p>
                   </div>
                 </div>
               </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{poster.altText}</p>
-                  <span className="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 shrink-0">
-                    {poster.placement === 'category_bottom' ? 'Category Bottom' : poster.placement === 'bestsellers_bottom' ? 'Best Sellers' : 'Hero Slider'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600 font-mono truncate">{poster.link}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Upload Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isUploading && setIsModalOpen(false)} />
-          <div className="relative w-full max-w-md bg-white rounded-[40px] shadow-2xl p-10 space-y-8 animate-in fade-in zoom-in duration-300">
-            <div>
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">Upload Poster</h2>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Add a new banner to the homepage</p>
-            </div>
+      {isModalOpen && (() => {
+        const currentPlacementInfo = PLACEMENT_INFO[placement as keyof typeof PLACEMENT_INFO] || PLACEMENT_INFO.slider;
+        
+        let aspectStatus: 'perfect' | 'warning' | 'info' | null = null;
+        let statusMessage = '';
 
-            <form onSubmit={handleUpload} className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Select Image</label>
-                <div 
-                  className={`relative border-2 border-dashed rounded-3xl p-8 flex flex-col items-center transition-all ${file ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300 bg-gray-50'}`}
-                >
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+        if (selectedResolution) {
+          const fileRatio = selectedResolution.width / selectedResolution.height;
+          const targetRatio = currentPlacementInfo.aspectRatio;
+          const ratioDifference = Math.abs(fileRatio - targetRatio) / targetRatio;
+
+          if (ratioDifference < 0.05) { // 5% tolerance
+            if (selectedResolution.width >= currentPlacementInfo.width && selectedResolution.height >= currentPlacementInfo.height) {
+              aspectStatus = 'perfect';
+              statusMessage = `Ideal dimensions! The image (${selectedResolution.width}x${selectedResolution.height}px) matches the recommended aspect ratio and is high-resolution.`;
+            } else {
+              aspectStatus = 'info';
+              statusMessage = `Correct aspect ratio, but resolution is lower than recommended (Current: ${selectedResolution.width}x${selectedResolution.height}px, Recommended: ${currentPlacementInfo.width}x${currentPlacementInfo.height}px to prevent blurriness).`;
+            }
+          } else {
+            aspectStatus = 'warning';
+            statusMessage = `Aspect ratio mismatch! Uploaded image is ${selectedResolution.width}x${selectedResolution.height}px. The recommended size is ${currentPlacementInfo.width}x${currentPlacementInfo.height}px (${currentPlacementInfo.ratioString}). The image will be cropped to fit.`;
+          }
+        }
+
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isUploading && (resetUploadState(), setIsModalOpen(false))} />
+            <div className="relative w-full max-w-md bg-white rounded-[40px] shadow-2xl p-10 space-y-8 animate-in fade-in zoom-in duration-300 my-8">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">
+                  {editingPosterId ? 'Edit Poster' : 'Upload Poster'}
+                </h2>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
+                  {editingPosterId ? 'Modify poster details' : 'Add a new banner to the homepage'}
+                </p>
+              </div>
+
+              <form onSubmit={handleUpload} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Placement Area</label>
+                  <select
+                    value={placement}
+                    onChange={(e) => {
+                      setPlacement(e.target.value);
+                    }}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all cursor-pointer"
+                    required
                     disabled={isUploading}
-                  />
-                  {file ? (
-                    <div className="text-center">
-                      <p className="text-amber-600 font-bold text-xs truncate max-w-[200px]">{file.name}</p>
-                      <p className="text-amber-400 text-[8px] font-black uppercase tracking-tighter mt-1">Click to change</p>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-8 h-8 text-gray-300 mb-2" />
-                      <p className="text-gray-400 font-bold text-[10px] uppercase tracking-tighter">Click to browse</p>
-                    </>
-                  )}
+                  >
+                    <option value="slider">Main Home Hero Slider (1080 x 1350 px)</option>
+                    <option value="category_bottom">Homepage Bottom of Categories (1400 x 200 px)</option>
+                    <option value="bestsellers_bottom">Homepage Bottom of Best Sellers (1400 x 200 px)</option>
+                    <option value="shop_top_banner">Shop Page Top Banner (1400 x 300 px)</option>
+                    <option value="shop_grid_1">Shop Page Grid Card 1 - Pos 4 (400 x 500 px)</option>
+                    <option value="shop_grid_2">Shop Page Grid Card 2 - Pos 8 (400 x 500 px)</option>
+                  </select>
+                  <div className="mt-1 bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
+                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider">
+                      Recommended: <span className="text-amber-600 font-black">{currentPlacementInfo.width} x {currentPlacementInfo.height} px</span> ({currentPlacementInfo.ratioString})
+                    </p>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight leading-relaxed">
+                      {currentPlacementInfo.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Redirect Link</label>
-                <input
-                  type="text"
-                  value={link}
-                  onChange={(e) => setLink(e.target.value)}
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all"
-                  placeholder="/shop"
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Select Image</label>
+                  <div 
+                    className={`relative border-2 border-dashed rounded-3xl overflow-hidden transition-all bg-gray-50 hover:bg-gray-100/50 ${
+                      file ? 'border-amber-500 bg-amber-50/10' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                      disabled={isUploading}
+                    />
+                    {file && filePreviewUrl ? (
+                      <div className="p-6 flex flex-col items-center space-y-4">
+                        {/* Live Crop Preview Box */}
+                        <div className="relative w-full max-w-[260px] bg-slate-100 rounded-2xl overflow-hidden border border-amber-200/50 shadow-inner flex items-center justify-center">
+                          <div className={`relative w-full ${
+                            (placement === 'slider' || placement === 'shop_grid_1' || placement === 'shop_grid_2')
+                              ? 'aspect-[1080/1350]' 
+                              : 'aspect-[7/2]'
+                          }`}>
+                            <Image
+                              src={filePreviewUrl}
+                              alt="Upload preview"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        </div>
+                        <div className="text-center w-full">
+                          <p className="text-gray-900 font-bold text-xs truncate max-w-full px-2">{file.name}</p>
+                          <p className="text-amber-500 text-[8px] font-black uppercase tracking-widest mt-1">Click or drag here to change image</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-8 flex flex-col items-center justify-center">
+                        <Upload className="w-8 h-8 text-gray-300 mb-2" />
+                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-tighter">Click to browse or drag image</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Placement Area</label>
-                <select
-                  value={placement}
-                  onChange={(e) => setPlacement(e.target.value)}
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all cursor-pointer"
-                  required
-                  disabled={isUploading}
-                >
-                  <option value="slider">Main Home Hero Slider</option>
-                  <option value="category_bottom">Homepage Bottom of Categories</option>
-                  <option value="bestsellers_bottom">Homepage Bottom of Best Sellers</option>
-                </select>
-              </div>
+                {selectedResolution && (
+                  <div className={`p-4 rounded-2xl flex items-start gap-3 border ${
+                    aspectStatus === 'perfect' 
+                      ? 'bg-emerald-50 border-emerald-100 text-emerald-800' 
+                      : aspectStatus === 'info'
+                      ? 'bg-blue-50 border-blue-100 text-blue-800'
+                      : 'bg-amber-50/70 border-amber-100 text-amber-800'
+                  }`}>
+                    {aspectStatus === 'perfect' ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : aspectStatus === 'info' ? (
+                      <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase tracking-wider">
+                        {aspectStatus === 'perfect' 
+                          ? 'Perfect Match' 
+                          : aspectStatus === 'info'
+                          ? 'Low Resolution'
+                          : 'Aspect Ratio Mismatch'}
+                      </p>
+                      <p className="text-xs leading-relaxed font-medium">
+                        {statusMessage}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Alt Text</label>
-                <input
-                  type="text"
-                  value={altText}
-                  onChange={(e) => setAltText(e.target.value)}
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all"
-                  placeholder="e.g. Winter Sale 50% Off"
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Redirect Link</label>
+                  <input
+                    type="text"
+                    value={link}
+                    onChange={(e) => setLink(e.target.value)}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                    placeholder="/shop"
+                    required
+                  />
+                </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isUploading}
-                  className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-wider text-[10px]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!file || isUploading}
-                  className="flex-[2] bg-gray-900 hover:bg-gray-800 text-white h-14 rounded-2xl font-bold uppercase tracking-wider text-[10px] shadow-xl flex items-center justify-center gap-2"
-                >
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {isUploading ? 'Uploading...' : 'Upload Now'}
-                </Button>
-              </div>
-            </form>
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Button Text (CTA)</label>
+                  <input
+                    type="text"
+                    value={buttonText}
+                    onChange={(e) => setButtonText(e.target.value)}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                    placeholder="e.g. Shop Now"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Alt Text</label>
+                  <input
+                    type="text"
+                    value={altText}
+                    onChange={(e) => setAltText(e.target.value)}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                    placeholder="e.g. Winter Sale 50% Off"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      resetUploadState();
+                      setIsModalOpen(false);
+                    }}
+                    disabled={isUploading}
+                    className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-wider text-[10px]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={(!file && !editingPosterId) || isUploading}
+                    className="flex-[2] bg-gray-900 hover:bg-gray-800 text-white h-14 rounded-2xl font-bold uppercase tracking-wider text-[10px] shadow-xl flex items-center justify-center gap-2"
+                  >
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingPosterId ? <CheckCircle2 className="w-4 h-4" /> : <Upload className="w-4 h-4" />)}
+                    {isUploading ? 'Saving...' : (editingPosterId ? 'Save Changes' : 'Upload Now')}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
