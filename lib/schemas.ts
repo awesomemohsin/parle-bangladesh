@@ -63,9 +63,22 @@ export const UserSchema = z.object({
   role: z.enum(['admin', 'moderator']),
 })
 
+export const OfferSchema = z.object({
+  title: z.string().min(1, 'Title required'),
+  slug: z.string().min(1, 'Slug required'),
+  description: z.string().min(1, 'Description required'),
+  offerEndsAt: z.string().or(z.date()).transform((val) => new Date(val)),
+  image: z.string().optional(),
+  isActive: z.boolean().optional(),
+  buttonText: z.string().optional(),
+  buttonLink: z.string().optional(),
+})
+
 export type LoginInput = z.infer<typeof LoginSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type ProductInput = z.infer<typeof ProductSchema>
 export type CategoryInput = z.infer<typeof CategorySchema>
 export type OrderInput = z.infer<typeof OrderSchema>
 export type UserInput = z.infer<typeof UserSchema>
+export type OfferInput = z.infer<typeof OfferSchema>
+

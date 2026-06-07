@@ -788,9 +788,42 @@ const VerificationCodeSchema = new Schema<IVerificationCode>(
 );
 
 VerificationCodeSchema.index({ batchId: 1 });
-VerificationCodeSchema.index({ isVerified: 1 });
-
 export const VerificationCode = mongoose.models?.VerificationCode || mongoose.model<IVerificationCode>("VerificationCode", VerificationCodeSchema, "verification_codes");
+
+
+// --- OFFER MODEL ---
+export interface IOffer extends Document {
+  title: string;
+  slug: string;
+  description: string;
+  image: string;
+  offerEndsAt: Date;
+  isActive: boolean;
+  buttonText?: string;
+  buttonLink?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const OfferSchema = new Schema<IOffer>(
+  {
+    title: { type: String, required: true },
+    slug: { type: String, required: true, unique: true, lowercase: true, index: true },
+    description: { type: String, required: true },
+    image: { type: String, required: true },
+    offerEndsAt: { type: Date, required: true },
+    isActive: { type: Boolean, default: true },
+    buttonText: { type: String, default: 'Shop Now' },
+    buttonLink: { type: String, default: '/shop' },
+  },
+  { timestamps: true }
+);
+
+OfferSchema.index({ isActive: 1 });
+OfferSchema.index({ offerEndsAt: 1 });
+
+export const Offer = mongoose.models?.Offer || mongoose.model<IOffer>("Offer", OfferSchema, "offers");
+
 
 
 
