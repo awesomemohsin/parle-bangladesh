@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { Phone, Mail, Facebook, MessageCircle, Instagram, Building2, MapPin } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -18,7 +19,7 @@ export default function Footer() {
           {/* 1. Brand Identity (Top Left on Mobile) */}
           <div className="col-span-1 space-y-5">
             <Link href="/" className="block group">
-              <img src="/logo.png" alt="Logo" className="h-14 sm:h-12 w-auto object-contain" />
+              <Image src="/logo.png" alt="Logo" width={224} height={56} className="h-14 sm:h-12 w-auto object-contain" />
               <div className="flex flex-col border-l-4 border-red-600 pl-3 mt-3">
                 <h3 className="text-[25px] sm:text-[20px] font-black text-red-600 uppercase tracking-tighter italic leading-none">
                   Parle <span className="text-gray-900">Bangladesh</span>

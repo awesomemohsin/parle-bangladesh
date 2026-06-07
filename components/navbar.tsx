@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
 import { useAuth } from '@/hooks/useAuth'
 import NotificationCenter from '@/components/admin/notification-center'
+import Image from 'next/image'
 
 export default function Navbar() {
   const { itemCount } = useCart()
@@ -174,7 +175,7 @@ export default function Navbar() {
 
             <div className="flex-1 flex justify-center">
               <Link href="/">
-                <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+                <Image src="/logo.png" alt="Logo" width={160} height={40} priority className="h-10 w-auto object-contain" />
               </Link>
             </div>
 
@@ -208,7 +209,7 @@ export default function Navbar() {
                 <span className="text-4xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
                 <span className="text-xs font-bold text-gray-900 uppercase tracking-[0.25em] leading-none mt-1">Bangladesh</span>
               </div>
-              <img src="/logo.png" alt="Logo" className="h-11 w-auto transition-transform group-hover:scale-105 duration-300" />
+              <Image src="/logo.png" alt="Logo" width={176} height={44} priority className="h-11 w-auto object-contain transition-transform group-hover:scale-105 duration-300" />
             </Link>
 
             {/* Center: Essential Links (Absolutely Centered) - Hidden on Admin Routes */}

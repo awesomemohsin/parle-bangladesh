@@ -7,6 +7,7 @@ import ProductCard from "@/components/product-card";
 import { useCart } from "@/hooks/useCart";
 import { Search, ShoppingCart, Filter, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import Image from "next/image";
 
 interface Variation {
   weight?: string;
@@ -300,10 +301,12 @@ export default function ShopClient({
       {topBanner && (
         <div className="mb-8 relative w-full h-[100px] sm:h-[140px] md:h-[180px] rounded-[2rem] overflow-hidden bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
           <Link href={topBanner.link} className="block relative w-full h-full">
-            <img
+            <Image
               src={topBanner.imageUrl}
               alt={topBanner.altText}
-              className="w-full h-full object-cover transition-transform duration-[1000ms] group-hover:scale-[1.03]"
+              fill
+              sizes="100vw"
+              className="object-cover transition-transform duration-[1000ms] group-hover:scale-[1.03]"
             />
             {/* CTA Overlay */}
             <div className="absolute right-6 sm:right-10 md:right-16 top-1/2 -translate-y-1/2 flex items-center z-10">
@@ -373,10 +376,12 @@ export default function ShopClient({
                       
                       {/* Visual Banner Preview inside the card */}
                       <div className="relative w-full h-36 flex items-center justify-center overflow-hidden rounded-xl bg-black/10 border border-white/10">
-                        <img
+                        <Image
                           src={promo.imageUrl}
                           alt={promo.altText}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 25vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       </div>
 

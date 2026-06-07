@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { User, ShoppingBag, Clock, Package, ChevronRight, Hash, Calendar, ShieldCheck, Printer, Image as ImageIcon, X, ShoppingCart, Plus, Download as DownloadIcon } from "lucide-react";
 import { OrderInvoice } from "@/components/admin/order-invoice";
+import NextImage from "next/image";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useCart } from "@/hooks/useCart";
@@ -413,10 +414,12 @@ export default function MyOrdersPage() {
                         <div key={idx} className="flex items-center gap-1.5 p-0.5 bg-slate-50/50 rounded-lg border border-gray-50 hover:border-gray-200 transition-all group/item">
                           <div className="relative w-8 h-8 bg-white rounded-md border border-gray-100 flex-shrink-0 overflow-hidden shadow-sm">
                             {item.image ? (
-                              <img
+                              <NextImage
                                 src={item.image}
                                 alt={item.name}
-                                className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                                fill
+                                sizes="32px"
+                                className="object-cover group-hover/item:scale-110 transition-transform duration-500"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
@@ -656,10 +659,12 @@ export default function MyOrdersPage() {
                       {/* Image Container - Highly compact */}
                       <div className="relative w-full h-24 sm:h-36 bg-white flex items-center justify-center p-2 sm:p-4 overflow-hidden">
                         {item.image ? (
-                          <img
+                          <NextImage
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 20vw"
+                            className="object-contain p-2 sm:p-4 group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
                           <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-100" />

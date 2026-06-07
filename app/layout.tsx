@@ -24,11 +24,13 @@ export const metadata: Metadata = {
 
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
-import CareerCTA from '@/components/career-cta'
-import PromoModal from '@/components/promo-modal'
 import { CartProvider } from '@/lib/contexts/CartContext'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { Toaster } from 'sonner'
+import dynamic from 'next/dynamic'
+
+const PromoModal = dynamic(() => import('@/components/promo-modal'))
+const CareerCTA = dynamic(() => import('@/components/career-cta'))
 
 export default function RootLayout({
   children,
@@ -80,7 +82,7 @@ export default function RootLayout({
             {/* End Meta Pixel Code */}
           </>
         )}
-        <Script id="disable-img-interaction">
+        <Script id="disable-img-interaction" strategy="lazyOnload">
           {`
             document.addEventListener('contextmenu', function(e) {
               if (e.target.tagName === 'IMG') {

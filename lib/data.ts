@@ -8,11 +8,21 @@ export interface GetProductsOptions {
   limit?: number;
 }
 
+export const getCachedFlatDiscounts = unstable_cache(
+  async () => {
+    await connectDB();
+    const discounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+    return JSON.parse(JSON.stringify(discounts));
+  },
+  ["active-flat-discounts"],
+  { revalidate: 60, tags: ["promo-codes"] }
+);
+
 // Helper to apply flat discounts to a list of products
 async function applyFlatDiscounts(products: any[]) {
   if (!products || products.length === 0) return products;
   
-  const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
+  const flatDiscounts = await getCachedFlatDiscounts();
   if (flatDiscounts.length === 0) return products;
 
   return products.map(product => {

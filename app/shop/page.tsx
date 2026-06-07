@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 import { PromoPoster } from "@/lib/models";
 import dbConnect from "@/lib/db";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Shop | Parle Bangladesh",
@@ -23,7 +24,7 @@ export default async function ShopPage({
   const [products, categories, promoPosters] = await Promise.all([
     getProducts(),
     getCategories(),
-    PromoPoster.find({ isActive: true }).sort({ order: 1 })
+    PromoPoster.find({ isActive: true }).sort({ order: 1 }).lean()
   ]);
 
   const activeCategory = categories.find((c: any) => c.slug === params.category);
@@ -62,10 +63,13 @@ export default async function ShopPage({
           <div className="absolute inset-y-0 right-0 w-2/3 md:w-[65%] flex items-center justify-end pr-3 md:pr-8 pointer-events-none">
             {/* The scaling wrapper with right-side origin to push growth inward */}
             <div className="relative w-full h-full flex items-center justify-end transition-transform duration-1000 group-hover:scale-[1.04] origin-right">
-              <img
+              <Image
                 src={activeCategory?.image || (activeCategory ? `/images/${activeCategory.slug}/${activeCategory.slug}-cover.webp` : "/images/parle-cover.webp")}
                 alt={pageTitle}
-                className="w-full h-full object-contain object-right opacity-95 drop-shadow-2xl scale-[1.2] md:scale-[1.4] origin-right"
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 66vw"
+                className="object-contain object-right opacity-95 drop-shadow-2xl scale-[1.2] md:scale-[1.4] origin-right"
               />
             </div>
           </div>
