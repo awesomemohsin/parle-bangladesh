@@ -78,27 +78,7 @@ export default function OffersListing() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-24">
-      {/* Header Banner */}
-      <div className="relative bg-gray-900 text-white overflow-hidden py-16 sm:py-24 border-b border-gray-800">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-6">
-          <div className="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg shadow-red-900/30">
-            <Tag className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">EXCLUSIVE OFFERS</span>
-          </div>
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter uppercase italic leading-none">
-            Campaigns & <span className="text-red-500">Deals</span>
-          </h1>
-          <p className="text-gray-400 text-sm sm:text-lg max-w-xl mx-auto font-medium leading-relaxed">
-            Discover limited-time promotions, corporate discounts, and tasty surprises direct from Parle Bangladesh.
-          </p>
-        </div>
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-red-600/10 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/5 blur-[120px] pointer-events-none" />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
