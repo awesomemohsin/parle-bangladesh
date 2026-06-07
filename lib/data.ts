@@ -34,7 +34,7 @@ async function applyFlatDiscounts(products: any[]) {
         
         // Find applicable flat discounts
         // Check both allProducts flag AND if the product ID is in the applicable list
-        const applicableFlat = flatDiscounts.find(d => 
+        const applicableFlat = flatDiscounts.find((d: any) => 
           d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
         );
 
