@@ -304,7 +304,7 @@ export default function Navbar() {
         }
         .animate-ticker-marquee {
           display: inline-flex;
-          animation: tickerMarquee 40s linear infinite;
+          animation: tickerMarquee 120s linear infinite;
         }
         .marquee-container:hover .animate-ticker-marquee {
           animation-play-state: paused;
