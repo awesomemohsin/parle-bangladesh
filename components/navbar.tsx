@@ -111,43 +111,56 @@ export default function Navbar() {
   ]
 
   const renderTickerContent = () => {
+    const items: React.ReactNode[] = [];
     if (tickerOffers.length > 0) {
-      return tickerOffers.map((offer, idx) => (
-        <Link 
-          key={offer._id || idx} 
-          href={`/offers/${offer.slug}`}
-          className="flex items-center gap-3 hover:underline cursor-pointer"
-        >
-          <span className="flex items-center gap-1 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
-            🔥 HOT DEAL
-          </span>
-          <span className="text-red-700 font-black tracking-wider uppercase text-[11px] sm:text-[12px] shrink-0">
-            {offer.title}
-          </span>
-          <span className="text-amber-500 text-[10px] animate-pulse">★</span>
-          <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
-            {offer.description}
-          </span>
-        </Link>
-      ));
+      // Repeat offers list to ensure it covers screens and loops seamlessly
+      const repeatCount = Math.max(3, Math.ceil(12 / tickerOffers.length));
+      for (let r = 0; r < repeatCount; r++) {
+        tickerOffers.forEach((offer, idx) => {
+          items.push(
+            <Link 
+              key={`${offer._id || idx}-${r}`} 
+              href={`/offers/${offer.slug}`}
+              className="flex items-center gap-3 hover:underline cursor-pointer"
+            >
+              <span className="flex items-center gap-1 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
+                🔥 HOT DEAL
+              </span>
+              <span className="text-red-700 font-black tracking-wider uppercase text-[11px] sm:text-[12px] shrink-0">
+                {offer.title}
+              </span>
+              <span className="text-amber-500 text-[10px] animate-pulse">★</span>
+              <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
+                {offer.description}
+              </span>
+            </Link>
+          );
+        });
+      }
+    } else {
+      // Repeat welcome messages to fill the screen width
+      for (let r = 0; r < 8; r++) {
+        items.push(
+          <Link 
+            key={`welcome-${r}`}
+            href="/shop" 
+            className="flex items-center gap-3 hover:underline cursor-pointer"
+          >
+            <span className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
+              ✨ WELCOME
+            </span>
+            <span className="text-emerald-700 font-black tracking-wider uppercase text-[11px] sm:text-[12px] shrink-0">
+              Official Parle Bangladesh Shop
+            </span>
+            <span className="text-amber-500 text-[10px] animate-pulse">★</span>
+            <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
+              Bite into Pure Joy - Order online for home delivery!
+            </span>
+          </Link>
+        );
+      }
     }
-    return (
-      <Link 
-        href="/shop" 
-        className="flex items-center gap-3 hover:underline cursor-pointer"
-      >
-        <span className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
-          ✨ WELCOME
-        </span>
-        <span className="text-emerald-700 font-black tracking-wider uppercase text-[11px] sm:text-[12px] shrink-0">
-          Official Parle Bangladesh Shop
-        </span>
-        <span className="text-amber-500 text-[10px] animate-pulse">★</span>
-        <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
-          Bite into Pure Joy - Order online for home delivery!
-        </span>
-      </Link>
-    );
+    return items;
   };
 
   const currentLinks = isAdminRoute ? adminLinks : userLinks
@@ -286,12 +299,12 @@ export default function Navbar() {
       {/* Dynamic Slim News/Offer Ticker (Scrolling Marquee) */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes tickerMarquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
         }
         .animate-ticker-marquee {
           display: inline-flex;
-          animation: tickerMarquee 12s linear infinite;
+          animation: tickerMarquee 40s linear infinite;
         }
         .marquee-container:hover .animate-ticker-marquee {
           animation-play-state: paused;
