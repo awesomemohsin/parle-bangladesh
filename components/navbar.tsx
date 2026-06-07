@@ -34,6 +34,7 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [tickerOffers, setTickerOffers] = useState<any[]>([])
 
   const isAdminRoute = pathname.startsWith('/admin')
 
@@ -45,6 +46,22 @@ export default function Navbar() {
       window.removeEventListener('scroll', scrollHandler)
     }
   }, [])
+
+  useEffect(() => {
+    if (isAdminRoute) return;
+    const fetchTickerOffers = async () => {
+      try {
+        const res = await fetch('/api/offers', { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          setTickerOffers(data)
+        }
+      } catch (err) {
+        console.error('Failed to load ticker offers', err)
+      }
+    }
+    fetchTickerOffers()
+  }, [isAdminRoute])
 
   // Simplified Scroll Lock
   useEffect(() => {
@@ -78,6 +95,7 @@ export default function Navbar() {
     { label: 'Categories', href: '/admin/categories', icon: <ListFilter className="w-4 h-4" />, hide: !isAdmin, isSpecial: false },
     { label: 'Manage Users', href: '/admin/users', icon: <Users className="w-4 h-4" />, hide: !isSuperAdmin, isSpecial: false },
     { label: 'Promo Codes', href: '/admin/promo-codes', icon: <Tag className="w-4 h-4" />, hide: !isSuperAdmin, isSpecial: false },
+    { label: 'Manage Offers', href: '/admin/offers', icon: <Tag className="w-4 h-4" />, hide: !isAdmin, isSpecial: false },
     { label: 'Action Logs', href: '/admin/activities', icon: <Shield className="w-4 h-4" />, hide: !isSuperAdmin, isSpecial: false },
     { label: 'Profile & Security', href: '/admin/profile', icon: <Lock className="w-4 h-4" />, isSpecial: false },
     { label: 'Back to Site', href: '/', icon: <ShoppingBag className="w-4 h-4" />, isSpecial: true }
@@ -88,9 +106,48 @@ export default function Navbar() {
     { label: 'Cart', href: '/shop/cart', icon: <ShoppingCart className="w-4 h-4" />, isSpecial: false },
     { label: 'Track Order', href: '/shop/track', icon: <Truck className="w-4 h-4" />, hide: isLoggedIn, isSpecial: false },
     { label: 'Orders', href: '/orders', icon: <Clock className="w-4 h-4" />, hide: !isLoggedIn, isSpecial: false },
-    { label: 'About', href: '/about', icon: <Info className="w-4 h-4" />, isSpecial: false },
-    { label: 'Contact', href: '/contact', icon: <Mail className="w-4 h-4" />, isSpecial: false }
+    { label: 'Offers', href: '/offers', icon: <Tag className="w-4 h-4" />, isSpecial: false }
   ]
+
+  const renderTickerContent = () => {
+    if (tickerOffers.length > 0) {
+      return tickerOffers.map((offer, idx) => (
+        <Link 
+          key={offer._id || idx} 
+          href={`/offers/${offer.slug}`}
+          className="flex items-center gap-3 hover:underline cursor-pointer"
+        >
+          <span className="flex items-center gap-1 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
+            🔥 HOT DEAL
+          </span>
+          <span className="text-red-700 font-black tracking-wider uppercase text-[11px] sm:text-[12px] shrink-0">
+            {offer.title}
+          </span>
+          <span className="text-amber-500 text-[10px] animate-pulse">★</span>
+          <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
+            {offer.description}
+          </span>
+        </Link>
+      ));
+    }
+    return (
+      <Link 
+        href="/shop" 
+        className="flex items-center gap-3 hover:underline cursor-pointer"
+      >
+        <span className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
+          ✨ WELCOME
+        </span>
+        <span className="text-emerald-700 font-black tracking-wider uppercase text-[11px] sm:text-[12px] shrink-0">
+          Official Parle Bangladesh Shop
+        </span>
+        <span className="text-amber-500 text-[10px] animate-pulse">★</span>
+        <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
+          Bite into Pure Joy - Order online for home delivery!
+        </span>
+      </Link>
+    );
+  };
 
   const currentLinks = isAdminRoute ? adminLinks : userLinks
 
@@ -100,10 +157,10 @@ export default function Navbar() {
     <>
       <nav className={`
         fixed top-0 left-0 right-0 z-[200] transition-all duration-300
-        ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg py-2' : 'bg-white py-2'}
+        ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-white'}
         border-b border-gray-100
       `}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-300 ${isScrolled ? 'py-1' : 'py-2'}`}>
         <div className="flex items-center justify-between h-16 lg:h-16">
 
           {/* Mobile Header Branding & Controls */}
@@ -156,7 +213,7 @@ export default function Navbar() {
 
             {/* Center: Essential Links (Absolutely Centered) - Hidden on Admin Routes */}
             {!isAdminRoute && (
-              <div className="flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
+              <div className="flex items-center space-x-8 absolute left-1/2 -translate-x-1/2">
                 <Link href="/shop" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
                   <ShoppingBag className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Shop
                 </Link>
@@ -177,11 +234,12 @@ export default function Navbar() {
                     <Clock className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Orders
                   </Link>
                 )}
-                <Link href="/about" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                  <Info className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> About
-                </Link>
-                <Link href="/contact" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
-                  <Mail className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Contact
+                <Link href="/offers" className="group flex items-center gap-2 text-[12px] font-black text-amber-700 bg-amber-50 hover:bg-amber-600 hover:text-white px-4 py-2 rounded-full border border-amber-200 uppercase tracking-[0.15em] transition-all duration-300 font-sans shadow-sm shadow-amber-100">
+                  <Tag className="w-4 h-4 text-amber-600 group-hover:text-white transition-colors" /> Offers
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+                  </span>
                 </Link>
               </div>
             )}
@@ -220,6 +278,34 @@ export default function Navbar() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Slim News/Offer Ticker (Scrolling Marquee) */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes tickerMarquee {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-ticker-marquee {
+          display: inline-flex;
+          animation: tickerMarquee 12s linear infinite;
+        }
+        .marquee-container:hover .animate-ticker-marquee {
+          animation-play-state: paused;
+        }
+      `}} />
+      
+      <div 
+        className="marquee-container block border-t border-gray-100 bg-white py-1 z-[190] relative overflow-hidden select-none hover:bg-slate-50/50 transition-colors"
+      >
+        <div className="flex overflow-hidden whitespace-nowrap">
+          <div className="animate-ticker-marquee text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-16 pr-16 shrink-0">
+            {renderTickerContent()}
+          </div>
+          <div className="animate-ticker-marquee text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-16 pr-16 shrink-0" aria-hidden="true">
+            {renderTickerContent()}
           </div>
         </div>
       </div>
@@ -342,23 +428,40 @@ export default function Navbar() {
                   </div>
                 </>
               ) : (
-                currentLinks.map((item) => (
-                  !item.hide && (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-4 p-5 rounded-2xl transition-all border group shadow-sm ${item.isSpecial ? 'bg-red-600 border-red-500 text-white shadow-red-100' : 'bg-gray-50 hover:bg-gray-100 border-gray-100'}`}
-                    >
-                      <div className={`${item.isSpecial ? 'text-white' : 'text-gray-400 group-hover:text-red-600'} transition-colors`}>
-                        {item.icon}
-                      </div>
-                      <span className={`text-[11px] font-black uppercase tracking-widest ${item.isSpecial ? 'text-white' : 'text-gray-900'}`}>
-                        {item.label}
-                      </span>
-                    </Link>
-                  )
-                ))
+                currentLinks.map((item) => {
+                  const isOffers = item.href === '/offers';
+                  return (
+                    !item.hide && (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center justify-between p-5 rounded-2xl transition-all border group shadow-sm ${
+                          item.isSpecial 
+                            ? 'bg-red-600 border-red-500 text-white shadow-red-100' 
+                            : isOffers
+                            ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-amber-50/50'
+                            : 'bg-gray-50 hover:bg-gray-100 border-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`${item.isSpecial ? 'text-white' : isOffers ? 'text-amber-600' : 'text-gray-400 group-hover:text-red-600'} transition-colors`}>
+                            {item.icon}
+                          </div>
+                          <span className={`text-[11px] font-black uppercase tracking-widest ${item.isSpecial ? 'text-white' : isOffers ? 'text-amber-800' : 'text-gray-900'}`}>
+                            {item.label}
+                          </span>
+                        </div>
+                        {isOffers && (
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  );
+                })
               )}
 
               <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">

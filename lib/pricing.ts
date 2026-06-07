@@ -86,7 +86,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     }
 
     // Compare with User Discount
-    if (userDiscountAmount > bestDiscountForItem) {
+    if (userDiscount && userDiscountAmount > bestDiscountForItem) {
       bestDiscountForItem = userDiscountAmount;
       bestRuleId = `user-flat-${userDiscount.percent}`;
     }

@@ -58,7 +58,7 @@ export default function PromoModal() {
             if (!sessionClosed) {
               const timer = setTimeout(() => {
                 setIsOpen(true);
-              }, 500);
+              }, 100);
               return () => clearTimeout(timer);
             }
           } else {
@@ -78,7 +78,7 @@ export default function PromoModal() {
     if (!isOpen || posters.length <= 1) return;
     const interval = setInterval(() => {
       handleNext();
-    }, 5000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [isOpen, currentIndex, posters]);
 
@@ -106,72 +106,77 @@ export default function PromoModal() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={handleClose}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
 
             {/* Modal Container */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
               className="relative w-full max-w-[90vw] xs:max-w-[380px] sm:max-w-md md:max-w-lg flex flex-col items-center gap-4 sm:gap-6 my-auto"
             >
-              {/* Image Section */}
-              <div className="relative w-auto max-w-full h-[75vh] max-h-[640px] min-h-[360px] aspect-[1080/1350] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden group">
+              {/* Image & Controls Wrapper */}
+              <div className="relative w-auto max-w-full group">
                   {/* Close Button */}
                   <button
                   onClick={handleClose}
-                  className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 sm:p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all z-20 backdrop-blur-md"
+                  className="absolute -top-12 right-0 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
                   >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <X className="w-5 h-5" />
                   </button>
 
-                  {/* Carousel */}
-                  <div className="relative w-full h-full overflow-hidden">
-                      <AnimatePresence initial={false}>
-                          <motion.div
-                          key={currentIndex}
-                          initial={{ opacity: 0, x: direction * 300 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -direction * 300 }}
-                          transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-                          className="absolute inset-0 w-full h-full"
+                  {/* Side Controls */}
+                  {posters.length > 1 && (
+                      <>
+                          <button
+                              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+                              className="absolute left-4 md:-left-16 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
                           >
-                          <Link href={posters[currentIndex].link} onClick={handleAction} className="block relative w-full h-full">
-                              <Image
-                              src={posters[currentIndex].image}
-                              alt={posters[currentIndex].alt}
-                              fill
-                              sizes="(max-width: 768px) 100vw, 512px"
-                              className="object-cover"
-                              priority
-                              loading="eager"
-                              />
-                          </Link>
-                          </motion.div>
-                      </AnimatePresence>
+                              <ChevronLeft className="w-6 h-6" />
+                          </button>
+                          <button
+                              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                              className="absolute right-4 md:-right-16 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                          >
+                              <ChevronRight className="w-6 h-6" />
+                          </button>
+                      </>
+                  )}
 
-                      {/* Side Controls */}
-                      {posters.length > 1 && (
-                          <>
-                              <button
-                                  onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                                  className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/10 hover:bg-white/30 text-white rounded-full transition-all z-20 backdrop-blur-md opacity-0 group-hover:opacity-100"
+                  {/* Image Section */}
+                  <div className="relative w-auto max-w-full h-[75vh] max-h-[640px] min-h-[360px] aspect-[1080/1350] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden">
+                      {/* Carousel */}
+                      <div className="relative w-full h-full overflow-hidden">
+                          <AnimatePresence initial={false}>
+                              <motion.div
+                              key={currentIndex}
+                              initial={{ opacity: 0, x: direction * 300 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -direction * 300 }}
+                              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+                              className="absolute inset-0 w-full h-full"
                               >
-                                  <ChevronLeft className="w-6 h-6" />
-                              </button>
-                              <button
-                                  onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/10 hover:bg-white/30 text-white rounded-full transition-all z-20 backdrop-blur-md opacity-0 group-hover:opacity-100"
-                              >
-                                  <ChevronRight className="w-6 h-6" />
-                              </button>
-                          </>
-                      )}
+                              <Link href={posters[currentIndex].link} onClick={handleAction} className="block relative w-full h-full">
+                                  <Image
+                                  src={posters[currentIndex].image}
+                                  alt={posters[currentIndex].alt}
+                                  fill
+                                  sizes="(max-width: 768px) 100vw, 512px"
+                                  className="object-cover"
+                                  priority
+                                  loading="eager"
+                                  />
+                              </Link>
+                              </motion.div>
+                          </AnimatePresence>
 
-                      {/* Bottom Gradient Overlay (Subtle) */}
-                      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                          {/* Bottom Gradient Overlay (Subtle) */}
+                          <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                      </div>
                   </div>
               </div>
 
@@ -203,6 +208,11 @@ export default function PromoModal() {
                           ))}
                       </div>
                   )}
+
+                  {/* See All Offers Link */}
+                  <Link href="/offers" onClick={handleAction} className="text-[10px] font-black text-white/70 hover:text-white uppercase tracking-[0.2em] transition-colors mt-2">
+                      See All Offers
+                  </Link>
               </div>
             </motion.div>
           </div>

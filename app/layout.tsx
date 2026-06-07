@@ -43,7 +43,7 @@ export default function RootLayout({
             <Toaster position="top-center" richColors />
             <PromoModal />
             <Navbar />
-            <main className="flex-grow pt-20">
+            <main className="flex-grow pt-[104px]">
               {children}
             </main>
             <CareerCTA />
