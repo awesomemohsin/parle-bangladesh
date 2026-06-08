@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
             const applicableFlats = flatDiscounts.filter(d => {
               const varKey = `${product.id}:${(variation.weight || '').toString().trim().toLowerCase()}:${(variation.flavor || '').toString().trim().toLowerCase()}`;
               return d.allProducts || (
-                d.applicableProducts && d.applicableProducts.includes(product.id) && (
+                d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === product.id) && (
                   !d.applicableVariations ||
                   d.applicableVariations.length === 0 ||
                   d.applicableVariations.map((val: string) => val.trim().toLowerCase()).includes(varKey.trim().toLowerCase())
