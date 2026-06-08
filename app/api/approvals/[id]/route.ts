@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
         if (hasAnindo && hasSaiful) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          const isFinancialOrStock = ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order';
+          const isFinancialOrStock = ['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order';
           
           if (!isFinancialOrStock) {
             // BASIC CONTENT: 2nd SuperAdmin is Final
@@ -200,7 +200,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
 
     const field = approvalRequest.field;
     const newValue = approvalRequest.newValue;
-    const isNumeric = field === 'price' || field === 'dealerPrice' || field === 'stock' || field === 'discountPrice';
+    const isNumeric = field === 'price' || field === 'dealerPrice' || field === 'retailerPrice' || field === 'stock' || field === 'discountPrice';
 
     if (approvalRequest.variationIndex !== undefined && approvalRequest.variationIndex !== null) {
       const varIndex = Number(approvalRequest.variationIndex);

@@ -13,6 +13,7 @@ interface Variation {
   flavor?: string
   price: number
   dealerPrice?: number
+  retailerPrice?: number
   discountPrice?: number
   stock: number
   holdStock?: number
@@ -106,7 +107,7 @@ export default function AdminProductFormPage() {
             category: '',
             brand: '',
             description: '',
-            variations: [{ weight: '', flavor: '', price: 0, dealerPrice: 0, stock: 0, image: '', isDefault: true }],
+            variations: [{ weight: '', flavor: '', price: 0, dealerPrice: 0, retailerPrice: 0, stock: 0, image: '', isDefault: true }],
           })
         }
       } catch (error) {
@@ -287,7 +288,7 @@ export default function AdminProductFormPage() {
                 type="button"
                 onClick={() => {
                   const variations = [...(product.variations || [])];
-                  variations.push({ weight: '', flavor: '', price: 0, dealerPrice: 0, stock: 0, image: '', isDefault: variations.length === 0 });
+                  variations.push({ weight: '', flavor: '', price: 0, dealerPrice: 0, retailerPrice: 0, stock: 0, image: '', isDefault: variations.length === 0 });
                   setProduct({ ...product, variations });
                 }}
                 className="h-8 px-4 bg-red-600 text-white hover:bg-black text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
@@ -325,7 +326,7 @@ export default function AdminProductFormPage() {
                   
                   <div className="flex flex-col gap-6">
                     {/* Row 1: Measurements & Prices */}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-4 items-end">
                       <div className="space-y-1 md:col-span-1">
                         <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Weight</label>
                         <Input
@@ -390,6 +391,28 @@ export default function AdminProductFormPage() {
                           className="h-10 px-3 text-xs font-bold text-amber-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
                           placeholder="Wholesale"
                         />
+                        {pendingApprovals.some(p => p.field === 'dealerPrice' && p.variationIndex === index) && (
+                          <p className="text-[8px] text-amber-600 font-black uppercase mt-1 animate-pulse">Pending Review</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Retailer Price</label>
+                        <Input
+                          type="number"
+                          value={variation.retailerPrice || ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            const vars = [...product.variations];
+                            vars[index].retailerPrice = isNaN(val) ? 0 : val;
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-xs font-bold text-teal-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          placeholder="Retailer Rate"
+                        />
+                        {pendingApprovals.some(p => p.field === 'retailerPrice' && p.variationIndex === index) && (
+                          <p className="text-[8px] text-amber-600 font-black uppercase mt-1 animate-pulse">Pending Review</p>
+                        )}
                       </div>
 
                       <div className="space-y-1">

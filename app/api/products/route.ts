@@ -59,18 +59,24 @@ export async function GET(request: NextRequest) {
     
     // Deep verification: checks tokenVersion
     const user = await getVerifiedAuthUser(request);
-    let isPrivileged = false;
+    let showDealerPrice = false;
+    let showRetailerPrice = false;
     
     let userFlatDiscountPercent = 0;
     if (user) {
       if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
-        isPrivileged = true;
+        showDealerPrice = true;
+        showRetailerPrice = true;
       }
       const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
       if (dbUser) {
         if (dbUser.customerType === "dealer") {
-          isPrivileged = true;
-        } else if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
+          showDealerPrice = true;
+        } else if (dbUser.customerType === "retailer") {
+          showRetailerPrice = true;
+        }
+        
+        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
           userFlatDiscountPercent = dbUser.flatDiscountPercent;
         }
       }
@@ -95,7 +101,13 @@ export async function GET(request: NextRequest) {
             );
 
             if (applicableFlats.length > 0 || userFlatDiscountPercent > 0) {
-              const originalPrice = Number(isPrivileged && variation.dealerPrice ? variation.dealerPrice : variation.price);
+              const originalPrice = Number(
+                (showDealerPrice && variation.dealerPrice)
+                  ? variation.dealerPrice
+                  : (showRetailerPrice && variation.retailerPrice)
+                  ? variation.retailerPrice
+                  : variation.price
+              );
               let bestSavings = 0;
               let bestDiscountedPrice = originalPrice;
               let bestDiscountAmount = 0;
@@ -142,8 +154,11 @@ export async function GET(request: NextRequest) {
               }
             }
 
-            if (!isPrivileged) {
+            if (!showDealerPrice) {
               delete variation.dealerPrice;
+            }
+            if (!showRetailerPrice) {
+              delete variation.retailerPrice;
             }
             return variation;
           });

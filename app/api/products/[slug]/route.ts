@@ -31,20 +31,26 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // Security: Only admins and dealers can see dealerPrice
+    // Security: Only admins, dealers, and retailers can see respective prices
     const user = await getVerifiedAuthUser(_);
-    let isPrivileged = false;
+    let showDealerPrice = false;
+    let showRetailerPrice = false;
     
     let userFlatDiscountPercent = 0;
     if (user) {
       if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
-        isPrivileged = true;
+        showDealerPrice = true;
+        showRetailerPrice = true;
       }
       const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
       if (dbUser) {
         if (dbUser.customerType === "dealer") {
-          isPrivileged = true;
-        } else if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
+          showDealerPrice = true;
+        } else if (dbUser.customerType === "retailer") {
+          showRetailerPrice = true;
+        }
+        
+        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
           userFlatDiscountPercent = dbUser.flatDiscountPercent;
         }
       }
@@ -62,11 +68,17 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
         
         // Find applicable flat discounts
         const applicableFlat = flatDiscounts.find(d => 
-          d.allProducts || (d.applicableProducts && d.applicableProducts.includes(sanitizedProduct.id))
+          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === sanitizedProduct.id))
         );
 
         if (applicableFlat || userFlatDiscountPercent > 0) {
-          const originalPrice = Number(isPrivileged && variation.dealerPrice ? variation.dealerPrice : variation.price);
+          const originalPrice = Number(
+            (showDealerPrice && variation.dealerPrice)
+              ? variation.dealerPrice
+              : (showRetailerPrice && variation.retailerPrice)
+              ? variation.retailerPrice
+              : variation.price
+          );
           let bestSavings = 0;
           let bestDiscountedPrice = originalPrice;
           let bestDiscountAmount = 0;
@@ -113,8 +125,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
           }
         }
 
-        if (!isPrivileged) {
+        if (!showDealerPrice) {
           delete variation.dealerPrice;
+        }
+        if (!showRetailerPrice) {
+          delete variation.retailerPrice;
         }
         return variation;
       });
@@ -268,6 +283,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           variationToSave.dealerPrice = oldV.dealerPrice; // Hold back sensitive change
         }
 
+        // Retailer Price Change (Sensitive) -> ALWAYS goes to approval, regardless of user role
+        const isRetailerPriceChange = newV.retailerPrice !== undefined && Number(newV.retailerPrice || 0) !== Number(oldV.retailerPrice || 0);
+        if (isRetailerPriceChange) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "retailerPrice",
+            oldValue: String(oldV.retailerPrice || 0),
+            newValue: String(newV.retailerPrice),
+            weight: newV.weight || oldV.weight,
+            flavor: newV.flavor || oldV.flavor,
+            variationIndex: index,
+            targetDetails: {
+              brand: existingProduct.brand || "Parle",
+              category: existingProduct.category
+            }
+          });
+          variationToSave.retailerPrice = oldV.retailerPrice; // Hold back sensitive change
+        }
+
         // Discount Price Change (Sensitive) -> ALWAYS goes to approval, regardless of user role
         const isDiscountPriceChange = newV.discountPrice !== undefined && Number(newV.discountPrice || 0) !== Number(oldV.discountPrice || 0);
         if (isDiscountPriceChange) {
@@ -318,6 +352,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           stock: 0, 
           price: 0, 
           dealerPrice: 0, 
+          retailerPrice: 0,
           discountPrice: 0 
         };
 
@@ -391,6 +426,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             field: "dealerPrice",
             oldValue: "0",
             newValue: String(newV.dealerPrice),
+            weight: newV.weight,
+            flavor: newV.flavor,
+            variationIndex: index,
+            targetDetails: { brand: existingProduct.brand || "Parle", category: existingProduct.category }
+          });
+        }
+
+        if (newV.retailerPrice !== undefined && Number(newV.retailerPrice) > 0) {
+          approvalRequestsToCreate.push({
+            type: "product",
+            field: "retailerPrice",
+            oldValue: "0",
+            newValue: String(newV.retailerPrice),
             weight: newV.weight,
             flavor: newV.flavor,
             variationIndex: index,
