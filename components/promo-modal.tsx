@@ -28,15 +28,29 @@ export default function PromoModal() {
     (prefix) => pathname.startsWith(prefix)
   );
 
+  const getSessionSeen = () => {
+    try {
+      return sessionStorage.getItem('promo_modal_seen') === 'true';
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const setSessionSeen = () => {
+    try {
+      sessionStorage.setItem('promo_modal_seen', 'true');
+    } catch (e) {}
+  };
+
   const handleClose = () => {
     setIsOpen(false);
-    sessionStorage.setItem('promo_modal_seen', 'true');
+    setSessionSeen();
     setHasSeenPromo(true);
   };
 
   const handleAction = () => {
     setIsOpen(false);
-    sessionStorage.setItem('promo_modal_seen', 'true');
+    setSessionSeen();
     setHasSeenPromo(true);
   };
 
@@ -56,9 +70,9 @@ export default function PromoModal() {
           setPosters(sliderPosters);
           
           if (sliderPosters.length > 0) {
-            const sessionClosed = sessionStorage.getItem('promo_modal_seen') === 'true';
+            const sessionClosed = getSessionSeen();
             setHasSeenPromo(sessionClosed);
-
+ 
             if (!sessionClosed) {
               const timer = setTimeout(() => {
                 setIsOpen(true);
@@ -73,7 +87,7 @@ export default function PromoModal() {
         console.error('Failed to fetch posters', err);
       }
     };
-
+ 
     fetchPosters();
   }, [pathname]);
 
