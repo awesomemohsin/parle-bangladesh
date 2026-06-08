@@ -62,7 +62,7 @@ export default function AdminCustomersPage() {
     customer: null,
   });
 
-  const [promoType, setPromoType] = useState<"dealer" | "student" | "influencer" | "corporate" | "other">("dealer");
+  const [promoType, setPromoType] = useState<"dealer" | "retailer" | "student" | "influencer" | "corporate" | "other">("dealer");
   const [customTypeName, setCustomTypeName] = useState("");
   const [discountPercent, setDiscountPercent] = useState("10");
   const [expirationDate, setExpirationDate] = useState("");
@@ -117,7 +117,7 @@ export default function AdminCustomersPage() {
       return;
     }
 
-    const newType = "retailer";
+    const newType = "customer";
     setUpdatingId(customer.id);
     setConfirmModal({ ...confirmModal, open: false });
     
@@ -174,7 +174,7 @@ export default function AdminCustomersPage() {
       customerType: finalType
     };
 
-    if (promoType !== "dealer") {
+    if (promoType !== "dealer" && promoType !== "retailer") {
       const percent = Number(discountPercent);
       if (isNaN(percent) || percent <= 0 || percent > 50) {
         toast.error("Custom customer discounts cannot exceed 50%. Please enter a percent between 1 and 50.");
@@ -367,6 +367,8 @@ export default function AdminCustomersPage() {
                             : ['student', 'influencer', 'corporate'].includes(customer.customerType)
                             ? 'bg-red-50 text-red-600 border border-red-100'
                             : customer.customerType === 'retailer'
+                            ? 'bg-teal-50 text-teal-700 border border-teal-100'
+                            : customer.customerType === 'customer'
                             ? 'bg-slate-100 text-slate-500'
                             : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
                         }`}>
@@ -395,7 +397,7 @@ export default function AdminCustomersPage() {
                         <Button
                           size="sm"
                           onClick={() => {
-                            if (customer.customerType !== "retailer") {
+                            if (customer.customerType !== "customer") {
                               setConfirmModal({ open: true, customer });
                             } else {
                               setPromoType("dealer");
@@ -406,9 +408,9 @@ export default function AdminCustomersPage() {
                             }
                           }}
                           disabled={updatingId === customer.id || customer.pendingApproval}
-                          variant={customer.customerType !== "retailer" ? "outline" : "default"}
+                          variant={customer.customerType !== "customer" ? "outline" : "default"}
                           className={`h-9 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                            customer.customerType !== "retailer"
+                            customer.customerType !== "customer"
                               ? "border-gray-200 text-gray-500 hover:bg-gray-50"
                               : "bg-red-600 hover:bg-black text-white shadow-lg shadow-red-100"
                           } ${customer.pendingApproval ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -420,7 +422,7 @@ export default function AdminCustomersPage() {
                               <Loader2 className="w-3 h-3 animate-spin mr-2" />
                               Verifying...
                             </>
-                          ) : customer.customerType !== "retailer" ? (
+                          ) : customer.customerType !== "customer" ? (
                             <>
                               <UserCheck className="w-3.5 h-3.5 mr-2" />
                               Demote
@@ -520,7 +522,7 @@ export default function AdminCustomersPage() {
                    Select Type
                  </label>
                  <div className="grid grid-cols-2 gap-2">
-                   {["dealer", "student", "influencer", "corporate", "other"].map((t) => (
+                   {["dealer", "retailer", "student", "influencer", "corporate", "other"].map((t) => (
                      <button
                        key={t}
                        type="button"
@@ -553,7 +555,7 @@ export default function AdminCustomersPage() {
                  </div>
                )}
 
-               {promoType !== "dealer" && (
+               {promoType !== "dealer" && promoType !== "retailer" && (
                  <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                    <div>
                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">

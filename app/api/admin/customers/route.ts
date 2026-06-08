@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         name: u.name,
         email: u.email,
         mobile: u.mobile,
-        customerType: u.customerType || "retailer",
+        customerType: u.customerType || "customer",
         status: u.status,
         createdAt: u.createdAt,
         ordersCount: stats.ordersCount,
@@ -177,15 +177,15 @@ export async function PATCH(request: NextRequest) {
     let pendingApproval = false;
     
     if (customerType && customerType !== customer.customerType) {
-      if (customerType === "retailer") {
+      if (customerType === "customer") {
         // DEMOTION: Applies instantly without approval
-        customer.customerType = "retailer";
+        customer.customerType = "customer";
         customer.flatDiscountPercent = undefined;
         customer.flatDiscountExpiresAt = undefined;
       } else {
         // PROMOTION: Requires Level 2 consensus approval (Anindo + Saiful)
         const discountVal = Number(body.flatDiscountPercent) || 0;
-        if (!["retailer", "dealer"].includes(customerType) && discountVal > 50) {
+        if (!["customer", "retailer", "dealer"].includes(customerType) && discountVal > 50) {
           return NextResponse.json({ error: "High-level discount limit exceeded: Custom customer flat discounts cannot exceed 50%." }, { status: 400 });
         }
 
@@ -205,8 +205,8 @@ export async function PATCH(request: NextRequest) {
         // Store the targetDetails snapshot for consensus application
         const targetDetails = {
           customerType,
-          flatDiscountPercent: !["retailer", "dealer"].includes(customerType) ? discountVal : undefined,
-          flatDiscountExpiresAt: !["retailer", "dealer"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
+          flatDiscountPercent: !["customer", "retailer", "dealer"].includes(customerType) ? discountVal : undefined,
+          flatDiscountExpiresAt: !["customer", "retailer", "dealer"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
         };
 
         const approval = await ApprovalRequest.create({

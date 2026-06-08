@@ -39,7 +39,7 @@ export async function PATCH(
     }
 
     const updates: any = {};
-    if (customerType && ["retailer", "dealer"].includes(customerType)) {
+    if (customerType && ["customer", "retailer", "dealer"].includes(customerType)) {
       updates.customerType = customerType;
     }
     if (status && ["active", "disabled"].includes(status)) {
