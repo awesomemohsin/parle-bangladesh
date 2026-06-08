@@ -264,7 +264,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
           <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight tracking-tight">
             {product.name}
             {selectedVariation?.flavor && (
-              <span className="block text-red-600 text-xl lg:text-2xl mt-1 font-medium italic opacity-80">
+              <span className="block text-red-600 text-sm xs:text-base sm:text-lg lg:text-xl mt-1 font-medium italic opacity-80">
                 {selectedVariation.flavor}
               </span>
             )}
@@ -321,31 +321,16 @@ export default function ProductDetailsClient({ product, images }: { product: any
           }
           
           const discountedTotal = Math.round(originalTotal - totalDiscount);
-          const currentQty = quantity;
-          const isMet = currentQty >= targetQty;
           const freeShippingText = activeMinOrderDiscount.freeShipping ? " + Free Shipping" : "";
-          const remainingQty = Math.max(0, targetQty - currentQty);
 
           return (
-            <div className="flex flex-col gap-2 -mt-4 mb-2 p-4 bg-red-50/40 border border-red-100/70 rounded-2xl w-full max-w-md shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="flex h-2 w-2 relative">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isMet ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isMet ? 'bg-emerald-500' : 'bg-red-600'}`}></span>
-                </span>
-                <p className="text-xs font-black text-gray-900 uppercase tracking-tight">
-                  Get {targetQty} packs of {product.name} for ৳{discountedTotal}{freeShippingText}!
-                </p>
-              </div>
-              <p className={`text-[10px] font-black uppercase tracking-wider pl-4 ${isMet ? 'text-emerald-600' : 'text-red-600 animate-pulse'}`}>
-                {isMet ? `✓ Offer Unlocked! You save ৳${Math.round(totalDiscount)}!` : `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`}
+            <div className="flex flex-col gap-1 -mt-4 mb-2 p-3 sm:p-4 bg-red-50/30 border border-red-100/50 rounded-xl sm:rounded-2xl w-full max-w-sm shadow-sm">
+              <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-tight">
+                🔥 Get {targetQty} packs of {product.name} for ৳{discountedTotal}{freeShippingText}!
               </p>
-              <div className="mt-1 pt-1.5 border-t border-red-100/50 flex items-center gap-1.5 opacity-60">
-                <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
-                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">
-                  To avail this discount, minimum order amount is ৳{activeMinOrderDiscount.minOrderAmount}
-                </p>
-              </div>
+              <p className="text-[8px] sm:text-[9px] font-bold text-red-600/80 uppercase tracking-wider">
+                * To avail this discount, minimum order amount is ৳{activeMinOrderDiscount.minOrderAmount}
+              </p>
             </div>
           );
         })()}
