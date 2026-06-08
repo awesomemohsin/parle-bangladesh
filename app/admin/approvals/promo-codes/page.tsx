@@ -213,9 +213,16 @@ export default function PromoCodeApprovalsPage() {
                         </div>
                         <div>
                           <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Applicability</p>
-                          <p className="text-sm font-black text-gray-700">
-                            {request.targetDetails.allProducts ? 'All Products' : `${request.targetDetails.applicableProducts?.length || 0} Products`}
-                          </p>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-black text-gray-700 leading-tight">
+                              {request.targetDetails.allProducts ? 'All Products' : `${request.targetDetails.applicableProducts?.length || 0} Products`}
+                            </p>
+                            {!request.targetDetails.allProducts && request.targetDetails.applicableVariations && request.targetDetails.applicableVariations.length > 0 && (
+                              <span className="text-[8px] font-black text-amber-600 uppercase tracking-tight">
+                                {request.targetDetails.applicableVariations.length} Variations
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div>
                           <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Expires</p>

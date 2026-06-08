@@ -96,9 +96,16 @@ export async function GET(request: NextRequest) {
             
             // Logic: Option A (Best Value)
             // Find ALL applicable flat discounts and pick the one with max savings
-            const applicableFlats = flatDiscounts.filter(d => 
-              d.allProducts || (d.applicableProducts && d.applicableProducts.includes(product.id))
-            );
+            const applicableFlats = flatDiscounts.filter(d => {
+              const varKey = `${product.id}:${(variation.weight || '').toString().trim().toLowerCase()}:${(variation.flavor || '').toString().trim().toLowerCase()}`;
+              return d.allProducts || (
+                d.applicableProducts && d.applicableProducts.includes(product.id) && (
+                  !d.applicableVariations ||
+                  d.applicableVariations.length === 0 ||
+                  d.applicableVariations.map((val: string) => val.trim().toLowerCase()).includes(varKey.trim().toLowerCase())
+                )
+              );
+            });
 
             if (applicableFlats.length > 0 || userFlatDiscountPercent > 0) {
               const originalPrice = Number(

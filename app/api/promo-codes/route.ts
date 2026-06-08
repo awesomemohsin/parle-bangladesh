@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { code, type, discountType, discountAmount, maxUsage, expiresAt, isActive, allProducts, applicableProducts, minOrderAmount, maxDiscountAmount, freeShipping } = body;
+    const { code, type, discountType, discountAmount, maxUsage, expiresAt, isActive, allProducts, applicableProducts, applicableVariations, minOrderAmount, maxDiscountAmount, freeShipping } = body;
 
     if (type === 'promo' && !code) {
       return NextResponse.json({ error: 'Code is required for promo type' }, { status: 400 });
@@ -105,6 +105,7 @@ export async function POST(req: Request) {
       status: 'pending',
       allProducts: allProducts !== undefined ? allProducts : false,
       applicableProducts: applicableProducts || [],
+      applicableVariations: applicableVariations || [],
       minOrderAmount: Number(minOrderAmount) || 0,
       maxDiscountAmount: Number(maxDiscountAmount) || 0,
       createdBy: user.name || user.email,

@@ -16,6 +16,7 @@ interface Discount {
   status: 'pending' | 'approved' | 'declined';
   allProducts: boolean;
   applicableProducts: string[];
+  applicableVariations?: string[];
   minOrderAmount: number;
   maxDiscountAmount: number;
   expiresAt?: string;
@@ -25,9 +26,17 @@ interface Discount {
   updatedAt: string;
 }
 
+interface VariationInfo {
+  _id?: string;
+  weight?: string;
+  flavor?: string;
+  price: number;
+}
+
 interface ProductInfo {
   id: string;
   name: string;
+  variations?: VariationInfo[];
 }
 
 export default function DiscountsAdmin() {
@@ -59,6 +68,7 @@ export default function DiscountsAdmin() {
   const [maxDiscountAmount, setMaxDiscountAmount] = useState('');
   const [allProducts, setAllProducts] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [selectedVariations, setSelectedVariations] = useState<string[]>([]);
   const [freeShipping, setFreeShipping] = useState(false);
   
   const [formError, setFormError] = useState('');
@@ -108,6 +118,16 @@ export default function DiscountsAdmin() {
     setMaxDiscountAmount('0');
     setAllProducts(true);
     setSelectedProducts(products.map(p => p.id));
+    
+    // Select all variations by default
+    const allVars: string[] = [];
+    products.forEach(p => {
+      p.variations?.forEach(v => {
+        allVars.push(`${p.id}:${v.weight || ''}:${v.flavor || ''}`);
+      });
+    });
+    setSelectedVariations(allVars);
+    
     setFreeShipping(false);
     setFormError('');
     setIsModalOpen(true);
@@ -125,12 +145,18 @@ export default function DiscountsAdmin() {
     setAllProducts(discount.allProducts || false);
     setFreeShipping(discount.freeShipping || false);
     
-    // If allProducts was true, we might not have a list of IDs in DB, 
-    // so we should populate it for the UI to show everything as ticked.
     if (discount.allProducts) {
       setSelectedProducts(products.map(p => p.id));
+      const allVars: string[] = [];
+      products.forEach(p => {
+        p.variations?.forEach(v => {
+          allVars.push(`${p.id}:${v.weight || ''}:${v.flavor || ''}`);
+        });
+      });
+      setSelectedVariations(allVars);
     } else {
       setSelectedProducts(discount.applicableProducts || []);
+      setSelectedVariations(discount.applicableVariations || []);
     }
     
     if (discount.expiresAt) {
@@ -152,8 +178,10 @@ export default function DiscountsAdmin() {
     setFormError('');
     setIsSubmitting(true);
 
-    // Check if all products are selected.
-    const isActuallyAllSelected = products.length > 0 && selectedProducts.length === products.length;
+    const totalVariationsCount = products.reduce((sum, p) => sum + (p.variations?.length || 0), 0);
+    const isActuallyAllSelected = products.length > 0 && 
+      selectedProducts.length === products.length && 
+      selectedVariations.length === totalVariationsCount;
 
     const payload = {
       code: type === 'promo' ? code : undefined,
@@ -164,6 +192,7 @@ export default function DiscountsAdmin() {
       isActive,
       allProducts: isActuallyAllSelected,
       applicableProducts: isActuallyAllSelected ? [] : selectedProducts,
+      applicableVariations: isActuallyAllSelected ? [] : selectedVariations,
       minOrderAmount: Number(minOrderAmount),
       maxDiscountAmount: Number(maxDiscountAmount),
       expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
@@ -207,18 +236,57 @@ export default function DiscountsAdmin() {
   };
 
   const toggleProduct = (productId: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
+    const productObj = products.find(p => p.id === productId);
+    const productVarKeys = productObj?.variations?.map(v => `${productId}:${v.weight || ''}:${v.flavor || ''}`) || [];
+    const isProdSelected = selectedProducts.includes(productId);
+    
+    if (isProdSelected) {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+      setSelectedVariations(prev => prev.filter(key => !productVarKeys.includes(key)));
+    } else {
+      setSelectedProducts(prev => [...prev, productId]);
+      setSelectedVariations(prev => [...prev, ...productVarKeys]);
+    }
+  };
+
+  const toggleVariation = (productId: string, vKey: string) => {
+    const isVarSelected = selectedVariations.includes(vKey);
+    let newVars = [...selectedVariations];
+    
+    if (isVarSelected) {
+      newVars = newVars.filter(key => key !== vKey);
+    } else {
+      newVars.push(vKey);
+    }
+    setSelectedVariations(newVars);
+
+    // If at least one variation is selected, the product must be selected
+    const productObj = products.find(p => p.id === productId);
+    const productVarKeys = productObj?.variations?.map(v => `${productId}:${v.weight || ''}:${v.flavor || ''}`) || [];
+    const hasAnyVarSelected = productVarKeys.some(key => newVars.includes(key));
+    
+    if (hasAnyVarSelected) {
+      if (!selectedProducts.includes(productId)) {
+        setSelectedProducts(prev => [...prev, productId]);
+      }
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
   };
 
   const handleSelectAllProducts = (checked: boolean) => {
     if (checked) {
       setSelectedProducts(products.map(p => p.id));
+      const allVars: string[] = [];
+      products.forEach(p => {
+        p.variations?.forEach(v => {
+          allVars.push(`${p.id}:${v.weight || ''}:${v.flavor || ''}`);
+        });
+      });
+      setSelectedVariations(allVars);
     } else {
       setSelectedProducts([]);
+      setSelectedVariations([]);
     }
   };
 
@@ -280,9 +348,16 @@ export default function DiscountsAdmin() {
                       {discount.minOrderAmount > 0 ? `৳ ${discount.minOrderAmount}` : 'None'}
                     </td>
                     <td className="p-4">
-                       <span className="text-xs font-bold text-gray-600">
-                          {discount.allProducts ? 'All Products' : `${discount.applicableProducts?.length || 0} Products`}
-                       </span>
+                       <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-bold text-gray-700">
+                             {discount.allProducts ? 'All Products' : `${discount.applicableProducts?.length || 0} Products`}
+                          </span>
+                          {!discount.allProducts && discount.applicableVariations && discount.applicableVariations.length > 0 && (
+                            <span className="text-[9px] font-black uppercase text-amber-600">
+                              {discount.applicableVariations.length} Variations
+                            </span>
+                          )}
+                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
@@ -527,18 +602,45 @@ export default function DiscountsAdmin() {
                           {products.length === 0 ? (
                             <div className="p-4 text-center text-xs text-gray-400">No products found</div>
                           ) : (
-                            products.map(product => (
-                              <div 
-                                key={product.id}
-                                onClick={() => toggleProduct(product.id)}
-                                className={`p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${selectedProducts.includes(product.id) ? 'bg-amber-50/50' : ''}`}
-                              >
-                                <span className="text-xs font-bold text-gray-700">{product.name}</span>
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${selectedProducts.includes(product.id) ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
-                                  {selectedProducts.includes(product.id) && <Plus className="w-3 h-3 rotate-45" />}
+                            products.map(product => {
+                              const isProdSelected = selectedProducts.includes(product.id);
+                              return (
+                                <div key={product.id} className="flex flex-col border-b border-gray-100">
+                                  <div 
+                                    onClick={() => toggleProduct(product.id)}
+                                    className={`p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isProdSelected ? 'bg-amber-50/30' : ''}`}
+                                  >
+                                    <span className="text-xs font-bold text-gray-750">{product.name}</span>
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isProdSelected ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
+                                      {isProdSelected && <Plus className="w-3 h-3 rotate-45" />}
+                                    </div>
+                                  </div>
+                                  
+                                  {isProdSelected && product.variations && product.variations.length > 1 && (
+                                    <div className="bg-slate-50/50 pl-8 pr-3 py-2 space-y-2 border-t border-gray-50">
+                                      <p className="text-[9px] font-black uppercase tracking-wider text-gray-455">Fine-tune Flavors / Variations</p>
+                                      {product.variations.map((v, vIdx) => {
+                                        const vKey = `${product.id}:${v.weight || ''}:${v.flavor || ''}`;
+                                        const isVarSelected = selectedVariations.includes(vKey);
+                                        const labelName = [v.weight, v.flavor].filter(Boolean).join(" - ") || `Option ${vIdx + 1}`;
+                                        return (
+                                          <div 
+                                            key={vIdx}
+                                            onClick={(e) => { e.stopPropagation(); toggleVariation(product.id, vKey); }}
+                                            className="flex items-center justify-between cursor-pointer hover:opacity-85 py-1"
+                                          >
+                                            <span className="text-[11px] font-medium text-gray-600">{labelName} (৳{v.price})</span>
+                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isVarSelected ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
+                                              {isVarSelected && <Plus className="w-2.5 h-2.5 rotate-45" />}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       </div>

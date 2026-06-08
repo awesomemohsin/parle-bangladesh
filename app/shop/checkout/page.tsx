@@ -89,7 +89,8 @@ function CheckoutContent() {
 
     try {
       const pIds = items.map(item => item.productId).join(',');
-      const res = await fetch(`/api/promo-codes/validate?code=${promoInput.toUpperCase()}&subtotal=${subtotal}&productIds=${pIds}`);
+      const vars = items.map(item => `${item.productId}:${item.weight || ''}:${item.flavor || ''}`).join(',');
+      const res = await fetch(`/api/promo-codes/validate?code=${promoInput.toUpperCase()}&subtotal=${subtotal}&productIds=${pIds}&variations=${vars}`);
       const data = await res.json();
 
       if (res.ok) {

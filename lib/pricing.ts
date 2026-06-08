@@ -51,7 +51,14 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     let ruleSubtotal = 0;
     items.forEach(item => {
       const pId = (item.productId || item.id || item._id)?.toString();
-      const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId));
+      const itemVarKey = `${pId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      const applies = rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId) && (
+          !rule.applicableVariations ||
+          rule.applicableVariations.length === 0 ||
+          rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
+        )
+      );
       if (applies) {
         const itemPrice = Number(item.price) || 0;
         const qty = Number(item.quantity || item.q) || 0;
@@ -97,7 +104,14 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
 
     // Compare with Campaign-based Flat Discounts
     flatDiscounts.forEach(rule => {
-      const appliesToProduct = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId));
+      const itemVarKey = `${productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      const appliesToProduct = rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId) && (
+          !rule.applicableVariations ||
+          rule.applicableVariations.length === 0 ||
+          rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
+        )
+      );
       const applicableSubtotal = ruleSubtotals.get(rule._id.toString()) || 0;
       const minOrderMet = applicableSubtotal >= (Number(rule.minOrderAmount) || 0);
 
@@ -192,6 +206,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
         .map((id: any) => id?.toString()?.trim()?.toLowerCase())
         .filter(Boolean);
       
+      const applicableVariations = promoDetails.applicableVariations || [];
+      
       if (restrictedIds.length > 0) {
         items.forEach(item => {
           const possibleIds = [
@@ -204,9 +220,15 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
           
           const isMatch = possibleIds.some(id => restrictedIds.includes(id));
           if (isMatch) {
-             const itemPrice = Number(item.price) || 0;
-             const itemDiscountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : itemPrice;
-             applicableSubtotal += itemDiscountedPrice * (Number(item.quantity || item.q) || 0);
+             const itemVarKey = `${item.productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+             const isVarMatch = applicableVariations.length === 0 || 
+               applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase());
+               
+             if (isVarMatch) {
+               const itemPrice = Number(item.price) || 0;
+               const itemDiscountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : itemPrice;
+               applicableSubtotal += itemDiscountedPrice * (Number(item.quantity || item.q) || 0);
+             }
           }
         });
       } else {
@@ -253,7 +275,14 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     // Find if the cart has any items targeted by this rule
     const targetedItems = items.filter(item => {
       const pId = (item.productId || item.id || item._id)?.toString();
-      return rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId));
+      const itemVarKey = `${pId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      return rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId) && (
+          !rule.applicableVariations ||
+          rule.applicableVariations.length === 0 ||
+          rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
+        )
+      );
     });
 
     if (targetedItems.length === 0) return;

@@ -522,6 +522,7 @@ export interface IPromoCode extends Document {
   status: 'pending' | 'approved' | 'declined';
   allProducts: boolean;
   applicableProducts: string[]; // Array of product IDs
+  applicableVariations?: string[]; // Array of "productId:weight:flavor" strings
   minOrderAmount: number;
   maxDiscountAmount?: number;
   expiresAt?: Date;
@@ -543,6 +544,7 @@ const PromoCodeSchema = new Schema<IPromoCode>(
     status: { type: String, enum: ['pending', 'approved', 'declined'], default: 'pending' },
     allProducts: { type: Boolean, default: true },
     applicableProducts: [{ type: String }],
+    applicableVariations: [{ type: String }],
     minOrderAmount: { type: Number, default: 0 },
     maxDiscountAmount: { type: Number, default: 0 },
     expiresAt: { type: Date },

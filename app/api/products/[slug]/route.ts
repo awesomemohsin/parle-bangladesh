@@ -67,8 +67,15 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
         const variation = { ...v };
         
         // Find applicable flat discounts
+        const varKey = `${sanitizedProduct.id}:${(variation.weight || '').toString().trim().toLowerCase()}:${(variation.flavor || '').toString().trim().toLowerCase()}`;
         const applicableFlat = flatDiscounts.find(d => 
-          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === sanitizedProduct.id))
+          d.allProducts || (
+            d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === sanitizedProduct.id) && (
+              !d.applicableVariations ||
+              d.applicableVariations.length === 0 ||
+              d.applicableVariations.map((val: string) => val.trim().toLowerCase()).includes(varKey.trim().toLowerCase())
+            )
+          )
         );
 
         if (applicableFlat || userFlatDiscountPercent > 0) {
