@@ -156,6 +156,12 @@ function CheckoutContent() {
     };
   }, [removePromo]);
 
+  useEffect(() => {
+    if (mounted) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [mounted]);
+
   if (!mounted) return null;
 
   if (isLoading && items.length === 0) {

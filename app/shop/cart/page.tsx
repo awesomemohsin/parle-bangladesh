@@ -35,7 +35,7 @@ function CollapsibleOffers({ notices }: { notices: any[] }) {
     <div className="border border-amber-200 bg-amber-50/20 rounded-[24px] overflow-hidden transition-all duration-300 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between text-left text-amber-900 font-black uppercase text-[10px] tracking-widest hover:bg-amber-50/40 transition-colors"
+        className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between text-left text-amber-900 font-black uppercase text-[9px] sm:text-[10px] tracking-widest hover:bg-amber-50/40 transition-colors"
       >
         <span className="flex items-center gap-2">
           <Tag className="w-4 h-4 text-amber-600 animate-pulse" />
@@ -116,6 +116,12 @@ export default function CartPage() {
   }, []);
 
   useEffect(() => {
+    if (mounted) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [mounted]);
+
+  useEffect(() => {
     if (!isSyncing) {
       setUpdatingKeys(new Set());
     }
@@ -188,48 +194,48 @@ export default function CartPage() {
       </AnimatePresence>
       {/* Header */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200 rotate-3 group-hover:rotate-6 transition-transform">
-              <ShoppingBag className="w-5 h-5 text-white" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-red-200 rotate-3 group-hover:rotate-6 transition-transform flex-shrink-0">
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase leading-none">Your Cart</h1>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">
+              <h1 className="text-2xl sm:text-4xl font-black text-gray-900 italic tracking-tighter uppercase leading-none">Your Cart</h1>
+              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 sm:mt-2">
                 {items.length} {items.length === 1 ? 'Product' : 'Products'} Selected
               </p>
             </div>
           </div>
 
           <a href="/shop" onClick={(e) => handleLinkClick(e, '/shop')}>
-            <Button variant="ghost" className="text-[9px] font-black uppercase tracking-widest hover:text-red-600 gap-2">
-              Continue Shopping <ArrowRight className="w-3 h-3" />
+            <Button variant="ghost" className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:text-red-600 gap-1.5 sm:gap-2 px-2.5 sm:px-4">
+              Continue <span className="hidden sm:inline">Shopping</span> <ArrowRight className="w-3 h-3" />
             </Button>
           </a>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 mt-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-4">
         {items.length === 0 ? (
-          <div className="bg-white rounded-[40px] p-20 text-center shadow-xl shadow-slate-200/50 border border-gray-50 max-w-2xl mx-auto mt-10">
-            <div className="w-24 h-24 bg-slate-50 rounded-[35px] flex items-center justify-center mx-auto mb-8 relative">
-              <ShoppingBag className="w-10 h-10 text-slate-200" />
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center border-4 border-white">
-                <X className="w-3 h-3 text-white" />
+          <div className="bg-white rounded-3xl sm:rounded-[40px] p-8 sm:p-20 text-center shadow-xl shadow-slate-200/50 border border-gray-50 max-w-2xl mx-auto mt-6 sm:mt-10">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-[30px] sm:rounded-[35px] flex items-center justify-center mx-auto mb-6 sm:mb-8 relative">
+              <ShoppingBag className="w-8 h-8 sm:w-10 sm:h-10 text-slate-200" />
+              <div className="absolute -top-1 -right-1 w-5.5 h-5.5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center border-4 border-white">
+                <X className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
               </div>
             </div>
-            <h2 className="text-3xl font-black text-gray-900 uppercase italic tracking-tight mb-4">Cart is Empty</h2>
-            <p className="text-gray-400 font-medium mb-10 max-w-xs mx-auto text-sm leading-relaxed">
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 uppercase italic tracking-tight mb-3 sm:mb-4">Cart is Empty</h2>
+            <p className="text-gray-400 font-medium mb-8 sm:mb-10 max-w-xs mx-auto text-xs sm:text-sm leading-relaxed">
               Your bag is waiting for some delicious snacks. Let's fill it up!
             </p>
             <a href="/shop" onClick={(e) => handleLinkClick(e, '/shop')}>
-              <Button className="h-14 px-10 rounded-2xl bg-gray-900 hover:bg-red-600 text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200 active:scale-95 text-[10px]">
+              <Button className="h-12 sm:h-14 px-8 sm:px-10 rounded-2xl bg-gray-900 hover:bg-red-600 text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-200 active:scale-95 text-[9px] sm:text-[10px]">
                 Browse Shop
               </Button>
             </a>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
             {/* Items Column */}
             <div className="lg:col-span-8 space-y-4">
               {/* Unlocked Campaign Alerts */}
@@ -274,44 +280,44 @@ export default function CartPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="group bg-white rounded-3xl p-5 flex items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border border-transparent hover:border-gray-100"
+                        className="group bg-white rounded-3xl p-3.5 sm:p-5 flex items-start sm:items-center gap-3.5 sm:gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border border-transparent hover:border-gray-100"
                       >
                         {/* Product Image */}
                         <a 
                           href={productLink} 
                           onClick={(e) => handleLinkClick(e, productLink)} 
-                          className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform cursor-pointer"
+                          className="relative w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform cursor-pointer"
                         >
                           <Image
                             src={sanitizeProductImagePath(item.image || "")}
                             alt={item.productName}
                             fill
-                            sizes="96px"
+                            sizes="(max-width: 640px) 80px, 96px"
                             className="object-contain p-2"
                           />
                         </a>
 
                         {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <div className="flex justify-between items-start mb-1 sm:mb-2">
+                            <div className="min-w-0 flex-1">
                               <a 
                                 href={productLink} 
                                 onClick={(e) => handleLinkClick(e, productLink)} 
                                 className="hover:text-red-600 transition-colors"
                               >
-                                <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-1 cursor-pointer pr-2">
+                                <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-2 sm:line-clamp-1 cursor-pointer pr-2">
                                   {item.productName}
                                 </h3>
                               </a>
-                              <div className="flex flex-wrap gap-2 mt-1">
+                              <div className="flex flex-wrap gap-1 sm:gap-2 mt-1">
                                 {item.weight && (
-                                  <span className="text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 uppercase tracking-widest">
+                                  <span className="text-[8px] font-black text-slate-400 bg-slate-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-slate-100 uppercase tracking-widest">
                                     {item.weight}
                                   </span>
                                 )}
                                 {item.flavor && (
-                                  <span className="text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 uppercase tracking-widest">
+                                  <span className="text-[8px] font-black text-slate-400 bg-slate-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-slate-100 uppercase tracking-widest">
                                     {item.flavor}
                                   </span>
                                 )}
@@ -320,30 +326,30 @@ export default function CartPage() {
 
                             <button
                               onClick={() => setDeleteId(itemKey)}
-                              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                              className="p-1.5 sm:p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all flex-shrink-0"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                           </div>
 
-                          <div className="flex items-center justify-between mt-4">
-                            <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-100">
+                          <div className="flex items-center justify-between gap-2 mt-3 sm:mt-4">
+                            <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-50 rounded-xl p-0.5 sm:p-1 border border-slate-100 flex-shrink-0">
                               <button
                                 onClick={() => handleUpdateQuantity(itemKey, item.quantity - 1)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
+                                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
                                 disabled={item.quantity <= 1}
                               >
-                                <Minus className="w-3 h-3" />
+                                <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                               </button>
-                              <span className="w-10 text-center text-xs font-black text-gray-900 tabular-nums">
+                              <span className="w-8 sm:w-10 text-center text-[11px] sm:text-xs font-black text-gray-900 tabular-nums">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => handleUpdateQuantity(itemKey, item.quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
+                                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-red-600 transition-all text-slate-400 active:scale-90"
                                 disabled={!canInputManualQty && item.stock !== undefined && item.quantity >= item.stock}
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                               </button>
                             </div>
 
@@ -351,32 +357,32 @@ export default function CartPage() {
                               const originalTotal = item.price * item.quantity;
                               const discountedTotal = item.discountedTotal;
                               return (
-                                <div className="text-right min-w-[80px]">
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                                <div className="text-right min-w-[70px] sm:min-w-[80px] flex-shrink-0">
+                                  <p className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                                     {item.quantity > 1 ? `৳${item.price} x ${item.quantity}` : 'Price'}
                                   </p>
-                                  <div className="flex flex-col items-end justify-center min-h-[40px]">
+                                  <div className="flex flex-col items-end justify-center min-h-[36px] sm:min-h-[40px]">
                                     <div className={`transition-opacity duration-200 ${isSyncing && updatingKeys.has(itemKey) ? 'opacity-50' : 'opacity-100'}`}>
                                       {discountedTotal !== undefined && discountedTotal < originalTotal ? (
                                         <>
-                                          <div className="flex items-center gap-1 font-bold text-gray-400 text-xs line-through">
+                                          <div className="flex items-center gap-1 font-bold text-gray-400 text-[10px] sm:text-xs line-through">
                                             <span>৳</span>
                                             <span>{originalTotal}</span>
                                           </div>
-                                          <div className="flex items-center gap-1 font-black text-green-600">
-                                            <span className="text-[10px]">৳</span>
-                                            <span className="text-lg tracking-tighter tabular-nums">
+                                          <div className="flex items-center gap-0.5 sm:gap-1 font-black text-green-600">
+                                            <span className="text-[9px] sm:text-[10px]">৳</span>
+                                            <span className="text-sm sm:text-lg tracking-tighter tabular-nums">
                                               {discountedTotal}
                                             </span>
                                           </div>
-                                          <span className="text-[8px] font-black text-white bg-green-500 px-1.5 py-0.5 rounded uppercase tracking-tighter mt-1">
+                                          <span className="text-[7px] sm:text-[8px] font-black text-white bg-green-500 px-1 sm:px-1.5 py-0.5 rounded uppercase tracking-tighter mt-0.5 sm:mt-1">
                                             Saved ৳{originalTotal - discountedTotal}
                                           </span>
                                         </>
                                       ) : (
-                                        <div className="flex items-center gap-1 font-black text-gray-900">
-                                          <span className="text-[10px] text-red-600">৳</span>
-                                          <span className="text-lg tracking-tighter tabular-nums">
+                                        <div className="flex items-center gap-0.5 sm:gap-1 font-black text-gray-900">
+                                          <span className="text-[9px] sm:text-[10px] text-red-600">৳</span>
+                                          <span className="text-sm sm:text-lg tracking-tighter tabular-nums">
                                             {originalTotal}
                                           </span>
                                         </div>
@@ -459,7 +465,7 @@ export default function CartPage() {
                 })()}
               </motion.div>
 
-              <div className="bg-white rounded-[32px] p-8 shadow-2xl shadow-slate-200/50 border border-gray-50 flex flex-col gap-8 relative overflow-hidden">
+              <div className="bg-white rounded-[24px] sm:rounded-[32px] p-5 sm:p-8 shadow-2xl shadow-slate-200/50 border border-gray-50 flex flex-col gap-6 sm:gap-8 relative overflow-hidden">
                 {/* Decorative background element */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/50 blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
@@ -468,29 +474,29 @@ export default function CartPage() {
                     <div className="w-4 h-1 bg-red-600 rounded-full" />
                     <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Order Summary</span>
                   </div>
-                  <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Cart Total</h2>
+                  <h2 className="text-2xl sm:text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Cart Total</h2>
                 </div>
 
 
                 <div className="pt-4 border-t border-slate-100">
-                  <div className="flex justify-between items-end mb-6">
+                  <div className="flex justify-between items-center sm:items-end mb-6 gap-2">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mb-1">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TOTAL</p>
                         {(ruleDiscount || 0) > 0 && (
                           <motion.span
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="text-[10px] font-black text-white bg-green-600 px-2 py-1 rounded-md uppercase tracking-tighter shadow-lg shadow-green-100 flex items-center gap-1"
+                            className="text-[9px] sm:text-[10px] font-black text-white bg-green-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md uppercase tracking-tighter shadow-lg shadow-green-100 flex items-center gap-1 w-fit whitespace-nowrap"
                           >
-                            <ShieldCheck className="w-2.5 h-2.5" />
+                            <ShieldCheck className="w-2.5 h-2.5 animate-pulse" />
                             Saved ৳{Math.round(cartDisplaySaved)}
                           </motion.span>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic text-right">
-                      <span className="text-xl text-red-600 not-italic">৳</span>
+                    <div className="flex items-center gap-1.5 text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic text-right flex-shrink-0">
+                      <span className="text-base sm:text-xl text-red-600 not-italic">৳</span>
                       <span className={`transition-opacity duration-200 ${isSyncing ? 'opacity-50' : 'opacity-100'}`}>
                         {Math.round(cartDisplayTotal)}
                       </span>
