@@ -31,7 +31,7 @@ const UserSchema = new Schema<IUser>(
     password: { type: String }, // optional for oauth, required for credentials
     name: { type: String, required: true },
     role: { type: String, enum: ["customer", "admin", "moderator", "super_admin", "owner"], default: "customer" },
-    customerType: { type: String, default: "retailer" },
+    customerType: { type: String, default: "customer" },
     status: { type: String, enum: ["active", "disabled"], default: "active" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
@@ -180,6 +180,7 @@ export interface IVariation {
   flavor?: string;
   price: number;
   dealerPrice?: number;
+  retailerPrice?: number;
   discountPrice?: number;
   stock: number;
   holdStock: number;
@@ -219,6 +220,7 @@ const VariationSchema = new Schema<IVariation>({
   flavor: { type: String },
   price: { type: Number, required: true },
   dealerPrice: { type: Number },
+  retailerPrice: { type: Number },
   discountPrice: { type: Number },
   stock: { type: Number, required: true, default: 0 },
   holdStock: { type: Number, default: 0 },
@@ -365,7 +367,7 @@ const OrderSchema = new Schema<IOrder>(
     shippingPostalCode: { type: String },
     deliveryMethod: { type: String, default: "shipping" },
     orderLogs: { type: [OrderLogSchema], default: [] },
-    customerType: { type: String, default: "retailer" },
+    customerType: { type: String, default: "customer" },
   },
   { timestamps: true }
 );

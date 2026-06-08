@@ -10,18 +10,22 @@ import { PromoCode } from './models';
  * 2. Pick the ONE discount that saves the user the most money.
  * 3. Promo codes stack on top of the best flat discount.
  */
-export async function calculateServerSideCart(items: any[], promoCode?: string, userDiscount?: { percent: number; expiresAt: Date }) {
+export async function calculateServerSideCart(items: any[], promoCode?: string, userDiscount?: { percent: number; expiresAt: Date }, customerType?: string) {
   await connectDB();
   
+  const isDealer = customerType === 'dealer';
+  const isRetailer = customerType === 'retailer';
+  const isPrivilegedCustomer = isDealer || isRetailer;
+
   // 1. Fetch current active flat discounts
-  const flatDiscounts = await PromoCode.find({ 
+  const flatDiscounts = isPrivilegedCustomer ? [] : await PromoCode.find({ 
     type: 'flat', 
     isActive: true 
   }).lean();
 
   // 2. Fetch promo code if provided
   let promoDetails: any = null;
-  if (promoCode) {
+  if (promoCode && !isDealer) {
     const promo = await PromoCode.findOne({ 
       code: promoCode.toUpperCase(), 
       isActive: true,
@@ -65,13 +69,13 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     const originalItemSubtotal = itemPrice * itemQuantity;
 
     // 1. Candidate A: Variation Discount
-    const variationDiscountAmount = (item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+    const variationDiscountAmount = (!isPrivilegedCustomer && item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
       ? (itemPrice - item.variationDiscountPrice) * itemQuantity
       : 0;
 
     // 2. Candidate B: User Discount
     let userDiscountAmount = 0;
-    if (userDiscount && userDiscount.percent > 0 && new Date(userDiscount.expiresAt) > new Date()) {
+    if (!isPrivilegedCustomer && userDiscount && userDiscount.percent > 0 && new Date(userDiscount.expiresAt) > new Date()) {
       userDiscountAmount = (originalItemSubtotal * userDiscount.percent) / 100;
       userDiscountAmount = Math.min(originalItemSubtotal, userDiscountAmount);
     }
