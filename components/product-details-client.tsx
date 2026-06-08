@@ -302,15 +302,53 @@ export default function ProductDetailsClient({ product, images }: { product: any
           </div>
         </div>
         
-        {/* Minimum Order Discount Notice */}
-        {activeMinOrderDiscount && (
-          <div className="flex items-center gap-2 -mt-4 mb-2 py-1.5 px-3 bg-amber-50 border border-amber-100 rounded-lg w-fit">
-            <span className="animate-pulse w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
-            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">
-              To avail this discount, minimum order amount is ৳{activeMinOrderDiscount.minOrderAmount}
-            </p>
-          </div>
-        )}
+        {/* Minimum Order Discount Notice & Dynamic Campaign Progress */}
+        {!isDealer && !isRetailer && activeMinOrderDiscount && (() => {
+          const minOrder = Number(activeMinOrderDiscount.minOrderAmount || 0);
+          const unitPrice = displayPrice || 150;
+          const targetQty = Math.round(minOrder / unitPrice);
+          const originalTotal = targetQty * unitPrice;
+          
+          let totalDiscount = 0;
+          if (activeMinOrderDiscount.discountType === 'percentage') {
+            totalDiscount = (originalTotal * Number(activeMinOrderDiscount.discountAmount)) / 100;
+            const maxCap = Number(activeMinOrderDiscount.maxDiscountAmount || 0);
+            if (maxCap > 0 && totalDiscount > maxCap) {
+              totalDiscount = maxCap;
+            }
+          } else {
+            totalDiscount = Number(activeMinOrderDiscount.discountAmount) * targetQty;
+          }
+          
+          const discountedTotal = Math.round(originalTotal - totalDiscount);
+          const currentQty = quantity;
+          const isMet = currentQty >= targetQty;
+          const freeShippingText = activeMinOrderDiscount.freeShipping ? " + Free Shipping" : "";
+          const remainingQty = Math.max(0, targetQty - currentQty);
+
+          return (
+            <div className="flex flex-col gap-2 -mt-4 mb-2 p-4 bg-red-50/40 border border-red-100/70 rounded-2xl w-full max-w-md shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 relative">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isMet ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isMet ? 'bg-emerald-500' : 'bg-red-600'}`}></span>
+                </span>
+                <p className="text-xs font-black text-gray-900 uppercase tracking-tight">
+                  Get {targetQty} packs of {product.name} for ৳{discountedTotal}{freeShippingText}!
+                </p>
+              </div>
+              <p className={`text-[10px] font-black uppercase tracking-wider pl-4 ${isMet ? 'text-emerald-600' : 'text-red-600 animate-pulse'}`}>
+                {isMet ? `✓ Offer Unlocked! You save ৳${Math.round(totalDiscount)}!` : `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`}
+              </p>
+              <div className="mt-1 pt-1.5 border-t border-red-100/50 flex items-center gap-1.5 opacity-60">
+                <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">
+                  To avail this discount, minimum order amount is ৳{activeMinOrderDiscount.minOrderAmount}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Option Selection */}
         {product.variations && product.variations.length > 0 && (
