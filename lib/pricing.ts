@@ -292,6 +292,34 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     const productName = sampleItem.productName || "packs";
     const unitPrice = Number(sampleItem.price) || 150;
     
+    // Collect targeted variation names for this product
+    let variationSuffix = "";
+    const pId = (sampleItem.productId || sampleItem.id || sampleItem._id)?.toString();
+    if (rule.applicableVariations && rule.applicableVariations.length > 0 && pId) {
+      const targetedVars = rule.applicableVariations.filter((v: string) => 
+        v.trim().toLowerCase().startsWith(pId.toLowerCase() + ":")
+      );
+      if (targetedVars.length > 0) {
+        const varNames = targetedVars.map((v: string) => {
+          const parts = v.split(":");
+          const weight = parts[1] ? parts[1].trim() : "";
+          const flavor = parts[2] ? parts[2].trim() : "";
+          return [weight, flavor].filter(Boolean).join(" - ");
+        }).filter(Boolean);
+        if (varNames.length > 0) {
+          variationSuffix = ` (${varNames.join(", ")})`;
+        }
+      }
+    } else {
+      // Fallback: collect from the actual matched items in the cart
+      const varNames = Array.from(new Set(targetedItems.map(item => {
+        return [item.weight, item.flavor].filter(Boolean).join(" - ");
+      }).filter(Boolean)));
+      if (varNames.length > 0) {
+        variationSuffix = ` (${varNames.join(", ")})`;
+      }
+    }
+    
     const targetQty = Math.round(minOrder / unitPrice);
     const originalTotal = targetQty * unitPrice;
     
@@ -316,14 +344,14 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       const usedAmount = ruleUsage.get(rule._id.toString()) || 0;
       const actualSaved = usedAmount > 0 ? Math.min(usedAmount, Number(rule.maxDiscountAmount || 99999999)) : totalDiscount;
       campaignNotices.push({
-        offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
+        offer: `Get ${targetQty} packs of ${productName}${variationSuffix} for ৳${discountedTotal}${freeShippingText}!`,
         action: `✓ Offer Unlocked! You saved ৳${Math.round(actualSaved)}!`,
         unlocked: true
       });
     } else {
       const remainingQty = Math.max(0, targetQty - currentQty);
       campaignNotices.push({
-        offer: `Get ${targetQty} packs of ${productName} for ৳${discountedTotal}${freeShippingText}!`,
+        offer: `Get ${targetQty} packs of ${productName}${variationSuffix} for ৳${discountedTotal}${freeShippingText}!`,
         action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`,
         unlocked: false
       });

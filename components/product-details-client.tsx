@@ -109,8 +109,12 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   // Find if current product has an active flat discount with a minimum order amount
   const activeMinOrderDiscount = activeDiscounts.find(rule => {
-    const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === product.id));
-    return applies && (Number(rule.minOrderAmount) || 0) > 0;
+    if (rule.allProducts) return (Number(rule.minOrderAmount) || 0) > 0;
+    
+    const productMatch = rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === product.id);
+    if (!productMatch) return false;
+    
+    return (Number(rule.minOrderAmount) || 0) > 0;
   });
 
   const originalPrice = selectedVariation?.price || product.price || 0;
@@ -323,10 +327,29 @@ export default function ProductDetailsClient({ product, images }: { product: any
           const discountedTotal = Math.round(originalTotal - totalDiscount);
           const freeShippingText = activeMinOrderDiscount.freeShipping ? " + Free Shipping" : "";
 
+          let variationName = "";
+          if (activeMinOrderDiscount.applicableVariations && activeMinOrderDiscount.applicableVariations.length > 0) {
+            const ruleVars = activeMinOrderDiscount.applicableVariations.filter((v: string) => 
+              v.trim().toLowerCase().startsWith(product.id.toLowerCase() + ":")
+            );
+            if (ruleVars.length > 0) {
+              const varNames = ruleVars.map((v: string) => {
+                const parts = v.split(":");
+                const flavor = parts[2] ? parts[2].trim() : "";
+                return flavor;
+              }).filter(Boolean);
+              if (varNames.length > 0) {
+                variationName = ` (${varNames.join(", ")})`;
+              }
+            }
+          } else if (selectedVariation?.flavor) {
+            variationName = ` (${selectedVariation.flavor})`;
+          }
+
           return (
             <div className="flex flex-col gap-1 -mt-4 mb-2 p-3 sm:p-4 bg-red-50/30 border border-red-100/50 rounded-xl sm:rounded-2xl w-full max-w-sm shadow-sm">
               <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-tight">
-                🔥 Get {targetQty} packs of {product.name} for ৳{discountedTotal}{freeShippingText}!
+                🔥 Get {targetQty} packs of {product.name}{variationName} for ৳{discountedTotal}{freeShippingText}!
               </p>
               <p className="text-[8px] sm:text-[9px] font-bold text-red-600/80 uppercase tracking-wider">
                 * To avail this discount, minimum order amount is ৳{activeMinOrderDiscount.minOrderAmount}

@@ -33,9 +33,15 @@ async function applyFlatDiscounts(products: any[]) {
         const variation = { ...v };
         
         // Find applicable flat discounts
-        // Check both allProducts flag AND if the product ID is in the applicable list
+        const varKey = `${productIdStr}:${(variation.weight || '').toString().trim().toLowerCase()}:${(variation.flavor || '').toString().trim().toLowerCase()}`;
         const applicableFlat = flatDiscounts.find((d: any) => 
-          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
+          d.allProducts || (
+            d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr) && (
+              !d.applicableVariations ||
+              d.applicableVariations.length === 0 ||
+              d.applicableVariations.map((val: string) => val.trim().toLowerCase()).includes(varKey.trim().toLowerCase())
+            )
+          )
         );
 
         if (applicableFlat) {
