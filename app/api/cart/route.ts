@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
 
     const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
     const isDealer = dbUser?.customerType === "dealer";
+    const isRetailer = dbUser?.customerType === "retailer";
 
     const cart = await Cart.findOne({ userId: user.id }).lean();
     if (!cart) {
@@ -47,7 +48,9 @@ export async function GET(request: NextRequest) {
           });
 
           if (variation) {
-            item.price = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
+            item.price = isDealer && variation.dealerPrice 
+              ? variation.dealerPrice 
+              : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
             item.variationDiscountPrice = variation.discountPrice;
             item.stock = variation.stock;
           }
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
       ? { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) }
       : undefined;
 
-    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount);
+    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount, dbUser?.customerType);
 
 
 
@@ -92,15 +95,21 @@ export async function POST(request: NextRequest) {
 
     const refreshedItems = [];
     let isDealer = false;
+    let isRetailer = false;
     let userDiscount = undefined;
+    let customerType = "customer";
 
     if (user) {
       const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-      isDealer = dbUser?.customerType === "dealer";
-      
-      const now = new Date();
-      if (dbUser && dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
-        userDiscount = { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) };
+      if (dbUser) {
+        isDealer = dbUser.customerType === "dealer";
+        isRetailer = dbUser.customerType === "retailer";
+        customerType = dbUser.customerType || "customer";
+        
+        const now = new Date();
+        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
+          userDiscount = { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) };
+        }
       }
     }
 
@@ -128,7 +137,9 @@ export async function POST(request: NextRequest) {
         });
 
         if (variation) {
-          item.price = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
+          item.price = isDealer && variation.dealerPrice 
+            ? variation.dealerPrice 
+            : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
           item.variationDiscountPrice = variation.discountPrice;
           item.stock = variation.stock;
         }
@@ -136,7 +147,7 @@ export async function POST(request: NextRequest) {
       refreshedItems.push(item);
     }
 
-    const totals = await calculateServerSideCart(refreshedItems, promoCode, userDiscount);
+    const totals = await calculateServerSideCart(refreshedItems, promoCode, userDiscount, customerType);
 
     if (user) {
       await Cart.findOneAndUpdate(

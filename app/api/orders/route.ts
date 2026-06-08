@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
       orders: ordersRaw.map(o => { 
         o.id = o._id.toString(); 
         o.pendingApproval = pendingIds.has(o.id);
-        if (!o.customerType) o.customerType = "retailer";
+        if (!o.customerType) o.customerType = "customer";
         delete o.idString; 
         return o; 
       }),
@@ -200,14 +200,16 @@ export async function POST(request: NextRequest) {
     }
     
     let isDealer = false;
+    let isRetailer = false;
     let userDiscount = undefined;
-    let customerTypeStr = "retailer";
+    let customerTypeStr = "customer";
 
     if (user) {
       const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
       if (dbUser) {
         isDealer = dbUser.customerType === "dealer";
-        customerTypeStr = dbUser.customerType || "retailer";
+        isRetailer = dbUser.customerType === "retailer";
+        customerTypeStr = dbUser.customerType || "customer";
         const now = new Date();
         if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
           userDiscount = {
@@ -256,7 +258,9 @@ export async function POST(request: NextRequest) {
         });
 
         if (variation) {
-          const basePrice = isDealer && variation.dealerPrice ? variation.dealerPrice : variation.price;
+          const basePrice = isDealer && variation.dealerPrice 
+            ? variation.dealerPrice 
+            : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
           let effectiveVarDiscountPrice = variation.discountPrice;
 
           items.push({
@@ -306,7 +310,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    const totals = await calculateServerSideCart(items, body.promoCode, userDiscount);
+    const totals = await calculateServerSideCart(items, body.promoCode, userDiscount, customerTypeStr);
     const subtotal = totals.subtotal;
     const discountAmount = totals.discountAmount;
     const ruleDiscount = totals.ruleDiscount || 0;

@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
-      customerType: user.customerType || 'retailer',
+      customerType: user.customerType || 'customer',
       tokenVersion: user.tokenVersion || 0,
     });
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
-        customerType: user.customerType || 'retailer',
+        customerType: user.customerType || 'customer',
         tokenVersion: user.tokenVersion || 0,
       },
     });
