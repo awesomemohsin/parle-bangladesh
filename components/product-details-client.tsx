@@ -305,7 +305,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
         {/* Minimum Order Discount Notice & Dynamic Campaign Progress */}
         {!isDealer && !isRetailer && activeMinOrderDiscount && (() => {
           const minOrder = Number(activeMinOrderDiscount.minOrderAmount || 0);
-          const unitPrice = displayPrice || 150;
+          const unitPrice = originalPrice || 150;
           const targetQty = Math.round(minOrder / unitPrice);
           const originalTotal = targetQty * unitPrice;
           
