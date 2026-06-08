@@ -289,7 +289,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
                  {isDealer ? "Dealer Rate (Inc. Vat)" : (isRetailer ? "Retailer Rate (Inc. Vat)" : "(Including Vat)")}
                </span>
-               {(hasAnyRetailDiscount || (isDealer && selectedVariation?.dealerPrice) || (isRetailer && selectedVariation?.retailerPrice)) && (
+               {hasAnyRetailDiscount && (
                  <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 opacity-40">
                        <span className="text-xs font-bold text-gray-400">৳</span>
@@ -298,7 +298,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                        </span>
                     </div>
                     <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
-                      {isDealer ? "Dealer Savings" : (isRetailer ? "Retailer Savings" : `${activeDiscountLabel}: ${finalDiscountPercentage}% off`)}
+                      {`${activeDiscountLabel}: ${finalDiscountPercentage}% off`}
                     </span>
                  </div>
                )}

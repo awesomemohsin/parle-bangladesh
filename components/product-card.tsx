@@ -196,7 +196,7 @@ export default function ProductCard({
   const productUrl = `/shop/products/${slug}${variationParams.toString() ? `?${variationParams.toString()}` : ''}`;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full">
       {hasAnyRetailDiscount && (
         <div className="absolute top-4 left-4 z-10">
           <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">
@@ -206,7 +206,7 @@ export default function ProductCard({
       )}
       {/* Image Container */}
       <Link href={productUrl}>
-        <div className="relative w-full h-56 bg-white overflow-hidden flex items-center justify-center p-4">
+        <div className="relative w-full h-40 sm:h-48 bg-white overflow-hidden flex items-center justify-center p-2 sm:p-3.5">
           <AnimatePresence mode="popLayout">
             <motion.div
               key={activeVarIndex}
@@ -214,7 +214,7 @@ export default function ProductCard({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.04 }}
               transition={{ duration: 0.45, ease: "easeInOut" }}
-              className="absolute inset-0 p-4 flex items-center justify-center"
+              className="absolute inset-0 p-2 sm:p-3.5 flex items-center justify-center"
             >
               <div className="relative w-full h-full">
                 <Image
@@ -222,7 +222,7 @@ export default function ProductCard({
                   alt={name}
                   fill
                   priority={priority}
-                  className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                  className="object-contain p-1 sm:p-1.5 group-hover:scale-105 transition-transform duration-500"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
@@ -237,9 +237,9 @@ export default function ProductCard({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8, y: 8 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="absolute bottom-3 right-3 z-20"
+                className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-20"
               >
-                <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-[9.5px] uppercase tracking-widest px-3 py-1 rounded-full shadow-lg border border-white/20 select-none">
+                <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-[7.5px] sm:text-[9.5px] uppercase tracking-normal sm:tracking-widest px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-white/20 select-none whitespace-nowrap">
                   {activeVariation.flavor}
                 </span>
               </motion.div>
@@ -247,25 +247,25 @@ export default function ProductCard({
           </AnimatePresence>
           {isOutOfStock && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30 backdrop-blur-[1px]">
-              <span className="bg-white text-gray-900 border-2 border-red-600 px-4 py-1 font-black text-sm uppercase tracking-tighter">Out of Stock</span>
+              <span className="bg-white text-gray-900 border border-red-600 px-3 py-0.5 sm:px-4 sm:py-1 font-black text-[10px] sm:text-sm uppercase tracking-tighter">Out of Stock</span>
             </div>
           )}
           {isAtMax && !isOutOfStock && (
             <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-30">
-               <span className="bg-white text-amber-600 border border-amber-500 px-2 py-1 font-black text-xs uppercase tracking-tighter shadow-sm">Max in Cart</span>
+               <span className="bg-white text-amber-600 border border-amber-500 px-2 py-0.5 font-black text-[10px] sm:text-xs uppercase tracking-tighter shadow-sm">Max in Cart</span>
             </div>
           )}
         </div>
       </Link>
 
       {/* Content */}
-      <div className="p-4 border-t">
+      <div className="p-3 sm:p-3.5 border-t flex flex-col flex-grow">
         <Link href={productUrl}>
-          <h3 className="font-bold text-gray-900 leading-tight hover:text-red-600 line-clamp-2 min-h-[2.5rem] mb-1 transition-colors">
+          <h3 className="font-bold text-gray-900 leading-tight hover:text-red-600 line-clamp-2 min-h-[2rem] sm:min-h-[2.25rem] mb-0.5 sm:mb-1 transition-colors text-xs sm:text-sm">
             {name}
           </h3>
         </Link>
-        <div className="flex items-center justify-between mb-3 min-h-[1.5rem] overflow-hidden">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-2 min-h-[1rem] sm:min-h-[1.25rem] overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.span
               key={activeVarIndex}
@@ -273,14 +273,14 @@ export default function ProductCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="text-xs font-bold text-gray-500 uppercase tracking-widest"
+              className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest"
             >
               {activeVariation.weight || (!activeVariation.flavor ? "Standard" : "")}
             </motion.span>
           </AnimatePresence>
         </div>
 
-        <div className="flex flex-col gap-0.5 mb-4 min-h-[3rem] justify-center overflow-hidden">
+        <div className="flex flex-col gap-0.5 mb-2.5 sm:mb-3.5 min-h-[2rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeVarIndex}
@@ -290,28 +290,28 @@ export default function ProductCard({
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="flex flex-col gap-0.5"
             >
-              <div className="flex items-center gap-1.5">
-                <span className={`text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
-                <span className={`text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
+                <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
                   {Math.round(currentPrice)}
                 </span>
                 {hasDealerPrice && (
-                  <div className="ml-2 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
-                    <ShieldCheck className="w-2.5 h-2.5 text-amber-600" />
-                    <span className="text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer Rate</span>
+                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-100 flex-shrink-0">
+                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-amber-600" />
+                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer</span>
                   </div>
                 )}
                 {hasRetailerPrice && (
-                  <div className="ml-2 flex items-center gap-1 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
-                    <ShieldCheck className="w-2.5 h-2.5 text-teal-600" />
-                    <span className="text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer Rate</span>
+                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-teal-100 flex-shrink-0">
+                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-teal-600" />
+                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer</span>
                   </div>
                 )}
               </div>
-              {(hasAnyRetailDiscount || hasDealerPrice || hasRetailerPrice) && (
+              {hasAnyRetailDiscount && (
                 <div className="flex items-center gap-1 opacity-40">
-                   <span className="text-[10px] font-bold text-gray-500">৳</span>
-                   <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
+                   <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">৳</span>
+                   <span className="text-[9px] sm:text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
                 </div>
               )}
             </motion.div>
@@ -319,11 +319,11 @@ export default function ProductCard({
         </div>
 
         {/* Button */}
-        <div className="relative">
+        <div className="relative mt-auto">
           <Button
             onClick={handleAddToCart}
             disabled={isOutOfStock || isAtMax}
-            className={`w-full py-6 font-black uppercase tracking-wider text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
+            className={`w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
           >
             {isOutOfStock ? "Out of Stock" : (isAtMax ? "Stock Reached" : "Add to Cart")}
           </Button>
