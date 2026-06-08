@@ -63,7 +63,7 @@ export default function PromoModal() {
 
     const fetchPosters = async () => {
       try {
-        const res = await fetch('/api/promo-posters');
+        const res = await fetch('/api/display-banners');
         if (res.ok) {
           const data = await res.json();
           const sliderPosters = data.filter((p: any) => p.placement === 'slider' || !p.placement);

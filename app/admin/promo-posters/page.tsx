@@ -123,7 +123,7 @@ export default function PromoPostersAdmin() {
 
   const fetchPosters = async () => {
     try {
-      const res = await fetch('/api/admin/promo-posters');
+      const res = await fetch('/api/admin/display-banners');
       if (res.ok) {
         const data = await res.json();
         setPosters(data);
@@ -173,8 +173,8 @@ export default function PromoPostersAdmin() {
 
     try {
       const url = editingPosterId 
-        ? `/api/admin/promo-posters/${editingPosterId}`
-        : '/api/admin/promo-posters';
+        ? `/api/admin/display-banners/${editingPosterId}`
+        : '/api/admin/display-banners';
       const method = editingPosterId ? 'PATCH' : 'POST';
 
       const res = await fetch(url, {
@@ -199,7 +199,7 @@ export default function PromoPostersAdmin() {
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const res = await fetch(`/api/admin/promo-posters/${id}`, {
+      const res = await fetch(`/api/admin/display-banners/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !currentStatus }),
@@ -218,7 +218,7 @@ export default function PromoPostersAdmin() {
   const deletePoster = async (id: string) => {
     if (!confirm('Are you sure you want to delete this poster? It will be permanently removed from storage.')) return;
     try {
-      const res = await fetch(`/api/admin/promo-posters/${id}`, {
+      const res = await fetch(`/api/admin/display-banners/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
