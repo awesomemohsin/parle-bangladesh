@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Trash2, Edit, AlertCircle, Calendar } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertCircle, Calendar, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Discount {
@@ -73,6 +73,7 @@ export default function DiscountsAdmin() {
   
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchDiscounts();
@@ -130,6 +131,7 @@ export default function DiscountsAdmin() {
     
     setFreeShipping(false);
     setFormError('');
+    setSearchQuery('');
     setIsModalOpen(true);
   };
 
@@ -170,6 +172,7 @@ export default function DiscountsAdmin() {
     
     setIsActive(discount.isActive);
     setFormError('');
+    setSearchQuery('');
     setIsModalOpen(true);
   };
 
@@ -598,49 +601,61 @@ export default function DiscountsAdmin() {
                         <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
                           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Select Specific Products</p>
                         </div>
+                        <div className="p-2 border-b border-gray-100 bg-white flex items-center gap-2">
+                          <Search className="w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search products..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full text-xs outline-none bg-transparent placeholder-gray-400 text-gray-700"
+                          />
+                        </div>
                         <div className="max-h-[250px] overflow-y-auto divide-y divide-gray-100">
-                          {products.length === 0 ? (
+                          {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
                             <div className="p-4 text-center text-xs text-gray-400">No products found</div>
                           ) : (
-                            products.map(product => {
-                              const isProdSelected = selectedProducts.includes(product.id);
-                              return (
-                                <div key={product.id} className="flex flex-col border-b border-gray-100">
-                                  <div 
-                                    onClick={() => toggleProduct(product.id)}
-                                    className={`p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isProdSelected ? 'bg-amber-50/30' : ''}`}
-                                  >
-                                    <span className="text-xs font-bold text-gray-750">{product.name}</span>
-                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isProdSelected ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
-                                      {isProdSelected && <Plus className="w-3 h-3 rotate-45" />}
+                            products
+                              .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                              .map(product => {
+                                const isProdSelected = selectedProducts.includes(product.id);
+                                return (
+                                  <div key={product.id} className="flex flex-col border-b border-gray-100">
+                                    <div 
+                                      onClick={() => toggleProduct(product.id)}
+                                      className={`p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isProdSelected ? 'bg-amber-50/30' : ''}`}
+                                    >
+                                      <span className="text-xs font-bold text-gray-750">{product.name}</span>
+                                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isProdSelected ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
+                                        {isProdSelected && <Plus className="w-3 h-3 rotate-45" />}
+                                      </div>
                                     </div>
-                                  </div>
-                                  
-                                  {isProdSelected && product.variations && product.variations.length > 1 && (
-                                    <div className="bg-slate-50/50 pl-8 pr-3 py-2 space-y-2 border-t border-gray-50">
-                                      <p className="text-[9px] font-black uppercase tracking-wider text-gray-455">Fine-tune Flavors / Variations</p>
-                                      {product.variations.map((v, vIdx) => {
-                                        const vKey = `${product.id}:${v.weight || ''}:${v.flavor || ''}`;
-                                        const isVarSelected = selectedVariations.includes(vKey);
-                                        const labelName = [v.weight, v.flavor].filter(Boolean).join(" - ") || `Option ${vIdx + 1}`;
-                                        return (
-                                          <div 
-                                            key={vIdx}
-                                            onClick={(e) => { e.stopPropagation(); toggleVariation(product.id, vKey); }}
-                                            className="flex items-center justify-between cursor-pointer hover:opacity-85 py-1"
-                                          >
-                                            <span className="text-[11px] font-medium text-gray-600">{labelName} (৳{v.price})</span>
-                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isVarSelected ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
-                                              {isVarSelected && <Plus className="w-2.5 h-2.5 rotate-45" />}
+                                    
+                                    {isProdSelected && product.variations && product.variations.length > 1 && (
+                                      <div className="bg-slate-50/50 pl-8 pr-3 py-2 space-y-2 border-t border-gray-50">
+                                        <p className="text-[9px] font-black uppercase tracking-wider text-gray-455">Fine-tune Flavors / Variations</p>
+                                        {product.variations.map((v, vIdx) => {
+                                          const vKey = `${product.id}:${v.weight || ''}:${v.flavor || ''}`;
+                                          const isVarSelected = selectedVariations.includes(vKey);
+                                          const labelName = [v.weight, v.flavor].filter(Boolean).join(" - ") || `Option ${vIdx + 1}`;
+                                          return (
+                                            <div 
+                                              key={vIdx}
+                                              onClick={(e) => { e.stopPropagation(); toggleVariation(product.id, vKey); }}
+                                              className="flex items-center justify-between cursor-pointer hover:opacity-85 py-1"
+                                            >
+                                              <span className="text-[11px] font-medium text-gray-600">{labelName} (৳{v.price})</span>
+                                              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isVarSelected ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-gray-300'}`}>
+                                                {isVarSelected && <Plus className="w-2.5 h-2.5 rotate-45" />}
+                                              </div>
                                             </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
                           )}
                         </div>
                       </div>
