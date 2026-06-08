@@ -46,7 +46,8 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const { user } = useAuth();
   
   const isDealer = user?.customerType === "dealer";
-  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
+  const isRetailer = user?.customerType === "retailer";
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
   
   const searchParams = useSearchParams();
   const targetWeight = searchParams.get('weight');
@@ -83,10 +84,11 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
   
   const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
-  const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+  const isUserDiscountActive = !isDealer && !isRetailer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
-  const hasFlatDiscount = !isDealer && !!selectedVariation?.hasFlatDiscount && !!selectedVariation?.flatDiscountPrice;
-  const hasManualDiscount = !isDealer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
+  const hasFlatDiscount = !isDealer && !isRetailer && !!selectedVariation?.hasFlatDiscount && !!selectedVariation?.flatDiscountPrice;
+  const hasManualDiscount = !isDealer && !isRetailer && !!selectedVariation?.discountPrice && selectedVariation.discountPrice < selectedVariation.price;
+  const hasRetailerPrice = isRetailer && !!selectedVariation?.retailerPrice && selectedVariation.retailerPrice > 0;
 
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
   
@@ -121,6 +123,8 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   if (isDealer && selectedVariation?.dealerPrice) {
     displayPrice = selectedVariation.dealerPrice;
+  } else if (isRetailer && selectedVariation?.retailerPrice) {
+    displayPrice = selectedVariation.retailerPrice;
   } else if (selectedVariation) {
     let candidates = [{ price: originalPrice, percent: 0, label: "" }];
     
@@ -279,9 +283,9 @@ export default function ProductDetailsClient({ product, images }: { product: any
             
             <div className="flex flex-col mb-1.5">
                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
-                 {isDealer ? "Dealer Rate (Inc. Vat)" : "(Including Vat)"}
+                 {isDealer ? "Dealer Rate (Inc. Vat)" : (isRetailer ? "Retailer Rate (Inc. Vat)" : "(Including Vat)")}
                </span>
-               {(hasAnyRetailDiscount || (isDealer && selectedVariation?.dealerPrice)) && (
+               {(hasAnyRetailDiscount || (isDealer && selectedVariation?.dealerPrice) || (isRetailer && selectedVariation?.retailerPrice)) && (
                  <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 opacity-40">
                        <span className="text-xs font-bold text-gray-400">৳</span>
@@ -290,7 +294,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                        </span>
                     </div>
                     <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
-                      {isDealer ? "Dealer Savings" : `${activeDiscountLabel}: ${finalDiscountPercentage}% off`}
+                      {isDealer ? "Dealer Savings" : (isRetailer ? "Retailer Savings" : `${activeDiscountLabel}: ${finalDiscountPercentage}% off`)}
                     </span>
                  </div>
                )}

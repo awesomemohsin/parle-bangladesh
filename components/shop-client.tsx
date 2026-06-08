@@ -14,6 +14,7 @@ interface Variation {
   flavor?: string;
   price: number;
   dealerPrice?: number;
+  retailerPrice?: number;
   discountPrice?: number;
   flatDiscountPrice?: number;
   hasFlatDiscount?: boolean;
@@ -64,6 +65,7 @@ export default function ShopClient({
   const { addItem } = useCart();
   const { user } = useAuth();
   const isDealer = user?.customerType === "dealer";
+  const isRetailer = user?.customerType === "retailer";
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
@@ -411,11 +413,13 @@ export default function ShopClient({
                   priority={index < 12}
                   onAddToCart={(variation: Variation) => {
                     const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
-                    const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+                    const isUserDiscountActive = !isDealer && !isRetailer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
                     let bestPrice = variation.price;
                     if (isDealer && variation.dealerPrice) {
                       bestPrice = variation.dealerPrice;
+                    } else if (isRetailer && variation.retailerPrice) {
+                      bestPrice = variation.retailerPrice;
                     } else {
                       let candidates = [variation.price];
                       if (variation.discountPrice && variation.discountPrice < variation.price) {

@@ -104,7 +104,8 @@ export default function CartPage() {
   } = useCart();
   const { user } = useAuth();
   const isDealer = user?.customerType === "dealer";
-  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
+  const isRetailer = user?.customerType === "retailer";
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [mounted, setMounted] = useState(false);

@@ -15,6 +15,7 @@ interface Variation {
   flavor?: string;
   price: number;
   dealerPrice?: number;
+  retailerPrice?: number;
   discountPrice?: number;
   flatDiscountPrice?: number;
   hasFlatDiscount?: boolean;
@@ -56,6 +57,7 @@ export default function ProductCard({
   const { user } = useAuth();
   const [isFlying, setIsFlying] = useState(false);
   const isDealer = user?.customerType === "dealer";
+  const isRetailer = user?.customerType === "retailer";
 
   // Intelligent Default Selection: Skip out-of-stock items for the main display
   const defaultIndex = useMemo(() => {
@@ -105,13 +107,14 @@ export default function ProductCard({
   const productImg = sanitizeProductImagePath(activeVariation.image);
 
   const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
-  const isUserDiscountActive = !isDealer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+  const isUserDiscountActive = !isDealer && !isRetailer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
   const hasDealerPrice = isDealer && !!activeVariation.dealerPrice && activeVariation.dealerPrice > 0;
+  const hasRetailerPrice = isRetailer && !!activeVariation.retailerPrice && activeVariation.retailerPrice > 0;
   
   // A product has a retail discount if it has a manual discountPrice OR a global flatDiscountPrice
-  const hasManualDiscount = !hasDealerPrice && !!activeVariation.discountPrice && activeVariation.discountPrice < activeVariation.price;
-  const hasFlatDiscount = !hasDealerPrice && !!activeVariation.hasFlatDiscount && !!activeVariation.flatDiscountPrice;
+  const hasManualDiscount = !isDealer && !isRetailer && !!activeVariation.discountPrice && activeVariation.discountPrice < activeVariation.price;
+  const hasFlatDiscount = !isDealer && !isRetailer && !!activeVariation.hasFlatDiscount && !!activeVariation.flatDiscountPrice;
   
   let currentPrice = activeVariation.price;
   let discountPercentage = 0;
@@ -120,6 +123,8 @@ export default function ProductCard({
 
   if (hasDealerPrice) {
     currentPrice = activeVariation.dealerPrice!;
+  } else if (hasRetailerPrice) {
+    currentPrice = activeVariation.retailerPrice!;
   } else {
     // Collect all candidates
     let candidates = [{ price: activeVariation.price, percent: 0, label: "" }];
@@ -151,7 +156,7 @@ export default function ProductCard({
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
   const cartQuantity = existingCartItem?.quantity || 0;
   
-  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer);
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
 
   // Resilience: If stock is missing, assume it's available (or treat as out of stock? 
   // Let's assume a large number if missing to avoid blocking)
@@ -286,8 +291,8 @@ export default function ProductCard({
               className="flex flex-col gap-0.5"
             >
               <div className="flex items-center gap-1.5">
-                <span className={`text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>৳</span>
-                <span className={`text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : 'text-red-600'}`}>
+                <span className={`text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
+                <span className={`text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
                   {Math.round(currentPrice)}
                 </span>
                 {hasDealerPrice && (
@@ -296,8 +301,14 @@ export default function ProductCard({
                     <span className="text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer Rate</span>
                   </div>
                 )}
+                {hasRetailerPrice && (
+                  <div className="ml-2 flex items-center gap-1 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+                    <ShieldCheck className="w-2.5 h-2.5 text-teal-600" />
+                    <span className="text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer Rate</span>
+                  </div>
+                )}
               </div>
-              {(hasAnyRetailDiscount || hasDealerPrice) && (
+              {(hasAnyRetailDiscount || hasDealerPrice || hasRetailerPrice) && (
                 <div className="flex items-center gap-1 opacity-40">
                    <span className="text-[10px] font-bold text-gray-500">৳</span>
                    <span className="text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
