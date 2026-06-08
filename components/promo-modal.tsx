@@ -24,6 +24,10 @@ export default function PromoModal() {
   const [hasSeenPromo, setHasSeenPromo] = useState(false);
   const pathname = usePathname();
 
+  const isExcludedPage = ['/admin', '/offers', '/shop/checkout', '/shop/cart'].some(
+    (prefix) => pathname.startsWith(prefix)
+  );
+
   const handleClose = () => {
     setIsOpen(false);
     sessionStorage.setItem('promo_modal_seen', 'true');
@@ -37,8 +41,8 @@ export default function PromoModal() {
   };
 
   useEffect(() => {
-    // Only show on frontend pages
-    if (pathname.startsWith('/admin')) {
+    // Only show on frontend pages, excluding admin, offers, checkout, and cart
+    if (isExcludedPage) {
         setIsOpen(false);
         return;
     }
@@ -117,14 +121,14 @@ export default function PromoModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="relative w-full max-w-[90vw] xs:max-w-[380px] sm:max-w-md md:max-w-lg flex flex-col items-center gap-4 sm:gap-6 my-auto"
+              className="relative w-full max-w-[90vw] xs:max-w-[380px] sm:max-w-md md:max-w-lg flex flex-col items-center gap-4 sm:gap-6 my-8 sm:my-auto"
             >
               {/* Image & Controls Wrapper */}
-              <div className="relative w-auto max-w-full group">
+              <div className="relative w-full max-w-full md:w-auto group">
                   {/* Close Button */}
                   <button
                   onClick={handleClose}
-                  className="absolute -top-12 right-0 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                  className="absolute top-4 right-4 md:-top-12 md:right-0 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
                   >
                   <X className="w-5 h-5" />
                   </button>
@@ -148,7 +152,7 @@ export default function PromoModal() {
                   )}
 
                   {/* Image Section */}
-                  <div className="relative w-auto max-w-full h-[75vh] max-h-[640px] min-h-[360px] aspect-[1080/1350] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden">
+                  <div className="relative w-full md:w-auto aspect-[1080/1350] h-auto md:h-[75vh] md:max-h-[640px] md:min-h-[360px] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden">
                       {/* Carousel */}
                       <div className="relative w-full h-full overflow-hidden">
                           <AnimatePresence initial={false}>
@@ -221,7 +225,7 @@ export default function PromoModal() {
 
       {/* Floating Toggle Badge */}
       <AnimatePresence>
-        {!pathname.startsWith('/admin') && !isOpen && hasSeenPromo && (
+        {!isExcludedPage && !isOpen && hasSeenPromo && (
           <motion.button
             initial={{ opacity: 0, x: 50, scale: 0.8 }}
             animate={{ 
