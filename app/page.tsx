@@ -96,7 +96,7 @@ export default async function HomePage() {
       </div>
 
       {/* Categories Grid */}
-      <section id="categories" className="pt-16 pb-8 bg-slate-50/30">
+      <section id="categories" className="pt-10 pb-4 md:pt-16 md:pb-8 bg-slate-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div>
@@ -150,7 +150,7 @@ export default async function HomePage() {
           </div>
 
           {categoryBottomPoster && (
-            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-12">
+            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-6 md:mt-12">
               <Link href={categoryBottomPoster.link}>
                 <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
                   <Image
@@ -169,15 +169,15 @@ export default async function HomePage() {
       </section>
 
       {/* Newly Arrived Products Section */}
-      <section className="pt-10 pb-16 md:py-20 bg-slate-50/50 overflow-hidden">
+      <section className="pt-4 pb-12 md:py-20 bg-slate-50/50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-2 mb-4">
+          <div className="text-center mb-8 md:mb-16">
+            <div className="flex items-center justify-center gap-2 mb-2 md:mb-4">
               <span className="w-8 h-0.5 bg-red-600 rounded-full"></span>
               <span className="text-xs font-bold text-red-600 uppercase tracking-widest">New Arrival</span>
               <span className="w-8 h-0.5 bg-red-600 rounded-full"></span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight uppercase italic leading-none mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight uppercase italic leading-none mb-4 md:mb-6">
               Recently Added
             </h2>
           </div>
@@ -196,15 +196,15 @@ export default async function HomePage() {
       </section>
 
       {/* Best Sellers Section */}
-      <section className="pt-10 pb-8 md:pt-20 md:pb-10 bg-white overflow-hidden">
+      <section className="pt-6 pb-6 md:pt-20 md:pb-10 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-2 mb-4">
+          <div className="text-center mb-8 md:mb-16">
+            <div className="flex items-center justify-center gap-2 mb-2 md:mb-4">
               <span className="w-8 h-0.5 bg-red-600 rounded-full"></span>
               <span className="text-xs font-bold text-red-600 uppercase tracking-widest">Popular Picks</span>
               <span className="w-8 h-0.5 bg-red-600 rounded-full"></span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight uppercase italic leading-none mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight uppercase italic leading-none mb-4 md:mb-6">
               Best Sellers
             </h2>
             <p className="text-gray-400 text-sm max-w-xl mx-auto font-bold uppercase tracking-tight">
@@ -224,7 +224,7 @@ export default async function HomePage() {
           )}
 
           {bestSellersBottomPoster && (
-            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-16">
+            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-8 md:mt-16">
               <Link href={bestSellersBottomPoster.link}>
                 <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
                   <Image
