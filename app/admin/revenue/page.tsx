@@ -31,7 +31,7 @@ export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
   const [filters, setFilters] = useState({
-    startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    startDate: "",
     endDate: new Date().toISOString().split('T')[0],
     productId: "all"
   });
@@ -93,7 +93,7 @@ export default function RevenuePage() {
 
   const handleReset = () => {
     setFilters({
-      startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+      startDate: "",
       endDate: new Date().toISOString().split('T')[0],
       productId: "all"
     });
@@ -162,10 +162,13 @@ export default function RevenuePage() {
             <div className="flex items-center gap-1.5 px-2 md:px-3">
               <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
               <input
-                type="date"
+                type={filters.startDate ? "date" : "text"}
                 value={filters.startDate}
+                onFocus={(e) => e.target.type = "date"}
+                onBlur={(e) => { if (!e.target.value) e.target.type = "text"; }}
                 onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none w-24 md:w-auto"
+                placeholder="LIFETIME (FROM)"
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none w-24 md:w-28 cursor-pointer"
               />
             </div>
             <div className="text-gray-300 text-[10px]">to</div>

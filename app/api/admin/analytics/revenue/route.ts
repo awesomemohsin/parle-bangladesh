@@ -20,11 +20,10 @@ export async function GET(request: NextRequest) {
     // Build the query - ONLY DELIVERED for standard revenue tracking
     let query: any = { status: 'delivered' };
 
-    if (startDate && endDate) {
-      query.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
-      };
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
     }
     if (productId) query["items.productId"] = productId;
 
