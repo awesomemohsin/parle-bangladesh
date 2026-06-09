@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "all";
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     if (type === "payment-history") {
       const orderId = searchParams.get("orderId");
@@ -167,10 +169,16 @@ export async function GET(request: NextRequest) {
 
     // 1. Outstanding Orders (Processing, Shipped, Delivered)
     if (type === "all" || type === "orders") {
-      const outstandingOrders = await Order.find({
+      const queryCond: any = {
         status: { $in: ["processing", "shipped", "delivered"] },
         paymentStatus: { $ne: "paid" }
-      }).sort({ createdAt: -1 }).lean();
+      };
+      if (startDate || endDate) {
+        queryCond.createdAt = {};
+        if (startDate) queryCond.createdAt.$gte = new Date(startDate);
+        if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+      }
+      const outstandingOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
       
       responseData.orders = outstandingOrders.map((o: any) => ({
         ...o,
@@ -181,10 +189,16 @@ export async function GET(request: NextRequest) {
 
     // 1b. Completed Invoices (Processing, Shipped, Delivered, paymentStatus === "paid")
     if (type === "all" || type === "completed") {
-      const completedOrders = await Order.find({
+      const queryCond: any = {
         status: { $in: ["processing", "shipped", "delivered"] },
         paymentStatus: "paid"
-      }).sort({ createdAt: -1 }).lean();
+      };
+      if (startDate || endDate) {
+        queryCond.createdAt = {};
+        if (startDate) queryCond.createdAt.$gte = new Date(startDate);
+        if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+      }
+      const completedOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
       
       responseData.completedOrders = completedOrders.map((o: any) => ({
         ...o,
@@ -220,7 +234,13 @@ export async function GET(request: NextRequest) {
 
     // 3. Last 50 entries of the Transaction Ledger
     if (type === "all" || type === "ledgers") {
-      const ledgers = await TransactionLedger.find({})
+      const queryCond: any = {};
+      if (startDate || endDate) {
+        queryCond.createdAt = {};
+        if (startDate) queryCond.createdAt.$gte = new Date(startDate);
+        if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+      }
+      const ledgers = await TransactionLedger.find(queryCond)
         .populate("userId", "name email mobile customerType")
         .sort({ createdAt: -1 })
         .limit(50)

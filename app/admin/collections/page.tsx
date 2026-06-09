@@ -13,7 +13,8 @@ import {
   Award, 
   X, 
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -83,6 +84,8 @@ export default function CollectionsPage() {
     "createdAt" | "id" | "customerName" | "total" | "amountPaid" | "amountDue" | "status"
   >("createdAt");
   const [invoiceSortOrder, setInvoiceSortOrder] = useState<"asc" | "desc">("desc");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
 
   const handleInvoiceSort = (field: typeof invoiceSortBy) => {
     if (invoiceSortBy === field) {
@@ -194,7 +197,11 @@ export default function CollectionsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/admin/collections?type=all", {
+      const query = new URLSearchParams();
+      query.append("type", "all");
+      if (startDate) query.append("startDate", startDate);
+      if (endDate) query.append("endDate", endDate);
+      const res = await fetch(`/api/admin/collections?${query.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -215,7 +222,7 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     if (!reconcileOrder) {
@@ -548,14 +555,50 @@ export default function CollectionsPage() {
             Accounts department cash ledger & shop wallets portal
           </p>
         </div>
-        <Button 
-          onClick={fetchData} 
-          variant="outline" 
-          className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 self-start md:self-auto uppercase tracking-wider text-xs font-black"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Console
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 self-start md:self-auto">
+          <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-1 md:gap-2">
+            <div className="flex items-center gap-1.5 px-2 md:px-3">
+              <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+              <input
+                type={startDate ? "date" : "text"}
+                value={startDate}
+                onFocus={(e) => e.target.type = "date"}
+                onBlur={(e) => { if (!e.target.value) e.target.type = "text"; }}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="LIFETIME (FROM)"
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none w-24 md:w-28 cursor-pointer"
+              />
+            </div>
+            <div className="text-gray-300 text-[10px]">to</div>
+            <div className="flex items-center gap-1.5 px-2 md:px-3">
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none w-24 md:w-28 cursor-pointer"
+              />
+            </div>
+            <button
+              onClick={() => {
+                setStartDate("");
+                setEndDate(new Date().toISOString().split("T")[0]);
+              }}
+              title="Reset Dates"
+              className="p-1.5 md:p-2 hover:bg-gray-50 rounded-xl text-gray-400 hover:text-amber-600 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3 md:w-3.5 md:h-3.5" />
+            </button>
+          </div>
+
+          <Button 
+            onClick={fetchData} 
+            variant="outline" 
+            className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 uppercase tracking-wider text-xs font-black h-11"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Console
+          </Button>
+        </div>
       </div>
 
       {/* Stats row */}
