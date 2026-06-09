@@ -421,7 +421,8 @@ export default function CartPage() {
                 className="bg-white rounded-[32px] p-6 shadow-xl shadow-slate-200/50 border border-gray-50 overflow-hidden relative"
               >
                 {(() => {
-                  const isFreeDelivery = cartDisplayTotal >= 1000 || !!freeShippingGranted;
+                  const isB2BUser = isDealer || isRetailer;
+                  const isFreeDelivery = cartDisplayTotal >= 1000 || !!freeShippingGranted || isB2BUser;
                   const progressPercent = isFreeDelivery ? 100 : Math.min((cartDisplayTotal / 1000) * 100, 100);
                   return (
                     <>
@@ -535,7 +536,11 @@ export default function CartPage() {
                   <p className="text-[9px] text-gray-400 font-bold leading-relaxed uppercase tracking-[0.05em]">
                     Inside Dhaka: ৳80 | Outside Dhaka: ৳130<br />
                     Collection Point Pickup is free<br />
-                    <span className="text-red-600">Free delivery on orders over ৳1000</span>
+                    {isDealer || isRetailer ? (
+                      <span className="text-green-600 font-extrabold">✨ B2B Free Delivery Activated</span>
+                    ) : (
+                      <span className="text-red-600">Free delivery on orders over ৳1000</span>
+                    )}
                   </p>
                 </div>
               </div>

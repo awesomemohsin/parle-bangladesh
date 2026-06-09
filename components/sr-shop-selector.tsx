@@ -74,11 +74,13 @@ export default function SRShopSelector() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Return only shops registered by this SR or all shops
-        // Let's list all shops so the SR can select any, but prioritize their own
+        // Filter: only show Retailers and Dealers, and exclude other Sales Representatives
         const allShops = data.shops || [];
-        setShops(allShops);
-        setFilteredShops(allShops);
+        const b2bShops = allShops.filter((s: any) => 
+          (s.customerType === "retailer" || s.customerType === "dealer") && !s.isSR
+        );
+        setShops(b2bShops);
+        setFilteredShops(b2bShops);
       }
     } catch (e) {
       console.error("Failed to fetch shops", e);
@@ -244,7 +246,11 @@ export default function SRShopSelector() {
 
               {/* Dropdown Container */}
               {isOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-4 z-[9999] overflow-visible">
+                <>
+                  {/* Mobile Backdrop */}
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] md:hidden" onClick={() => setIsOpen(false)} />
+                  
+                  <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto md:absolute md:right-0 md:top-full md:translate-y-0 md:mt-3 md:w-80 md:inset-auto bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-4 z-[9999] overflow-visible">
                   {isRegistering ? (
                     /* Form to register new shop */
                     <form onSubmit={handleRegisterShop} className="space-y-3">
@@ -381,7 +387,8 @@ export default function SRShopSelector() {
                     </div>
                   )}
                 </div>
-              )}
+              </>
+            )}
             </div>
           </div>
         </div>

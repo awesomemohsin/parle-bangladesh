@@ -129,25 +129,46 @@ function CheckoutContent() {
 
   useEffect(() => {
     document.title = 'Checkout | Parle Bangladesh';
+    
+    // Check if there is an active shop impersonation in localStorage
+    const activeShopStr = typeof window !== 'undefined' ? localStorage.getItem('sr_active_shop_user') : null;
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-    if (userStr) {
+    
+    let targetProfile: any = null;
+    if (activeShopStr) {
       try {
-        const user = JSON.parse(userStr);
-        setFormData(prev => ({
-          ...prev,
-          name: user.name || prev.name,
-          email: user.email || prev.email,
-          phone: user.mobile || prev.phone,
-        }));
-        setPrefilled({
-          name: !!user.name,
-          email: !!user.email,
-          phone: false
-        });
-      } catch (e) { }
+        targetProfile = JSON.parse(activeShopStr);
+      } catch (e) {}
     }
-    setMounted(true);
+    if (!targetProfile && userStr) {
+      try {
+        const parsedUser = JSON.parse(userStr);
+        targetProfile = {
+          name: parsedUser.name,
+          email: parsedUser.email,
+          mobile: parsedUser.mobile
+        };
+      } catch (e) {}
+    }
 
+    if (targetProfile) {
+      setFormData(prev => ({
+        ...prev,
+        name: targetProfile.name || prev.name,
+        email: targetProfile.email || prev.email,
+        phone: targetProfile.mobile || prev.phone,
+      }));
+      setPrefilled({
+        name: !!targetProfile.name,
+        email: !!targetProfile.email,
+        phone: !!targetProfile.mobile
+      });
+    }
+    
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     return () => {
       // Clear promo code when leaving checkout
       // We wrap it in a check to ensure it only happens when navigating AWAY
@@ -255,7 +276,8 @@ function CheckoutContent() {
 
   // Use the synchronized values from the CartContext (server-side calculation)
   // Note: we might need to handle shipping cost locally as it depends on the form
-  const isFreeDelivery = total >= 1000 || !!freeShippingGranted;
+  const isB2BUser = user?.customerType === 'retailer' || user?.customerType === 'dealer';
+  const isFreeDelivery = total >= 1000 || !!freeShippingGranted || isB2BUser;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
@@ -280,6 +302,9 @@ function CheckoutContent() {
     e.preventDefault();
     const currentSubtotal = subtotal; // Use original price for the database subtotal field
     setOrderState({ status: 'confirming' });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
 
     try {
       // Prepare order items
@@ -354,6 +379,9 @@ function CheckoutContent() {
         status: 'error',
         error: message,
       });
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
     }
   };
 
@@ -457,8 +485,7 @@ function CheckoutContent() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
-                    readOnly={prefilled.phone}
-                    className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.phone ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
                     placeholder="01XXXXXXXXX"
                   />
                 </div>
@@ -708,7 +735,9 @@ function CheckoutContent() {
                 {/* Delivery Charge */}
                 <div className="flex justify-between">
                   <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">Delivery Charge</span>
-                  <span className="font-semibold text-gray-900">৳ {Math.round(shippingCost)}</span>
+                  <span className={`font-semibold ${shippingCost === 0 ? 'text-green-600 font-extrabold' : 'text-gray-900'}`}>
+                    {shippingCost === 0 ? 'FREE' : `৳ ${Math.round(shippingCost)}`}
+                  </span>
                 </div>
 
                 {/* Coupon Discount */}
