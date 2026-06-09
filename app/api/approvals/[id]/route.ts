@@ -260,6 +260,15 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
       const newStatus = approvalRequest.newValue;
       order.status = newStatus;
 
+      const activeDuesStatuses = ["processing", "shipped", "delivered"];
+      const wasActiveDues = activeDuesStatuses.includes(oldStatus);
+      const isActiveDues = activeDuesStatuses.includes(newStatus);
+      if (!isActiveDues && wasActiveDues) {
+        order.amountPaid = 0;
+        order.amountDue = 0;
+        order.paymentStatus = "pending";
+      }
+
       if (!order.orderLogs) order.orderLogs = [];
       order.orderLogs.push({
         fromStatus: oldStatus,
@@ -269,6 +278,11 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         changedAt: new Date(),
       });
       await order.save();
+
+      if (order.userId) {
+        const { reconcileUserLedger } = await import("@/lib/ledger");
+        await reconcileUserLedger(order.userId.toString());
+      }
 
       // Adjust stock and log it upon approval of lost/damaged statuses
       const restorableStatuses = ["cancelled", "damaged", "lost"];

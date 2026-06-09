@@ -87,6 +87,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 changedAt: new Date(),
               });
               await order.save();
+
+              if (order.userId) {
+                const { reconcileUserLedger } = await import("@/lib/ledger");
+                await reconcileUserLedger(order.userId.toString());
+              }
            }
         }
       }
