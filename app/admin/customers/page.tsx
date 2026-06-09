@@ -252,7 +252,7 @@ export default function AdminCustomersPage() {
     { value: "", label: "All Roles", count: counts.all, activeStyle: "bg-gray-900 text-white shadow-lg shadow-gray-900/10 border-gray-900", inactiveStyle: "text-gray-500 hover:text-gray-950 border-gray-100 bg-white" },
     { value: "customer", label: "Regular", count: counts.customer, activeStyle: "bg-slate-600 text-white shadow-lg shadow-slate-600/10 border-slate-600", inactiveStyle: "bg-white text-slate-500 hover:text-slate-750 border-slate-100" },
     { value: "guest", label: "Guest", count: counts.guest, activeStyle: "bg-gray-500 text-white shadow-lg shadow-gray-500/10 border-gray-500", inactiveStyle: "bg-white text-gray-400 hover:text-gray-600 border-gray-105" },
-    { value: "retailer", label: "Retailer", count: counts.retailer, activeStyle: "bg-teal-600 text-white shadow-lg shadow-teal-600/10 border-teal-600", inactiveStyle: "bg-teal-50/50 text-teal-700 border-teal-100 hover:bg-teal-50" },
+    { value: "retailer", label: "Retailer", count: counts.retailer, activeStyle: "bg-blue-600 text-white shadow-lg shadow-blue-600/10 border-blue-600", inactiveStyle: "bg-blue-50/50 text-blue-700 border-blue-100 hover:bg-blue-50" },
     { value: "dealer", label: "Dealer", count: counts.dealer, activeStyle: "bg-amber-600 text-white shadow-lg shadow-amber-600/10 border-amber-600", inactiveStyle: "bg-amber-50/50 text-amber-700 border-amber-100 hover:bg-amber-50" },
     { value: "student", label: "Student", count: counts.student, activeStyle: "bg-rose-600 text-white shadow-lg shadow-rose-600/10 border-rose-600", inactiveStyle: "bg-rose-50/50 text-rose-700 border-rose-100 hover:bg-rose-50" },
     { value: "influencer", label: "Influencer", count: counts.influencer, activeStyle: "bg-violet-600 text-white shadow-lg shadow-violet-600/10 border-violet-600", inactiveStyle: "bg-violet-50/50 text-violet-700 border-violet-100 hover:bg-violet-50" },
@@ -417,15 +417,19 @@ export default function AdminCustomersPage() {
                         <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${
                           customer.customerType === 'dealer' 
                             ? 'bg-amber-100 text-amber-700' 
-                            : customer.customerType === 'guest'
+                          : customer.customerType === 'retailer'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                          : customer.customerType === 'student'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-100'
+                          : customer.customerType === 'influencer'
+                            ? 'bg-violet-50 text-violet-700 border border-violet-100'
+                          : customer.customerType === 'corporate'
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                          : customer.customerType === 'guest'
                             ? 'bg-gray-100 text-gray-400'
-                            : ['student', 'influencer', 'corporate'].includes(customer.customerType)
-                            ? 'bg-red-50 text-red-600 border border-red-100'
-                            : customer.customerType === 'retailer'
-                            ? 'bg-teal-50 text-teal-700 border border-teal-100'
-                            : customer.customerType === 'customer'
+                          : customer.customerType === 'customer'
                             ? 'bg-slate-100 text-slate-500'
-                            : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                            : 'bg-teal-50 text-teal-700 border border-teal-100'
                         }`}>
                           {customer.customerType}
                         </span>

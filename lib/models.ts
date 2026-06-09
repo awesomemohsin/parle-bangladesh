@@ -60,9 +60,51 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+// --- ADMIN MODEL ---
+export interface IAdmin extends Document {
+  email: string;
+  mobile: string;
+  password?: string;
+  name: string;
+  role: "customer" | "admin" | "moderator" | "super_admin" | "owner";
+  status: "active" | "disabled";
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  resetRequestCount?: number;
+  lastResetRequest?: Date;
+  otpCode?: string;
+  otpExpires?: Date;
+  failedLoginAttempts?: number;
+  lockUntil?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  tokenVersion: number;
+}
+
+const AdminSchema = new Schema<IAdmin>(
+  {
+    email: { type: String, required: true, unique: true, lowercase: true },
+    mobile: { type: String, required: true },
+    password: { type: String }, // optional for oauth, required for credentials
+    name: { type: String, required: true },
+    role: { type: String, enum: ["customer", "admin", "moderator", "super_admin", "owner"], default: "admin" },
+    status: { type: String, enum: ["active", "disabled"], default: "active" },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
+    resetRequestCount: { type: Number, default: 0 },
+    lastResetRequest: { type: Date },
+    otpCode: { type: String },
+    otpExpires: { type: Date },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+    tokenVersion: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
 export const User = mongoose.models?.User || mongoose.model<IUser>("User", UserSchema, "users");
 export const Customer = mongoose.models?.Customer || mongoose.model<IUser>("Customer", UserSchema, "customers");
-export const Admin = mongoose.models?.Admin || mongoose.model<IUser>("Admin", UserSchema, "admins");
+export const Admin = mongoose.models?.Admin || mongoose.model<IAdmin>("Admin", AdminSchema, "admins");
 
 // --- LOGIN HISTORY MODEL ---
 export interface ILoginHistory extends Document {

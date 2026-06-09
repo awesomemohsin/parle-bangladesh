@@ -271,35 +271,39 @@ export default function MyOrdersPage() {
               <Card
                 key={order.id}
                 className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group ${
-                  order.customerType === 'dealer' 
+                  order.customerType?.toLowerCase() === 'dealer' 
                     ? "border-amber-200 hover:border-amber-500 bg-amber-50/5" 
-                    : order.customerType === 'student'
+                  : order.customerType?.toLowerCase() === 'retailer'
+                    ? "border-blue-200 hover:border-blue-500 bg-blue-50/5"
+                  : order.customerType?.toLowerCase() === 'student'
                     ? "border-rose-200 hover:border-rose-500 bg-rose-50/5"
-                    : order.customerType === 'influencer'
+                  : order.customerType?.toLowerCase() === 'influencer'
                     ? "border-violet-200 hover:border-violet-500 bg-violet-50/5"
-                    : order.customerType === 'corporate'
+                  : order.customerType?.toLowerCase() === 'corporate'
                     ? "border-indigo-200 hover:border-indigo-500 bg-indigo-50/5"
-                    : order.customerType && order.customerType !== 'retailer'
+                  : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
                     ? "border-teal-200 hover:border-teal-500 bg-teal-50/5"
                     : "border-gray-100 hover:border-red-600"
                 }`}
               >
                 {/* Header Bar - More Compact */}
                 <div className={`${
-                  order.customerType === 'dealer' ? "bg-amber-50" :
-                  order.customerType === 'student' ? "bg-rose-50/50" :
-                  order.customerType === 'influencer' ? "bg-violet-50/50" :
-                  order.customerType === 'corporate' ? "bg-indigo-50/50" :
-                  order.customerType && order.customerType !== 'retailer' ? "bg-teal-50/50" :
+                  order.customerType?.toLowerCase() === 'dealer' ? "bg-amber-50" :
+                  order.customerType?.toLowerCase() === 'retailer' ? "bg-blue-50" :
+                  order.customerType?.toLowerCase() === 'student' ? "bg-rose-50/50" :
+                  order.customerType?.toLowerCase() === 'influencer' ? "bg-violet-50/50" :
+                  order.customerType?.toLowerCase() === 'corporate' ? "bg-indigo-50/50" :
+                  order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) ? "bg-teal-50/50" :
                   "bg-slate-50/80"
                 } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
                   <div className="flex items-center gap-3">
-                    {order.customerType && order.customerType !== 'retailer' && (
+                    {order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) && (
                       <div className={`flex items-center gap-1.5 px-2 py-0.5 text-white rounded-md ${
-                        order.customerType === 'dealer' ? 'bg-amber-600' :
-                        order.customerType === 'student' ? 'bg-rose-600' :
-                        order.customerType === 'influencer' ? 'bg-violet-600' :
-                        order.customerType === 'corporate' ? 'bg-indigo-600' :
+                        order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
+                        order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
+                        order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
+                        order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
+                        order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
                         'bg-teal-600'
                       }`}>
                         <ShieldCheck className="w-2.5 h-2.5" />

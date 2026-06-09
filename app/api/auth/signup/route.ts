@@ -20,24 +20,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid Bangladeshi mobile format" }, { status: 400 });
     }
 
-    const emailLower = (email && email.trim() !== "") 
-      ? email.toLowerCase() 
+    const emailLower = (email && email.trim() !== "")
+      ? email.toLowerCase()
       : `${mobile}@phone.parle.com`;
-    
+
     // Check both User and Admin collections to prevent duplicates across roles
-    const existingUser = await User.findOne({ 
+    const existingUser = await User.findOne({
       $or: [{ email: emailLower }, { mobile }]
     });
-    const existingAdmin = await Admin.findOne({ 
+    const existingAdmin = await Admin.findOne({
       $or: [{ email: emailLower }, { mobile }]
     });
-    
+
     if (existingUser || existingAdmin) {
       return NextResponse.json({ error: "Email or Mobile already in use" }, { status: 400 });
     }
 
     // If registered by a logged-in SR, set referral and customer type automatically
     let referredBySR = undefined;
+    let creatorEmail = "";
     let customerType = "customer";
     const srToken = getTokenFromCookie(request.headers.get("cookie")) || request.headers.get("authorization")?.slice(7);
     if (srToken) {
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
         const dbCreator = await User.findById(creator.id).lean() as any;
         if (dbCreator && dbCreator.isSR) {
           referredBySR = dbCreator._id;
+          creatorEmail = dbCreator.email;
           customerType = "retailer";
         }
       }
@@ -60,8 +62,35 @@ export async function POST(request: NextRequest) {
       role: "customer",
       referredBySR,
       customerType,
+      creditLimit: customerType === "retailer" ? 10000 : undefined,
       isRetailerApproved: false, // Default to probation retailer
     });
+
+    // Automatically queue retailer promotion consensus request if registered by an SR
+    if (referredBySR && creatorEmail) {
+      try {
+        const { ApprovalRequest } = await import("@/lib/models");
+        const { notifyNewApprovalRequest } = await import("@/lib/telegram");
+
+        const approval = await ApprovalRequest.create({
+          requesterEmail: creatorEmail,
+          type: "customer",
+          targetId: user._id.toString(),
+          targetName: user.name,
+          field: "isRetailerApproved",
+          oldValue: "Probation Retailer",
+          newValue: "Approved Retailer",
+          targetDetails: { isRetailerApproved: true, creditLimit: 999999999 },
+          stage: "superadmin",
+          superadminApprovals: [],
+          ownerApproved: false
+        });
+
+        await notifyNewApprovalRequest(approval);
+      } catch (err) {
+        console.error("[Signup] Failed to create or notify retailer promotion request:", err);
+      }
+    }
 
     const token = generateToken({
       id: user._id.toString(),

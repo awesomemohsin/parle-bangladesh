@@ -439,17 +439,19 @@ export default function AdminOrdersPage() {
               <Card 
                 key={order.id} 
                 className={`p-4 shadow-sm transition-all duration-300 ${
-                  order.customerType === 'dealer' 
+                  order.customerType?.toLowerCase() === 'dealer' 
                     ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500' 
-                    : order.customerType === 'student'
+                  : order.customerType?.toLowerCase() === 'retailer'
+                    ? 'border-blue-300 bg-blue-50/20 shadow-blue-100/50 hover:border-blue-500'
+                  : order.customerType?.toLowerCase() === 'student'
                     ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
-                    : order.customerType === 'influencer'
+                  : order.customerType?.toLowerCase() === 'influencer'
                     ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
-                    : order.customerType === 'corporate'
+                  : order.customerType?.toLowerCase() === 'corporate'
                     ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
-                    : order.customerType && order.customerType !== 'retailer'
+                  : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
                     ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
-                    : 'border-gray-100/60 hover:shadow-md'
+                  : 'border-gray-100/60 hover:shadow-md'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
@@ -458,12 +460,13 @@ export default function AdminOrdersPage() {
                       <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">
                         Order ID: {order.id.slice(-8).toUpperCase()}
                       </h3>
-                      {order.customerType && order.customerType !== 'retailer' && (
+                      {order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) && (
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 text-white rounded-lg shadow-sm ${
-                          order.customerType === 'dealer' ? 'bg-amber-600' :
-                          order.customerType === 'student' ? 'bg-rose-600' :
-                          order.customerType === 'influencer' ? 'bg-violet-600' :
-                          order.customerType === 'corporate' ? 'bg-indigo-600' :
+                          order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
+                          order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
+                          order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
+                          order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
+                          order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
                           'bg-teal-600'
                         }`}>
                           <BellRing className="w-3 h-3 animate-pulse" />

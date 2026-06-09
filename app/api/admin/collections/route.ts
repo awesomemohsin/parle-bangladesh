@@ -412,30 +412,7 @@ export async function POST(request: NextRequest) {
 
     // C. Approve Retailer / Lift Probation Limit
     if (action === "approve-retailer") {
-      const { userId } = body;
-      if (!userId) {
-        return NextResponse.json({ error: "User ID is required." }, { status: 400 });
-      }
-
-      const shopUser = await User.findById(userId);
-      if (!shopUser) {
-        return NextResponse.json({ error: "Shop user not found." }, { status: 404 });
-      }
-
-      shopUser.isRetailerApproved = true;
-      // Also elevate their credit limit upon approval
-      shopUser.creditLimit = 50000; // default standard retailer limit after approval
-      await shopUser.save();
-
-      return NextResponse.json({
-        success: true,
-        message: `Successfully approved retailer ${shopUser.name} and raised credit limit to ৳50,000.`,
-        shop: {
-          id: shopUser._id.toString(),
-          isRetailerApproved: shopUser.isRetailerApproved,
-          creditLimit: shopUser.creditLimit
-        }
-      });
+      return NextResponse.json({ error: "Direct retailer approval is disabled. Retailer accounts must be approved via the Consensus Promotions dashboard." }, { status: 403 });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

@@ -91,7 +91,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const hasAnindo = superApprovals.some((a: string) => a.includes("anindo"));
         const hasSaiful = superApprovals.some((a: string) => a.includes("saiful"));
         
-        if (hasAnindo && hasSaiful) {
+        // Retailer / Dealer promotions and retailer probation approvals only require a single Superadmin approval.
+        const isB2BPromotion = approvalRequest.type === 'customer' && (
+          approvalRequest.field === 'isRetailerApproved' ||
+          (approvalRequest.field === 'customerType' && 
+           approvalRequest.newValue && 
+           ['retailer', 'dealer'].includes(approvalRequest.newValue.toLowerCase()))
+        );
+
+        const isConsensusReached = isB2BPromotion 
+          ? (hasAnindo || hasSaiful) 
+          : (hasAnindo && hasSaiful);
+        
+        if (isConsensusReached) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
           const isFinancialOrStock = ['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order';
           
@@ -408,11 +420,21 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
   } else if (approvalRequest.type === 'customer') {
     const { User } = await import("@/lib/models");
     const customer = await User.findById(approvalRequest.targetId);
-    if (customer && approvalRequest.field === 'customerType' && approvalRequest.targetDetails) {
+    if (customer && approvalRequest.targetDetails) {
       const details = approvalRequest.targetDetails;
-      customer.customerType = details.customerType;
-      customer.flatDiscountPercent = details.flatDiscountPercent;
-      customer.flatDiscountExpiresAt = details.flatDiscountExpiresAt ? new Date(details.flatDiscountExpiresAt) : undefined;
+      if (approvalRequest.field === 'customerType') {
+        customer.customerType = details.customerType;
+        customer.flatDiscountPercent = details.flatDiscountPercent;
+        customer.flatDiscountExpiresAt = details.flatDiscountExpiresAt ? new Date(details.flatDiscountExpiresAt) : undefined;
+        // Automatically approve and set unlimited credit limit for B2B roles
+        if (details.customerType === "retailer" || details.customerType === "dealer") {
+          customer.isRetailerApproved = true;
+          customer.creditLimit = 999999999;
+        }
+      } else if (approvalRequest.field === 'isRetailerApproved') {
+        customer.isRetailerApproved = details.isRetailerApproved;
+        customer.creditLimit = 999999999; // Set approved B2B credit limit to unlimited
+      }
       await customer.save();
     }
   }

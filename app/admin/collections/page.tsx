@@ -18,6 +18,26 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const renderTypeBadge = (customerType: string | undefined) => {
+  if (!customerType) return null;
+  const type = customerType.toLowerCase();
+  
+  let classes = "bg-slate-100 text-slate-500 border-slate-200";
+  if (type === "dealer") classes = "bg-amber-50 text-amber-700 border-amber-200";
+  else if (type === "retailer") classes = "bg-blue-50 text-blue-700 border-blue-200";
+  else if (type === "student") classes = "bg-rose-50 text-rose-700 border-rose-200";
+  else if (type === "influencer") classes = "bg-violet-50 text-violet-700 border-violet-200";
+  else if (type === "corporate") classes = "bg-indigo-50 text-indigo-700 border-indigo-200";
+  else if (type === "guest") classes = "bg-gray-100 text-gray-400 border-gray-200";
+  else if (type !== "customer") classes = "bg-teal-50 text-teal-700 border-teal-200";
+
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border shrink-0 ${classes}`}>
+      {customerType}
+    </span>
+  );
+};
+
 interface Order {
   id: string;
   customerName: string;
@@ -876,7 +896,10 @@ export default function CollectionsPage() {
                               {new Date(order.createdAt).toLocaleString()}
                             </td>
                             <td className="py-4 px-3">
-                              <div className="font-bold text-gray-900">{order.customerName}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900">{order.customerName}</span>
+                                {renderTypeBadge(order.customerType)}
+                              </div>
                               <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
                             </td>
                             <td className="py-4 px-3 font-black text-gray-900">৳{order.total}</td>
@@ -1140,7 +1163,10 @@ export default function CollectionsPage() {
                               {new Date(order.createdAt).toLocaleString()}
                             </td>
                             <td className="py-4 px-3">
-                              <div className="font-bold text-gray-900">{order.customerName}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900">{order.customerName}</span>
+                                {renderTypeBadge(order.customerType)}
+                              </div>
                               <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
                             </td>
                             <td className="py-4 px-3 font-black text-gray-900">৳{order.total}</td>
@@ -1360,16 +1386,19 @@ export default function CollectionsPage() {
                     sortedShops.map((shop) => (
                       <tr key={shop.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="py-4 px-3">
-                          <div className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</span>
+                            {renderTypeBadge(shop.customerType)}
+                          </div>
                           <div className="text-[10px] text-gray-400">{shop.email}</div>
                         </td>
                         <td className="py-4 px-3 text-gray-500">{shop.mobile}</td>
                         <td className="py-4 px-3 uppercase tracking-wider text-[10px]">
                           <span className={`px-2 py-0.5 rounded font-black border ${
                             shop.customerType === "dealer" 
-                              ? "bg-purple-50 text-purple-600 border-purple-200" 
+                              ? "bg-amber-50 text-amber-700 border-amber-200" 
                               : shop.customerType === "retailer" 
-                              ? "bg-amber-50 text-amber-600 border-amber-200" 
+                              ? "bg-blue-50 text-blue-700 border-blue-200" 
                               : "bg-slate-100 text-slate-600 border-slate-200"
                           }`}>
                             {shop.customerType}
@@ -1400,18 +1429,14 @@ export default function CollectionsPage() {
                             return <span className="text-gray-400 font-normal">৳0</span>;
                           })()}
                         </td>
-                        <td className="py-4 px-3 text-gray-900">
-                          ৳{shop.creditLimit || 10000}
+                        <td className="py-4 px-3 text-gray-900 font-bold">
+                          {shop.creditLimit >= 999999999 ? (
+                            <span className="text-emerald-600 font-black uppercase text-[10px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Unlimited</span>
+                          ) : (
+                            `৳${shop.creditLimit || 10000}`
+                          )}
                         </td>
                         <td className="py-4 px-3 text-right flex items-center justify-end gap-2">
-                          {shop.customerType === "retailer" && !shop.isRetailerApproved && (
-                            <button
-                              onClick={() => handleApproveRetailer(shop.id)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all flex items-center gap-1.5"
-                            >
-                              <Award className="w-3.5 h-3.5" /> Approve
-                            </button>
-                          )}
                           <Button
                             onClick={() => {
                               setWalletDepositShop(shop);
@@ -1460,11 +1485,17 @@ export default function CollectionsPage() {
                         <td className="py-4 px-3">
                           {log.userId ? (
                             <div>
-                              <div className="font-bold text-gray-900">{log.userId.name}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900">{log.userId.name}</span>
+                                {renderTypeBadge(log.userId.customerType)}
+                              </div>
                               <div className="text-[9px] text-gray-400">{log.userId.mobile}</div>
                             </div>
                           ) : (
-                            <span className="text-gray-400">Guest Customer</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 font-bold">Guest Customer</span>
+                              {renderTypeBadge("guest")}
+                            </div>
                           )}
                         </td>
                         <td className="py-4 px-3">
