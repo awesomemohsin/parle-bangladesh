@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const search = (searchParams.get("search") || "").toLowerCase();
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
+    const customerType = searchParams.get("customerType") || "";
 
     const { Order, ApprovalRequest } = await import("@/lib/models");
     const { ORDER_STATUS } = await import("@/lib/constants");
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
     // 3. Merge Registered Users with their stats
     const customersList: any[] = registeredUsers.map((u: any) => {
       const stats = statsMap.get(u.email.toLowerCase()) || { ordersCount: 0, totalSpent: 0, totalProducts: 0 };
+      const bal = u.walletBalance || 0;
       return {
         id: u._id.toString(),
         name: u.name,
@@ -81,7 +83,9 @@ export async function GET(request: NextRequest) {
         isGuest: false,
         flatDiscountPercent: u.flatDiscountPercent,
         flatDiscountExpiresAt: u.flatDiscountExpiresAt,
-        pendingApproval: pendingIds.has(u._id.toString())
+        pendingApproval: pendingIds.has(u._id.toString()),
+        dueBalance: bal < 0 ? Math.abs(bal) : 0,
+        walletBalance: bal > 0 ? bal : 0
       };
     });
 
@@ -114,7 +118,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 6. Final Sort (By dynamic field)
+    // 6. Compute dynamic counts based on active search
+    const counts = {
+      all: filtered.length,
+      guest: filtered.filter(c => c.customerType === "guest").length,
+      customer: filtered.filter(c => c.customerType === "customer").length,
+      retailer: filtered.filter(c => c.customerType === "retailer").length,
+      dealer: filtered.filter(c => c.customerType === "dealer").length,
+      student: filtered.filter(c => c.customerType === "student").length,
+      influencer: filtered.filter(c => c.customerType === "influencer").length,
+      corporate: filtered.filter(c => c.customerType === "corporate").length,
+      other: filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate"].includes(c.customerType)).length,
+    };
+
+    // 7. Apply Role/Type Filtering
+    if (customerType) {
+      if (customerType === "other") {
+        filtered = filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate"].includes(c.customerType));
+      } else {
+        filtered = filtered.filter(c => c.customerType === customerType);
+      }
+    }
+
+    // 8. Final Sort (By dynamic field)
     filtered.sort((a: any, b: any) => {
       const fieldA = a[sortBy];
       const fieldB = b[sortBy];
@@ -132,7 +158,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ 
-      customers: filtered.slice(0, 100) 
+      customers: filtered.slice(0, 100),
+      counts
     });
   } catch (error) {
     console.error("Customers GET error:", error);

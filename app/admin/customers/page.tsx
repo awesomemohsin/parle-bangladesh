@@ -43,6 +43,18 @@ export default function AdminCustomersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [counts, setCounts] = useState({
+    all: 0,
+    guest: 0,
+    customer: 0,
+    retailer: 0,
+    dealer: 0,
+    student: 0,
+    influencer: 0,
+    corporate: 0,
+    other: 0
+  });
   
   // Demote Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -71,20 +83,23 @@ export default function AdminCustomersPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const url = `/api/admin/customers?search=${encodeURIComponent(search)}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+      const url = `/api/admin/customers?search=${encodeURIComponent(search)}&customerType=${selectedType}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
         setCustomers(data.customers || []);
+        if (data.counts) {
+          setCounts(data.counts);
+        }
       }
     } catch (error) {
       toast.error("Error fetching customers");
     } finally {
       setLoading(false);
     }
-  }, [search, sortBy, sortOrder]);
+  }, [search, selectedType, sortBy, sortOrder]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -233,6 +248,18 @@ export default function AdminCustomersPage() {
     }
   };
 
+  const filterTabs = [
+    { value: "", label: "All Roles", count: counts.all, activeStyle: "bg-gray-900 text-white shadow-lg shadow-gray-900/10 border-gray-900", inactiveStyle: "text-gray-500 hover:text-gray-950 border-gray-100 bg-white" },
+    { value: "customer", label: "Regular", count: counts.customer, activeStyle: "bg-slate-600 text-white shadow-lg shadow-slate-600/10 border-slate-600", inactiveStyle: "bg-white text-slate-500 hover:text-slate-750 border-slate-100" },
+    { value: "guest", label: "Guest", count: counts.guest, activeStyle: "bg-gray-500 text-white shadow-lg shadow-gray-500/10 border-gray-500", inactiveStyle: "bg-white text-gray-400 hover:text-gray-600 border-gray-105" },
+    { value: "retailer", label: "Retailer", count: counts.retailer, activeStyle: "bg-teal-600 text-white shadow-lg shadow-teal-600/10 border-teal-600", inactiveStyle: "bg-teal-50/50 text-teal-700 border-teal-100 hover:bg-teal-50" },
+    { value: "dealer", label: "Dealer", count: counts.dealer, activeStyle: "bg-amber-600 text-white shadow-lg shadow-amber-600/10 border-amber-600", inactiveStyle: "bg-amber-50/50 text-amber-700 border-amber-100 hover:bg-amber-50" },
+    { value: "student", label: "Student", count: counts.student, activeStyle: "bg-rose-600 text-white shadow-lg shadow-rose-600/10 border-rose-600", inactiveStyle: "bg-rose-50/50 text-rose-700 border-rose-100 hover:bg-rose-50" },
+    { value: "influencer", label: "Influencer", count: counts.influencer, activeStyle: "bg-violet-600 text-white shadow-lg shadow-violet-600/10 border-violet-600", inactiveStyle: "bg-violet-50/50 text-violet-700 border-violet-100 hover:bg-violet-50" },
+    { value: "corporate", label: "Corporate", count: counts.corporate, activeStyle: "bg-sky-600 text-white shadow-lg shadow-sky-600/10 border-sky-600", inactiveStyle: "bg-sky-50/50 text-sky-700 border-sky-100 hover:bg-sky-50" },
+    { value: "other", label: "Other", count: counts.other, activeStyle: "bg-indigo-600 text-white shadow-lg shadow-indigo-600/10 border-indigo-600", inactiveStyle: "bg-indigo-50/50 text-indigo-700 border-indigo-100 hover:bg-indigo-50" },
+  ];
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -250,6 +277,34 @@ export default function AdminCustomersPage() {
             className="pl-10 h-10 border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest"
           />
         </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div 
+        className="flex items-center gap-2 mb-6 p-2 bg-gray-50/60 rounded-2xl border border-gray-100/80 overflow-x-auto [&::-webkit-scrollbar]:hidden scroll-smooth"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {filterTabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setSelectedType(tab.value)}
+            className={`
+              flex items-center gap-1 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-200 shrink-0 select-none
+              ${selectedType === tab.value ? tab.activeStyle : tab.inactiveStyle}
+              hover:scale-[1.02] active:scale-[0.98] cursor-pointer
+            `}
+          >
+            {tab.label}
+            <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[9px] font-black tracking-tight leading-none transition-colors duration-200 ${
+              selectedType === tab.value 
+                ? 'bg-white/20 text-white' 
+                : 'bg-black/5 text-gray-500'
+            }`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </div>
 
       <Card className="overflow-hidden border-none shadow-xl shadow-gray-100 rounded-2xl">
