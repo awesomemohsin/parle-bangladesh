@@ -52,8 +52,10 @@ export async function GET(
     // For guest orders, we might want to allow viewing if they have the ID, 
     // but ideally we should verify email/phone too. 
     // For now, we'll allow viewing by ID since it's a GUID and used for the success page.
-    // If it's a logged-in order, verify the user.
-    if (order.userId && (!user || user.id !== order.userId.toString()) && !isAdmin) {
+    // If it's a logged-in order, verify the user or if it was placed by the current SR.
+    const isPlacedByCurrentSR = order.placedBySR && user && order.placedBySR.toString() === user.id;
+
+    if (order.userId && (!user || user.id !== order.userId.toString()) && !isAdmin && !isPlacedByCurrentSR) {
       return NextResponse.json({ error: "Unauthorized access to this order" }, { status: 403 });
     }
 
@@ -212,17 +214,20 @@ export async function PUT(
       }
     }
 
-    // If status changed to delivered, remove from hold and record outstanding dues
+    const activeDuesStatuses = ["processing", "shipped", "delivered"];
+    const wasActiveDues = activeDuesStatuses.includes(oldStatus);
+    const isActiveDues = activeDuesStatuses.includes(status);
+
+    if (!isActiveDues && wasActiveDues) {
+      // Transitioned from active dues state to inactive/cancelled dues state
+      order.amountPaid = 0;
+      order.amountDue = 0;
+      order.paymentStatus = "pending";
+    }
+
+    // If status changed to delivered, remove from hold
     if (status === "delivered" && oldStatus !== "delivered") {
-      const { Product, User } = await import("@/lib/models");
-      
-      // Increment user's due balance if not already paid online
-      if (order.userId && order.paymentStatus !== "paid") {
-        await User.findByIdAndUpdate(order.userId, {
-          $inc: { dueBalance: order.total }
-        });
-        order.amountDue = order.total - (order.amountPaid || 0);
-      }
+      const { Product } = await import("@/lib/models");
 
       for (const item of order.items) {
         if (item.productId) {
@@ -247,6 +252,18 @@ export async function PUT(
     }
 
     await order.save();
+
+    if (order.userId) {
+      const { reconcileUserLedger } = await import("@/lib/ledger");
+      await reconcileUserLedger(order.userId.toString());
+
+      const reloadedOrder = await Order.findById(order._id);
+      if (reloadedOrder) {
+        order.amountPaid = reloadedOrder.amountPaid;
+        order.amountDue = reloadedOrder.amountDue;
+        order.paymentStatus = reloadedOrder.paymentStatus;
+      }
+    }
 
     // Telegram Notifications
     try {

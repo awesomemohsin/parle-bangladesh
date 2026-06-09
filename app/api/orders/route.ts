@@ -315,17 +315,20 @@ export async function POST(request: NextRequest) {
     const ruleDiscount = totals.ruleDiscount || 0;
     const promoDiscount = totals.promoDiscount || 0;
     
+    const isB2BUser = customerTypeStr === "retailer" || customerTypeStr === "dealer";
     const baseShippingCharge = reqShippingCity === "Dhaka" ? 80 : 130;
-    const shippingCost = deliveryMethod === "pickup" ? 0 : (((subtotal - ruleDiscount) >= 1000 || totals.freeShippingGranted) ? 0 : baseShippingCharge);
+    const shippingCost = (deliveryMethod === "pickup" || isB2BUser) ? 0 : (((subtotal - ruleDiscount) >= 1000 || totals.freeShippingGranted) ? 0 : baseShippingCharge);
     const tax = 0;
     const total = subtotal + shippingCost - discountAmount;
 
-    // Credit limit check for probation retailers
-    if (user && customerTypeStr === "retailer" && !user.isRetailerApproved) {
-      const outstandingDues = (user.dueBalance || 0) + total;
-      if (outstandingDues > 10000) {
+    // Credit limit check for probation B2B users (retailers and dealers)
+    const isB2B = customerTypeStr === "retailer" || customerTypeStr === "dealer";
+    if (user && isB2B && !user.isRetailerApproved) {
+      const netBal = (user.walletBalance || 0) - (user.dueBalance || 0);
+      const newBal = netBal - total;
+      if (newBal < -10000) {
         return NextResponse.json({
-          error: `Credit limit exceeded. Your current outstanding dues (৳${user.dueBalance || 0}) plus this order (৳${total}) would exceed the ৳10,000 probation limit. Please contact a Superadmin for approval.`
+          error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳10,000 probation limit. Please contact a Superadmin for approval.`
         }, { status: 400 });
       }
     }
@@ -372,7 +375,7 @@ export async function POST(request: NextRequest) {
       isRestricted: totals.isRestricted,
       promoCode: body.promoCode,
       total,
-      status: ORDER_STATUS.PENDING,
+      status: srUser ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING,
       customerType: customerTypeStr,
       amountPaid: 0,
       amountDue: total,
@@ -380,6 +383,35 @@ export async function POST(request: NextRequest) {
     });
 
     await order.save();
+
+    // Reconcile ledger for B2B users
+    if (user && isB2BUser) {
+      const advancePaid = Number(body.advancePaid || body.amountPaid || 0);
+      if (advancePaid > 0) {
+        const { TransactionLedger } = await import("@/lib/models");
+        const ledger = new TransactionLedger({
+          userId: user.id,
+          orderId: order._id,
+          amount: advancePaid,
+          type: "collection",
+          paymentMethod: body.paymentMethod || "cash",
+          recordedBy: srUser ? srUser.email : user.email,
+          notes: body.notes || `Advance payment of ৳${advancePaid} at order placement.`,
+        });
+        await ledger.save();
+      }
+
+      const { reconcileUserLedger } = await import("@/lib/ledger");
+      await reconcileUserLedger(user.id);
+
+      // Reload order to return updated amountPaid, amountDue, and paymentStatus fields
+      const updatedOrder = await Order.findById(order._id);
+      if (updatedOrder) {
+        order.amountPaid = updatedOrder.amountPaid;
+        order.amountDue = updatedOrder.amountDue;
+        order.paymentStatus = updatedOrder.paymentStatus;
+      }
+    }
 
     try {
       await notifyNewOrder(order);
