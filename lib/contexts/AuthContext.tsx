@@ -13,6 +13,12 @@ export interface User {
   flatDiscountPercent?: number;
   flatDiscountExpiresAt?: string | Date;
   isSR?: boolean;
+  isRetailerApproved?: boolean;
+  dueBalance?: number;
+  walletBalance?: number;
+  creditLimit?: number;
+  impersonatedName?: string;
+  mobile?: string;
 }
 
 export interface AuthState {
@@ -58,8 +64,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(USER_STORAGE_KEY);
     }
 
+    let effectiveUser = user ? { ...user } : null;
+    if (effectiveUser && effectiveUser.isSR) {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          const activeShop = JSON.parse(activeShopStr);
+          effectiveUser = {
+            ...effectiveUser,
+            customerType: activeShop.customerType || "customer",
+            isRetailerApproved: activeShop.isRetailerApproved,
+            flatDiscountPercent: activeShop.flatDiscountPercent,
+            flatDiscountExpiresAt: activeShop.flatDiscountExpiresAt,
+            dueBalance: activeShop.dueBalance,
+            walletBalance: activeShop.walletBalance,
+            creditLimit: activeShop.creditLimit,
+            mobile: activeShop.mobile,
+            email: activeShop.email,
+          };
+        } catch (e) {}
+      }
+    }
+
     setAuthState({
-      user,
+      user: effectiveUser,
       token,
       isAuthenticated: !!token,
       isLoading: false,
@@ -91,9 +119,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const localUser = JSON.parse(userStr);
         
+        let effectiveUser = { ...localUser };
+        if (localUser.isSR) {
+          const activeShopStr = localStorage.getItem("sr_active_shop_user");
+          if (activeShopStr) {
+            try {
+              const activeShop = JSON.parse(activeShopStr);
+              effectiveUser = {
+                ...effectiveUser,
+                customerType: activeShop.customerType || "customer",
+                isRetailerApproved: activeShop.isRetailerApproved,
+                flatDiscountPercent: activeShop.flatDiscountPercent,
+                flatDiscountExpiresAt: activeShop.flatDiscountExpiresAt,
+                dueBalance: activeShop.dueBalance,
+                walletBalance: activeShop.walletBalance,
+                creditLimit: activeShop.creditLimit,
+                mobile: activeShop.mobile,
+                email: activeShop.email,
+              };
+            } catch (e) {}
+          }
+        }
+
         // 1. Instant local restore
         setAuthState({
-          user: localUser,
+          user: effectiveUser,
           token,
           isAuthenticated: true,
           isLoading: false,
@@ -136,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for storage events from other instances/tabs
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === AUTH_STORAGE_KEY || e.key === USER_STORAGE_KEY) {
+      if (e.key === AUTH_STORAGE_KEY || e.key === USER_STORAGE_KEY || e.key === "sr_active_shop_user") {
         const token = localStorage.getItem(AUTH_STORAGE_KEY);
         const userStr = localStorage.getItem(USER_STORAGE_KEY);
         if (!token || !userStr) {
@@ -150,8 +200,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           try {
             const user = JSON.parse(userStr);
+            let effectiveUser = { ...user };
+            if (user.isSR) {
+              const activeShopStr = localStorage.getItem("sr_active_shop_user");
+              if (activeShopStr) {
+                const activeShop = JSON.parse(activeShopStr);
+                effectiveUser = {
+                  ...effectiveUser,
+                  customerType: activeShop.customerType || "customer",
+                  isRetailerApproved: activeShop.isRetailerApproved,
+                  flatDiscountPercent: activeShop.flatDiscountPercent,
+                  flatDiscountExpiresAt: activeShop.flatDiscountExpiresAt,
+                  dueBalance: activeShop.dueBalance,
+                  walletBalance: activeShop.walletBalance,
+                  creditLimit: activeShop.creditLimit,
+                  mobile: activeShop.mobile,
+                  email: activeShop.email,
+                };
+              }
+            }
             setAuthState({
-              user,
+              user: effectiveUser,
               token,
               isAuthenticated: true,
               isLoading: false,

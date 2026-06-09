@@ -81,7 +81,9 @@ export async function POST(request: NextRequest) {
       message: "Signup successful",
     }, { status: 201 });
 
-    response.headers.set("Set-Cookie", setAuthCookie(token));
+    if (!referredBySR) {
+      response.headers.set("Set-Cookie", setAuthCookie(token));
+    }
     return response;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
