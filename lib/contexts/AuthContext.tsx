@@ -12,6 +12,7 @@ export interface User {
   status?: "active" | "disabled";
   flatDiscountPercent?: number;
   flatDiscountExpiresAt?: string | Date;
+  isSR?: boolean;
 }
 
 export interface AuthState {

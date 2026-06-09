@@ -31,6 +31,7 @@ import dynamic from 'next/dynamic'
 
 const PromoModal = dynamic(() => import('@/components/promo-modal'))
 const CareerCTA = dynamic(() => import('@/components/career-cta'))
+import SRShopSelector from '@/components/sr-shop-selector'
 
 export default function RootLayout({
   children,
@@ -46,6 +47,7 @@ export default function RootLayout({
             <PromoModal />
             <Navbar />
             <main className="flex-grow pt-[104px]">
+              <SRShopSelector />
               {children}
             </main>
             <CareerCTA />

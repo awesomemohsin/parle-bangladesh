@@ -32,6 +32,8 @@ function LoginForm() {
       
       if (isAdmin) {
         router.replace("/admin/dashboard");
+      } else if (user.isSR) {
+        router.replace("/shop");
       } else {
         const callbackUrl = searchParams.get("callbackUrl");
         if (callbackUrl) {
@@ -78,6 +80,11 @@ function LoginForm() {
 
       if (isAdmin) {
         window.location.href = "/admin/dashboard";
+        return;
+      }
+
+      if (data.user?.isSR) {
+        window.location.href = "/shop";
         return;
       }
 

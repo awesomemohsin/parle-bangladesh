@@ -16,13 +16,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isAuthorized = [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR].includes(user.role as any);
-    if (!isAuthorized) {
+    // Load full user details to check isSR
+    const dbUser = await User.findById(user.id).lean() as any;
+    const isSR = dbUser ? dbUser.isSR : false;
+
+    const isAdmin = [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR].includes(user.role as any);
+    if (!isAdmin && !isSR) {
       return NextResponse.json({ error: "Forbidden: Insufficient permissions." }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "all";
+
+    // Sales Representative can only fetch shops list
+    if (isSR && !isAdmin && type !== "shops") {
+      return NextResponse.json({ error: "Forbidden: Sales Representatives can only access shop list." }, { status: 403 });
+    }
 
     const responseData: any = {};
 
