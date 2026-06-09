@@ -58,12 +58,12 @@ const PLACEMENT_INFO = {
     description: 'Inline promotional card displayed as the 4th item in the Shop product grid.'
   },
   shop_grid_2: {
-    label: 'Shop Page Grid Card 2 (Position 8)',
+    label: 'Shop Page Grid Card 2 (Position 15)',
     width: 400,
     height: 500,
     aspectRatio: 400 / 500,
     ratioString: '4:5 (Portrait Card)',
-    description: 'Inline promotional card displayed as the 8th item in the Shop product grid.'
+    description: 'Inline promotional card displayed as the 15th item in the Shop product grid.'
   }
 };
 
@@ -329,7 +329,7 @@ export default function PromoPostersAdmin() {
                         : poster.placement === 'shop_grid_1'
                         ? 'Shop Grid Pos 4'
                         : poster.placement === 'shop_grid_2'
-                        ? 'Shop Grid Pos 8'
+                        ? 'Shop Grid Pos 15'
                         : 'Hero Slider'}
                     </span>
                   </div>
@@ -412,7 +412,7 @@ export default function PromoPostersAdmin() {
                     <option value="bestsellers_bottom">Homepage Bottom of Best Sellers (1400 x 200 px)</option>
                     <option value="shop_top_banner">Shop Page Top Banner (1400 x 300 px)</option>
                     <option value="shop_grid_1">Shop Page Grid Card 1 - Pos 4 (400 x 500 px)</option>
-                    <option value="shop_grid_2">Shop Page Grid Card 2 - Pos 8 (400 x 500 px)</option>
+                    <option value="shop_grid_2">Shop Page Grid Card 2 - Pos 15 (400 x 500 px)</option>
                   </select>
                   <div className="mt-1 bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
                     <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider">

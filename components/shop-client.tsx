@@ -348,7 +348,7 @@ export default function ShopClient({
            </button>
         </div>
       ) : (() => {
-        // Construct array containing products and inline promo cards at indices 3 and 7
+        // Construct array containing products and inline promo cards at indices 3 and 14
         const hasPromo1 = !!gridPromo1;
         const hasPromo2 = !!gridPromo2;
         const gridItems: Array<{ type: 'product'; data: any } | { type: 'promo'; data: any }> = [];
@@ -359,7 +359,7 @@ export default function ShopClient({
         for (let i = 0; i < totalLength; i++) {
           if (i === 3 && hasPromo1) {
             gridItems.push({ type: 'promo', data: gridPromo1 });
-          } else if (i === 7 && hasPromo2) {
+          } else if (i === 14 && hasPromo2) {
             gridItems.push({ type: 'promo', data: gridPromo2 });
           } else {
             if (productIdx < filteredProducts.length) {
@@ -377,41 +377,16 @@ export default function ShopClient({
                 return (
                   <div 
                     key={promo._id} 
-                    className="bg-gradient-to-br from-red-600 via-rose-600 to-red-700 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between text-white p-5 border border-red-500/10 min-h-[360px]"
+                    className="relative w-full aspect-[4/5] rounded-[2rem] shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 group border border-slate-100 bg-slate-50 overflow-hidden"
                   >
-                    <Link href={promo.link} className="absolute inset-0 z-10" />
-                    
-                    <div className="space-y-4">
-                      {/* Badge Tag */}
-                      <span className="inline-block bg-white/20 text-white font-black text-[8px] uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/20 backdrop-blur-md">
-                        Special Offer
-                      </span>
-                      
-                      {/* Visual Banner Preview inside the card */}
-                      <div className="relative w-full h-36 flex items-center justify-center overflow-hidden rounded-xl bg-black/10 border border-white/10">
-                        <Image
-                          src={promo.imageUrl}
-                          alt={promo.altText}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 25vw"
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      </div>
-
-                      {/* Header content */}
-                      <div className="space-y-1">
-                        <h3 className="font-black text-[16px] md:text-[18px] uppercase tracking-tighter leading-tight line-clamp-2 italic text-white/95">
-                          {promo.altText}
-                        </h3>
-                      </div>
-                    </div>
-
-                    {/* CTA Button */}
-                    <div className="mt-4">
-                      <span className="w-full py-2.5 px-4 bg-white text-gray-900 font-black uppercase tracking-widest text-[10px] rounded-lg shadow-md flex items-center justify-center gap-2 group-hover:bg-amber-400 group-hover:text-gray-950 transition-colors">
-                        {promo.buttonText || 'Shop Now'}
-                      </span>
-                    </div>
+                    <Link href={promo.link} className="absolute inset-0 z-20" />
+                    <Image
+                      src={promo.imageUrl}
+                      alt={promo.altText}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 25vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
                   </div>
                 );
               }
