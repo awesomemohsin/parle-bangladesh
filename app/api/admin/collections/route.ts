@@ -28,6 +28,136 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "all";
 
+    if (type === "payment-history") {
+      const orderId = searchParams.get("orderId");
+      if (!orderId) {
+        return NextResponse.json({ error: "orderId is required" }, { status: 400 });
+      }
+
+      const order = await Order.findById(orderId).lean() as any;
+      if (!order) {
+        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      }
+
+      // B2C / Guest orders check: only direct collections are logged against the orderId
+      if (!order.userId) {
+        const directLedgers = await TransactionLedger.find({ orderId }).sort({ createdAt: 1 }).lean();
+        const history = directLedgers.map((l: any) => ({
+          id: l._id.toString(),
+          amount: l.amount,
+          label: "Collected Cash",
+          paymentMethod: l.paymentMethod,
+          recordedBy: l.recordedBy,
+          notes: l.notes,
+          createdAt: l.createdAt
+        }));
+        return NextResponse.json({
+          orderId,
+          orderTotal: order.total,
+          history,
+          due: Math.max(0, order.total - directLedgers.reduce((sum, l) => sum + l.amount, 0))
+        });
+      }
+
+      // B2B Customer FIFO audit trail
+      const userId = order.userId;
+      const activeOrders = await Order.find({
+        userId,
+        status: { $in: ["processing", "shipped", "delivered"] },
+        paymentMethod: { $ne: "sslcommerz" }
+      }).sort({ createdAt: 1 }).lean() as any[];
+
+      const hasTarget = activeOrders.some(o => o._id.toString() === orderId);
+      if (!hasTarget) {
+        const directLedgers = await TransactionLedger.find({ orderId }).sort({ createdAt: 1 }).lean();
+        const history = directLedgers.map((l: any) => ({
+          id: l._id.toString(),
+          amount: l.amount,
+          label: "Collected Cash",
+          paymentMethod: l.paymentMethod,
+          recordedBy: l.recordedBy,
+          notes: l.notes,
+          createdAt: l.createdAt
+        }));
+        return NextResponse.json({
+          orderId,
+          orderTotal: order.total,
+          history,
+          due: order.amountDue ?? order.total
+        });
+      }
+
+      const ledgers = await TransactionLedger.find({
+        userId,
+        type: { $in: ["collection", "wallet_deposit"] }
+      }).sort({ createdAt: 1 }).lean() as any[];
+
+      // FIFO Simulator to construct the allocations timeline
+      let remainingPaid = ledgers.map(l => ({ ...l, remaining: l.amount }));
+      const history: any[] = [];
+      let orderDueAfterAlloc = order.total;
+
+      for (const currentOrder of activeOrders) {
+        const isTarget = currentOrder._id.toString() === orderId;
+        let orderNeeded = currentOrder.total;
+
+        for (const p of remainingPaid) {
+          if (p.remaining <= 0) continue;
+
+          // Determine the correct descriptive audit label matching user terminology
+          let label = "Collected Cash";
+          if (new Date(p.createdAt) < new Date(currentOrder.createdAt)) {
+            label = "Previous Balance / Advance Adjustment";
+          } else if (p.type === "wallet_deposit") {
+            label = "Account Balance Adjustment";
+          }
+
+          if (p.remaining >= orderNeeded) {
+            if (isTarget) {
+              history.push({
+                id: p._id.toString(),
+                amount: orderNeeded,
+                label,
+                paymentMethod: p.paymentMethod,
+                recordedBy: p.recordedBy,
+                notes: p.notes,
+                createdAt: p.createdAt
+              });
+            }
+            p.remaining -= orderNeeded;
+            orderNeeded = 0;
+            break; // currentOrder fully settled
+          } else {
+            if (isTarget) {
+              history.push({
+                id: p._id.toString(),
+                amount: p.remaining,
+                label,
+                paymentMethod: p.paymentMethod,
+                recordedBy: p.recordedBy,
+                notes: p.notes,
+                createdAt: p.createdAt
+              });
+            }
+            orderNeeded -= p.remaining;
+            p.remaining = 0;
+          }
+        }
+
+        if (isTarget) {
+          orderDueAfterAlloc = orderNeeded;
+          break; // Simulation completed up to the target order
+        }
+      }
+
+      return NextResponse.json({
+        orderId,
+        orderTotal: order.total,
+        history,
+        due: orderDueAfterAlloc
+      });
+    }
+
     // Sales Representative can only fetch shops list
     if (isSR && !isAdmin && type !== "shops") {
       return NextResponse.json({ error: "Forbidden: Sales Representatives can only access shop list." }, { status: 403 });
@@ -35,14 +165,28 @@ export async function GET(request: NextRequest) {
 
     const responseData: any = {};
 
-    // 1. Outstanding Delivered Orders
+    // 1. Outstanding Orders (Processing, Shipped, Delivered)
     if (type === "all" || type === "orders") {
       const outstandingOrders = await Order.find({
-        status: "delivered",
+        status: { $in: ["processing", "shipped", "delivered"] },
         paymentStatus: { $ne: "paid" }
       }).sort({ createdAt: -1 }).lean();
       
       responseData.orders = outstandingOrders.map((o: any) => ({
+        ...o,
+        id: o._id.toString(),
+        _id: undefined
+      }));
+    }
+
+    // 1b. Completed Invoices (Processing, Shipped, Delivered, paymentStatus === "paid")
+    if (type === "all" || type === "completed") {
+      const completedOrders = await Order.find({
+        status: { $in: ["processing", "shipped", "delivered"] },
+        paymentStatus: "paid"
+      }).sort({ createdAt: -1 }).lean();
+      
+      responseData.completedOrders = completedOrders.map((o: any) => ({
         ...o,
         id: o._id.toString(),
         _id: undefined
@@ -55,19 +199,23 @@ export async function GET(request: NextRequest) {
       const B2BShops = await User.find({
         $or: [
           { role: "customer" },
-          { dueBalance: { $gt: 0 } },
-          { walletBalance: { $gt: 0 } }
+          { walletBalance: { $ne: 0 } }
         ]
       })
-      .select("name email mobile dueBalance walletBalance creditLimit customerType isRetailerApproved createdAt")
-      .sort({ name: 1 })
+      .select("name email mobile walletBalance creditLimit customerType isSR isRetailerApproved createdAt updatedAt")
+      .sort({ updatedAt: -1 })
       .lean();
 
-      responseData.shops = B2BShops.map((s: any) => ({
-        ...s,
-        id: s._id.toString(),
-        _id: undefined
-      }));
+      responseData.shops = B2BShops.map((s: any) => {
+        const bal = s.walletBalance || 0;
+        return {
+          ...s,
+          id: s._id.toString(),
+          _id: undefined,
+          dueBalance: bal < 0 ? Math.abs(bal) : 0,
+          walletBalance: bal > 0 ? bal : 0
+        };
+      });
     }
 
     // 3. Last 50 entries of the Transaction Ledger
@@ -134,64 +282,71 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Order not found." }, { status: 404 });
       }
 
-      if (order.status !== "delivered") {
-        return NextResponse.json({ error: "Only delivered orders can be reconciled." }, { status: 400 });
+      if (!["processing", "shipped", "delivered"].includes(order.status)) {
+        return NextResponse.json({ error: "Only processing, shipped, or delivered orders can be reconciled." }, { status: 400 });
       }
 
-      const orderUser = await User.findById(order.userId);
+      const orderUser = order.userId ? await User.findById(order.userId) : null;
+      
+      const isB2B = order.customerType === "retailer" || order.customerType === "dealer" || 
+                    (orderUser && (orderUser.customerType === "retailer" || orderUser.customerType === "dealer"));
 
-      // Increment order payments
-      const oldPaid = order.amountPaid || 0;
-      const newPaid = oldPaid + cashCollected;
-      order.amountPaid = newPaid;
-      order.amountDue = Math.max(0, order.total - newPaid);
+      if (isB2B) {
+        // Record in Transaction Ledger
+        const ledger = new TransactionLedger({
+          userId: order.userId || orderUser?._id,
+          orderId: order._id,
+          amount: cashCollected,
+          type: "collection",
+          paymentMethod: paymentMethod || "cash",
+          recordedBy: adminUser.email,
+          notes: notes || `Reconciled B2B payment of ৳${cashCollected} by accounts department.`,
+        });
+        await ledger.save();
 
-      if (order.amountDue <= 0) {
-        order.paymentStatus = "paid";
-      } else {
-        order.paymentStatus = "partial";
-      }
-
-      order.reconciledBy = operatorName;
-      order.reconciledAt = new Date();
-      await order.save();
-
-      // Decrement User's Dues
-      if (orderUser) {
-        const remainingDues = orderUser.dueBalance || 0;
-        const netDues = remainingDues - cashCollected;
-
-        if (netDues < 0) {
-          // If excess cash collected, credit to wallet
-          orderUser.dueBalance = 0;
-          orderUser.walletBalance = (orderUser.walletBalance || 0) + Math.abs(netDues);
+        // Reconcile user ledger using FIFO
+        const { reconcileUserLedger } = await import("@/lib/ledger");
+        if (order.userId) {
+          await reconcileUserLedger(order.userId.toString());
         } else {
-          orderUser.dueBalance = netDues;
+          order.amountPaid = (order.amountPaid || 0) + cashCollected;
+          order.amountDue = Math.max(0, order.total - order.amountPaid);
+          order.paymentStatus = order.amountDue <= 0 ? "paid" : "partial";
+          await order.save();
         }
-        await orderUser.save();
+      } else {
+        // B2C / Guest order - direct update on order dues
+        order.amountPaid = (order.amountPaid || 0) + cashCollected;
+        order.amountDue = Math.max(0, order.total - order.amountPaid);
+        order.paymentStatus = order.amountDue <= 0 ? "paid" : "partial";
+        await order.save();
+
+        // Save ledger entry if we have a userId for tracking
+        if (order.userId || orderUser?._id) {
+          const ledger = new TransactionLedger({
+            userId: order.userId || orderUser?._id,
+            orderId: order._id,
+            amount: cashCollected,
+            type: "collection",
+            paymentMethod: paymentMethod || "cash",
+            recordedBy: adminUser.email,
+            notes: notes || `Reconciled B2C payment of ৳${cashCollected} by accounts department.`,
+          });
+          await ledger.save();
+        }
       }
 
-      // Record in Transaction Ledger
-      const ledger = new TransactionLedger({
-        userId: order.userId || orderUser?._id,
-        orderId: order._id,
-        amount: cashCollected,
-        type: "collection",
-        paymentMethod: paymentMethod || "cash",
-        recordedBy: adminUser.email,
-        notes: notes || `Reconciled order total ৳${order.total} by accounts department.`,
-      });
-      await ledger.save();
+      const updatedOrder = await Order.findById(orderId).lean() as any;
 
       return NextResponse.json({
         success: true,
-        message: `Successfully reconciled ৳${cashCollected} for Order #${order._id.toString().slice(-8).toUpperCase()}`,
-        order: {
-          id: order._id.toString(),
-          paymentStatus: order.paymentStatus,
-          amountPaid: order.amountPaid,
-          amountDue: order.amountDue
-        }
+        message: `Successfully processed payment of ৳${cashCollected} for ${orderUser ? 'shop ' + orderUser.name : 'order #' + orderId.slice(-8).toUpperCase()}`,
+        order: updatedOrder ? {
+          id: updatedOrder._id.toString(),
+          paymentStatus: updatedOrder.paymentStatus,
+          amountPaid: updatedOrder.amountPaid,
+          amountDue: updatedOrder.amountDue
+        } : null
       });
     }
 
@@ -209,27 +364,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "User profile not found." }, { status: 404 });
       }
 
-      // Check if user has outstanding dues first. If so, apply the deposit to clear outstanding dues!
-      let appliedToDues = 0;
-      let remainingDeposit = depositAmount;
-      const dues = shopUser.dueBalance || 0;
-
-      if (dues > 0) {
-        if (remainingDeposit >= dues) {
-          appliedToDues = dues;
-          shopUser.dueBalance = 0;
-          remainingDeposit -= dues;
-        } else {
-          appliedToDues = remainingDeposit;
-          shopUser.dueBalance = dues - remainingDeposit;
-          remainingDeposit = 0;
-        }
-      }
-
-      // Any remaining deposit goes to the wallet balance
-      shopUser.walletBalance = (shopUser.walletBalance || 0) + remainingDeposit;
-      await shopUser.save();
-
       // Log in Transaction Ledger
       const ledger = new TransactionLedger({
         userId: shopUser._id,
@@ -237,17 +371,21 @@ export async function POST(request: NextRequest) {
         type: "wallet_deposit",
         paymentMethod: paymentMethod || "cash",
         recordedBy: adminUser.email,
-        notes: notes || `Wallet Deposit of ৳${depositAmount} (${appliedToDues > 0 ? `Cleared ৳${appliedToDues} dues` : ""} ${remainingDeposit > 0 ? `Deposited ৳${remainingDeposit} to wallet` : ""}).`,
+        notes: notes || `Wallet Deposit of ৳${depositAmount}.`,
       });
       await ledger.save();
+
+      // Reconcile user ledger using FIFO
+      const { reconcileUserLedger } = await import("@/lib/ledger");
+      const { walletBalance } = await reconcileUserLedger(userId);
 
       return NextResponse.json({
         success: true,
         message: `Successfully deposited ৳${depositAmount} for shop ${shopUser.name}`,
         shop: {
           id: shopUser._id.toString(),
-          dueBalance: shopUser.dueBalance,
-          walletBalance: shopUser.walletBalance
+          dueBalance: walletBalance < 0 ? Math.abs(walletBalance) : 0,
+          walletBalance: walletBalance > 0 ? walletBalance : 0
         }
       });
     }
