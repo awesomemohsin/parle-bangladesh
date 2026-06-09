@@ -169,7 +169,7 @@ export default async function HomePage() {
       </section>
 
       {/* Newly Arrived Products Section */}
-      <section className="py-20 bg-slate-50/50 overflow-hidden">
+      <section className="pt-10 pb-16 md:py-20 bg-slate-50/50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -196,7 +196,7 @@ export default async function HomePage() {
       </section>
 
       {/* Best Sellers Section */}
-      <section className="pt-20 pb-10 bg-white overflow-hidden">
+      <section className="pt-10 pb-8 md:pt-20 md:pb-10 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-2 mb-4">
