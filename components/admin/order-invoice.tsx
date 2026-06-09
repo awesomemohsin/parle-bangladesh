@@ -250,27 +250,62 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     <span className="font-black uppercase tracking-widest">Total Amount :</span>
                     <span className="font-black">৳{order.total.toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                    <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Method :</span>
-                    <span className="font-black text-gray-900 uppercase italic text-[8px]">
-                      {order.paymentMethod === 'sslcommerz' ? 'Online Payment' : (order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : order.paymentMethod)}
-                    </span>
-                  </div>
-
-                  {/* Payment Status always shown */}
                   {(() => {
-                    const isPaid = order.paymentStatus?.toLowerCase() === 'paid' || 
-                                   (order.paymentMethod?.toLowerCase() === 'cash_on_delivery' && order.status?.toLowerCase() === 'delivered');
+                    const isB2B = order.customerType === 'retailer' || order.customerType === 'dealer';
                     
+                    const isPaid = isB2B
+                      ? (order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0))
+                      : (order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered'));
+
+                    const paymentReceived = isB2B
+                      ? (order.amountPaid !== undefined ? order.amountPaid : (isPaid ? order.total : 0))
+                      : (isPaid ? order.total : 0);
+
+                    const totalDue = isB2B
+                      ? (order.amountDue !== undefined ? order.amountDue : (isPaid ? 0 : order.total))
+                      : (isPaid ? 0 : order.total);
+
+                    const getPaymentStatusText = () => {
+                      if (isB2B) {
+                        if (isPaid) return 'PAID ✅';
+                        if (order.paymentStatus === 'partial') return `PARTIAL (Due ৳${totalDue.toFixed(0)}) ⏳`;
+                        return order.status === 'delivered' ? 'Payment Pending ✅' : 'UNPAID ⏳';
+                      } else {
+                        return isPaid ? 'PAID ✅' : 'UNPAID ⏳';
+                      }
+                    };
+
+                    const statusColor = isPaid ? 'text-green-600' : 'text-amber-600';
+
                     return (
                       <>
+                        <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-gray-500">
+                          <span className="font-bold uppercase tracking-widest text-[8px]">Payment Recieved :</span>
+                          <span className="font-black text-gray-950 text-[9px]">৳{paymentReceived.toFixed(0)}</span>
+                        </div>
+
                         <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                          <span className="font-bold text-gray-500 uppercase tracking-widest">Payment Status :</span>
-                          <span className={`font-black uppercase tracking-widest text-[8px] ${isPaid ? 'text-green-600' : 'text-amber-600'}`}>
-                            {isPaid ? 'PAID ✅' : 'PENDING ⏳'}
+                          <span className="font-bold text-gray-500 uppercase tracking-widest text-[8px]">PAYMENT STATUS :</span>
+                          <span className={`font-black uppercase text-[8px] ${statusColor}`}>
+                            {getPaymentStatusText()}
                           </span>
                         </div>
-                        {order.paymentStatus === 'paid' && (
+
+                        {totalDue > 0 && (
+                          <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-gray-500">
+                            <span className="font-bold uppercase tracking-widest text-[8px]">PAYMENT METHOD :</span>
+                            <span className="font-black text-gray-950 uppercase text-[8px]">CASH ON DELIVERY</span>
+                          </div>
+                        )}
+
+                        <div className="mt-2 flex items-center justify-between bg-red-600 px-3 py-2.5 text-white rounded-sm">
+                          <span className="text-[10px] font-black uppercase tracking-[0.1em] italic">TOTAL DUE :</span>
+                          <span className="text-sm font-black italic">
+                            ৳{totalDue.toFixed(0)}
+                          </span>
+                        </div>
+
+                        {order.paymentStatus === 'paid' && order.paymentMethod === 'sslcommerz' && (
                           <div className="flex flex-col gap-1 py-1.5 px-1 border-t border-gray-100 text-[9px] text-gray-500 leading-normal font-bold">
                             <div><span className="uppercase tracking-tight text-gray-400">Transaction ID:</span> <span className="font-mono text-gray-900 font-black text-[9px]">{order.id}</span></div>
                             {order.paymentDetails?.card_brand && (
@@ -281,13 +316,6 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                             )}
                           </div>
                         )}
-                        
-                        <div className="mt-2 flex items-center justify-between bg-red-600 px-3 py-2.5 text-white rounded-sm">
-                          <span className="text-[10px] font-black uppercase tracking-[0.1em] italic">TOTAL DUE :</span>
-                          <span className="text-sm font-black italic">
-                            ৳{isPaid ? '0' : order.total.toFixed(0)}
-                          </span>
-                        </div>
                       </>
                     );
                   })()}
