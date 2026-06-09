@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, mobile, password } = body;
 
-    if (!name || !email || !mobile || !password) {
+    if (!name || !mobile || !password) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid Bangladeshi mobile format" }, { status: 400 });
     }
 
-    const emailLower = email.toLowerCase();
+    const emailLower = (email && email.trim() !== "") 
+      ? email.toLowerCase() 
+      : `${mobile}@phone.parle.com`;
     
     // Check both User and Admin collections to prevent duplicates across roles
     const existingUser = await User.findOne({ 
