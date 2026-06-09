@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 import { Search, ShoppingCart, Filter, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 interface Variation {
   weight?: string;
@@ -319,7 +320,7 @@ export default function ShopClient({
               alt={topBanner.altText}
               fill
               sizes="100vw"
-              className="object-cover transition-transform duration-[1000ms] group-hover:scale-[1.03]"
+              className="object-cover"
             />
             {/* CTA Overlay */}
             <div className="absolute right-6 sm:right-10 md:right-16 top-1/2 -translate-y-1/2 flex items-center z-10">
@@ -377,16 +378,29 @@ export default function ShopClient({
                 return (
                   <div 
                     key={promo._id} 
-                    className="relative w-full aspect-[4/5] rounded-[2rem] shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 group border border-slate-100 bg-slate-50 overflow-hidden"
+                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full min-h-[360px]"
                   >
-                    <Link href={promo.link} className="absolute inset-0 z-20" />
-                    <Image
-                      src={promo.imageUrl}
-                      alt={promo.altText}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 25vw"
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
+                    <Link href={promo.link} className="absolute inset-0 z-10" />
+                    
+                    {/* Image Container */}
+                    <div className="relative w-full flex-grow overflow-hidden bg-slate-50">
+                      <Image
+                        src={promo.imageUrl}
+                        alt={promo.altText}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </div>
+
+                    {/* Bottom area with Button (separated from image) */}
+                    <div className="p-3 sm:p-3.5 border-t bg-white relative z-20 mt-auto">
+                      <Button
+                        className="w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] bg-red-600 text-white hover:bg-black hover:shadow-lg shadow-md border-none"
+                      >
+                        {promo.buttonText || 'Shop Now'}
+                      </Button>
+                    </div>
                   </div>
                 );
               }

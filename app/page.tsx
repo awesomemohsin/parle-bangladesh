@@ -42,7 +42,7 @@ export default async function HomePage() {
                   alt="Free Delivery"
                   fill
                   sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-contain p-4 relative z-10 scale-90 group-hover:scale-100 transition-transform duration-700"
+                  className="object-contain p-4 relative z-10 scale-90"
                 />
               </div>
 
@@ -158,7 +158,7 @@ export default async function HomePage() {
                     alt={categoryBottomPoster.altText}
                     fill
                     sizes="100vw"
-                    className="object-cover transition-transform duration-1000 group-hover:scale-[1.03] group-hover:brightness-[1.02]"
+                    className="object-cover group-hover:brightness-[1.02]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
                 </div>
@@ -232,7 +232,7 @@ export default async function HomePage() {
                     alt={bestSellersBottomPoster.altText}
                     fill
                     sizes="100vw"
-                    className="object-cover transition-transform duration-1000 group-hover:scale-[1.03] group-hover:brightness-[1.02]"
+                    className="object-cover group-hover:brightness-[1.02]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
                 </div>
