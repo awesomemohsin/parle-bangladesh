@@ -53,3 +53,83 @@ export async function getVerifiedAuthUser(
 export function hasAnyRole(user: JWTPayload, roles: string[]): boolean {
   return roles.includes(user.role);
 }
+
+/**
+ * Resolves the effective user context.
+ * If the authenticated user is a Sales Representative (SR) and provides the X-On-Behalf-Of header,
+ * this returns the impersonated shop owner's context as 'user', and the SR's profile as 'srUser'.
+ */
+export async function getEffectiveUserContext(
+  request: NextRequest,
+): Promise<{ user: any; srUser: any | null } | null> {
+  const user = await getVerifiedAuthUser(request);
+  if (!user) return null;
+
+  try {
+    const { User, Admin } = await import("@/lib/models");
+    
+    // Load full user details
+    let dbUser = await User.findById(user.id).lean() as any;
+    if (!dbUser) {
+      dbUser = await Admin.findById(user.id).lean() as any;
+    }
+
+    if (!dbUser) return null;
+
+    if (dbUser.isSR) {
+      const onBehalfOfHeader = request.headers.get("x-on-behalf-of");
+      if (onBehalfOfHeader && onBehalfOfHeader !== "null" && onBehalfOfHeader !== "undefined") {
+        const shopUser = await User.findById(onBehalfOfHeader).lean() as any;
+        if (shopUser) {
+          return {
+            user: {
+              id: shopUser._id.toString(),
+              email: shopUser.email,
+              name: shopUser.name,
+              role: shopUser.role,
+              customerType: shopUser.customerType || "customer",
+              flatDiscountPercent: shopUser.flatDiscountPercent,
+              flatDiscountExpiresAt: shopUser.flatDiscountExpiresAt,
+              isSR: false,
+              referredBySR: shopUser.referredBySR,
+              isRetailerApproved: shopUser.isRetailerApproved,
+              dueBalance: shopUser.dueBalance,
+              creditLimit: shopUser.creditLimit,
+              walletBalance: shopUser.walletBalance,
+              mobile: shopUser.mobile,
+            },
+            srUser: {
+              id: dbUser._id.toString(),
+              email: dbUser.email,
+              name: dbUser.name,
+              role: dbUser.role,
+            },
+          };
+        }
+      }
+    }
+
+    return {
+      user: {
+        id: dbUser._id.toString(),
+        email: dbUser.email,
+        name: dbUser.name,
+        role: dbUser.role,
+        customerType: dbUser.customerType || "customer",
+        flatDiscountPercent: dbUser.flatDiscountPercent,
+        flatDiscountExpiresAt: dbUser.flatDiscountExpiresAt,
+        isSR: dbUser.isSR,
+        referredBySR: dbUser.referredBySR,
+        isRetailerApproved: dbUser.isRetailerApproved,
+        dueBalance: dbUser.dueBalance,
+        creditLimit: dbUser.creditLimit,
+        walletBalance: dbUser.walletBalance,
+        mobile: dbUser.mobile,
+      },
+      srUser: null,
+    };
+  } catch (error) {
+    console.error("Error in getEffectiveUserContext:", error);
+    return null;
+  }
+}

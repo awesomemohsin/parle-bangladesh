@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProductSchema } from "@/lib/schemas";
-import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
+import { getVerifiedAuthUser, getEffectiveUserContext, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Product, User, ApprovalRequest, Notification, Category, PromoCode, StockLog } from "@/lib/models";
@@ -32,7 +32,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
     }
 
     // Security: Only admins, dealers, and retailers can see respective prices
-    const user = await getVerifiedAuthUser(_);
+    const context = await getEffectiveUserContext(_);
+    const user = context?.user;
     let showDealerPrice = false;
     let showRetailerPrice = false;
     
@@ -42,17 +43,14 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
         showDealerPrice = true;
         showRetailerPrice = true;
       }
-      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-      if (dbUser) {
-        if (dbUser.customerType === "dealer") {
-          showDealerPrice = true;
-        } else if (dbUser.customerType === "retailer") {
-          showRetailerPrice = true;
-        }
-        
-        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
-          userFlatDiscountPercent = dbUser.flatDiscountPercent;
-        }
+      if (user.customerType === "dealer") {
+        showDealerPrice = true;
+      } else if (user.customerType === "retailer") {
+        showRetailerPrice = true;
+      }
+      
+      if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date()) {
+        userFlatDiscountPercent = user.flatDiscountPercent;
       }
     }
 

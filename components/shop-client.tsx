@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 import { Search, ShoppingCart, Filter, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
+import SRShopSelector from "@/components/sr-shop-selector";
 
 interface Variation {
   weight?: string;
@@ -64,8 +65,19 @@ export default function ShopClient({
 }) {
   const { addItem } = useCart();
   const { user } = useAuth();
-  const isDealer = user?.customerType === "dealer";
-  const isRetailer = user?.customerType === "retailer";
+  
+  const [activeShop, setActiveShop] = useState<any>(null);
+  useEffect(() => {
+    const activeShopStr = localStorage.getItem("sr_active_shop_user");
+    if (activeShopStr) {
+      try {
+        setActiveShop(JSON.parse(activeShopStr));
+      } catch (e) {}
+    }
+  }, []);
+
+  const isDealer = (activeShop ? activeShop.customerType : user?.customerType) === "dealer";
+  const isRetailer = (activeShop ? activeShop.customerType : user?.customerType) === "retailer";
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
@@ -183,6 +195,7 @@ export default function ShopClient({
 
   return (
     <>
+      <SRShopSelector />
       {/* Search & Filters Interface */}
       <div className="bg-white border-2 border-gray-100 rounded-2xl p-4 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 shadow-xl shadow-gray-200/40">
         <div className="md:col-span-2 flex flex-col gap-1.5">

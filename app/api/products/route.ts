@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
+import { getVerifiedAuthUser, getEffectiveUserContext, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Product, User, PromoCode } from "@/lib/models";
@@ -57,8 +57,9 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
     
-    // Deep verification: checks tokenVersion
-    const user = await getVerifiedAuthUser(request);
+    // Resolve effective context (impersonation support)
+    const context = await getEffectiveUserContext(request);
+    const user = context?.user;
     let showDealerPrice = false;
     let showRetailerPrice = false;
     
@@ -68,17 +69,14 @@ export async function GET(request: NextRequest) {
         showDealerPrice = true;
         showRetailerPrice = true;
       }
-      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-      if (dbUser) {
-        if (dbUser.customerType === "dealer") {
-          showDealerPrice = true;
-        } else if (dbUser.customerType === "retailer") {
-          showRetailerPrice = true;
-        }
-        
-        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > new Date()) {
-          userFlatDiscountPercent = dbUser.flatDiscountPercent;
-        }
+      if (user.customerType === "dealer") {
+        showDealerPrice = true;
+      } else if (user.customerType === "retailer") {
+        showRetailerPrice = true;
+      }
+      
+      if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date()) {
+        userFlatDiscountPercent = user.flatDiscountPercent;
       }
     }
 

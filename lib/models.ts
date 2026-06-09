@@ -22,6 +22,12 @@ export interface IUser extends Document {
   tokenVersion: number;
   flatDiscountPercent?: number;
   flatDiscountExpiresAt?: Date;
+  isSR?: boolean;
+  walletBalance?: number;
+  dueBalance?: number;
+  creditLimit?: number;
+  referredBySR?: mongoose.Types.ObjectId | string;
+  isRetailerApproved?: boolean;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -44,6 +50,12 @@ const UserSchema = new Schema<IUser>(
     tokenVersion: { type: Number, default: 0 },
     flatDiscountPercent: { type: Number },
     flatDiscountExpiresAt: { type: Date },
+    isSR: { type: Boolean, default: false },
+    walletBalance: { type: Number, default: 0 },
+    dueBalance: { type: Number, default: 0 },
+    creditLimit: { type: Number, default: 10000 },
+    referredBySR: { type: Schema.Types.ObjectId, ref: "User" },
+    isRetailerApproved: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -313,6 +325,11 @@ export interface IOrder extends Document {
   deliveryMethod?: string;
   orderLogs?: IOrderLog[];
   customerType?: string; // 'retailer', 'dealer'
+  amountPaid?: number;
+  amountDue?: number;
+  reconciledBy?: string;
+  reconciledAt?: Date;
+  placedBySR?: string | mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -368,6 +385,11 @@ const OrderSchema = new Schema<IOrder>(
     deliveryMethod: { type: String, default: "shipping" },
     orderLogs: { type: [OrderLogSchema], default: [] },
     customerType: { type: String, default: "customer" },
+    amountPaid: { type: Number, default: 0 },
+    amountDue: { type: Number, default: 0 },
+    reconciledBy: { type: String },
+    reconciledAt: { type: Date },
+    placedBySR: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
@@ -827,6 +849,38 @@ OfferSchema.index({ isActive: 1 });
 OfferSchema.index({ offerEndsAt: 1 });
 
 export const Offer = mongoose.models?.Offer || mongoose.model<IOffer>("Offer", OfferSchema, "offers");
+
+// --- TRANSACTION LEDGER MODEL ---
+export interface ITransactionLedger extends Document {
+  userId: mongoose.Types.ObjectId | string;
+  orderId?: mongoose.Types.ObjectId | string;
+  amount: number; // Positive for collection/wallet deposit, negative for purchase/deductions
+  type: "collection" | "purchase" | "refund" | "wallet_deposit" | "wallet_deduction";
+  paymentMethod: string; // 'cash' | 'bkash' | 'nagad' | 'bank' | 'wallet'
+  recordedBy: string; // Admin/Accounts operator email or name
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const TransactionLedgerSchema = new Schema<ITransactionLedger>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    orderId: { type: Schema.Types.ObjectId, ref: "Order", index: true },
+    amount: { type: Number, required: true },
+    type: { 
+      type: String, 
+      enum: ["collection", "purchase", "refund", "wallet_deposit", "wallet_deduction"], 
+      required: true 
+    },
+    paymentMethod: { type: String, default: "cash" },
+    recordedBy: { type: String, required: true },
+    notes: { type: String },
+  },
+  { timestamps: true }
+);
+
+export const TransactionLedger = mongoose.models?.TransactionLedger || mongoose.model<ITransactionLedger>("TransactionLedger", TransactionLedgerSchema, "transaction_ledgers");
 
 
 

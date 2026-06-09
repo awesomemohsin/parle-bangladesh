@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Cart, Product, PromoCode, User } from "@/lib/models";
-import { getVerifiedAuthUser } from "@/lib/api-auth";
+import { getEffectiveUserContext } from "@/lib/api-auth";
 import { calculateServerSideCart } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const user = await getVerifiedAuthUser(request);
+    const context = await getEffectiveUserContext(request);
+    const user = context?.user;
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-    const isDealer = dbUser?.customerType === "dealer";
-    const isRetailer = dbUser?.customerType === "retailer";
+    const isDealer = user.customerType === "dealer";
+    const isRetailer = user.customerType === "retailer";
 
     const cart = await Cart.findOne({ userId: user.id }).lean();
     if (!cart) {
@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
         const product = productMap.get(item.productId);
         if (product) {
           const productIdStr = product._id?.toString();
-          // Find if any flat discount applies to this product (regardless of minOrder for now)
           const applicableFlat = flatDiscounts.find(d => 
             d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
           );
@@ -61,13 +60,11 @@ export async function GET(request: NextRequest) {
       }
     }
     const now = new Date();
-    const userDiscount = (dbUser && dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now)
-      ? { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) }
+    const userDiscount = (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now)
+      ? { percent: user.flatDiscountPercent, expiresAt: new Date(user.flatDiscountExpiresAt) }
       : undefined;
 
-    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount, dbUser?.customerType);
-
-
+    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount, user.customerType);
 
     return NextResponse.json({
       items: refreshedItems,
@@ -82,7 +79,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    const user = await getVerifiedAuthUser(request);
+    const context = await getEffectiveUserContext(request);
+    const user = context?.user;
 
     const { items, promoCode } = await request.json();
 
@@ -100,16 +98,13 @@ export async function POST(request: NextRequest) {
     let customerType = "customer";
 
     if (user) {
-      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-      if (dbUser) {
-        isDealer = dbUser.customerType === "dealer";
-        isRetailer = dbUser.customerType === "retailer";
-        customerType = dbUser.customerType || "customer";
-        
-        const now = new Date();
-        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
-          userDiscount = { percent: dbUser.flatDiscountPercent, expiresAt: new Date(dbUser.flatDiscountExpiresAt) };
-        }
+      isDealer = user.customerType === "dealer";
+      isRetailer = user.customerType === "retailer";
+      customerType = user.customerType || "customer";
+      
+      const now = new Date();
+      if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now) {
+        userDiscount = { percent: user.flatDiscountPercent, expiresAt: new Date(user.flatDiscountExpiresAt) };
       }
     }
 
@@ -124,8 +119,6 @@ export async function POST(request: NextRequest) {
       const product = productMap.get(pId);
       if (product) {
         const productIdStr = product._id?.toString();
-        // Find if any flat discount applies to this product (regardless of minOrder for now, 
-        // calculateServerSideCart will check minOrder)
         const applicableFlat = flatDiscounts.find(d => 
           d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
         );

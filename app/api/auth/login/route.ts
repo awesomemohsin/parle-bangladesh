@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
         customerType: user.customerType || 'customer',
         tokenVersion: user.tokenVersion || 0,
+        isSR: user.isSR || false,
       },
     });
 

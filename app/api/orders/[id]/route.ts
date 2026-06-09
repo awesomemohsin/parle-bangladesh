@@ -212,9 +212,18 @@ export async function PUT(
       }
     }
 
-    // If status changed to delivered, remove from hold
+    // If status changed to delivered, remove from hold and record outstanding dues
     if (status === "delivered" && oldStatus !== "delivered") {
-      const { Product } = await import("@/lib/models");
+      const { Product, User } = await import("@/lib/models");
+      
+      // Increment user's due balance if not already paid online
+      if (order.userId && order.paymentStatus !== "paid") {
+        await User.findByIdAndUpdate(order.userId, {
+          $inc: { dueBalance: order.total }
+        });
+        order.amountDue = order.total - (order.amountPaid || 0);
+      }
+
       for (const item of order.items) {
         if (item.productId) {
           const product = await Product.findById(item.productId);
@@ -223,15 +232,15 @@ export async function PUT(
               const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
               const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
               return weightMatch && flavorMatch;
-            });
-            if (varIndex !== -1) {
-              const holdField = `variations.${varIndex}.holdStock`;
-              const deliveredField = `variations.${varIndex}.deliveredCount`;
-              await Product.updateOne(
-                { _id: product._id },
-                { $inc: { [holdField]: -item.quantity, [deliveredField]: item.quantity } }
-              );
-            }
+             });
+             if (varIndex !== -1) {
+               const holdField = `variations.${varIndex}.holdStock`;
+               const deliveredField = `variations.${varIndex}.deliveredCount`;
+               await Product.updateOne(
+                 { _id: product._id },
+                 { $inc: { [holdField]: -item.quantity, [deliveredField]: item.quantity } }
+               );
+             }
           }
         }
       }

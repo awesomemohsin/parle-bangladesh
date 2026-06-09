@@ -215,8 +215,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (token && !alreadySynced) {
         try {
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${token}`
+          };
+          const activeShopId = localStorage.getItem("sr_active_shop_id");
+          if (activeShopId) {
+            headers["x-on-behalf-of"] = activeShopId;
+          }
           const res = await fetch("/api/cart", {
-            headers: { Authorization: `Bearer ${token}` }
+            headers
           });
           if (res.ok) {
             const data = await res.json();
@@ -315,6 +322,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         };
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const activeShopId = localStorage.getItem("sr_active_shop_id");
+        if (activeShopId) {
+          headers["x-on-behalf-of"] = activeShopId;
         }
 
         const res = await fetch("/api/cart", {

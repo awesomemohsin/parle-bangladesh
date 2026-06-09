@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVerifiedAuthUser, hasAnyRole, getAuthUserFromRequest } from "@/lib/api-auth";
+import { getEffectiveUserContext, hasAnyRole, getAuthUserFromRequest } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order, Product, Customer, PromoCode, ApprovalRequest, StockLog, User } from "@/lib/models";
@@ -192,7 +192,9 @@ export async function POST(request: NextRequest) {
     // Securely calculate prices on the server based on user role
     // DEEP VERIFICATION: Checks tokenVersion and ensures user isn't stale
     const token = await import("@/lib/api-auth").then(m => m.getTokenFromRequest(request));
-    const user = await getVerifiedAuthUser(request);
+    const context = await getEffectiveUserContext(request);
+    const user = context?.user;
+    const srUser = context?.srUser;
 
     // If token was provided but verification failed (e.g. role demoted), force re-login
     if (token && !user) {
@@ -205,18 +207,15 @@ export async function POST(request: NextRequest) {
     let customerTypeStr = "customer";
 
     if (user) {
-      const dbUser = await User.findById(user.id).select("customerType flatDiscountPercent flatDiscountExpiresAt").lean() as any;
-      if (dbUser) {
-        isDealer = dbUser.customerType === "dealer";
-        isRetailer = dbUser.customerType === "retailer";
-        customerTypeStr = dbUser.customerType || "customer";
-        const now = new Date();
-        if (dbUser.flatDiscountPercent && dbUser.flatDiscountExpiresAt && new Date(dbUser.flatDiscountExpiresAt) > now) {
-          userDiscount = {
-            percent: dbUser.flatDiscountPercent,
-            expiresAt: new Date(dbUser.flatDiscountExpiresAt)
-          };
-        }
+      isDealer = user.customerType === "dealer";
+      isRetailer = user.customerType === "retailer";
+      customerTypeStr = user.customerType || "customer";
+      const now = new Date();
+      if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now) {
+        userDiscount = {
+          percent: user.flatDiscountPercent,
+          expiresAt: new Date(user.flatDiscountExpiresAt)
+        };
       }
     }
 
@@ -321,6 +320,16 @@ export async function POST(request: NextRequest) {
     const tax = 0;
     const total = subtotal + shippingCost - discountAmount;
 
+    // Credit limit check for probation retailers
+    if (user && customerTypeStr === "retailer" && !user.isRetailerApproved) {
+      const outstandingDues = (user.dueBalance || 0) + total;
+      if (outstandingDues > 10000) {
+        return NextResponse.json({
+          error: `Credit limit exceeded. Your current outstanding dues (৳${user.dueBalance || 0}) plus this order (৳${total}) would exceed the ৳10,000 probation limit. Please contact a Superadmin for approval.`
+        }, { status: 400 });
+      }
+    }
+
     // If guest, upsert into Customer collection
     if (!user) {
       try {
@@ -365,6 +374,9 @@ export async function POST(request: NextRequest) {
       total,
       status: ORDER_STATUS.PENDING,
       customerType: customerTypeStr,
+      amountPaid: 0,
+      amountDue: total,
+      placedBySR: srUser ? srUser.id : undefined,
     });
 
     await order.save();

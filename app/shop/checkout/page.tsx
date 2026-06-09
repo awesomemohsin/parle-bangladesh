@@ -295,12 +295,18 @@ function CheckoutContent() {
 
       // Create order
       const token = localStorage.getItem('token');
+      const activeShopId = localStorage.getItem("sr_active_shop_id");
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      if (activeShopId) {
+        headers['x-on-behalf-of'] = activeShopId;
+      }
+
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
+        headers,
         body: JSON.stringify({
           items: orderItems,
           billingAddress: {
@@ -332,6 +338,10 @@ function CheckoutContent() {
 
       const order = await response.json();
       clearCart();
+
+      // Clear active shop session details if we were impersonating
+      localStorage.removeItem("sr_active_shop_id");
+      localStorage.removeItem("sr_active_shop_user");
 
       if (order.paymentMethod === "sslcommerz" && order.gatewayUrl) {
         window.location.href = order.gatewayUrl;

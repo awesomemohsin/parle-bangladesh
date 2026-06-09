@@ -173,6 +173,14 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
             )}
 
             {isModerator && (
+              <Link href="/admin/collections" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                  Dues & Collections
+                </Button>
+              </Link>
+            )}
+
+            {isModerator && (
               <Link href="/admin/orders" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
                   Order Hub
