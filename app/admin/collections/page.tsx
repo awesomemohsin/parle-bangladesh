@@ -28,6 +28,8 @@ interface Order {
   paymentMethod: string;
   paymentStatus: string;
   createdAt: string;
+  customerType?: string;
+  status: string;
 }
 
 interface Shop {
@@ -41,6 +43,7 @@ interface Shop {
   customerType: string;
   isRetailerApproved: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface Ledger {
@@ -62,16 +65,122 @@ interface Ledger {
 }
 
 export default function CollectionsPage() {
-  const [activeTab, setActiveTab] = useState<"invoices" | "shops" | "ledgers">("invoices");
+  const [activeTab, setActiveTab] = useState<"invoices" | "shops" | "ledgers" | "completed">("invoices");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [shopFilter, setShopFilter] = useState<"b2b" | "retailer" | "dealer" | "all">("b2b");
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "b2b" | "retailer" | "dealer">("all");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [shopSortBy, setShopSortBy] = useState<
+    "updatedAt" | "name" | "mobile" | "customerType" | "isRetailerApproved" | "dueBalance" | "walletBalance" | "creditLimit" | "accountBalance"
+  >("updatedAt");
+  const [shopSortOrder, setShopSortOrder] = useState<"asc" | "desc">("desc");
+  const [invoiceSortBy, setInvoiceSortBy] = useState<
+    "createdAt" | "id" | "customerName" | "total" | "amountPaid" | "amountDue" | "status"
+  >("createdAt");
+  const [invoiceSortOrder, setInvoiceSortOrder] = useState<"asc" | "desc">("desc");
+
+  const handleInvoiceSort = (field: typeof invoiceSortBy) => {
+    if (invoiceSortBy === field) {
+      setInvoiceSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setInvoiceSortBy(field);
+      const numericFields = ["total", "amountPaid", "amountDue"];
+      setInvoiceSortOrder(numericFields.includes(field) ? "desc" : "asc");
+    }
+  };
+
+  const renderInvoiceSortIndicator = (field: typeof invoiceSortBy) => {
+    if (invoiceSortBy !== field) {
+      return <span className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1">↕</span>;
+    }
+    return invoiceSortOrder === "asc" ? (
+      <span className="text-gray-900 font-extrabold ml-1">▲</span>
+    ) : (
+      <span className="text-gray-900 font-extrabold ml-1">▼</span>
+    );
+  };
+
+  const handleSort = (field: typeof shopSortBy) => {
+    if (shopSortBy === field) {
+      setShopSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setShopSortBy(field);
+      const numericFields = ["dueBalance", "walletBalance", "creditLimit", "accountBalance"];
+      setShopSortOrder(numericFields.includes(field) ? "desc" : "asc");
+    }
+  };
+
+  const renderSortIndicator = (field: typeof shopSortBy) => {
+    if (shopSortBy !== field) {
+      return <span className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1">↕</span>;
+    }
+    return shopSortOrder === "asc" ? (
+      <span className="text-gray-900 font-extrabold ml-1">▲</span>
+    ) : (
+      <span className="text-gray-900 font-extrabold ml-1">▼</span>
+    );
+  };
 
   // Modals state
   const [reconcileOrder, setReconcileOrder] = useState<Order | null>(null);
   const [walletDepositShop, setWalletDepositShop] = useState<Shop | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<{
+    orderId: string;
+    orderTotal: number;
+    due: number;
+    history: Array<{
+      id: string;
+      amount: number;
+      label: string;
+      paymentMethod: string;
+      recordedBy: string;
+      notes: string;
+      createdAt: string;
+    }>;
+  } | null>(null);
+
+  const [expandedOrderHistory, setExpandedOrderHistory] = useState<string | null>(null);
+  const [expandedHistoryData, setExpandedHistoryData] = useState<any | null>(null);
+  const [expandedLoading, setExpandedLoading] = useState(false);
+
+  const toggleRowExpand = async (orderId: string) => {
+    if (expandedOrderHistory === orderId) {
+      setExpandedOrderHistory(null);
+      setExpandedHistoryData(null);
+      return;
+    }
+    
+    setExpandedOrderHistory(orderId);
+    setExpandedHistoryData(null);
+    setExpandedLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/admin/collections?type=payment-history&orderId=${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExpandedHistoryData(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch expanded history", err);
+    } finally {
+      setExpandedLoading(false);
+    }
+  };
   
   // Form states
   const [cashAmount, setCashAmount] = useState("");
@@ -93,6 +202,7 @@ export default function CollectionsPage() {
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
+        setCompletedOrders(data.completedOrders || []);
         setShops(data.shops || []);
         setLedgers(data.ledgers || []);
       }
@@ -107,6 +217,35 @@ export default function CollectionsPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!reconcileOrder) {
+      setPaymentHistory(null);
+      return;
+    }
+
+    const fetchPaymentHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`/api/admin/collections?type=payment-history&orderId=${reconcileOrder.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPaymentHistory(data);
+        }
+      } catch (err) {
+        console.error("Failed to load payment history", err);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    fetchPaymentHistory();
+  }, [reconcileOrder]);
+
   // Recalculate top stats cards
   const totalOutstandingDues = shops.reduce((sum, s) => sum + (s.dueBalance || 0), 0);
   const totalWalletBalances = shops.reduce((sum, s) => sum + (s.walletBalance || 0), 0);
@@ -117,8 +256,17 @@ export default function CollectionsPage() {
     .filter(l => l.type === "collection" && l.createdAt.split("T")[0] === today)
     .reduce((sum, l) => sum + l.amount, 0);
 
-  const handleReconcileSubmit = async (e: React.FormEvent) => {
+  const handleReconcileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!reconcileOrder) return;
+    setConfirmAction({
+      title: "Confirm Cash Collection",
+      message: `Are you sure you want to record a cash collection of ৳${cashAmount} via ${paymentMethod === 'cash' ? 'Cash' : paymentMethod.toUpperCase()} for Order #${reconcileOrder.id.slice(-8).toUpperCase()}? This will update the order's payment status and adjust the outstanding dues.`,
+      onConfirm: () => submitReconcile()
+    });
+  };
+
+  const submitReconcile = async () => {
     if (!reconcileOrder) return;
     setActionLoading(true);
     setErrorMsg("");
@@ -162,8 +310,17 @@ export default function CollectionsPage() {
     }
   };
 
-  const handleWalletDepositSubmit = async (e: React.FormEvent) => {
+  const handleWalletDepositSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!walletDepositShop) return;
+    setConfirmAction({
+      title: "Confirm Wallet Deposit",
+      message: `Are you sure you want to record a direct wallet deposit of ৳${cashAmount} via ${paymentMethod === 'cash' ? 'Cash' : paymentMethod.toUpperCase()} for ${walletDepositShop.name}? This will automatically clear any outstanding dues first, and allocate any remaining amount to the wallet balance.`,
+      onConfirm: () => submitWalletDeposit()
+    });
+  };
+
+  const submitWalletDeposit = async () => {
     if (!walletDepositShop) return;
     setActionLoading(true);
     setErrorMsg("");
@@ -206,8 +363,15 @@ export default function CollectionsPage() {
     }
   };
 
-  const handleApproveRetailer = async (shopId: string) => {
-    if (!confirm("Are you sure you want to approve this retailer and increase credit limit to ৳50,000?")) return;
+  const handleApproveRetailer = (shopId: string) => {
+    setConfirmAction({
+      title: "Approve Retailer",
+      message: "Are you sure you want to approve this retailer and increase their credit limit to ৳50,000?",
+      onConfirm: () => submitApproveRetailer(shopId)
+    });
+  };
+
+  const submitApproveRetailer = async (shopId: string) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -236,20 +400,134 @@ export default function CollectionsPage() {
     }
   };
 
-  // Filter listings based on query
-  const filteredOrders = orders.filter(
-    o =>
+  // Filter listings based on query, invoice type, and order status
+  const filteredOrders = orders.filter(o => {
+    const matchesSearch =
       o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.customerPhone.includes(searchQuery) ||
-      o.id.slice(-8).toUpperCase().includes(searchQuery.toUpperCase())
-  );
+      o.id.slice(-8).toUpperCase().includes(searchQuery.toUpperCase());
+    
+    if (!matchesSearch) return false;
 
-  const filteredShops = shops.filter(
-    s =>
+    // Filter by customer/shop type
+    if (invoiceFilter === "b2b") {
+      if (o.customerType !== "retailer" && o.customerType !== "dealer") return false;
+    } else if (invoiceFilter === "retailer") {
+      if (o.customerType !== "retailer") return false;
+    } else if (invoiceFilter === "dealer") {
+      if (o.customerType !== "dealer") return false;
+    }
+
+    // Filter by order status
+    if (orderStatusFilter !== "all") {
+      if (o.status !== orderStatusFilter) return false;
+    }
+
+    return true;
+  });
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    let valA: any = a[invoiceSortBy];
+    let valB: any = b[invoiceSortBy];
+
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+
+    if (valA === undefined || valA === null) valA = 0;
+    if (valB === undefined || valB === null) valB = 0;
+
+    if (valA < valB) return invoiceSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return invoiceSortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const filteredCompletedOrders = completedOrders.filter(o => {
+    const matchesSearch =
+      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.customerPhone.includes(searchQuery) ||
+      o.id.slice(-8).toUpperCase().includes(searchQuery.toUpperCase());
+    
+    if (!matchesSearch) return false;
+
+    // Filter by customer/shop type
+    if (invoiceFilter === "b2b") {
+      if (o.customerType !== "retailer" && o.customerType !== "dealer") return false;
+    } else if (invoiceFilter === "retailer") {
+      if (o.customerType !== "retailer") return false;
+    } else if (invoiceFilter === "dealer") {
+      if (o.customerType !== "dealer") return false;
+    }
+
+    // Filter by order status
+    if (orderStatusFilter !== "all") {
+      if (o.status !== orderStatusFilter) return false;
+    }
+
+    return true;
+  });
+
+  const sortedCompletedOrders = [...filteredCompletedOrders].sort((a, b) => {
+    let valA: any = a[invoiceSortBy];
+    let valB: any = b[invoiceSortBy];
+
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+
+    if (valA === undefined || valA === null) valA = 0;
+    if (valB === undefined || valB === null) valB = 0;
+
+    if (valA < valB) return invoiceSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return invoiceSortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const filteredShops = shops.filter(s => {
+    const matchesSearch = 
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.mobile.includes(searchQuery) ||
-      (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+      (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (!matchesSearch) return false;
+
+    if (shopFilter === "b2b") {
+      return s.customerType === "retailer" || s.customerType === "dealer";
+    }
+    if (shopFilter === "retailer") {
+      return s.customerType === "retailer";
+    }
+    if (shopFilter === "dealer") {
+      return s.customerType === "dealer";
+    }
+    return true; // "all" shows all customer types
+  });
+
+  const sortedShops = [...filteredShops].sort((a, b) => {
+    if (shopSortBy === "accountBalance") {
+      const valA = (a.walletBalance || 0) - (a.dueBalance || 0);
+      const valB = (b.walletBalance || 0) - (b.dueBalance || 0);
+      if (valA < valB) return shopSortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return shopSortOrder === "asc" ? 1 : -1;
+      return 0;
+    }
+
+    let valA: any = a[shopSortBy as keyof Shop];
+    let valB: any = b[shopSortBy as keyof Shop];
+
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+
+    if (shopSortBy === "isRetailerApproved") {
+      valA = a.customerType === "retailer" ? (a.isRetailerApproved ? 1 : 0) : -1;
+      valB = b.customerType === "retailer" ? (b.isRetailerApproved ? 1 : 0) : -1;
+    }
+
+    if (valA === undefined || valA === null) valA = 0;
+    if (valB === undefined || valB === null) valB = 0;
+
+    if (valA < valB) return shopSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return shopSortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   const filteredLedgers = ledgers.filter(
     l =>
@@ -330,10 +608,10 @@ export default function CollectionsPage() {
 
       {/* Main navigation tabs & search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-2">
-        <div className="flex items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-full md:w-auto">
           <button
             onClick={() => { setActiveTab("invoices"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
               activeTab === "invoices"
                 ? "bg-white text-gray-900 shadow-md shadow-gray-200"
                 : "text-gray-400 hover:text-gray-900"
@@ -343,7 +621,7 @@ export default function CollectionsPage() {
           </button>
           <button
             onClick={() => { setActiveTab("shops"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
               activeTab === "shops"
                 ? "bg-white text-gray-900 shadow-md shadow-gray-200"
                 : "text-gray-400 hover:text-gray-900"
@@ -352,8 +630,18 @@ export default function CollectionsPage() {
             B2B Shop Balances ({shops.length})
           </button>
           <button
+            onClick={() => { setActiveTab("completed"); setSearchQuery(""); }}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
+              activeTab === "completed"
+                ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                : "text-gray-400 hover:text-gray-900"
+            }`}
+          >
+            Completed Invoices ({completedOrders.length})
+          </button>
+          <button
             onClick={() => { setActiveTab("ledgers"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
               activeTab === "ledgers"
                 ? "bg-white text-gray-900 shadow-md shadow-gray-200"
                 : "text-gray-400 hover:text-gray-900"
@@ -371,7 +659,7 @@ export default function CollectionsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
-              activeTab === "invoices" 
+              activeTab === "invoices" || activeTab === "completed"
                 ? "Search invoice, shop, phone..." 
                 : activeTab === "shops" 
                 ? "Search shop name or mobile..."
@@ -393,92 +681,640 @@ export default function CollectionsPage() {
           
           {/* TAB 1: OUTSTANDING INVOICES */}
           {activeTab === "invoices" && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    <th className="py-4 px-3">Order ID</th>
-                    <th className="py-4 px-3">Date</th>
-                    <th className="py-4 px-3">Customer Shop</th>
-                    <th className="py-4 px-3">Grand Total</th>
-                    <th className="py-4 px-3">Paid</th>
-                    <th className="py-4 px-3">Outstanding Dues</th>
-                    <th className="py-4 px-3">Status</th>
-                    <th className="py-4 px-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
-                  {filteredOrders.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-400 uppercase tracking-wider">No outstanding delivered invoices found.</td>
+            <div className="space-y-4 animate-in fade-in duration-300">
+              {/* Invoice Filter Selector Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("all")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "all"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    All Invoices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("b2b")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "b2b"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Retailer & Dealers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("retailer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "retailer"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Retailers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("dealer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "dealer"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Dealers
+                  </button>
+                </div>
+
+                {/* Order Status selector */}
+                <div className="flex items-center gap-2 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Order Status:</span>
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    className="h-8 px-3 text-[10px] font-black uppercase bg-white border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-all cursor-pointer min-w-[120px]"
+                  >
+                    <option value="all">ALL STATUSES</option>
+                    <option value="processing">PROCESSING</option>
+                    <option value="shipped">SHIPPED</option>
+                    <option value="delivered">DELIVERED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      <th 
+                        onClick={() => handleInvoiceSort("id")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Order ID {renderInvoiceSortIndicator("id")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("createdAt")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Date {renderInvoiceSortIndicator("createdAt")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("customerName")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Customer Shop {renderInvoiceSortIndicator("customerName")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("total")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Grand Total {renderInvoiceSortIndicator("total")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("amountPaid")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Paid {renderInvoiceSortIndicator("amountPaid")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("amountDue")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Outstanding Dues {renderInvoiceSortIndicator("amountDue")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("status")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Order Status {renderInvoiceSortIndicator("status")}
+                        </div>
+                      </th>
+                      <th className="py-4 px-3">Payment Status</th>
+                      <th className="py-4 px-3 text-right">Action</th>
                     </tr>
-                  ) : (
-                    filteredOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 px-3 font-mono text-gray-900 font-black">
-                          #{order.id.slice(-8).toUpperCase()}
-                        </td>
-                        <td className="py-4 px-3 text-gray-400">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-4 px-3">
-                          <div className="font-bold text-gray-900">{order.customerName}</div>
-                          <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
-                        </td>
-                        <td className="py-4 px-3 font-black text-gray-900">৳{order.total}</td>
-                        <td className="py-4 px-3 text-emerald-500">৳{order.amountPaid || 0}</td>
-                        <td className="py-4 px-3 text-rose-500 font-black">৳{order.amountDue ?? order.total}</td>
-                        <td className="py-4 px-3">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                            order.paymentStatus === "partial" 
-                              ? "bg-amber-50 text-amber-600 border-amber-200" 
-                              : "bg-rose-50 text-rose-600 border-rose-200"
-                          }`}>
-                            {order.paymentStatus}
-                          </span>
-                        </td>
-                        <td className="py-4 px-3 text-right">
-                          <Button 
-                            onClick={() => {
-                              setReconcileOrder(order);
-                              setCashAmount(String(order.amountDue ?? order.total));
-                            }}
-                            className="bg-amber-600 hover:bg-black text-white px-4 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95 shrink-0"
-                          >
-                            Collect Cash
-                          </Button>
-                        </td>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
+                    {filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-gray-400 uppercase tracking-wider">No outstanding delivered invoices found.</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      sortedOrders.map((order) => (
+                        <React.Fragment key={order.id}>
+                          <tr 
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer select-none border-b border-gray-100 last:border-b-0"
+                            onClick={() => toggleRowExpand(order.id)}
+                          >
+                            <td className="py-4 px-3 font-mono text-gray-900 font-black flex items-center gap-1.5">
+                              <span className="text-[9px] text-gray-400 font-black shrink-0 w-3 text-center">
+                                {expandedOrderHistory === order.id ? "▼" : "▶"}
+                              </span>
+                              <span>#{order.id.slice(-8).toUpperCase()}</span>
+                            </td>
+                            <td className="py-4 px-3 text-gray-400">
+                              {new Date(order.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-3">
+                              <div className="font-bold text-gray-900">{order.customerName}</div>
+                              <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
+                            </td>
+                            <td className="py-4 px-3 font-black text-gray-900">৳{order.total}</td>
+                            <td className="py-4 px-3 text-emerald-500">৳{order.amountPaid || 0}</td>
+                            <td className="py-4 px-3 text-rose-500 font-black">৳{order.amountDue ?? order.total}</td>
+                            <td className="py-4 px-3">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                                order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-3">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                order.paymentStatus === "partial" 
+                                  ? "bg-amber-50 text-amber-600 border-amber-200" 
+                                  : "bg-rose-50 text-rose-600 border-rose-200"
+                              }`}>
+                                {order.paymentStatus}
+                              </span>
+                            </td>
+                            <td className="py-4 px-3 text-right">
+                              <Button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReconcileOrder(order);
+                                  setCashAmount(String(order.amountDue ?? order.total));
+                                }}
+                                className="bg-amber-600 hover:bg-black text-white px-4 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95 shrink-0"
+                              >
+                                Collect Cash
+                              </Button>
+                            </td>
+                          </tr>
+
+                          {/* EXPANDED INLINE AUDIT TRAIL */}
+                          {expandedOrderHistory === order.id && (
+                            <tr className="bg-slate-50/60 border-y border-slate-100">
+                              <td colSpan={9} className="py-3 px-6">
+                                <div className="max-w-2xl bg-white rounded-2xl p-5 border border-slate-100 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-slate-200/50 pb-2 flex justify-between items-center">
+                                    <span>Detailed Allocation & Payment Audit Trail</span>
+                                    {expandedLoading && <span className="text-amber-600 animate-pulse text-[8px] tracking-normal font-bold uppercase">Retrieving...</span>}
+                                  </h4>
+                                  
+                                  {expandedLoading && !expandedHistoryData ? (
+                                    <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
+                                      Retrieving Ledger History...
+                                    </div>
+                                  ) : !expandedHistoryData || expandedHistoryData.history.length === 0 ? (
+                                    <div className="text-[10px] text-gray-400 font-bold italic py-2.5 text-center bg-slate-50 rounded-xl border border-dashed border-slate-100">
+                                      No payment allocations recorded for this invoice yet.
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-4">
+                                      <div className="text-[10px] font-black text-gray-500 uppercase tracking-tight flex justify-between px-1 border-b border-slate-100 pb-1">
+                                        <span>Initial Order Charge:</span>
+                                        <span className="font-extrabold text-slate-900">৳{expandedHistoryData.orderTotal}</span>
+                                      </div>
+                                      <div className="space-y-2 pl-3 border-l border-slate-200">
+                                        {(() => {
+                                          let currentRemaining = expandedHistoryData.orderTotal;
+                                          return expandedHistoryData.history.map((item: any, idx: number) => {
+                                            currentRemaining = Math.max(0, currentRemaining - item.amount);
+                                            return (
+                                              <div key={item.id || idx} className="text-xs text-gray-700 py-2 relative pl-4">
+                                                {/* Bullet dot */}
+                                                <div className="absolute left-[-16.5px] top-3.5 w-2 h-2 rounded-full bg-slate-400 border border-white" />
+                                                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                                  <div className="font-black text-gray-900 uppercase text-[10px]">
+                                                    {item.label}
+                                                  </div>
+                                                  <div className="font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                    -৳{item.amount}
+                                                  </div>
+                                                </div>
+                                                <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                                                  <span>Collected: <strong className="text-slate-600">{new Date(item.createdAt).toLocaleString()}</strong></span>
+                                                  <span>Method: <strong className="text-slate-600">{item.paymentMethod.toUpperCase()}</strong></span>
+                                                  <span>By: <strong className="text-slate-600">{item.recordedBy}</strong></span>
+                                                  <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
+                                                </div>
+                                                {item.notes && (
+                                                  <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit">
+                                                    Remarks: "{item.notes}"
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          });
+                                        })()}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 1B: COMPLETED INVOICES */}
+          {activeTab === "completed" && (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              {/* Invoice Filter Selector Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("all")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "all"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    All Invoices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("b2b")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "b2b"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Retailer & Dealers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("retailer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "retailer"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Retailers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("dealer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      invoiceFilter === "dealer"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Dealers
+                  </button>
+                </div>
+
+                {/* Order Status selector */}
+                <div className="flex items-center gap-2 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Order Status:</span>
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    className="h-8 px-3 text-[10px] font-black uppercase bg-white border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-all cursor-pointer min-w-[120px]"
+                  >
+                    <option value="all">ALL STATUSES</option>
+                    <option value="processing">PROCESSING</option>
+                    <option value="shipped">SHIPPED</option>
+                    <option value="delivered">DELIVERED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      <th 
+                        onClick={() => handleInvoiceSort("id")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Order ID {renderInvoiceSortIndicator("id")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("createdAt")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Date {renderInvoiceSortIndicator("createdAt")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("customerName")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Customer Shop {renderInvoiceSortIndicator("customerName")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("total")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Grand Total {renderInvoiceSortIndicator("total")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("amountPaid")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Paid {renderInvoiceSortIndicator("amountPaid")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("amountDue")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Outstanding Dues {renderInvoiceSortIndicator("amountDue")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleInvoiceSort("status")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Order Status {renderInvoiceSortIndicator("status")}
+                        </div>
+                      </th>
+                      <th className="py-4 px-3">Payment Status</th>
+                      <th className="py-4 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
+                    {filteredCompletedOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-gray-400 uppercase tracking-wider">No completed paid invoices found.</td>
+                      </tr>
+                    ) : (
+                      sortedCompletedOrders.map((order) => (
+                        <React.Fragment key={order.id}>
+                          <tr 
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer select-none border-b border-gray-100 last:border-b-0"
+                            onClick={() => toggleRowExpand(order.id)}
+                          >
+                            <td className="py-4 px-3 font-mono text-gray-900 font-black flex items-center gap-1.5">
+                              <span className="text-[9px] text-gray-400 font-black shrink-0 w-3 text-center">
+                                {expandedOrderHistory === order.id ? "▼" : "▶"}
+                              </span>
+                              <span>#{order.id.slice(-8).toUpperCase()}</span>
+                            </td>
+                            <td className="py-4 px-3 text-gray-400">
+                              {new Date(order.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-3">
+                              <div className="font-bold text-gray-900">{order.customerName}</div>
+                              <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
+                            </td>
+                            <td className="py-4 px-3 font-black text-gray-900">৳{order.total}</td>
+                            <td className="py-4 px-3 text-emerald-500">৳{order.amountPaid || 0}</td>
+                            <td className="py-4 px-3 text-gray-400 font-normal">৳{order.amountDue || 0}</td>
+                            <td className="py-4 px-3">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                                order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-3">
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">
+                                PAID
+                              </span>
+                            </td>
+                            <td className="py-4 px-3 text-right">
+                              <Button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRowExpand(order.id);
+                                }}
+                                className="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95 shrink-0"
+                              >
+                                {expandedOrderHistory === order.id ? "Hide History" : "View History"}
+                              </Button>
+                            </td>
+                          </tr>
+
+                          {/* EXPANDED INLINE AUDIT TRAIL */}
+                          {expandedOrderHistory === order.id && (
+                            <tr className="bg-slate-50/60 border-y border-slate-100">
+                              <td colSpan={9} className="py-3 px-6">
+                                <div className="max-w-2xl bg-white rounded-2xl p-5 border border-slate-100 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-slate-200/50 pb-2 flex justify-between items-center">
+                                    <span>Detailed Allocation & Payment Audit Trail</span>
+                                    {expandedLoading && <span className="text-amber-600 animate-pulse text-[8px] tracking-normal font-bold uppercase">Retrieving...</span>}
+                                  </h4>
+                                  
+                                  {expandedLoading && !expandedHistoryData ? (
+                                    <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
+                                      Retrieving Ledger History...
+                                    </div>
+                                  ) : !expandedHistoryData || expandedHistoryData.history.length === 0 ? (
+                                    <div className="text-[10px] text-gray-400 font-bold italic py-2.5 text-center bg-slate-50 rounded-xl border border-dashed border-slate-100">
+                                      No payment allocations recorded for this invoice yet.
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-4">
+                                      <div className="text-[10px] font-black text-gray-500 uppercase tracking-tight flex justify-between px-1 border-b border-slate-100 pb-1">
+                                        <span>Initial Order Charge:</span>
+                                        <span className="font-extrabold text-slate-900">৳{expandedHistoryData.orderTotal}</span>
+                                      </div>
+                                      <div className="space-y-2 pl-3 border-l border-slate-200">
+                                        {(() => {
+                                          let currentRemaining = expandedHistoryData.orderTotal;
+                                          return expandedHistoryData.history.map((item: any, idx: number) => {
+                                            currentRemaining = Math.max(0, currentRemaining - item.amount);
+                                            return (
+                                              <div key={item.id || idx} className="text-xs text-gray-700 py-2 relative pl-4">
+                                                {/* Bullet dot */}
+                                                <div className="absolute left-[-16.5px] top-3.5 w-2 h-2 rounded-full bg-slate-400 border border-white" />
+                                                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                                  <div className="font-black text-gray-900 uppercase text-[10px]">
+                                                    {item.label}
+                                                  </div>
+                                                  <div className="font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                    -৳{item.amount}
+                                                  </div>
+                                                </div>
+                                                <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                                                  <span>Collected: <strong className="text-slate-600">{new Date(item.createdAt).toLocaleString()}</strong></span>
+                                                  <span>Method: <strong className="text-slate-600">{item.paymentMethod.toUpperCase()}</strong></span>
+                                                  <span>By: <strong className="text-slate-600">{item.recordedBy}</strong></span>
+                                                  <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
+                                                </div>
+                                                {item.notes && (
+                                                  <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit">
+                                                    Remarks: "{item.notes}"
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          });
+                                        })()}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           {/* TAB 2: B2B SHOP BALANCES & WALLETS */}
           {activeTab === "shops" && (
-            <div className="overflow-x-auto">
+            <div className="space-y-4 animate-in fade-in duration-300">
+              {/* Shop Balances Role Selector Bar */}
+              <div className="flex flex-wrap items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                <button
+                  type="button"
+                  onClick={() => setShopFilter("b2b")}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    shopFilter === "b2b"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  Retailer & Dealers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShopFilter("retailer")}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    shopFilter === "retailer"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  Retailers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShopFilter("dealer")}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    shopFilter === "dealer"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  Dealers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShopFilter("all")}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    shopFilter === "all"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                  }`}
+                >
+                  All Customers
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    <th className="py-4 px-3">Shop Profile</th>
-                    <th className="py-4 px-3">Mobile</th>
-                    <th className="py-4 px-3">Customer Type</th>
-                    <th className="py-4 px-3">Probation Status</th>
-                    <th className="py-4 px-3">Outstanding Dues</th>
-                    <th className="py-4 px-3">Wallet Balance</th>
-                    <th className="py-4 px-3">Credit Limit</th>
+                    <th 
+                      onClick={() => handleSort("name")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Shop Profile {renderSortIndicator("name")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("mobile")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Mobile {renderSortIndicator("mobile")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("customerType")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Customer Type {renderSortIndicator("customerType")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("isRetailerApproved")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Probation Status {renderSortIndicator("isRetailerApproved")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("accountBalance")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Account Balance {renderSortIndicator("accountBalance")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("creditLimit")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Credit Limit {renderSortIndicator("creditLimit")}
+                      </div>
+                    </th>
                     <th className="py-4 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
-                  {filteredShops.length === 0 ? (
+                  {sortedShops.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-400 uppercase tracking-wider">No shop profiles found.</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-400 uppercase tracking-wider">No shop profiles found.</td>
                     </tr>
                   ) : (
-                    filteredShops.map((shop) => (
+                    sortedShops.map((shop) => (
                       <tr key={shop.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="py-4 px-3">
                           <div className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</div>
@@ -509,11 +1345,17 @@ export default function CollectionsPage() {
                             <span className="text-gray-400">—</span>
                           )}
                         </td>
-                        <td className="py-4 px-3 text-rose-500 font-black">
-                          ৳{shop.dueBalance || 0}
-                        </td>
-                        <td className="py-4 px-3 text-emerald-500 font-black">
-                          ৳{shop.walletBalance || 0}
+                        <td className="py-4 px-3">
+                          {(() => {
+                            const balance = (shop.walletBalance || 0) - (shop.dueBalance || 0);
+                            if (balance < 0) {
+                              return <span className="text-rose-500 font-black">-৳{Math.abs(balance)}</span>;
+                            }
+                            if (balance > 0) {
+                              return <span className="text-emerald-500 font-black">+৳{balance}</span>;
+                            }
+                            return <span className="text-gray-400 font-normal">৳0</span>;
+                          })()}
                         </td>
                         <td className="py-4 px-3 text-gray-900">
                           ৳{shop.creditLimit || 10000}
@@ -543,6 +1385,7 @@ export default function CollectionsPage() {
                 </tbody>
               </table>
             </div>
+          </div>
           )}
 
           {/* TAB 3: TRANSACTION LEDGERS */}
@@ -642,6 +1485,59 @@ export default function CollectionsPage() {
                   <span>Outstanding Dues</span>
                   <span>৳{reconcileOrder.amountDue ?? reconcileOrder.total}</span>
                 </div>
+              </div>
+
+              {/* Order Payment History Audit Trail */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2.5">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-slate-200/50 pb-1.5 flex justify-between items-center">
+                  <span>Payment History & Allocations</span>
+                  {historyLoading && <span className="text-amber-600 animate-pulse text-[8px] tracking-normal font-bold uppercase">Loading...</span>}
+                </h4>
+                {historyLoading && !paymentHistory ? (
+                  <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
+                    Retrieving Ledger History...
+                  </div>
+                ) : !paymentHistory || paymentHistory.history.length === 0 ? (
+                  <div className="text-[10px] text-gray-400 font-bold italic py-1 text-center">
+                    No payment allocations recorded for this order yet.
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-56 overflow-y-auto pr-1">
+                    <div className="space-y-2 pl-3 border-l border-slate-200">
+                      {(() => {
+                        let currentRemaining = paymentHistory.orderTotal;
+                        return paymentHistory.history.map((item, idx) => {
+                          currentRemaining = Math.max(0, currentRemaining - item.amount);
+                          return (
+                            <div key={item.id || idx} className="text-xs text-gray-700 py-1.5 relative pl-4">
+                              {/* Bullet dot */}
+                              <div className="absolute left-[-16.5px] top-3.5 w-2 h-2 rounded-full bg-slate-400 border border-white" />
+                              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                <div className="font-black text-gray-900 uppercase text-[10px]">
+                                  {item.label}
+                                </div>
+                                <div className="font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
+                                  -৳{item.amount}
+                                </div>
+                              </div>
+                              <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
+                                <span>Collected: <strong className="text-slate-600">{new Date(item.createdAt).toLocaleString()}</strong></span>
+                                <span>Method: <strong className="text-slate-600">{item.paymentMethod.toUpperCase()}</strong></span>
+                                <span>By: <strong className="text-slate-600">{item.recordedBy}</strong></span>
+                                <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
+                              </div>
+                              {item.notes && (
+                                <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit">
+                                  Remarks: "{item.notes}"
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -772,6 +1668,42 @@ export default function CollectionsPage() {
                 {actionLoading ? "Processing Deposit..." : "Deposit Funds & Reconcile"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION POPUP MODAL */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 border-b pb-3 mb-4">
+              <h3 className="text-md font-black text-gray-900 uppercase tracking-tighter italic">
+                {confirmAction.title}
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 font-bold leading-relaxed mb-6">
+              {confirmAction.message}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                variant="outline"
+                className="flex-1 border-2 border-gray-200 rounded-xl hover:bg-gray-50 uppercase tracking-wider text-[9px] font-black h-11"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  confirmAction.onConfirm();
+                  setConfirmAction(null);
+                }}
+                className="flex-1 bg-amber-600 hover:bg-black text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg h-11 transition-all"
+              >
+                Confirm & Proceed
+              </Button>
+            </div>
           </div>
         </div>
       )}
