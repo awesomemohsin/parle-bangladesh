@@ -76,8 +76,9 @@ export default function ShopClient({
     }
   }, []);
 
-  const isDealer = (activeShop ? activeShop.customerType : user?.customerType) === "dealer";
-  const isRetailer = (activeShop ? activeShop.customerType : user?.customerType) === "retailer";
+  const isB2BRole = user?.role === "customer";
+  const isDealer = isB2BRole && (activeShop ? activeShop.customerType : user?.customerType) === "dealer";
+  const isRetailer = isB2BRole && (activeShop ? activeShop.customerType : user?.customerType) === "retailer";
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
@@ -313,7 +314,7 @@ export default function ShopClient({
 
       {/* Top Banner Promotional Section */}
       {topBanner && (
-        <div className="mb-8 relative w-full h-[100px] sm:h-[140px] md:h-[180px] rounded-[2rem] overflow-hidden bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
+        <div className="mb-8 relative w-full aspect-[7/1] rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
           <Link href={topBanner.link} className="block relative w-full h-full">
             <Image
               src={topBanner.imageUrl}
@@ -378,7 +379,7 @@ export default function ShopClient({
                 return (
                   <div 
                     key={promo._id} 
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full min-h-[360px]"
+                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full min-h-[280px] sm:min-h-[360px]"
                   >
                     <Link href={promo.link} className="absolute inset-0 z-10" />
                     
@@ -389,7 +390,7 @@ export default function ShopClient({
                         alt={promo.altText}
                         fill
                         sizes="(max-width: 768px) 100vw, 25vw"
-                        style={{ objectFit: 'cover' }}
+                        style={{ objectFit: 'contain' }}
                       />
                     </div>
 

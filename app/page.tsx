@@ -96,7 +96,7 @@ export default async function HomePage() {
       </div>
 
       {/* Categories Grid */}
-      <section id="categories" className="py-16 bg-slate-50/30">
+      <section id="categories" className="pt-16 pb-8 bg-slate-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div>
@@ -150,9 +150,9 @@ export default async function HomePage() {
           </div>
 
           {categoryBottomPoster && (
-            <MotionDiv className="relative w-full rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-12">
+            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-12">
               <Link href={categoryBottomPoster.link}>
-                <div className="relative w-full aspect-[4.5/1] md:aspect-[7/1] cursor-pointer bg-slate-100">
+                <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
                   <Image
                     src={categoryBottomPoster.imageUrl}
                     alt={categoryBottomPoster.altText}
@@ -196,7 +196,7 @@ export default async function HomePage() {
       </section>
 
       {/* Best Sellers Section */}
-      <section className="py-20 bg-white overflow-hidden">
+      <section className="pt-20 pb-10 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -224,9 +224,9 @@ export default async function HomePage() {
           )}
 
           {bestSellersBottomPoster && (
-            <MotionDiv className="relative w-full rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-16">
+            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-16">
               <Link href={bestSellersBottomPoster.link}>
-                <div className="relative w-full aspect-[4.5/1] md:aspect-[7/1] cursor-pointer bg-slate-100">
+                <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
                   <Image
                     src={bestSellersBottomPoster.imageUrl}
                     alt={bestSellersBottomPoster.altText}
@@ -240,7 +240,7 @@ export default async function HomePage() {
             </MotionDiv>
           )}
 
-          <div className="mt-16 text-center">
+          <div className="mt-8 text-center">
             <Link href="/shop">
               <Button size="lg" className="h-14 px-10 rounded-xl bg-white text-black hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition-all shadow-xl active:scale-95 text-xs">
                 See All Products

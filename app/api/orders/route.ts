@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     let userDiscount = undefined;
     let customerTypeStr = "customer";
 
-    if (user) {
+    if (user && user.role === "customer") {
       isDealer = user.customerType === "dealer";
       isRetailer = user.customerType === "retailer";
       customerTypeStr = user.customerType || "customer";

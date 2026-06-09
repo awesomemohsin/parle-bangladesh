@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isDealer = user.customerType === "dealer";
-    const isRetailer = user.customerType === "retailer";
+    const isDealer = user.role === "customer" && user.customerType === "dealer";
+    const isRetailer = user.role === "customer" && user.customerType === "retailer";
 
     const cart = await Cart.findOne({ userId: user.id }).lean();
     if (!cart) {
@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
       ? { percent: user.flatDiscountPercent, expiresAt: new Date(user.flatDiscountExpiresAt) }
       : undefined;
 
-    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount, user.customerType);
+    const customerType = user.role === "customer" ? (user.customerType || "customer") : "customer";
+    const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount, customerType);
 
     return NextResponse.json({
       items: refreshedItems,
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     let userDiscount = undefined;
     let customerType = "customer";
 
-    if (user) {
+    if (user && user.role === "customer") {
       isDealer = user.customerType === "dealer";
       isRetailer = user.customerType === "retailer";
       customerType = user.customerType || "customer";

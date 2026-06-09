@@ -419,7 +419,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const existingIdx = prev.items.findIndex(i => itemMatchesKey(i, itemKey));
       let newItems = [...prev.items];
       
-      const isDealerUser = user?.customerType === "dealer";
+      const isDealerUser = user?.role === "customer" && user?.customerType === "dealer";
       const canInputManual = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealerUser);
       const maxAllowed = canInputManual ? 999999 : (normalized.stock || 999);
 
@@ -467,7 +467,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const updateQuantity = useCallback((key: string, quantity: number) => {
     setCart(prev => {
-      const isDealerUser = user?.customerType === "dealer";
+      const isDealerUser = user?.role === "customer" && user?.customerType === "dealer";
       const canInputManual = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealerUser);
 
       const newItems = quantity <= 0 

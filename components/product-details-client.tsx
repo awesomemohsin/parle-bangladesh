@@ -45,8 +45,8 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const { addItem } = useCart();
   const { user } = useAuth();
   
-  const isDealer = user?.customerType === "dealer";
-  const isRetailer = user?.customerType === "retailer";
+  const isDealer = user?.role === "customer" && user?.customerType === "dealer";
+  const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
   
   const searchParams = useSearchParams();
