@@ -32,6 +32,11 @@ export default function PromoCodeApprovalsPage() {
   const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>({})
   const [user, setUser] = useState<any>(null)
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest')
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     fetchRequests()
@@ -267,23 +272,31 @@ export default function PromoCodeApprovalsPage() {
                          </p>
                       </div>
                    ) : (
-                      <>
-                        <Button 
-                          disabled={isProcessing[request._id]}
-                          onClick={() => handleProcess(request._id, 'approved')}
-                          className="bg-amber-600 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl"
-                        >
-                          {isProcessing[request._id] ? "Processing..." : "Approve & Go Live"}
-                        </Button>
-                        <Button 
-                          disabled={isProcessing[request._id]}
-                          onClick={() => handleProcess(request._id, 'declined')}
-                          variant="ghost"
-                          className="text-gray-400 hover:text-red-600 font-black uppercase tracking-widest text-[9px] h-10 transition-all underline"
-                        >
-                          Decline
-                        </Button>
-                      </>
+                       <>
+                         <Button 
+                           disabled={isProcessing[request._id]}
+                           onClick={() => setConfirmAction({
+                             title: "Verify Consensus",
+                             message: `Are you sure you want to approve this promo code request for ${request.targetName}?`,
+                             onConfirm: () => handleProcess(request._id, 'approved')
+                           })}
+                           className="bg-amber-600 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl"
+                         >
+                           {isProcessing[request._id] ? "Processing..." : "Approve & Go Live"}
+                         </Button>
+                         <Button 
+                           disabled={isProcessing[request._id]}
+                           onClick={() => setConfirmAction({
+                             title: "Decline Request",
+                             message: `Are you sure you want to decline this promo code request for ${request.targetName}?`,
+                             onConfirm: () => handleProcess(request._id, 'declined')
+                           })}
+                           variant="ghost"
+                           className="text-gray-400 hover:text-red-600 font-black uppercase tracking-widest text-[9px] h-10 transition-all underline"
+                         >
+                           Decline
+                         </Button>
+                       </>
                    )}
                    <p className="text-[8px] text-gray-300 font-bold uppercase tracking-tighter text-center mt-2">
                      Requested: {new Date(request.createdAt).toLocaleString()}
@@ -292,6 +305,41 @@ export default function PromoCodeApprovalsPage() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+      {/* CONFIRMATION POPUP MODAL */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 border-b pb-3 mb-4">
+              <h3 className="text-md font-black text-gray-900 uppercase tracking-tighter italic">
+                {confirmAction.title}
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 font-bold leading-relaxed mb-6">
+              {confirmAction.message}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                variant="outline"
+                className="flex-1 border-2 border-gray-200 rounded-xl hover:bg-gray-50 uppercase tracking-wider text-[9px] font-black h-11"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  confirmAction.onConfirm();
+                  setConfirmAction(null);
+                }}
+                className="flex-1 bg-amber-600 hover:bg-black text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg h-11 transition-all"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

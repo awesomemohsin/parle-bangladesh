@@ -37,6 +37,11 @@ export default function ProductApprovalsPage() {
   const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>({})
   const [user, setUser] = useState<any>(null)
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-asc' | 'name-desc'>('newest')
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     fetchRequests()
@@ -318,21 +323,29 @@ export default function ProductApprovalsPage() {
                       </div>
                    ) : (
                       <>
-                        <Button 
-                          disabled={isProcessing[request._id]}
-                          onClick={() => handleProcess(request._id, 'approved')}
-                          className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl shadow-gray-100"
-                        >
-                          {isProcessing[request._id] ? "Processing..." : request.stage === 'superadmin' ? "Sign & Verify" : "Authorize Final Update"}
-                        </Button>
-                        <Button 
-                          disabled={isProcessing[request._id]}
-                          onClick={() => handleProcess(request._id, 'declined')}
-                          variant="ghost"
-                          className="text-gray-400 hover:text-red-600 font-black uppercase tracking-widest text-[9px] h-10 transition-all underline underline-offset-4"
-                        >
-                          Decline Request
-                        </Button>
+                         <Button 
+                           disabled={isProcessing[request._id]}
+                           onClick={() => setConfirmAction({
+                             title: request.stage === 'superadmin' ? "Verify Consensus" : "Authorize Final Update",
+                             message: `Are you sure you want to approve this product change request for ${request.targetName}?`,
+                             onConfirm: () => handleProcess(request._id, 'approved')
+                           })}
+                           className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl shadow-gray-100"
+                         >
+                           {isProcessing[request._id] ? "Processing..." : request.stage === 'superadmin' ? "Sign & Verify" : "Authorize Final Update"}
+                         </Button>
+                         <Button 
+                           disabled={isProcessing[request._id]}
+                           onClick={() => setConfirmAction({
+                             title: "Decline Request",
+                             message: `Are you sure you want to decline this product change request for ${request.targetName}?`,
+                             onConfirm: () => handleProcess(request._id, 'declined')
+                           })}
+                           variant="ghost"
+                           className="text-gray-400 hover:text-red-600 font-black uppercase tracking-widest text-[9px] h-10 transition-all underline underline-offset-4"
+                         >
+                           Decline Request
+                         </Button>
                       </>
                    )}
                    <p className="text-[8px] text-gray-300 font-bold uppercase tracking-tighter text-center mt-2">
@@ -342,6 +355,41 @@ export default function ProductApprovalsPage() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+      {/* CONFIRMATION POPUP MODAL */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 border-b pb-3 mb-4">
+              <h3 className="text-md font-black text-gray-900 uppercase tracking-tighter italic">
+                {confirmAction.title}
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 font-bold leading-relaxed mb-6">
+              {confirmAction.message}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                variant="outline"
+                className="flex-1 border-2 border-gray-200 rounded-xl hover:bg-gray-50 uppercase tracking-wider text-[9px] font-black h-11"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  confirmAction.onConfirm();
+                  setConfirmAction(null);
+                }}
+                className="flex-1 bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg h-11 transition-all"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
