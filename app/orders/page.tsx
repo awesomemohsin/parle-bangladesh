@@ -84,6 +84,8 @@ interface Order {
   city?: string;
   postalCode?: string;
   customerType?: string;
+  amountPaid?: number;
+  amountDue?: number;
 }
 
 export default function MyOrdersPage() {
@@ -329,12 +331,41 @@ export default function MyOrdersPage() {
                       {new Date(order.createdAt).toLocaleDateString()}
                     </span>
                     {(order.paymentMethod === 'sslcommerz' || order.paymentMethod === 'cash_on_delivery') && (
-                      <span className={`px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border
-                        ${(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered'))
-                          ? 'bg-green-50 text-green-700 border-green-100' 
-                          : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                        {(order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered')) ? 'PAID ✅' : 'UNPAID ⏳'}
-                      </span>
+                      (() => {
+                        const isB2B = order.customerType === 'retailer' || order.customerType === 'dealer';
+                        if (isB2B) {
+                          const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
+                          const isPartial = order.paymentStatus === 'partial' && (order.amountDue !== undefined && order.amountDue > 0);
+                          if (isPaid) {
+                            return (
+                              <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
+                                PAID ✅
+                              </span>
+                            );
+                          } else if (isPartial) {
+                            return (
+                              <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                                PARTIAL (Due ৳{(order.amountDue || 0).toFixed(0)}) ⏳
+                              </span>
+                            );
+                          } else {
+                            const isDelivered = order.status === 'delivered';
+                            return (
+                              <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                                {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
+                              </span>
+                            );
+                          }
+                        } else {
+                          const isPaid = order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered');
+                          return (
+                            <span className={`px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border
+                              ${isPaid ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                              {isPaid ? 'PAID ✅' : 'UNPAID ⏳'}
+                            </span>
+                          );
+                        }
+                      })()
                     )}
                     {order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
                       <OrderTimer createdAt={order.createdAt} onTimeout={() => handleOrderTimeout(order.id)} />
@@ -611,12 +642,41 @@ export default function MyOrdersPage() {
                       <div><span className="font-bold text-gray-400">Payment Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.paymentMethod === 'sslcommerz' ? '💳 Online Payment (SSLCommerz)' : '💵 Cash on Delivery'}</span></div>
                       <div>
                         <span className="font-bold text-gray-400">Payment Status:</span>{' '}
-                        <span className={`px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
-                          ${(previewOrder?.paymentStatus === 'paid' || (previewOrder?.paymentMethod === 'cash_on_delivery' && previewOrder?.status === 'delivered'))
-                            ? 'bg-green-50 text-green-700 border-green-100' 
-                            : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                          {(previewOrder?.paymentStatus === 'paid' || (previewOrder?.paymentMethod === 'cash_on_delivery' && previewOrder?.status === 'delivered')) ? 'PAID ✅' : 'UNPAID ⏳'}
-                        </span>
+                        {(() => {
+                          const isB2B = previewOrder?.customerType === 'retailer' || previewOrder?.customerType === 'dealer';
+                          if (isB2B) {
+                            const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.amountDue !== undefined && previewOrder?.amountDue <= 0);
+                            const isPartial = previewOrder?.paymentStatus === 'partial' && (previewOrder?.amountDue !== undefined && previewOrder?.amountDue > 0);
+                            if (isPaid) {
+                              return (
+                                <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
+                                  PAID ✅
+                                </span>
+                              );
+                            } else if (isPartial) {
+                              return (
+                                <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                                  PARTIAL (Due ৳{(previewOrder?.amountDue || 0).toFixed(0)}) ⏳
+                                </span>
+                              );
+                            } else {
+                              const isDelivered = previewOrder?.status === 'delivered';
+                              return (
+                                <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                                  {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
+                                </span>
+                              );
+                            }
+                          } else {
+                            const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.paymentMethod === 'cash_on_delivery' && previewOrder?.status === 'delivered');
+                            return (
+                              <span className={`px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
+                                ${isPaid ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                {isPaid ? 'PAID ✅' : 'UNPAID ⏳'}
+                              </span>
+                            );
+                          }
+                        })()}
                       </div>
                       {previewOrder?.paymentMethod === 'sslcommerz' && previewOrder?.paymentStatus !== 'paid' && previewOrder?.status !== 'cancelled' && (
                         <div className="pt-1 flex items-center gap-2">
