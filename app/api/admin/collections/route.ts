@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedAuthUser, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, User, TransactionLedger } from "@/lib/models";
+import { Order, User, TransactionLedger, Admin } from "@/lib/models";
 import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +42,9 @@ export async function GET(request: NextRequest) {
       let dbUser: any = null;
       if (customerId && !customerId.startsWith("guest-") && mongoose.Types.ObjectId.isValid(customerId)) {
         dbUser = await User.findById(customerId).populate("referredBySR", "name email mobile").lean();
+        if (!dbUser) {
+          dbUser = await Admin.findById(customerId).lean();
+        }
       }
 
       // Fetch all orders for this customer (sorted by createdAt desc)
@@ -76,12 +79,12 @@ export async function GET(request: NextRequest) {
           name: dbUser.name,
           mobile: dbUser.mobile,
           email: dbUser.email,
-          customerType: dbUser.customerType,
+          customerType: dbUser.customerType || dbUser.role,
           walletBalance: dbUser.walletBalance || 0,
           creditLimit: dbUser.creditLimit || 0,
-          isRetailerApproved: dbUser.isRetailerApproved,
+          isRetailerApproved: dbUser.isRetailerApproved ?? true,
           createdAt: dbUser.createdAt,
-          referredBySR: dbUser.referredBySR
+          referredBySR: dbUser.referredBySR || null
         } : {
           id: customerId,
           name: allOrders[0]?.customerName || "Guest Customer",
@@ -272,7 +275,7 @@ export async function GET(request: NextRequest) {
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
       }
       const outstandingOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
-      
+
       responseData.orders = outstandingOrders.map((o: any) => ({
         ...o,
         customerType: o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest")),
@@ -293,7 +296,7 @@ export async function GET(request: NextRequest) {
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
       }
       const completedOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
-      
+
       responseData.completedOrders = completedOrders.map((o: any) => ({
         ...o,
         customerType: o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest")),
@@ -311,9 +314,9 @@ export async function GET(request: NextRequest) {
           { walletBalance: { $ne: 0 } }
         ]
       })
-      .select("name email mobile walletBalance creditLimit customerType isSR isRetailerApproved createdAt updatedAt")
-      .sort({ updatedAt: -1 })
-      .lean();
+        .select("name email mobile walletBalance creditLimit customerType isSR isRetailerApproved createdAt updatedAt")
+        .sort({ updatedAt: -1 })
+        .lean();
 
       // Aggregate order statistics for users
       const orderStats = await Order.aggregate([
@@ -402,8 +405,36 @@ export async function GET(request: NextRequest) {
         totalDueAmount: g.totalDueAmount || 0
       }));
 
+      // Retrieve all Admin users who can also place orders
+      const adminUsers = await Admin.find({})
+      .select("name email mobile role createdAt updatedAt")
+      .lean();
+
+      const registeredAdmins = adminUsers
+        .map((a: any) => {
+          const stats = statsMap[a._id.toString()] || { totalOrderAmount: 0, totalPaidAmount: 0, totalDueAmount: 0 };
+          return {
+            id: a._id.toString(),
+            name: a.name,
+            email: a.email,
+            mobile: a.mobile,
+            role: a.role,
+            customerType: a.role, // e.g. "admin", "super_admin", "owner"
+            walletBalance: 0,
+            dueBalance: stats.totalDueAmount,
+            creditLimit: 0,
+            isRetailerApproved: true,
+            createdAt: a.createdAt,
+            updatedAt: a.updatedAt,
+            totalOrderAmount: stats.totalOrderAmount,
+            totalPaidAmount: stats.totalPaidAmount,
+            totalDueAmount: stats.totalDueAmount
+          };
+        })
+        .filter((a: any) => a.totalOrderAmount > 0);
+
       // Combine and sort by updatedAt desc
-      responseData.shops = [...registeredShops, ...guestShops].sort((a: any, b: any) => {
+      responseData.shops = [...registeredShops, ...guestShops, ...registeredAdmins].sort((a: any, b: any) => {
         const timeA = new Date(a.updatedAt).getTime();
         const timeB = new Date(b.updatedAt).getTime();
         return timeB - timeA;
@@ -419,21 +450,46 @@ export async function GET(request: NextRequest) {
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
       }
       const ledgers = await TransactionLedger.find(queryCond)
-        .populate("userId", "name email mobile customerType")
         .sort({ createdAt: -1 })
         .limit(50)
         .lean();
+
+      // Extract unique user IDs
+      const userIds = Array.from(new Set(ledgers.map((l: any) => l.userId).filter(Boolean)));
+
+      // Fetch from User collection
+      const dbUsers = await User.find({ _id: { $in: userIds } }).select("name email mobile customerType").lean();
+      
+      // Fetch from Admin collection (in case some are admins)
+      const dbAdmins = await Admin.find({ _id: { $in: userIds } }).select("name email mobile role").lean();
+
+      // Build a map of users and admins
+      const userMap: Record<string, any> = {};
+      dbUsers.forEach((u: any) => {
+        userMap[u._id.toString()] = {
+          id: u._id.toString(),
+          name: u.name,
+          email: u.email,
+          mobile: u.mobile,
+          customerType: u.customerType || "customer"
+        };
+      });
+      dbAdmins.forEach((a: any) => {
+        userMap[a._id.toString()] = {
+          id: a._id.toString(),
+          name: a.name,
+          email: a.email,
+          mobile: a.mobile,
+          customerType: a.role || "admin"
+        };
+      });
 
       responseData.ledgers = ledgers.map((l: any) => ({
         ...l,
         id: l._id.toString(),
         _id: undefined,
         orderId: l.orderId ? l.orderId.toString() : undefined,
-        userId: l.userId ? {
-          ...l.userId,
-          id: l.userId._id?.toString(),
-          _id: undefined
-        } : null
+        userId: l.userId ? (userMap[l.userId.toString()] || null) : null
       }));
     }
 
@@ -486,9 +542,9 @@ export async function POST(request: NextRequest) {
       }
 
       const orderUser = order.userId ? await User.findById(order.userId) : null;
-      
-      const isB2B = order.customerType === "retailer" || order.customerType === "dealer" || 
-                    (orderUser && (orderUser.customerType === "retailer" || orderUser.customerType === "dealer"));
+
+      const isB2B = order.customerType === "retailer" || order.customerType === "dealer" ||
+        (orderUser && (orderUser.customerType === "retailer" || orderUser.customerType === "dealer"));
 
       if (isB2B) {
         // Record in Transaction Ledger
