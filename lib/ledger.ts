@@ -1,24 +1,33 @@
 import { User, Order, TransactionLedger } from "@/lib/models";
+import mongoose from "mongoose";
 
 /**
  * Reconciles the running balance and order dues for a B2B user using FIFO.
  * @param userId The ID of the User (shop/retailer/dealer)
  */
 export async function reconcileUserLedger(userId: string) {
+  const userIdObj = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
+
   // 1. Fetch all orders for this user that are in an active dues state,
   // excluding online payment method since they are self-contained.
   // Sort by createdAt ASC (oldest first) to enforce FIFO oldest-first invoice settlement.
-  const activeOrders = await Order.find({
-    userId,
+  const rawOrders = await Order.collection.find({
+    $or: [{ userId }, { userId: userIdObj }].filter(Boolean) as any,
     status: { $in: ["processing", "shipped", "delivered"] },
     paymentMethod: { $ne: "sslcommerz" }
+  }).project({ _id: 1 }).toArray();
+
+  const orderIds = rawOrders.map(o => o._id);
+
+  const activeOrders = await Order.find({
+    _id: { $in: orderIds }
   }).sort({ createdAt: 1 });
 
   // 2. Fetch all transaction ledger entries of type collection and wallet_deposit
-  const ledgers = await TransactionLedger.find({
-    userId,
+  const ledgers = await TransactionLedger.collection.find({
+    $or: [{ userId }, { userId: userIdObj }].filter(Boolean) as any,
     type: { $in: ["collection", "wallet_deposit"] }
-  }).sort({ createdAt: 1 });
+  }).sort({ createdAt: 1 }).toArray();
 
   const totalPaid = ledgers.reduce((sum, l) => sum + l.amount, 0);
 
