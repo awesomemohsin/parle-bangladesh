@@ -275,6 +275,7 @@ export async function GET(request: NextRequest) {
       
       responseData.orders = outstandingOrders.map((o: any) => ({
         ...o,
+        customerType: o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest")),
         id: o._id.toString(),
         _id: undefined
       }));
@@ -295,6 +296,7 @@ export async function GET(request: NextRequest) {
       
       responseData.completedOrders = completedOrders.map((o: any) => ({
         ...o,
+        customerType: o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest")),
         id: o._id.toString(),
         _id: undefined
       }));

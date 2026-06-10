@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
       orders: ordersRaw.map(o => { 
         o.id = o._id.toString(); 
         o.pendingApproval = pendingIds.has(o.id);
-        if (!o.customerType) o.customerType = "customer";
+        o.customerType = o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest"));
         delete o.idString; 
         return o; 
       }),
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     let isDealer = false;
     let isRetailer = false;
     let userDiscount = undefined;
-    let customerTypeStr = "customer";
+    let customerTypeStr = "guest";
 
     if (user && user.role === "customer") {
       isDealer = user.customerType === "dealer";
