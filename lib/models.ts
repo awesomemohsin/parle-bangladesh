@@ -901,6 +901,7 @@ export interface ITransactionLedger extends Document {
   paymentMethod: string; // 'cash' | 'bkash' | 'nagad' | 'bank' | 'wallet'
   recordedBy: string; // Admin/Accounts operator email or name
   notes?: string;
+  documentUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -918,6 +919,7 @@ const TransactionLedgerSchema = new Schema<ITransactionLedger>(
     paymentMethod: { type: String, default: "cash" },
     recordedBy: { type: String, required: true },
     notes: { type: String },
+    documentUrl: { type: String },
   },
   { timestamps: true }
 );
