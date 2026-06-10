@@ -63,8 +63,8 @@ export default function ProductCard({
   const defaultIndex = useMemo(() => {
     if (!variations || variations.length === 0) return 0;
     const primaryVar = variations.find(v => v.isDefault);
-    const target = (primaryVar && primaryVar.stock > 0) 
-      ? primaryVar 
+    const target = (primaryVar && primaryVar.stock > 0)
+      ? primaryVar
       : (variations.find(v => v.stock > 0) || variations[0]);
     const idx = variations.indexOf(target);
     return idx !== -1 ? idx : 0;
@@ -111,11 +111,11 @@ export default function ProductCard({
 
   const hasDealerPrice = isDealer && !!activeVariation.dealerPrice && activeVariation.dealerPrice > 0;
   const hasRetailerPrice = isRetailer && !!activeVariation.retailerPrice && activeVariation.retailerPrice > 0;
-  
+
   // A product has a retail discount if it has a manual discountPrice OR a global flatDiscountPrice
   const hasManualDiscount = !isDealer && !isRetailer && !!activeVariation.discountPrice && activeVariation.discountPrice < activeVariation.price;
   const hasFlatDiscount = !isDealer && !isRetailer && !!activeVariation.hasFlatDiscount && !!activeVariation.flatDiscountPrice;
-  
+
   let currentPrice = activeVariation.price;
   let discountPercentage = 0;
   let hasAnyRetailDiscount = false;
@@ -128,13 +128,13 @@ export default function ProductCard({
   } else {
     // Collect all candidates
     let candidates = [{ price: activeVariation.price, percent: 0, label: "" }];
-    
+
     if (hasManualDiscount) {
       const p = Math.round(((activeVariation.price - activeVariation.discountPrice!) / activeVariation.price) * 100);
       candidates.push({ price: activeVariation.discountPrice!, percent: p, label: "Sale" });
     }
     if (hasFlatDiscount) {
-      const p = activeVariation.flatDiscountType === 'percentage' 
+      const p = activeVariation.flatDiscountType === 'percentage'
         ? activeVariation.flatDiscountAmount!
         : Math.round(((activeVariation.price - activeVariation.flatDiscountPrice!) / activeVariation.price) * 100);
       candidates.push({ price: activeVariation.flatDiscountPrice!, percent: p, label: "Campaign" });
@@ -155,7 +155,7 @@ export default function ProductCard({
   const cartItemKey = getItemKey({ productId: id || slug, weight: activeVariation.weight, flavor: activeVariation.flavor });
   const existingCartItem = items.find(i => getItemKey(i) === cartItemKey);
   const cartQuantity = existingCartItem?.quantity || 0;
-  
+
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
 
   // Resilience: If stock is missing, assume it's available (or treat as out of stock? 
@@ -184,7 +184,7 @@ export default function ProductCard({
           stock: actualStock,
         });
       }
-      
+
       setIsFlying(true);
       setTimeout(() => setIsFlying(false), 800);
     }
@@ -252,7 +252,7 @@ export default function ProductCard({
           )}
           {isAtMax && !isOutOfStock && (
             <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-30">
-               <span className="bg-white text-amber-600 border border-amber-500 px-2 py-0.5 font-black text-[10px] sm:text-xs uppercase tracking-tighter shadow-sm">Max in Cart</span>
+              <span className="bg-white text-amber-600 border border-amber-500 px-2 py-0.5 font-black text-[10px] sm:text-xs uppercase tracking-tighter shadow-sm">Max in Cart</span>
             </div>
           )}
         </div>
@@ -310,8 +310,8 @@ export default function ProductCard({
               </div>
               {hasAnyRetailDiscount && (
                 <div className="flex items-center gap-1 opacity-40">
-                   <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">৳</span>
-                   <span className="text-[9px] sm:text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">৳</span>
+                  <span className="text-[9px] sm:text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
                 </div>
               )}
             </motion.div>
@@ -333,12 +333,12 @@ export default function ProductCard({
             {isFlying && (
               <motion.div
                 initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-                animate={{ 
-                  x: 0, 
-                  y: -800, 
-                  scale: 0.2, 
+                animate={{
+                  x: 0,
+                  y: -800,
+                  scale: 0.2,
                   opacity: 0,
-                  rotate: 720 
+                  rotate: 720
                 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1, ease: "circOut" }}

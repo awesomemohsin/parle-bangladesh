@@ -251,28 +251,16 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     <span className="font-black">৳{order.total.toFixed(0)}</span>
                   </div>
                   {(() => {
-                    const isB2B = order.customerType === 'retailer' || order.customerType === 'dealer';
-                    
-                    const isPaid = isB2B
-                      ? (order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0))
-                      : (order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered'));
+                    const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
 
-                    const paymentReceived = isB2B
-                      ? (order.amountPaid !== undefined ? order.amountPaid : (isPaid ? order.total : 0))
-                      : (isPaid ? order.total : 0);
+                    const paymentReceived = order.amountPaid !== undefined ? order.amountPaid : (isPaid ? order.total : 0);
 
-                    const totalDue = isB2B
-                      ? (order.amountDue !== undefined ? order.amountDue : (isPaid ? 0 : order.total))
-                      : (isPaid ? 0 : order.total);
+                    const totalDue = order.amountDue !== undefined ? order.amountDue : (isPaid ? 0 : order.total);
 
                     const getPaymentStatusText = () => {
-                      if (isB2B) {
-                        if (isPaid) return 'PAID ✅';
-                        if (order.paymentStatus === 'partial') return `PARTIAL (Due ৳${totalDue.toFixed(0)}) ⏳`;
-                        return order.status === 'delivered' ? 'Payment Pending ✅' : 'UNPAID ⏳';
-                      } else {
-                        return isPaid ? 'PAID ✅' : 'UNPAID ⏳';
-                      }
+                      if (isPaid) return 'PAID ✅';
+                      if (order.paymentStatus === 'partial') return `PARTIAL (Due ৳${totalDue.toFixed(0)}) ⏳`;
+                      return order.status === 'delivered' ? 'Payment Pending ✅' : 'UNPAID ⏳';
                     };
 
                     const statusColor = isPaid ? 'text-green-600' : 'text-amber-600';

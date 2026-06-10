@@ -54,25 +54,25 @@ interface PromoPoster {
   buttonText?: string;
 }
 
-export default function ShopClient({ 
-  initialProducts, 
+export default function ShopClient({
+  initialProducts,
   categories,
   promoPosters = []
-}: { 
-  initialProducts: Product[], 
+}: {
+  initialProducts: Product[],
   categories: Category[],
   promoPosters?: PromoPoster[]
 }) {
   const { addItem } = useCart();
   const { user } = useAuth();
-  
+
   const [activeShop, setActiveShop] = useState<any>(null);
   useEffect(() => {
     const activeShopStr = localStorage.getItem("sr_active_shop_user");
     if (activeShopStr) {
       try {
         setActiveShop(JSON.parse(activeShopStr));
-      } catch (e) {}
+      } catch (e) { }
     }
   }, []);
 
@@ -107,7 +107,7 @@ export default function ShopClient({
     const category = searchParams.get("category");
     const brand = searchParams.get("brand");
     const sort = searchParams.get("sort");
-    
+
     setSelectedCategory(category || "all");
     setSelectedBrand(brand || "all");
     setSortBy(sort || "best-match");
@@ -200,7 +200,7 @@ export default function ShopClient({
       <div className="bg-white border-2 border-gray-100 rounded-2xl p-4 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 shadow-xl shadow-gray-200/40">
         <div className="md:col-span-2 flex flex-col gap-1.5">
           <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
-             <Search className="w-3 h-3" /> Search
+            <Search className="w-3 h-3" /> Search
           </label>
           <div className="relative group">
             <input
@@ -215,7 +215,7 @@ export default function ShopClient({
 
         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
-             <Filter className="w-3 h-3" /> Category
+            <Filter className="w-3 h-3" /> Category
           </label>
           <select
             value={selectedCategory}
@@ -234,7 +234,7 @@ export default function ShopClient({
 
         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
-             <ArrowUpDown className="w-3 h-3" /> Sort By
+            <ArrowUpDown className="w-3 h-3" /> Sort By
           </label>
           <select
             value={sortBy}
@@ -265,36 +265,34 @@ export default function ShopClient({
         <div className="mb-6 animate-fade-in relative">
           <div className="flex items-center justify-between mb-4 px-1">
             <div className="flex items-center gap-3">
-               <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></div>
-               <h3 className="text-[11px] font-black uppercase text-gray-500 tracking-[0.3em]">Explore {selectedCategory !== 'all' ? selectedCategory : 'Product'} Brands</h3>
+              <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></div>
+              <h3 className="text-[11px] font-black uppercase text-gray-500 tracking-[0.3em]">Explore {selectedCategory !== 'all' ? selectedCategory : 'Product'} Brands</h3>
             </div>
             <div className="hidden md:block h-px flex-1 bg-gradient-to-r from-gray-100 to-transparent ml-6"></div>
           </div>
-          
+
           <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-2 pb-3 px-0.5">
             <button
               onClick={() => handleBrandChange("all")}
-              className={`relative px-3.5 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.1em] sm:tracking-[0.15em] transition-all duration-300 active:scale-95 overflow-hidden whitespace-nowrap flex-shrink-0 ${
-                selectedBrand === "all" 
-                ? "bg-gray-900 border-gray-900 text-white shadow-xl sm:shadow-2xl shadow-gray-300 ring-2 sm:ring-4 ring-gray-900/5 translate-y-[-1px] sm:translate-y-[-2px]" 
-                : "bg-white border-gray-100 text-gray-400 hover:border-gray-300 hover:text-gray-600 shadow-sm border-2"
-              }`}
+              className={`relative px-3.5 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.1em] sm:tracking-[0.15em] transition-all duration-300 active:scale-95 overflow-hidden whitespace-nowrap flex-shrink-0 ${selectedBrand === "all"
+                  ? "bg-gray-900 border-gray-900 text-white shadow-xl sm:shadow-2xl shadow-gray-300 ring-2 sm:ring-4 ring-gray-900/5 translate-y-[-1px] sm:translate-y-[-2px]"
+                  : "bg-white border-gray-100 text-gray-400 hover:border-gray-300 hover:text-gray-600 shadow-sm border-2"
+                }`}
             >
               All {selectedCategory !== 'all' ? selectedCategory : 'Collection'}
               {selectedBrand === "all" && (
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
               )}
             </button>
-            
+
             {availableBrands.map((brand) => (
               <button
                 key={brand}
                 onClick={() => handleBrandChange(brand)}
-                className={`relative px-3.5 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] transition-all duration-500 border-2 active:scale-95 group overflow-hidden whitespace-nowrap flex-shrink-0 ${
-                  selectedBrand === brand
-                  ? "bg-red-600 border-red-600 text-white shadow-xl sm:shadow-2xl shadow-red-200 ring-2 sm:ring-4 ring-red-600/10 translate-y-[-1px] sm:translate-y-[-2px]"
-                  : "bg-white/50 backdrop-blur-sm border-gray-50 text-gray-700 hover:border-red-500/30 hover:text-red-600 hover:bg-white shadow-sm"
-                }`}
+                className={`relative px-3.5 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] transition-all duration-500 border-2 active:scale-95 group overflow-hidden whitespace-nowrap flex-shrink-0 ${selectedBrand === brand
+                    ? "bg-red-600 border-red-600 text-white shadow-xl sm:shadow-2xl shadow-red-200 ring-2 sm:ring-4 ring-red-600/10 translate-y-[-1px] sm:translate-y-[-2px]"
+                    : "bg-white/50 backdrop-blur-sm border-gray-50 text-gray-700 hover:border-red-500/30 hover:text-red-600 hover:bg-white shadow-sm"
+                  }`}
               >
                 <span className="relative z-10">{brand}</span>
                 {selectedBrand === brand && (
@@ -337,17 +335,17 @@ export default function ShopClient({
 
       {filteredProducts.length === 0 ? (
         <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center">
-           <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-8 border border-white shadow-inner">
-              <Search className="w-8 h-8 text-gray-200" />
-           </div>
-           <h3 className="text-xl font-bold text-gray-900 uppercase tracking-tight mb-2">No Matches Found</h3>
-           <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Try selecting a different brand or category</p>
-           <button 
-             onClick={() => { setSelectedCategory('all'); setSelectedBrand('all'); setSearch(''); router.push('/shop') }}
-             className="mt-8 px-8 py-3 rounded-xl bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors"
-           >
-             Reset Filters
-           </button>
+          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-8 border border-white shadow-inner">
+            <Search className="w-8 h-8 text-gray-200" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 uppercase tracking-tight mb-2">No Matches Found</h3>
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Try selecting a different brand or category</p>
+          <button
+            onClick={() => { setSelectedCategory('all'); setSelectedBrand('all'); setSearch(''); router.push('/shop') }}
+            className="mt-8 px-8 py-3 rounded-xl bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors"
+          >
+            Reset Filters
+          </button>
         </div>
       ) : (() => {
         // Construct array containing products and inline promo cards at indices 3 and 14
@@ -377,12 +375,12 @@ export default function ShopClient({
               if (item.type === 'promo') {
                 const promo = item.data;
                 return (
-                  <div 
-                    key={promo._id} 
+                  <div
+                    key={promo._id}
                     className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full min-h-[280px] sm:min-h-[360px]"
                   >
                     <Link href={promo.link} className="absolute inset-0 z-10" />
-                    
+
                     {/* Image Container */}
                     <div className="relative w-full flex-grow overflow-hidden bg-slate-50">
                       <Image

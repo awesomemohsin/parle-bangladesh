@@ -44,15 +44,15 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const router = useRouter();
   const { addItem } = useCart();
   const { user } = useAuth();
-  
+
   const isDealer = user?.role === "customer" && user?.customerType === "dealer";
   const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
-  
+
   const searchParams = useSearchParams();
   const targetWeight = searchParams.get('weight');
   const targetFlavor = searchParams.get('flavor');
-  
+
   // Intelligent Default Selection
   let initialVarIndex = -1;
   if (targetWeight || targetFlavor) {
@@ -65,24 +65,24 @@ export default function ProductDetailsClient({ product, images }: { product: any
 
   if (initialVarIndex === -1) {
     const defaultVar = product.variations.find((v: Variation) => v.isDefault);
-    initialVarIndex = (defaultVar && defaultVar.stock > 0) 
+    initialVarIndex = (defaultVar && defaultVar.stock > 0)
       ? product.variations.indexOf(defaultVar)
-      : (product.variations.findIndex((v: Variation) => v.stock > 0) !== -1 
-         ? product.variations.findIndex((v: Variation) => v.stock > 0) 
-         : 0);
+      : (product.variations.findIndex((v: Variation) => v.stock > 0) !== -1
+        ? product.variations.findIndex((v: Variation) => v.stock > 0)
+        : 0);
   }
 
   const [selectedVarIndex, setSelectedVarIndex] = useState<number>(initialVarIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(
-    product.variations[initialVarIndex]?.stock > 0 
-      ? 1 
+    product.variations[initialVarIndex]?.stock > 0
+      ? 1
       : (canInputManualQty ? 1 : 0)
   );
   const [isFlying, setIsFlying] = useState(false);
 
   const selectedVariation = product.variations && product.variations.length > 0 ? product.variations[selectedVarIndex] : null;
-  
+
   const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
   const isUserDiscountActive = !isDealer && !isRetailer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
@@ -91,7 +91,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const hasRetailerPrice = isRetailer && !!selectedVariation?.retailerPrice && selectedVariation.retailerPrice > 0;
 
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([]);
-  
+
   useEffect(() => {
     const fetchActiveDiscounts = async () => {
       try {
@@ -110,10 +110,10 @@ export default function ProductDetailsClient({ product, images }: { product: any
   // Find if current product has an active flat discount with a minimum order amount
   const activeMinOrderDiscount = activeDiscounts.find(rule => {
     if (rule.allProducts) return (Number(rule.minOrderAmount) || 0) > 0;
-    
+
     const productMatch = rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === product.id);
     if (!productMatch) return false;
-    
+
     return (Number(rule.minOrderAmount) || 0) > 0;
   });
 
@@ -131,7 +131,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
     displayPrice = selectedVariation.retailerPrice;
   } else if (selectedVariation) {
     let candidates = [{ price: originalPrice, percent: 0, label: "" }];
-    
+
     if (hasManualDiscount) {
       const p = Math.round(((originalPrice - selectedVariation.discountPrice!) / originalPrice) * 100);
       candidates.push({ price: selectedVariation.discountPrice!, percent: p, label: "Sale" });
@@ -172,7 +172,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const handleImageSelect = (idx: number) => {
     setCurrentImageIndex(idx);
     const selectedImage = images[idx];
-    
+
     // Check if this image belongs to a specific variation
     const matchingVarIdx = product.variations.findIndex((v: any) => v.image === selectedImage);
     if (matchingVarIdx !== -1) {
@@ -214,9 +214,9 @@ export default function ProductDetailsClient({ product, images }: { product: any
       {/* Left Column: Image Gallery */}
       <div className="md:col-span-6 p-6 lg:p-10 bg-white border-b md:border-b-0 md:border-r border-gray-100">
         <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-white group border-2 border-gray-50 flex items-center justify-center p-6">
-          <Image 
-            src={mainImageUrl} 
-            alt={product.name} 
+          <Image
+            src={mainImageUrl}
+            alt={product.name}
             fill
             priority
             sizes="(max-width: 768px) 100vw, 50vw"
@@ -238,19 +238,18 @@ export default function ProductDetailsClient({ product, images }: { product: any
               <button
                 key={idx}
                 onClick={() => handleImageSelect(idx)}
-                className={`flex-shrink-0 w-24 h-24 rounded-2xl border-4 transition-all relative overflow-hidden bg-white shadow-xl ${
-                  currentImageIndex === idx 
-                    ? "border-red-600 scale-110 translate-y-[-4px]" 
+                className={`flex-shrink-0 w-24 h-24 rounded-2xl border-4 transition-all relative overflow-hidden bg-white shadow-xl ${currentImageIndex === idx
+                    ? "border-red-600 scale-110 translate-y-[-4px]"
                     : "border-transparent opacity-60 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div className="relative w-full h-full p-3">
-                  <Image 
-                    src={img} 
-                    alt={`View ${idx + 1}`} 
+                  <Image
+                    src={img}
+                    alt={`View ${idx + 1}`}
                     fill
                     sizes="100px"
-                    className="object-contain" 
+                    className="object-contain"
                   />
                 </div>
               </button>
@@ -284,35 +283,35 @@ export default function ProductDetailsClient({ product, images }: { product: any
                 {Math.round(displayPrice)}
               </span>
             </div>
-            
+
             <div className="flex flex-col mb-1.5">
-               <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
-                 {isDealer ? "Dealer Rate (Inc. Vat)" : (isRetailer ? "Retailer Rate (Inc. Vat)" : "(Including Vat)")}
-               </span>
-               {hasAnyRetailDiscount && (
-                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 opacity-40">
-                       <span className="text-xs font-bold text-gray-400">৳</span>
-                       <span className="text-gray-400 line-through font-bold text-base tabular-nums leading-none">
-                         {Math.round(originalPrice)}
-                       </span>
-                    </div>
-                    <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
-                      {`${activeDiscountLabel}: ${finalDiscountPercentage}% off`}
+              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
+                {isDealer ? "Dealer Rate (Inc. Vat)" : (isRetailer ? "Retailer Rate (Inc. Vat)" : "(Including Vat)")}
+              </span>
+              {hasAnyRetailDiscount && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 opacity-40">
+                    <span className="text-xs font-bold text-gray-400">৳</span>
+                    <span className="text-gray-400 line-through font-bold text-base tabular-nums leading-none">
+                      {Math.round(originalPrice)}
                     </span>
-                 </div>
-               )}
+                  </div>
+                  <span className="text-green-600 text-[9px] font-black uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md">
+                    {`${activeDiscountLabel}: ${finalDiscountPercentage}% off`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
-        
+
         {/* Minimum Order Discount Notice & Dynamic Campaign Progress */}
         {!isDealer && !isRetailer && activeMinOrderDiscount && (() => {
           const minOrder = Number(activeMinOrderDiscount.minOrderAmount || 0);
           const unitPrice = originalPrice || 150;
           const targetQty = Math.round(minOrder / unitPrice);
           const originalTotal = targetQty * unitPrice;
-          
+
           let totalDiscount = 0;
           if (activeMinOrderDiscount.discountType === 'percentage') {
             totalDiscount = (originalTotal * Number(activeMinOrderDiscount.discountAmount)) / 100;
@@ -323,13 +322,13 @@ export default function ProductDetailsClient({ product, images }: { product: any
           } else {
             totalDiscount = Number(activeMinOrderDiscount.discountAmount) * targetQty;
           }
-          
+
           const discountedTotal = Math.round(originalTotal - totalDiscount);
           const freeShippingText = activeMinOrderDiscount.freeShipping ? " + Free Shipping" : "";
 
           let variationName = "";
           if (activeMinOrderDiscount.applicableVariations && activeMinOrderDiscount.applicableVariations.length > 0) {
-            const ruleVars = activeMinOrderDiscount.applicableVariations.filter((v: string) => 
+            const ruleVars = activeMinOrderDiscount.applicableVariations.filter((v: string) =>
               v.trim().toLowerCase().startsWith(product.id.toLowerCase() + ":")
             );
             if (ruleVars.length > 0) {
@@ -362,7 +361,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
         {product.variations && product.variations.length > 0 && (
           <div className="flex flex-col gap-4 pt-6 border-t-2 border-gray-100">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-6 h-0.5 bg-red-600 rounded-full"></span> 
+              <span className="w-6 h-0.5 bg-red-600 rounded-full"></span>
               Select Option
             </span>
             <div className="flex flex-wrap gap-2">
@@ -373,11 +372,10 @@ export default function ProductDetailsClient({ product, images }: { product: any
                     setSelectedVarIndex(i);
                     setQuantity(1);
                   }}
-                  className={`px-6 py-3 text-xs font-bold uppercase tracking-widest border-2 transition-all active:scale-95 rounded-xl flex items-center gap-2 ${
-                    selectedVarIndex === i 
-                      ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-100" 
+                  className={`px-6 py-3 text-xs font-bold uppercase tracking-widest border-2 transition-all active:scale-95 rounded-xl flex items-center gap-2 ${selectedVarIndex === i
+                      ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-100"
                       : "bg-white border-gray-50 text-gray-400 hover:border-red-200 hover:text-red-500"
-                  }`}
+                    }`}
                 >
                   {[v.weight, v.flavor].filter(Boolean).join(" ") || "Standard"}
                   {selectedVarIndex === i && <Check className="w-3 h-3" />}
@@ -398,10 +396,10 @@ export default function ProductDetailsClient({ product, images }: { product: any
               </span>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-6 items-center">
             <div className="flex items-center h-12 bg-white rounded-xl p-1 border-2 border-gray-50 shadow-sm w-fit group focus-within:border-red-600 transition-all">
-              <button 
+              <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="w-10 h-full flex items-center justify-center text-gray-300 hover:text-red-600 transition-colors disabled:opacity-20"
                 disabled={quantity <= 1 || (displayStock === 0 && !canInputManualQty)}
@@ -438,7 +436,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                   {quantity}
                 </div>
               )}
-              <button 
+              <button
                 onClick={() => setQuantity(canInputManualQty ? quantity + 1 : Math.min(displayStock, quantity + 1))}
                 className="w-10 h-full flex items-center justify-center text-gray-300 hover:text-red-600 transition-colors disabled:opacity-20"
                 disabled={(!canInputManualQty && quantity >= displayStock) || (displayStock === 0 && !canInputManualQty)}
@@ -474,18 +472,18 @@ export default function ProductDetailsClient({ product, images }: { product: any
                 <ShoppingCart className="w-4 h-4 group-hover:scale-110 transition-transform" />
                 Add To Cart
               </button>
-              
+
               {/* Flying Item Animation */}
               <AnimatePresence>
                 {isFlying && (
                   <motion.div
                     initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-                    animate={{ 
-                      x: 0, 
-                      y: -1000, 
-                      scale: 0.1, 
+                    animate={{
+                      x: 0,
+                      y: -1000,
+                      scale: 0.1,
                       opacity: 0,
-                      rotate: 720 
+                      rotate: 720
                     }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 1, ease: "circOut" }}
@@ -505,11 +503,11 @@ export default function ProductDetailsClient({ product, images }: { product: any
         <div className="flex flex-col md:flex-row gap-12 items-start">
           <div className="md:w-1/3">
             <h2 className="text-xl font-bold text-gray-900 leading-none mb-4 flex items-center gap-2">
-              <span className="w-6 h-1 bg-black rounded-full"></span> 
+              <span className="w-6 h-1 bg-black rounded-full"></span>
               PRODUCT INFO
             </h2>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-6">Details & Specifications</p>
-            
+
             <div className="grid grid-cols-1 gap-4">
               <div className="p-4 bg-slate-50/50 rounded-xl border border-gray-50">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Product Code</span>
@@ -544,7 +542,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
                 </p>
               )}
             </div>
-            
+
             {/* Additional Variation Context if any */}
             {(selectedVariation?.weight || selectedVariation?.flavor) && (
               <div className="mt-6 flex flex-wrap gap-2">

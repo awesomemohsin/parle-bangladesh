@@ -336,36 +336,25 @@ export default function MyOrdersPage() {
                     </span>
                     {(order.paymentMethod === 'sslcommerz' || order.paymentMethod === 'cash_on_delivery') && (
                       (() => {
-                        const isB2B = order.customerType === 'retailer' || order.customerType === 'dealer';
-                        if (isB2B) {
-                          const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
-                          const isPartial = order.paymentStatus === 'partial' && (order.amountDue !== undefined && order.amountDue > 0);
-                          if (isPaid) {
-                            return (
-                              <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
-                                PAID ✅
-                              </span>
-                            );
-                          } else if (isPartial) {
-                            return (
-                              <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
-                                PARTIAL (Due ৳{(order.amountDue || 0).toFixed(0)}) ⏳
-                              </span>
-                            );
-                          } else {
-                            const isDelivered = order.status === 'delivered';
-                            return (
-                              <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
-                                {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
-                              </span>
-                            );
-                          }
-                        } else {
-                          const isPaid = order.paymentStatus === 'paid' || (order.paymentMethod === 'cash_on_delivery' && order.status === 'delivered');
+                        const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
+                        const isPartial = order.paymentStatus === 'partial' && (order.amountDue !== undefined && order.amountDue > 0);
+                        if (isPaid) {
                           return (
-                            <span className={`px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border
-                              ${isPaid ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                              {isPaid ? 'PAID ✅' : 'UNPAID ⏳'}
+                            <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
+                              PAID ✅
+                            </span>
+                          );
+                        } else if (isPartial) {
+                          return (
+                            <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                              PARTIAL (Due ৳{(order.amountDue || 0).toFixed(0)}) ⏳
+                            </span>
+                          );
+                        } else {
+                          const isDelivered = order.status === 'delivered';
+                          return (
+                            <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                              {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
                             </span>
                           );
                         }
@@ -647,36 +636,25 @@ export default function MyOrdersPage() {
                       <div>
                         <span className="font-bold text-gray-400">Payment Status:</span>{' '}
                         {(() => {
-                          const isB2B = previewOrder?.customerType === 'retailer' || previewOrder?.customerType === 'dealer';
-                          if (isB2B) {
-                            const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.amountDue !== undefined && previewOrder?.amountDue <= 0);
-                            const isPartial = previewOrder?.paymentStatus === 'partial' && (previewOrder?.amountDue !== undefined && previewOrder?.amountDue > 0);
-                            if (isPaid) {
-                              return (
-                                <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
-                                  PAID ✅
-                                </span>
-                              );
-                            } else if (isPartial) {
-                              return (
-                                <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
-                                  PARTIAL (Due ৳{(previewOrder?.amountDue || 0).toFixed(0)}) ⏳
-                                </span>
-                              );
-                            } else {
-                              const isDelivered = previewOrder?.status === 'delivered';
-                              return (
-                                <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
-                                  {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
-                                </span>
-                              );
-                            }
-                          } else {
-                            const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.paymentMethod === 'cash_on_delivery' && previewOrder?.status === 'delivered');
+                          const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.amountDue !== undefined && previewOrder?.amountDue <= 0);
+                          const isPartial = previewOrder?.paymentStatus === 'partial' && (previewOrder?.amountDue !== undefined && previewOrder?.amountDue > 0);
+                          if (isPaid) {
                             return (
-                              <span className={`px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border
-                                ${isPaid ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                                {isPaid ? 'PAID ✅' : 'UNPAID ⏳'}
+                              <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
+                                PAID ✅
+                              </span>
+                            );
+                          } else if (isPartial) {
+                            return (
+                              <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                                PARTIAL (Due ৳{(previewOrder?.amountDue || 0).toFixed(0)}) ⏳
+                              </span>
+                            );
+                          } else {
+                            const isDelivered = previewOrder?.status === 'delivered';
+                            return (
+                              <span className="px-2 py-0.5 text-[9px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
+                                {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
                               </span>
                             );
                           }
