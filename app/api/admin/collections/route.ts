@@ -645,7 +645,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "User ID and positive deposit amount are required." }, { status: 400 });
       }
 
-      const shopUser = await User.findById(userId);
+      let shopUser = await User.findById(userId);
+      if (!shopUser) {
+        shopUser = await Admin.findById(userId);
+      }
       if (!shopUser) {
         return NextResponse.json({ error: "User profile not found." }, { status: 404 });
       }
