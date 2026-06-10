@@ -1779,7 +1779,7 @@ export default function CollectionsPage() {
             className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="flex items-center justify-between border-b pb-3 mb-4">
-              <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Reconcile Cash Payment</h3>
+              <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Reconcile Payment</h3>
               <button onClick={() => setReconcileOrder(null)} className="text-gray-400 hover:text-gray-900 transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -1876,7 +1876,7 @@ export default function CollectionsPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cash Collected *</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount Collected *</label>
                 <input
                   type="number"
                   required
@@ -2031,7 +2031,7 @@ export default function CollectionsPage() {
                 disabled={actionLoading}
                 className="w-full py-3 bg-amber-600 hover:bg-black disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-amber-900/10"
               >
-                {actionLoading ? "Saving Cash Receipt..." : "Record Payment"}
+                {actionLoading ? "Recording Payment..." : "Record Payment"}
               </button>
             </form>
           </div>
