@@ -157,11 +157,13 @@ export async function GET(request: NextRequest) {
 
       // B2B Customer FIFO audit trail
       const userId = order.userId;
-      const activeOrders = await Order.find({
-        userId,
+      const userIdObj = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
+
+      const activeOrders = await Order.collection.find({
+        $or: [{ userId }, { userId: userIdObj }].filter(Boolean) as any,
         status: { $in: ["processing", "shipped", "delivered"] },
         paymentMethod: { $ne: "sslcommerz" }
-      }).sort({ createdAt: 1 }).lean() as any[];
+      }).sort({ createdAt: 1 }).toArray() as any[];
 
       const hasTarget = activeOrders.some(o => o._id.toString() === orderId);
       if (!hasTarget) {
@@ -184,10 +186,10 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      const ledgers = await TransactionLedger.find({
-        userId,
+      const ledgers = await TransactionLedger.collection.find({
+        $or: [{ userId }, { userId: userIdObj }].filter(Boolean) as any,
         type: { $in: ["collection", "wallet_deposit"] }
-      }).sort({ createdAt: 1 }).lean() as any[];
+      }).sort({ createdAt: 1 }).toArray() as any[];
 
       // FIFO Simulator to construct the allocations timeline
       let remainingPaid = ledgers.map(l => ({ ...l, remaining: l.amount }));
@@ -378,11 +380,18 @@ export async function GET(request: NextRequest) {
       const statsMap: Record<string, { totalOrderAmount: number; totalPaidAmount: number; totalDueAmount: number }> = {};
       orderStats.forEach((stat: any) => {
         if (stat._id) {
-          statsMap[stat._id.toString()] = {
-            totalOrderAmount: stat.totalOrderAmount || 0,
-            totalPaidAmount: stat.totalPaidAmount || 0,
-            totalDueAmount: stat.totalDueAmount || 0
-          };
+          const idStr = stat._id.toString();
+          if (statsMap[idStr]) {
+            statsMap[idStr].totalOrderAmount += stat.totalOrderAmount || 0;
+            statsMap[idStr].totalPaidAmount += stat.totalPaidAmount || 0;
+            statsMap[idStr].totalDueAmount += stat.totalDueAmount || 0;
+          } else {
+            statsMap[idStr] = {
+              totalOrderAmount: stat.totalOrderAmount || 0,
+              totalPaidAmount: stat.totalPaidAmount || 0,
+              totalDueAmount: stat.totalDueAmount || 0
+            };
+          }
         }
       });
 
@@ -446,11 +455,12 @@ export async function GET(request: NextRequest) {
 
       // Retrieve all Admin users who can also place orders
       const adminUsers = await Admin.find({})
-      .select("name email mobile role createdAt updatedAt")
+      .select("name email mobile role walletBalance creditLimit createdAt updatedAt")
       .lean();
 
       const registeredAdmins = adminUsers
         .map((a: any) => {
+          const bal = a.walletBalance || 0;
           const stats = statsMap[a._id.toString()] || { totalOrderAmount: 0, totalPaidAmount: 0, totalDueAmount: 0 };
           return {
             id: a._id.toString(),
@@ -459,9 +469,9 @@ export async function GET(request: NextRequest) {
             mobile: a.mobile,
             role: a.role,
             customerType: a.role, // e.g. "admin", "super_admin", "owner"
-            walletBalance: 0,
-            dueBalance: stats.totalDueAmount,
-            creditLimit: 0,
+            dueBalance: bal < 0 ? Math.abs(bal) : 0,
+            walletBalance: bal > 0 ? bal : 0,
+            creditLimit: a.creditLimit || 0,
             isRetailerApproved: true,
             createdAt: a.createdAt,
             updatedAt: a.updatedAt,
