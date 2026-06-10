@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { 
   DollarSign, 
   Check, 
@@ -68,6 +69,9 @@ interface Shop {
   isRetailerApproved: boolean;
   createdAt: string;
   updatedAt: string;
+  totalOrderAmount?: number;
+  totalPaidAmount?: number;
+  totalDueAmount?: number;
 }
 
 interface Ledger {
@@ -89,19 +93,44 @@ interface Ledger {
   createdAt: string;
 }
 
+const formatPaymentMethod = (method: string) => {
+  if (!method) return "CASH";
+  const m = method.toLowerCase();
+  if (m === "bank_ucb") return "BANK TRANSFER (UCB bank)";
+  if (m === "bank_brac") return "BANK TRANSFER (Brac bank)";
+  if (m === "bank_nrbc") return "BANK TRANSFER (NRBC bank)";
+  if (m === "bank") return "BANK TRANSFER";
+  return m.toUpperCase();
+};
+
 export default function CollectionsPage() {
-  const [activeTab, setActiveTab] = useState<"invoices" | "shops" | "ledgers" | "completed">("invoices");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"invoices" | "shops" | "ledgers" | "completed">(() => {
+    return (searchParams.get("tab") as any) || "invoices";
+  });
   const [orders, setOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [shopFilter, setShopFilter] = useState<"b2b" | "retailer" | "dealer" | "all">("b2b");
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") || "");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const q = searchParams.get("q");
+    if (tab) {
+      setActiveTab(tab as any);
+    }
+    if (q !== null) {
+      setSearchQuery(q);
+      setShopFilter("all");
+    }
+  }, [searchParams]);
+  const [shopFilter, setShopFilter] = useState<"b2b" | "retailer" | "dealer" | "all">("all");
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "b2b" | "retailer" | "dealer">("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [shopSortBy, setShopSortBy] = useState<
-    "updatedAt" | "name" | "mobile" | "customerType" | "isRetailerApproved" | "dueBalance" | "walletBalance" | "creditLimit" | "accountBalance"
+    "id" | "updatedAt" | "name" | "mobile" | "customerType" | "isRetailerApproved" | "dueBalance" | "walletBalance" | "creditLimit" | "accountBalance" | "totalOrderAmount" | "totalPaidAmount" | "totalDueAmount"
   >("updatedAt");
   const [shopSortOrder, setShopSortOrder] = useState<"asc" | "desc">("desc");
   const [invoiceSortBy, setInvoiceSortBy] = useState<
@@ -137,7 +166,7 @@ export default function CollectionsPage() {
       setShopSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
     } else {
       setShopSortBy(field);
-      const numericFields = ["dueBalance", "walletBalance", "creditLimit", "accountBalance"];
+      const numericFields = ["dueBalance", "walletBalance", "creditLimit", "accountBalance", "totalOrderAmount", "totalPaidAmount", "totalDueAmount"];
       setShopSortOrder(numericFields.includes(field) ? "desc" : "asc");
     }
   };
@@ -213,12 +242,63 @@ export default function CollectionsPage() {
   // Form states
   const [cashAmount, setCashAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [selectedBank, setSelectedBank] = useState("");
   const [notes, setNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+
+  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<{
+    user: {
+      id: string;
+      name: string;
+      mobile: string;
+      email: string;
+      customerType: string;
+      walletBalance: number;
+      creditLimit: number;
+      isRetailerApproved: boolean;
+      createdAt?: string;
+      referredBySR?: {
+        name: string;
+        email: string;
+        mobile: string;
+      } | null;
+    };
+    orders: any[];
+    payments: any[];
+  } | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
+  const fetchCustomerDetails = async (customerId: string, customerMobile?: string) => {
+    setDetailsLoading(true);
+    setShowAllOrders(false);
+    setShowAllPayments(false);
+    try {
+      const token = localStorage.getItem("token");
+      const url = `/api/admin/collections?type=customer-details&customerId=${customerId}${customerMobile ? `&customerMobile=${customerMobile}` : ""}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedCustomerDetails(data);
+      } else {
+        alert("Failed to retrieve customer details.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while fetching customer details.");
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -302,9 +382,10 @@ export default function CollectionsPage() {
   const handleReconcileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reconcileOrder) return;
+    const finalMethod = paymentMethod === "bank" ? selectedBank : paymentMethod;
     setConfirmAction({
-      title: "Confirm Cash Collection",
-      message: `Are you sure you want to record a cash collection of ৳${cashAmount} via ${paymentMethod === 'cash' ? 'Cash' : paymentMethod.toUpperCase()} for Order #${reconcileOrder.id.slice(-8).toUpperCase()}? This will update the order's payment status and adjust the outstanding dues.`,
+      title: "Confirm Payment Collection",
+      message: `Are you sure you want to record a payment collection of ৳${cashAmount} via ${formatPaymentMethod(finalMethod)} for Order #${reconcileOrder.id.slice(-8).toUpperCase()}? This will update the order's payment status and adjust the outstanding dues.`,
       onConfirm: () => submitReconcile()
     });
   };
@@ -317,6 +398,7 @@ export default function CollectionsPage() {
 
     try {
       const token = localStorage.getItem("token");
+      const finalMethod = paymentMethod === "bank" ? selectedBank : paymentMethod;
       const res = await fetch("/api/admin/collections", {
         method: "POST",
         headers: {
@@ -327,7 +409,7 @@ export default function CollectionsPage() {
           action: "reconcile",
           orderId: reconcileOrder.id,
           amountPaid: Number(cashAmount),
-          paymentMethod,
+          paymentMethod: finalMethod,
           notes,
           documentUrl
         })
@@ -339,6 +421,7 @@ export default function CollectionsPage() {
         setCashAmount("");
         setNotes("");
         setDocumentUrl("");
+        setSelectedBank("");
         // Refresh listings
         await fetchData();
         setTimeout(() => {
@@ -358,9 +441,10 @@ export default function CollectionsPage() {
   const handleWalletDepositSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletDepositShop) return;
+    const finalMethod = paymentMethod === "bank" ? selectedBank : paymentMethod;
     setConfirmAction({
       title: "Confirm Wallet Deposit",
-      message: `Are you sure you want to record a direct wallet deposit of ৳${cashAmount} via ${paymentMethod === 'cash' ? 'Cash' : paymentMethod.toUpperCase()} for ${walletDepositShop.name}? This will automatically clear any outstanding dues first, and allocate any remaining amount to the wallet balance.`,
+      message: `Are you sure you want to record a direct wallet deposit of ৳${cashAmount} via ${formatPaymentMethod(finalMethod)} for ${walletDepositShop.name}? This will automatically clear any outstanding dues first, and allocate any remaining amount to the wallet balance.`,
       onConfirm: () => submitWalletDeposit()
     });
   };
@@ -373,6 +457,7 @@ export default function CollectionsPage() {
 
     try {
       const token = localStorage.getItem("token");
+      const finalMethod = paymentMethod === "bank" ? selectedBank : paymentMethod;
       const res = await fetch("/api/admin/collections", {
         method: "POST",
         headers: {
@@ -383,7 +468,7 @@ export default function CollectionsPage() {
           action: "wallet-deposit",
           userId: walletDepositShop.id,
           amount: Number(cashAmount),
-          paymentMethod,
+          paymentMethod: finalMethod,
           notes,
           documentUrl
         })
@@ -395,6 +480,7 @@ export default function CollectionsPage() {
         setCashAmount("");
         setNotes("");
         setDocumentUrl("");
+        setSelectedBank("");
         await fetchData();
         setTimeout(() => {
           setWalletDepositShop(null);
@@ -530,6 +616,7 @@ export default function CollectionsPage() {
 
   const filteredShops = shops.filter(s => {
     const matchesSearch = 
+      s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.mobile.includes(searchQuery) ||
       (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -578,6 +665,8 @@ export default function CollectionsPage() {
 
   const filteredLedgers = ledgers.filter(
     l =>
+      l.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (l.orderId && l.orderId.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (l.userId?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (l.notes || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       l.recordedBy.toLowerCase().includes(searchQuery.toLowerCase())
@@ -710,7 +799,7 @@ export default function CollectionsPage() {
                 : "text-gray-400 hover:text-gray-900"
             }`}
           >
-            B2B Shop Balances ({shops.length})
+            Customer Balances ({shops.length})
           </button>
           <button
             onClick={() => { setActiveTab("completed"); setSearchQuery(""); }}
@@ -952,7 +1041,7 @@ export default function CollectionsPage() {
                                 }}
                                 className="bg-amber-600 hover:bg-black text-white px-4 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95 shrink-0"
                               >
-                                Collect Cash
+                                Collect Payment
                               </Button>
                             </td>
                           </tr>
@@ -1013,7 +1102,7 @@ export default function CollectionsPage() {
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
                                                   <span>Collected: <strong className="text-slate-600">{new Date(item.createdAt).toLocaleString()}</strong></span>
-                                                  <span>Method: <strong className="text-slate-600">{item.paymentMethod.toUpperCase()}</strong></span>
+                                                  <span>Method: <strong className="text-slate-600">{formatPaymentMethod(item.paymentMethod)}</strong></span>
                                                   <span>By: <strong className="text-slate-600">{item.recordedBy}</strong></span>
                                                   <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
                                                 </div>
@@ -1288,7 +1377,7 @@ export default function CollectionsPage() {
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
                                                   <span>Collected: <strong className="text-slate-600">{new Date(item.createdAt).toLocaleString()}</strong></span>
-                                                  <span>Method: <strong className="text-slate-600">{item.paymentMethod.toUpperCase()}</strong></span>
+                                                  <span>Method: <strong className="text-slate-600">{formatPaymentMethod(item.paymentMethod)}</strong></span>
                                                   <span>By: <strong className="text-slate-600">{item.recordedBy}</strong></span>
                                                   <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
                                                 </div>
@@ -1317,21 +1406,21 @@ export default function CollectionsPage() {
             </div>
           )}
 
-          {/* TAB 2: B2B SHOP BALANCES & WALLETS */}
+          {/* TAB 2: CUSTOMER BALANCES & WALLETS */}
           {activeTab === "shops" && (
             <div className="space-y-4 animate-in fade-in duration-300">
               {/* Shop Balances Role Selector Bar */}
               <div className="flex flex-wrap items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
                 <button
                   type="button"
-                  onClick={() => setShopFilter("b2b")}
+                  onClick={() => setShopFilter("all")}
                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    shopFilter === "b2b"
+                    shopFilter === "all"
                       ? "bg-white text-gray-900 shadow-md shadow-gray-200"
                       : "text-gray-400 hover:text-gray-900"
                   }`}
                 >
-                  Retailer & Dealers
+                  All Customers
                 </button>
                 <button
                   type="button"
@@ -1357,14 +1446,14 @@ export default function CollectionsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShopFilter("all")}
+                  onClick={() => setShopFilter("b2b")}
                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    shopFilter === "all"
+                    shopFilter === "b2b"
                       ? "bg-white text-gray-900 shadow-md shadow-gray-200"
                       : "text-gray-400 hover:text-gray-900"
                   }`}
                 >
-                  All Customers
+                  Retailer & Dealers
                 </button>
               </div>
 
@@ -1373,11 +1462,19 @@ export default function CollectionsPage() {
                 <thead>
                   <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                     <th 
+                      onClick={() => handleSort("id")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Account ID {renderSortIndicator("id")}
+                      </div>
+                    </th>
+                    <th 
                       onClick={() => handleSort("name")} 
                       className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                     >
                       <div className="flex items-center">
-                        Shop Profile {renderSortIndicator("name")}
+                        Account Name {renderSortIndicator("name")}
                       </div>
                     </th>
                     <th 
@@ -1393,7 +1490,7 @@ export default function CollectionsPage() {
                       className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                     >
                       <div className="flex items-center">
-                        Customer Type {renderSortIndicator("customerType")}
+                        Account Type {renderSortIndicator("customerType")}
                       </div>
                     </th>
                     <th 
@@ -1405,19 +1502,35 @@ export default function CollectionsPage() {
                       </div>
                     </th>
                     <th 
+                      onClick={() => handleSort("totalOrderAmount")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Total Order {renderSortIndicator("totalOrderAmount")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("totalPaidAmount")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Total Paid {renderSortIndicator("totalPaidAmount")}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSort("totalDueAmount")} 
+                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center">
+                        Due {renderSortIndicator("totalDueAmount")}
+                      </div>
+                    </th>
+                    <th 
                       onClick={() => handleSort("accountBalance")} 
                       className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                     >
                       <div className="flex items-center">
                         Account Balance {renderSortIndicator("accountBalance")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("creditLimit")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Credit Limit {renderSortIndicator("creditLimit")}
                       </div>
                     </th>
                     <th className="py-4 px-3 text-right">Actions</th>
@@ -1426,25 +1539,27 @@ export default function CollectionsPage() {
                 <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
                   {sortedShops.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400 uppercase tracking-wider">No shop profiles found.</td>
+                      <td colSpan={9} className="py-8 text-center text-gray-400 uppercase tracking-wider">No shop profiles found.</td>
                     </tr>
                   ) : (
                     sortedShops.map((shop) => (
                       <tr key={shop.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-3 font-mono font-black text-gray-900">
+                          #{shop.id.slice(-8).toUpperCase()}
+                        </td>
                         <td className="py-4 px-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</span>
-                            {renderTypeBadge(shop.customerType)}
-                          </div>
+                          <span className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</span>
                           <div className="text-[10px] text-gray-400">{shop.email}</div>
                         </td>
                         <td className="py-4 px-3 text-gray-500">{shop.mobile}</td>
                         <td className="py-4 px-3 uppercase tracking-wider text-[10px]">
                           <span className={`px-2 py-0.5 rounded font-black border ${
-                            shop.customerType === "dealer" 
+                            shop.customerType?.toLowerCase() === "dealer" 
                               ? "bg-amber-50 text-amber-700 border-amber-200" 
-                              : shop.customerType === "retailer" 
+                              : shop.customerType?.toLowerCase() === "retailer" 
                               ? "bg-blue-50 text-blue-700 border-blue-200" 
+                              : shop.customerType?.toLowerCase() === "guest" 
+                              ? "bg-gray-100 text-gray-400 border-gray-200" 
                               : "bg-slate-100 text-slate-600 border-slate-200"
                           }`}>
                             {shop.customerType}
@@ -1463,6 +1578,15 @@ export default function CollectionsPage() {
                             <span className="text-gray-400">—</span>
                           )}
                         </td>
+                        <td className="py-4 px-3 font-bold text-gray-900">
+                          ৳{(shop.totalOrderAmount || 0).toLocaleString()}
+                        </td>
+                        <td className="py-4 px-3 font-bold text-emerald-600">
+                          ৳{(shop.totalPaidAmount || 0).toLocaleString()}
+                        </td>
+                        <td className="py-4 px-3 font-bold text-rose-500">
+                          ৳{(shop.totalDueAmount || 0).toLocaleString()}
+                        </td>
                         <td className="py-4 px-3">
                           {(() => {
                             const balance = (shop.walletBalance || 0) - (shop.dueBalance || 0);
@@ -1475,22 +1599,25 @@ export default function CollectionsPage() {
                             return <span className="text-gray-400 font-normal">৳0</span>;
                           })()}
                         </td>
-                        <td className="py-4 px-3 text-gray-900 font-bold">
-                          {shop.creditLimit >= 999999999 ? (
-                            <span className="text-emerald-600 font-black uppercase text-[10px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Unlimited</span>
-                          ) : (
-                            `৳${shop.creditLimit || 10000}`
-                          )}
-                        </td>
                         <td className="py-4 px-3 text-right flex items-center justify-end gap-2">
+                          {shop.customerType !== "Guest" ? (
+                            <Button
+                              onClick={() => {
+                                setWalletDepositShop(shop);
+                                setCashAmount("");
+                              }}
+                              className="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
+                            >
+                              Add Deposit
+                            </Button>
+                          ) : (
+                            <span className="text-gray-400 text-[10px] font-black uppercase italic tracking-wider px-3">No Wallet</span>
+                          )}
                           <Button
-                            onClick={() => {
-                              setWalletDepositShop(shop);
-                              setCashAmount("");
-                            }}
-                            className="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
+                            onClick={() => fetchCustomerDetails(shop.id, shop.customerType === "Guest" ? shop.mobile : undefined)}
+                            className="bg-amber-600 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
                           >
-                            Add Deposit
+                            Details
                           </Button>
                         </td>
                       </tr>
@@ -1508,11 +1635,14 @@ export default function CollectionsPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    <th className="py-4 px-3">Transaction ID</th>
                     <th className="py-4 px-3">Date</th>
                     <th className="py-4 px-3">Shop Profile</th>
                     <th className="py-4 px-3">Transaction Type</th>
+                    <th className="py-4 px-3">Reference ID</th>
                     <th className="py-4 px-3">Payment Method</th>
                     <th className="py-4 px-3">Amount</th>
+                    <th className="py-4 px-3">Proof</th>
                     <th className="py-4 px-3">Recorded By</th>
                     <th className="py-4 px-3">Notes</th>
                   </tr>
@@ -1520,11 +1650,14 @@ export default function CollectionsPage() {
                 <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
                   {filteredLedgers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400 uppercase tracking-wider">No transaction ledger logs found.</td>
+                      <td colSpan={10} className="py-8 text-center text-gray-400 uppercase tracking-wider">No transaction ledger logs found.</td>
                     </tr>
                   ) : (
                     filteredLedgers.map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-3 font-mono font-black text-gray-900">
+                          #{log.id.slice(-8).toUpperCase()}
+                        </td>
                         <td className="py-4 px-3 text-gray-400">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
@@ -1555,26 +1688,74 @@ export default function CollectionsPage() {
                             {log.type.replace("_", " ")}
                           </span>
                         </td>
+                        <td className="py-4 px-3 font-mono text-[10px] text-gray-600 font-bold">
+                          {(() => {
+                            if (log.type === "collection") {
+                                return log.orderId ? (
+                                  <a 
+                                    href={`/admin/orders?q=${log.orderId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                    title="View Order in Orders List"
+                                  >
+                                    #{log.orderId.slice(-8).toUpperCase()}
+                                  </a>
+                                ) : "—";
+                            }
+                            if (log.type === "wallet_deposit" || log.type === "wallet_deduction") {
+                              const userIdStr = log.userId ? (log.userId.id || (log.userId as any)._id?.toString()) : null;
+                              return userIdStr ? (
+                                <a 
+                                  href={`/admin/collections?tab=shops&q=${userIdStr}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 hover:underline transition-colors text-left font-mono text-[10px] font-bold"
+                                  title="View Customer Balance"
+                                >
+                                  #{userIdStr.slice(-8).toUpperCase()}
+                                </a>
+                              ) : "—";
+                            }
+                            return "—";
+                          })()}
+                        </td>
                         <td className="py-4 px-3 uppercase tracking-wider text-[10px] text-gray-500">
-                          {log.paymentMethod}
+                          {log.paymentMethod.startsWith("bank") ? (
+                            <div className="flex flex-col">
+                              <span className="font-bold">BANK TRANSFER</span>
+                              {log.paymentMethod !== "bank" && (
+                                <span className="text-[9px] text-amber-600 font-black tracking-normal normal-case mt-0.5">
+                                  {log.paymentMethod === "bank_ucb" ? "UCB Bank" : 
+                                   log.paymentMethod === "bank_brac" ? "Brac Bank" : 
+                                   log.paymentMethod === "bank_nrbc" ? "NRBC Bank" : 
+                                   log.paymentMethod.replace("bank_", "").toUpperCase() + " Bank"}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            formatPaymentMethod(log.paymentMethod)
+                          )}
                         </td>
                         <td className="py-4 px-3 font-black text-gray-900">৳{log.amount}</td>
+                        <td className="py-4 px-3">
+                          {log.documentUrl ? (
+                            <a 
+                              href={log.documentUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
+                              title="View Proof Document"
+                            >
+                              <Eye className="w-3 h-3" /> View Proof
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 font-normal">—</span>
+                          )}
+                        </td>
                         <td className="py-4 px-3 text-gray-400">{log.recordedBy}</td>
                         <td className="py-4 px-3 text-gray-400 font-normal max-w-[200px] truncate">
-                          <div className="flex items-center gap-2">
-                            <span>{log.notes || "—"}</span>
-                            {log.documentUrl && (
-                              <a 
-                                href={log.documentUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-amber-600 hover:text-amber-800 transition-colors p-1 hover:bg-amber-50 rounded"
-                                title="View Proof Document"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </a>
-                            )}
-                          </div>
+                          <span>{log.notes || "—"}</span>
                         </td>
                       </tr>
                     ))
@@ -1589,8 +1770,14 @@ export default function CollectionsPage() {
 
       {/* MODAL 1: RECONCILE CASH FROM ORDER */}
       {reconcileOrder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setReconcileOrder(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Reconcile Cash Payment</h3>
               <button onClick={() => setReconcileOrder(null)} className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -1670,7 +1857,7 @@ export default function CollectionsPage() {
                               </div>
                               <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
                                 <span>Collected: <strong className="text-slate-600">{new Date(item.createdAt).toLocaleString()}</strong></span>
-                                <span>Method: <strong className="text-slate-600">{item.paymentMethod.toUpperCase()}</strong></span>
+                                <span>Method: <strong className="text-slate-600">{formatPaymentMethod(item.paymentMethod)}</strong></span>
                                 <span>By: <strong className="text-slate-600">{item.recordedBy}</strong></span>
                                 <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
                               </div>
@@ -1704,7 +1891,15 @@ export default function CollectionsPage() {
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Collection Mode *</label>
                 <select
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPaymentMethod(val);
+                    if (val === "bank") {
+                      setSelectedBank("bank_ucb");
+                    } else {
+                      setSelectedBank("");
+                    }
+                  }}
                   className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-black focus:outline-none rounded-xl text-sm font-bold text-gray-900 appearance-none"
                 >
                   <option value="cash">Cash Collection</option>
@@ -1714,8 +1909,23 @@ export default function CollectionsPage() {
                 </select>
               </div>
 
+              {paymentMethod === "bank" && (
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Select Bank *</label>
+                  <select
+                    value={selectedBank}
+                    onChange={(e) => setSelectedBank(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-black focus:outline-none rounded-xl text-sm font-bold text-gray-900 appearance-none"
+                  >
+                    <option value="bank_ucb">UCB bank</option>
+                    <option value="bank_brac">Brac bank</option>
+                    <option value="bank_nrbc">NRBC bank</option>
+                  </select>
+                </div>
+              )}
+
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Reconciliation Notes</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Reconciliation Notes (Optional)</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -1830,8 +2040,14 @@ export default function CollectionsPage() {
 
       {/* MODAL 2: ADD DIRECT WALLET DEPOSIT */}
       {walletDepositShop && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setWalletDepositShop(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Log Wallet Deposit</h3>
               <button onClick={() => setWalletDepositShop(null)} className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -1875,7 +2091,15 @@ export default function CollectionsPage() {
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Deposit Mode *</label>
                 <select
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPaymentMethod(val);
+                    if (val === "bank") {
+                      setSelectedBank("bank_ucb");
+                    } else {
+                      setSelectedBank("");
+                    }
+                  }}
                   className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-black focus:outline-none rounded-xl text-sm font-bold text-gray-900 appearance-none"
                 >
                   <option value="cash">Cash Payment</option>
@@ -1885,8 +2109,23 @@ export default function CollectionsPage() {
                 </select>
               </div>
 
+              {paymentMethod === "bank" && (
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Select Bank *</label>
+                  <select
+                    value={selectedBank}
+                    onChange={(e) => setSelectedBank(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-black focus:outline-none rounded-xl text-sm font-bold text-gray-900 appearance-none"
+                  >
+                    <option value="bank_ucb">UCB bank</option>
+                    <option value="bank_brac">Brac bank</option>
+                    <option value="bank_nrbc">NRBC bank</option>
+                  </select>
+                </div>
+              )}
+
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Deposit Notes</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Deposit Notes (Optional)</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -2004,10 +2243,238 @@ export default function CollectionsPage() {
         </div>
       )}
 
+      {/* MODAL 3: CUSTOMER DETAILS / PROFILE VIEW */}
+      {selectedCustomerDetails && (
+        <div 
+          onClick={() => setSelectedCustomerDetails(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between border-b pb-3 mb-4">
+              <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Customer Profile & Details</h3>
+              <button 
+                onClick={() => setSelectedCustomerDetails(null)} 
+                className="text-gray-400 hover:text-gray-900 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Profile Summary Card */}
+              <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-100/50 space-y-4">
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                  <div>
+                    <h4 className="text-base font-black text-gray-900 uppercase tracking-tight">{selectedCustomerDetails.user.name}</h4>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Customer ID: #{selectedCustomerDetails.user.id.slice(-8).toUpperCase()}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded font-black border uppercase text-[9px] ${
+                      selectedCustomerDetails.user.customerType?.toLowerCase() === "dealer" 
+                        ? "bg-amber-50 text-amber-700 border-amber-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "retailer" 
+                        ? "bg-blue-50 text-blue-700 border-blue-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest" 
+                        ? "bg-gray-100 text-gray-400 border-gray-200" 
+                        : "bg-slate-100 text-slate-600 border-slate-200"
+                    }`}>
+                      {selectedCustomerDetails.user.customerType}
+                    </span>
+                    {selectedCustomerDetails.user.customerType === "retailer" && (
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
+                        selectedCustomerDetails.user.isRetailerApproved 
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                          : "bg-rose-50 text-rose-600 border-rose-200"
+                      }`}>
+                        {selectedCustomerDetails.user.isRetailerApproved ? "Approved" : "Probation"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold text-slate-500 border-t border-slate-200/50 pt-4">
+                  <div className="space-y-1">
+                    <div>Mobile: <span className="text-gray-900 font-mono">{selectedCustomerDetails.user.mobile}</span></div>
+                    <div>Email: <span className="text-gray-900">{selectedCustomerDetails.user.email || "—"}</span></div>
+                    <div>Customer Since: <span className="text-gray-900">{selectedCustomerDetails.user.createdAt ? new Date(selectedCustomerDetails.user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</span></div>
+                  </div>
+                  <div className="space-y-1 md:text-right">
+                    <div>Wallet Balance: <span className="text-emerald-600">৳{selectedCustomerDetails.user.walletBalance.toLocaleString()}</span></div>
+                    {selectedCustomerDetails.user.customerType === "retailer" && !selectedCustomerDetails.user.isRetailerApproved && (
+                      <div>Credit Limit: <span className="text-gray-900">৳{selectedCustomerDetails.user.creditLimit.toLocaleString()}</span></div>
+                    )}
+                    <div>Account Created By: <span className="text-gray-900">
+                      {selectedCustomerDetails.user.customerType === "Guest" ? "Guest Checkout" : 
+                       selectedCustomerDetails.user.referredBySR 
+                        ? `SR (${selectedCustomerDetails.user.referredBySR.name})` 
+                        : "Self"}
+                    </span></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200/50 pt-3 text-xs font-bold text-slate-500">
+                  <span className="text-[10px] text-gray-400 uppercase tracking-widest block mb-1">Last Billing Address</span>
+                  <span className="text-gray-800 font-medium leading-relaxed">
+                    {selectedCustomerDetails.orders[0]?.address || "No billing address recorded."}
+                  </span>
+                </div>
+              </div>
+
+              {/* Orders History Section */}
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-1.5 flex justify-between items-center">
+                  <span>Order History ({selectedCustomerDetails.orders.length})</span>
+                </h4>
+                {selectedCustomerDetails.orders.length === 0 ? (
+                  <div className="text-center py-4 text-xs font-bold italic text-gray-400">No orders recorded for this customer.</div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(showAllOrders 
+                      ? selectedCustomerDetails.orders 
+                      : selectedCustomerDetails.orders.slice(0, 5)
+                    ).map((order) => (
+                      <div key={order.id} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between text-xs gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <a 
+                              href={`/admin/orders?q=${order.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono font-black text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              #{order.id.slice(-8).toUpperCase()}
+                            </a>
+                            <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="text-[10px] text-gray-500 max-w-md truncate">{order.address}</div>
+                        </div>
+                        <div className="text-right shrink-0 space-y-1">
+                          <div className="font-black text-gray-900">৳{order.total.toLocaleString()}</div>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
+                              order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                              order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                              {order.status}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
+                              order.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              order.paymentStatus === 'partial' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}>
+                              {order.paymentStatus}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedCustomerDetails.orders.length > 5 && (
+                      <button
+                        onClick={() => setShowAllOrders(prev => !prev)}
+                        className="w-full text-center py-2 bg-slate-100 hover:bg-slate-200/80 transition-colors text-[9px] font-black uppercase tracking-widest rounded-xl text-slate-500"
+                      >
+                        {showAllOrders ? "Show Less" : `View Rest (${selectedCustomerDetails.orders.length - 5} More Orders)`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Payment History Section */}
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-1.5 flex justify-between items-center">
+                  <span>Payment History & Collections ({selectedCustomerDetails.payments.length})</span>
+                </h4>
+                {selectedCustomerDetails.payments.length === 0 ? (
+                  <div className="text-center py-4 text-xs font-bold italic text-gray-400">No payment transaction records.</div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(showAllPayments 
+                      ? selectedCustomerDetails.payments 
+                      : selectedCustomerDetails.payments.slice(0, 5)
+                    ).map((pm) => (
+                      <div key={pm.id} className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedCustomerDetails(null);
+                                setActiveTab("ledgers");
+                                setSearchQuery(pm.id);
+                              }}
+                              className="font-mono text-[10.5px] text-blue-600 hover:text-blue-800 hover:underline font-black shrink-0"
+                              title="Find in Ledgers Table"
+                            >
+                              #{pm.id.slice(-8).toUpperCase()}
+                            </button>
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
+                              pm.type === "collection" 
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                                : pm.type === "wallet_deposit" 
+                                ? "bg-blue-50 text-blue-600 border-blue-200" 
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}>
+                              {pm.type.replace("_", " ")}
+                            </span>
+                            <span className="text-[10px] text-gray-400">{new Date(pm.createdAt).toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {pm.documentUrl && (
+                              <a 
+                                href={pm.documentUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-amber-600 hover:text-amber-800 font-bold hover:underline inline-flex items-center gap-0.5 text-[10px]"
+                              >
+                                <Eye className="w-3.5 h-3.5" /> View Proof
+                              </a>
+                            )}
+                            <div className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-100">
+                              ৳{pm.amount.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5 justify-between">
+                          <span>Method: <strong className="text-slate-600">{formatPaymentMethod(pm.paymentMethod)}</strong></span>
+                          <span>Operator: <strong className="text-slate-600">{pm.recordedBy}</strong></span>
+                        </div>
+                        {pm.notes && (
+                          <div className="text-[10px] text-gray-400 italic bg-white p-2 rounded border border-slate-100/50 mt-1">
+                            Remarks: "{pm.notes}"
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {selectedCustomerDetails.payments.length > 5 && (
+                      <button
+                        onClick={() => setShowAllPayments(prev => !prev)}
+                        className="w-full text-center py-2 bg-slate-100 hover:bg-slate-200/80 transition-colors text-[9px] font-black uppercase tracking-widest rounded-xl text-slate-500"
+                      >
+                        {showAllPayments ? "Show Less" : `View Rest (${selectedCustomerDetails.payments.length - 5} More Payments)`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CONFIRMATION POPUP MODAL */}
       {confirmAction && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setConfirmAction(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center gap-3 border-b pb-3 mb-4">
               <h3 className="text-md font-black text-gray-900 uppercase tracking-tighter italic">
                 {confirmAction.title}

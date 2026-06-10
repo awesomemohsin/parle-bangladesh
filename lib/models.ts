@@ -894,7 +894,7 @@ export const Offer = mongoose.models?.Offer || mongoose.model<IOffer>("Offer", O
 
 // --- TRANSACTION LEDGER MODEL ---
 export interface ITransactionLedger extends Document {
-  userId: mongoose.Types.ObjectId | string;
+  userId?: mongoose.Types.ObjectId | string | null;
   orderId?: mongoose.Types.ObjectId | string;
   amount: number; // Positive for collection/wallet deposit, negative for purchase/deductions
   type: "collection" | "purchase" | "refund" | "wallet_deposit" | "wallet_deduction";
@@ -908,7 +908,7 @@ export interface ITransactionLedger extends Document {
 
 const TransactionLedgerSchema = new Schema<ITransactionLedger>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     orderId: { type: Schema.Types.ObjectId, ref: "Order", index: true },
     amount: { type: Number, required: true },
     type: { 

@@ -30,6 +30,94 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    if (type === "customer-details") {
+      const customerId = searchParams.get("customerId");
+      const customerMobile = searchParams.get("customerMobile");
+
+      if (!customerId && !customerMobile) {
+        return NextResponse.json({ error: "customerId or customerMobile is required" }, { status: 400 });
+      }
+
+      // Fetch user info
+      let dbUser: any = null;
+      if (customerId && !customerId.startsWith("guest-") && mongoose.Types.ObjectId.isValid(customerId)) {
+        dbUser = await User.findById(customerId).populate("referredBySR", "name email mobile").lean();
+      }
+
+      // Fetch all orders for this customer (sorted by createdAt desc)
+      const queryCond: any = {};
+      if (dbUser) {
+        queryCond.userId = dbUser._id;
+      } else {
+        const phone = customerMobile || (customerId?.startsWith("guest-") ? customerId.replace("guest-", "") : customerId);
+        queryCond.customerPhone = phone;
+      }
+      queryCond.status = { $in: ["processing", "shipped", "delivered"] };
+
+      const allOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
+
+      // Fetch all payment/transaction history for this customer (sorted by createdAt desc)
+      let allPayments: any[] = [];
+      if (dbUser) {
+        allPayments = await TransactionLedger.find({
+          userId: dbUser._id
+        }).sort({ createdAt: -1 }).lean();
+      } else {
+        // For guest, transactions are recorded against the orderIds of their orders
+        const orderIds = allOrders.map(o => o._id);
+        allPayments = await TransactionLedger.find({
+          orderId: { $in: orderIds }
+        }).sort({ createdAt: -1 }).lean();
+      }
+
+      return NextResponse.json({
+        user: dbUser ? {
+          id: dbUser._id.toString(),
+          name: dbUser.name,
+          mobile: dbUser.mobile,
+          email: dbUser.email,
+          customerType: dbUser.customerType,
+          walletBalance: dbUser.walletBalance || 0,
+          creditLimit: dbUser.creditLimit || 0,
+          isRetailerApproved: dbUser.isRetailerApproved,
+          createdAt: dbUser.createdAt,
+          referredBySR: dbUser.referredBySR
+        } : {
+          id: customerId,
+          name: allOrders[0]?.customerName || "Guest Customer",
+          mobile: customerMobile || (customerId?.startsWith("guest-") ? customerId.replace("guest-", "") : customerId),
+          email: allOrders[0]?.customerEmail || "",
+          customerType: "Guest",
+          walletBalance: 0,
+          creditLimit: 0,
+          isRetailerApproved: false,
+          createdAt: allOrders[allOrders.length - 1]?.createdAt || new Date(),
+          referredBySR: null
+        },
+        orders: allOrders.map((o: any) => ({
+          id: o._id.toString(),
+          total: o.total,
+          amountPaid: o.amountPaid,
+          amountDue: o.amountDue,
+          paymentMethod: o.paymentMethod,
+          paymentStatus: o.paymentStatus,
+          status: o.status,
+          address: `${o.address}, ${o.city} - ${o.postalCode}`,
+          createdAt: o.createdAt
+        })),
+        payments: allPayments.map((p: any) => ({
+          id: p._id.toString(),
+          amount: p.amount,
+          type: p.type,
+          paymentMethod: p.paymentMethod,
+          notes: p.notes,
+          documentUrl: p.documentUrl,
+          recordedBy: p.recordedBy,
+          createdAt: p.createdAt
+        }))
+      });
+    }
+
     if (type === "payment-history") {
       const orderId = searchParams.get("orderId");
       if (!orderId) {
@@ -225,15 +313,98 @@ export async function GET(request: NextRequest) {
       .sort({ updatedAt: -1 })
       .lean();
 
-      responseData.shops = B2BShops.map((s: any) => {
+      // Aggregate order statistics for users
+      const orderStats = await Order.aggregate([
+        {
+          $match: {
+            userId: { $nin: [null, ""], $exists: true },
+            status: { $in: ["processing", "shipped", "delivered"] }
+          }
+        },
+        {
+          $group: {
+            _id: "$userId",
+            totalOrderAmount: { $sum: "$total" },
+            totalPaidAmount: { $sum: "$amountPaid" },
+            totalDueAmount: { $sum: "$amountDue" }
+          }
+        }
+      ]);
+
+      const statsMap: Record<string, { totalOrderAmount: number; totalPaidAmount: number; totalDueAmount: number }> = {};
+      orderStats.forEach((stat: any) => {
+        if (stat._id) {
+          statsMap[stat._id.toString()] = {
+            totalOrderAmount: stat.totalOrderAmount || 0,
+            totalPaidAmount: stat.totalPaidAmount || 0,
+            totalDueAmount: stat.totalDueAmount || 0
+          };
+        }
+      });
+
+      const registeredShops = B2BShops.map((s: any) => {
         const bal = s.walletBalance || 0;
+        const stats = statsMap[s._id.toString()] || { totalOrderAmount: 0, totalPaidAmount: 0, totalDueAmount: 0 };
         return {
           ...s,
           id: s._id.toString(),
           _id: undefined,
           dueBalance: bal < 0 ? Math.abs(bal) : 0,
-          walletBalance: bal > 0 ? bal : 0
+          walletBalance: bal > 0 ? bal : 0,
+          totalOrderAmount: stats.totalOrderAmount,
+          totalPaidAmount: stats.totalPaidAmount,
+          totalDueAmount: stats.totalDueAmount
         };
+      });
+
+      // Aggregate guest checkout orders (where userId is missing/null/empty)
+      const guestOrderStats = await Order.aggregate([
+        {
+          $match: {
+            $or: [
+              { userId: { $exists: false } },
+              { userId: null },
+              { userId: "" }
+            ],
+            status: { $in: ["processing", "shipped", "delivered"] }
+          }
+        },
+        {
+          $group: {
+            _id: "$customerPhone",
+            name: { $first: "$customerName" },
+            email: { $first: "$customerEmail" },
+            totalOrderAmount: { $sum: "$total" },
+            totalPaidAmount: { $sum: "$amountPaid" },
+            totalDueAmount: { $sum: "$amountDue" },
+            createdAt: { $min: "$createdAt" },
+            updatedAt: { $max: "$createdAt" }
+          }
+        }
+      ]);
+
+      const guestShops = guestOrderStats.map((g: any) => ({
+        id: `guest-${g._id}`,
+        name: g.name || "Guest Customer",
+        mobile: g._id || "",
+        email: g.email || "",
+        dueBalance: g.totalDueAmount || 0,
+        walletBalance: 0,
+        creditLimit: 0,
+        customerType: "Guest",
+        isRetailerApproved: false,
+        createdAt: g.createdAt || new Date(),
+        updatedAt: g.updatedAt || new Date(),
+        totalOrderAmount: g.totalOrderAmount || 0,
+        totalPaidAmount: g.totalPaidAmount || 0,
+        totalDueAmount: g.totalDueAmount || 0
+      }));
+
+      // Combine and sort by updatedAt desc
+      responseData.shops = [...registeredShops, ...guestShops].sort((a: any, b: any) => {
+        const timeA = new Date(a.updatedAt).getTime();
+        const timeB = new Date(b.updatedAt).getTime();
+        return timeB - timeA;
       });
     }
 
@@ -255,6 +426,7 @@ export async function GET(request: NextRequest) {
         ...l,
         id: l._id.toString(),
         _id: undefined,
+        orderId: l.orderId ? l.orderId.toString() : undefined,
         userId: l.userId ? {
           ...l.userId,
           id: l.userId._id?.toString(),
@@ -325,7 +497,7 @@ export async function POST(request: NextRequest) {
           type: "collection",
           paymentMethod: paymentMethod || "cash",
           recordedBy: adminUser.email,
-          notes: notes || `Reconciled B2B payment of ৳${cashCollected} by accounts department.`,
+          notes: notes || "",
           documentUrl,
         });
         await ledger.save();
@@ -347,20 +519,18 @@ export async function POST(request: NextRequest) {
         order.paymentStatus = order.amountDue <= 0 ? "paid" : "partial";
         await order.save();
 
-        // Save ledger entry if we have a userId for tracking
-        if (order.userId || orderUser?._id) {
-          const ledger = new TransactionLedger({
-            userId: order.userId || orderUser?._id,
-            orderId: order._id,
-            amount: cashCollected,
-            type: "collection",
-            paymentMethod: paymentMethod || "cash",
-            recordedBy: adminUser.email,
-            notes: notes || `Reconciled B2C payment of ৳${cashCollected} by accounts department.`,
-            documentUrl,
-          });
-          await ledger.save();
-        }
+        // Save ledger entry (always save it, even for guests!)
+        const ledger = new TransactionLedger({
+          userId: order.userId || orderUser?._id || null,
+          orderId: order._id,
+          amount: cashCollected,
+          type: "collection",
+          paymentMethod: paymentMethod || "cash",
+          recordedBy: adminUser.email,
+          notes: notes || "",
+          documentUrl,
+        });
+        await ledger.save();
       }
 
       const updatedOrder = await Order.findById(orderId).lean() as any;
@@ -398,7 +568,7 @@ export async function POST(request: NextRequest) {
         type: "wallet_deposit",
         paymentMethod: paymentMethod || "cash",
         recordedBy: adminUser.email,
-        notes: notes || `Wallet Deposit of ৳${depositAmount}.`,
+        notes: notes || "",
         documentUrl,
       });
       await ledger.save();

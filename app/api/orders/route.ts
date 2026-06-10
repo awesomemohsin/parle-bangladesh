@@ -321,9 +321,9 @@ export async function POST(request: NextRequest) {
     const tax = 0;
     const total = subtotal + shippingCost - discountAmount;
 
-    // Credit limit check for probation B2B users (retailers and dealers)
-    const isB2B = customerTypeStr === "retailer" || customerTypeStr === "dealer";
-    if (user && isB2B && !user.isRetailerApproved) {
+    // Credit limit check ONLY for probation retailers
+    const isProbationRetailer = customerTypeStr === "retailer" && !user.isRetailerApproved;
+    if (user && isProbationRetailer) {
       const netBal = (user.walletBalance || 0) - (user.dueBalance || 0);
       const newBal = netBal - total;
       if (newBal < -10000) {
@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
           type: "collection",
           paymentMethod: body.paymentMethod || "cash",
           recordedBy: srUser ? srUser.email : user.email,
-          notes: body.notes || `Advance payment of ৳${advancePaid} at order placement.`,
+          notes: body.notes || "",
         });
         await ledger.save();
       }
