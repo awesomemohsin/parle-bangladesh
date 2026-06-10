@@ -37,7 +37,7 @@ const renderTypeBadge = (customerType: string | undefined) => {
 
   return (
     <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider border shrink-0 ${classes}`}>
-      {customerType}
+      {customerType.replace("_", " ")}
     </span>
   );
 };
@@ -2279,9 +2279,11 @@ export default function CollectionsPage() {
                         ? "bg-blue-50 text-blue-700 border-blue-200" 
                         : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest" 
                         ? "bg-gray-100 text-gray-400 border-gray-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() !== "customer"
+                        ? "bg-teal-50 text-teal-700 border-teal-200"
                         : "bg-slate-100 text-slate-600 border-slate-200"
                     }`}>
-                      {selectedCustomerDetails.user.customerType}
+                      {selectedCustomerDetails.user.customerType?.replace("_", " ")}
                     </span>
                     {selectedCustomerDetails.user.customerType === "retailer" && (
                       <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${

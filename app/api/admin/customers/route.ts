@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { User } from "@/lib/models";
+import { User, Admin } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 
 /**
@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
       .select("-password")
       .lean();
 
+    // Get all registered admins/superadmins/etc.
+    const dbAdmins = await Admin.find()
+      .select("-password")
+      .lean();
+
     // 2. Aggregate order statistics for ALL emails (including guests)
     const orderStats = await Order.aggregate([
       { 
@@ -64,6 +69,7 @@ export async function GET(request: NextRequest) {
 
     const statsMap = new Map(orderStats.map((s: any) => [s._id, s]));
     const registeredEmails = new Set(registeredUsers.map(u => u.email.toLowerCase()));
+    dbAdmins.forEach(a => registeredEmails.add(a.email.toLowerCase()));
 
     // 3. Merge Registered Users with their stats
     const customersList: any[] = registeredUsers.map((u: any) => {
@@ -87,6 +93,31 @@ export async function GET(request: NextRequest) {
         dueBalance: bal < 0 ? Math.abs(bal) : 0,
         walletBalance: bal > 0 ? bal : 0
       };
+    });
+
+    // Merge Admins with their stats (only if they have orders)
+    dbAdmins.forEach((a: any) => {
+      const stats = statsMap.get(a.email.toLowerCase());
+      if (stats) {
+        customersList.push({
+          id: a._id.toString(),
+          name: a.name,
+          email: a.email,
+          mobile: a.mobile,
+          customerType: a.role || "admin",
+          status: a.status,
+          createdAt: a.createdAt,
+          ordersCount: stats.ordersCount,
+          totalSpent: stats.totalSpent,
+          totalProducts: stats.totalProducts,
+          isGuest: false,
+          flatDiscountPercent: undefined,
+          flatDiscountExpiresAt: undefined,
+          pendingApproval: false,
+          dueBalance: 0,
+          walletBalance: 0
+        });
+      }
     });
 
     // 4. Add Guest Customers (those who have orders but no account)

@@ -469,7 +469,7 @@ export default function AdminCustomersPage() {
                             ? 'bg-slate-100 text-slate-500'
                             : 'bg-teal-50 text-teal-700 border border-teal-100'
                         }`}>
-                          {customer.customerType}
+                          {customer.customerType?.replace("_", " ")}
                         </span>
                         {customer.pendingApproval && (
                           <span className="text-[8px] font-black bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded uppercase tracking-widest animate-pulse mt-1">
@@ -753,9 +753,11 @@ export default function AdminCustomersPage() {
                         ? "bg-blue-50 text-blue-700 border-blue-200" 
                         : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest" 
                         ? "bg-gray-100 text-gray-400 border-gray-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() !== "customer"
+                        ? "bg-teal-50 text-teal-700 border-teal-200"
                         : "bg-slate-100 text-slate-600 border-slate-200"
                     }`}>
-                      {selectedCustomerDetails.user.customerType}
+                      {selectedCustomerDetails.user.customerType?.replace("_", " ")}
                     </span>
                     {selectedCustomerDetails.user.customerType === "retailer" && (
                       <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${

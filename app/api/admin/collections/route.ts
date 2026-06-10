@@ -275,13 +275,32 @@ export async function GET(request: NextRequest) {
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
       }
       const outstandingOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
+      
+      // Bulk resolve user types (including admins)
+      const orderUserIds = Array.from(new Set(outstandingOrders.map((o: any) => o.userId).filter(Boolean)));
+      const [dbUsers, dbAdmins] = await Promise.all([
+        User.find({ _id: { $in: orderUserIds } }).select("customerType role").lean(),
+        Admin.find({ _id: { $in: orderUserIds } }).select("role").lean()
+      ]);
+      const orderUserMap: Record<string, string> = {};
+      dbUsers.forEach((u: any) => {
+        orderUserMap[u._id.toString()] = u.customerType || u.role || "customer";
+      });
+      dbAdmins.forEach((a: any) => {
+        orderUserMap[a._id.toString()] = a.role || "admin";
+      });
 
-      responseData.orders = outstandingOrders.map((o: any) => ({
-        ...o,
-        customerType: o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest")),
-        id: o._id.toString(),
-        _id: undefined
-      }));
+      responseData.orders = outstandingOrders.map((o: any) => {
+        const resolvedType = o.userId 
+          ? (orderUserMap[o.userId.toString()] || o.customerType || "customer") 
+          : "guest";
+        return {
+          ...o,
+          customerType: resolvedType,
+          id: o._id.toString(),
+          _id: undefined
+        };
+      });
     }
 
     // 1b. Completed Invoices (Processing, Shipped, Delivered, paymentStatus === "paid")
@@ -296,13 +315,32 @@ export async function GET(request: NextRequest) {
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
       }
       const completedOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
+      
+      // Bulk resolve user types (including admins)
+      const orderUserIds = Array.from(new Set(completedOrders.map((o: any) => o.userId).filter(Boolean)));
+      const [dbUsers, dbAdmins] = await Promise.all([
+        User.find({ _id: { $in: orderUserIds } }).select("customerType role").lean(),
+        Admin.find({ _id: { $in: orderUserIds } }).select("role").lean()
+      ]);
+      const orderUserMap: Record<string, string> = {};
+      dbUsers.forEach((u: any) => {
+        orderUserMap[u._id.toString()] = u.customerType || u.role || "customer";
+      });
+      dbAdmins.forEach((a: any) => {
+        orderUserMap[a._id.toString()] = a.role || "admin";
+      });
 
-      responseData.completedOrders = completedOrders.map((o: any) => ({
-        ...o,
-        customerType: o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest")),
-        id: o._id.toString(),
-        _id: undefined
-      }));
+      responseData.completedOrders = completedOrders.map((o: any) => {
+        const resolvedType = o.userId 
+          ? (orderUserMap[o.userId.toString()] || o.customerType || "customer") 
+          : "guest";
+        return {
+          ...o,
+          customerType: resolvedType,
+          id: o._id.toString(),
+          _id: undefined
+        };
+      });
     }
 
     // 2. Shops / Retailers / Dealers with outstanding dues or wallet balances

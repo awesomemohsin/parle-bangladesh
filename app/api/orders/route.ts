@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getEffectiveUserContext, hasAnyRole, getAuthUserFromRequest } from "@/lib/api-auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order, Product, Customer, PromoCode, ApprovalRequest, StockLog, User } from "@/lib/models";
+import { Order, Product, Customer, PromoCode, ApprovalRequest, StockLog, User, Admin } from "@/lib/models";
 import mongoose from "mongoose";
 import { notifyNewOrder } from "@/lib/telegram";
 import { calculateServerSideCart } from "@/lib/pricing";
@@ -162,11 +162,28 @@ export async function GET(request: NextRequest) {
 
     const pendingIds = new Set(pendingRequests.map((r: any) => r.targetId));
     
+    // Fetch user details in bulk to resolve customerType accurately
+    const orderUserIds = Array.from(new Set(ordersRaw.map(o => o.userId).filter(Boolean)));
+    const [dbUsers, dbAdmins] = await Promise.all([
+      User.find({ _id: { $in: orderUserIds } }).select("customerType role").lean(),
+      Admin.find({ _id: { $in: orderUserIds } }).select("role").lean()
+    ]);
+    const orderUserMap: Record<string, string> = {};
+    dbUsers.forEach((u: any) => {
+      orderUserMap[u._id.toString()] = u.customerType || u.role || "customer";
+    });
+    dbAdmins.forEach((a: any) => {
+      orderUserMap[a._id.toString()] = a.role || "admin";
+    });
+
     return NextResponse.json({ 
       orders: ordersRaw.map(o => { 
         o.id = o._id.toString(); 
         o.pendingApproval = pendingIds.has(o.id);
-        o.customerType = o.customerType === "customer" && !o.userId ? "guest" : (o.customerType || (o.userId ? "customer" : "guest"));
+        const resolvedType = o.userId 
+          ? (orderUserMap[o.userId.toString()] || o.customerType || "customer") 
+          : "guest";
+        o.customerType = resolvedType;
         delete o.idString; 
         return o; 
       }),
@@ -206,16 +223,21 @@ export async function POST(request: NextRequest) {
     let userDiscount = undefined;
     let customerTypeStr = "guest";
 
-    if (user && user.role === "customer") {
-      isDealer = user.customerType === "dealer";
-      isRetailer = user.customerType === "retailer";
-      customerTypeStr = user.customerType || "customer";
-      const now = new Date();
-      if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now) {
-        userDiscount = {
-          percent: user.flatDiscountPercent,
-          expiresAt: new Date(user.flatDiscountExpiresAt)
-        };
+    if (user) {
+      if (user.role === "customer") {
+        isDealer = user.customerType === "dealer";
+        isRetailer = user.customerType === "retailer";
+        customerTypeStr = user.customerType || "customer";
+        const now = new Date();
+        if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now) {
+          userDiscount = {
+            percent: user.flatDiscountPercent,
+            expiresAt: new Date(user.flatDiscountExpiresAt)
+          };
+        }
+      } else {
+        // Logged in as Admin/Superadmin/Owner/Moderator
+        customerTypeStr = user.role;
       }
     }
 
