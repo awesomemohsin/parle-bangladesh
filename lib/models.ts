@@ -79,6 +79,9 @@ export interface IAdmin extends Document {
   createdAt: Date;
   updatedAt: Date;
   tokenVersion: number;
+  walletBalance?: number;
+  dueBalance?: number;
+  creditLimit?: number;
 }
 
 const AdminSchema = new Schema<IAdmin>(
@@ -98,6 +101,9 @@ const AdminSchema = new Schema<IAdmin>(
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     tokenVersion: { type: Number, default: 0 },
+    walletBalance: { type: Number, default: 0 },
+    dueBalance: { type: Number, default: 0 },
+    creditLimit: { type: Number, default: 10000 },
   },
   { timestamps: true }
 );
