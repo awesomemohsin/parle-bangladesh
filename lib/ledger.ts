@@ -49,9 +49,15 @@ export async function reconcileUserLedger(userId: string) {
   const totalActiveOrders = activeOrders.reduce((sum, o) => sum + o.total, 0);
   const newWalletBalance = totalPaid - totalActiveOrders;
 
-  await User.findByIdAndUpdate(userId, {
+  let updated = await User.findByIdAndUpdate(userId, {
     $set: { walletBalance: newWalletBalance }
   });
+  if (!updated) {
+    const { Admin } = await import("@/lib/models");
+    await Admin.findByIdAndUpdate(userId, {
+      $set: { walletBalance: newWalletBalance }
+    });
+  }
 
   return {
     walletBalance: newWalletBalance,

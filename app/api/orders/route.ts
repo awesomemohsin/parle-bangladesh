@@ -406,8 +406,8 @@ export async function POST(request: NextRequest) {
 
     await order.save();
 
-    // Reconcile ledger for B2B users
-    if (user && isB2BUser) {
+    // Reconcile ledger for all registered users (B2B, customers, admins)
+    if (user) {
       const advancePaid = Number(body.advancePaid || body.amountPaid || 0);
       if (advancePaid > 0) {
         const { TransactionLedger } = await import("@/lib/models");

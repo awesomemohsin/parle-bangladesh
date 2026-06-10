@@ -132,14 +132,15 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Order not found" }, { status: 404 });
       }
 
-      // B2C / Guest orders check: only direct collections are logged against the orderId
-      const isB2B = order.customerType === "retailer" || order.customerType === "dealer";
-      if (!isB2B) {
+      // Guest orders only show direct collections logged against the orderId.
+      // Registered users (B2B, customers, admins) use FIFO ledger reconciliation.
+      const isRegistered = !!order.userId;
+      if (!isRegistered) {
         const directLedgers = await TransactionLedger.find({ orderId }).sort({ createdAt: 1 }).lean();
         const history = directLedgers.map((l: any) => ({
           id: l._id.toString(),
           amount: l.amount,
-          label: "Collected Cash",
+          label: "Collected Payment",
           paymentMethod: l.paymentMethod,
           recordedBy: l.recordedBy,
           notes: l.notes,
@@ -168,7 +169,7 @@ export async function GET(request: NextRequest) {
         const history = directLedgers.map((l: any) => ({
           id: l._id.toString(),
           amount: l.amount,
-          label: "Collected Cash",
+          label: "Collected Payment",
           paymentMethod: l.paymentMethod,
           recordedBy: l.recordedBy,
           notes: l.notes,
@@ -201,7 +202,7 @@ export async function GET(request: NextRequest) {
           if (p.remaining <= 0) continue;
 
           // Determine the correct descriptive audit label matching user terminology
-          let label = "Collected Cash";
+          let label = "Collected Payment";
           if (new Date(p.createdAt) < new Date(currentOrder.createdAt)) {
             label = "Previous Balance / Advance Adjustment";
           } else if (p.type === "wallet_deposit") {
@@ -581,10 +582,9 @@ export async function POST(request: NextRequest) {
 
       const orderUser = order.userId ? await User.findById(order.userId) : null;
 
-      const isB2B = order.customerType === "retailer" || order.customerType === "dealer" ||
-        (orderUser && (orderUser.customerType === "retailer" || orderUser.customerType === "dealer"));
+      const isRegistered = !!order.userId || !!orderUser?._id;
 
-      if (isB2B) {
+      if (isRegistered) {
         // Record in Transaction Ledger
         const ledger = new TransactionLedger({
           userId: order.userId || orderUser?._id,
@@ -600,24 +600,17 @@ export async function POST(request: NextRequest) {
 
         // Reconcile user ledger using FIFO
         const { reconcileUserLedger } = await import("@/lib/ledger");
-        if (order.userId) {
-          await reconcileUserLedger(order.userId.toString());
-        } else {
-          order.amountPaid = (order.amountPaid || 0) + cashCollected;
-          order.amountDue = Math.max(0, order.total - order.amountPaid);
-          order.paymentStatus = order.amountDue <= 0 ? "paid" : "partial";
-          await order.save();
-        }
+        await reconcileUserLedger((order.userId || orderUser?._id).toString());
       } else {
-        // B2C / Guest order - direct update on order dues
+        // Guest order - direct update on order dues
         order.amountPaid = (order.amountPaid || 0) + cashCollected;
         order.amountDue = Math.max(0, order.total - order.amountPaid);
         order.paymentStatus = order.amountDue <= 0 ? "paid" : "partial";
         await order.save();
 
-        // Save ledger entry (always save it, even for guests!)
+        // Save ledger entry
         const ledger = new TransactionLedger({
-          userId: order.userId || orderUser?._id || null,
+          userId: null,
           orderId: order._id,
           amount: cashCollected,
           type: "collection",
