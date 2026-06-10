@@ -14,7 +14,10 @@ import {
   X, 
   AlertTriangle,
   RefreshCw,
-  RotateCcw
+  RotateCcw,
+  Upload,
+  Eye,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -82,6 +85,7 @@ interface Ledger {
   paymentMethod: string;
   recordedBy: string;
   notes?: string;
+  documentUrl?: string;
   createdAt: string;
 }
 
@@ -169,6 +173,7 @@ export default function CollectionsPage() {
       paymentMethod: string;
       recordedBy: string;
       notes: string;
+      documentUrl?: string;
       createdAt: string;
     }>;
   } | null>(null);
@@ -212,6 +217,8 @@ export default function CollectionsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [documentUrl, setDocumentUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -246,6 +253,8 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     if (!reconcileOrder) {
+      setDocumentUrl("");
+      setIsUploading(false);
       setPaymentHistory(null);
       return;
     }
@@ -272,6 +281,13 @@ export default function CollectionsPage() {
 
     fetchPaymentHistory();
   }, [reconcileOrder]);
+
+  useEffect(() => {
+    if (!walletDepositShop) {
+      setDocumentUrl("");
+      setIsUploading(false);
+    }
+  }, [walletDepositShop]);
 
   // Recalculate top stats cards
   const totalOutstandingDues = shops.reduce((sum, s) => sum + (s.dueBalance || 0), 0);
@@ -312,7 +328,8 @@ export default function CollectionsPage() {
           orderId: reconcileOrder.id,
           amountPaid: Number(cashAmount),
           paymentMethod,
-          notes
+          notes,
+          documentUrl
         })
       });
 
@@ -321,6 +338,7 @@ export default function CollectionsPage() {
         setSuccessMsg(data.message || "Payment recorded successfully.");
         setCashAmount("");
         setNotes("");
+        setDocumentUrl("");
         // Refresh listings
         await fetchData();
         setTimeout(() => {
@@ -366,7 +384,8 @@ export default function CollectionsPage() {
           userId: walletDepositShop.id,
           amount: Number(cashAmount),
           paymentMethod,
-          notes
+          notes,
+          documentUrl
         })
       });
 
@@ -375,6 +394,7 @@ export default function CollectionsPage() {
         setSuccessMsg(data.message || "Deposit logged successfully.");
         setCashAmount("");
         setNotes("");
+        setDocumentUrl("");
         await fetchData();
         setTimeout(() => {
           setWalletDepositShop(null);
@@ -974,8 +994,21 @@ export default function CollectionsPage() {
                                                   <div className="font-black text-gray-900 uppercase text-[10px]">
                                                     {item.label}
                                                   </div>
-                                                  <div className="font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
-                                                    -৳{item.amount}
+                                                  <div className="flex items-center gap-2">
+                                                    {item.documentUrl && (
+                                                      <a 
+                                                        href={item.documentUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
+                                                        title="View Proof Document"
+                                                      >
+                                                        <Eye className="w-3 h-3" /> View Proof
+                                                      </a>
+                                                    )}
+                                                    <div className="font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                      -৳{item.amount}
+                                                    </div>
                                                   </div>
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
@@ -985,8 +1018,8 @@ export default function CollectionsPage() {
                                                   <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
                                                 </div>
                                                 {item.notes && (
-                                                  <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit">
-                                                    Remarks: "{item.notes}"
+                                                  <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit flex items-center gap-2">
+                                                    <span>Remarks: "{item.notes}"</span>
                                                   </div>
                                                 )}
                                               </div>
@@ -1236,8 +1269,21 @@ export default function CollectionsPage() {
                                                   <div className="font-black text-gray-900 uppercase text-[10px]">
                                                     {item.label}
                                                   </div>
-                                                  <div className="font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
-                                                    -৳{item.amount}
+                                                  <div className="flex items-center gap-2">
+                                                    {item.documentUrl && (
+                                                      <a 
+                                                        href={item.documentUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
+                                                        title="View Proof Document"
+                                                      >
+                                                        <Eye className="w-3 h-3" /> View Proof
+                                                      </a>
+                                                    )}
+                                                    <div className="font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                      -৳{item.amount}
+                                                    </div>
                                                   </div>
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
@@ -1247,8 +1293,8 @@ export default function CollectionsPage() {
                                                   <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
                                                 </div>
                                                 {item.notes && (
-                                                  <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit">
-                                                    Remarks: "{item.notes}"
+                                                  <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit flex items-center gap-2">
+                                                    <span>Remarks: "{item.notes}"</span>
                                                   </div>
                                                 )}
                                               </div>
@@ -1514,7 +1560,22 @@ export default function CollectionsPage() {
                         </td>
                         <td className="py-4 px-3 font-black text-gray-900">৳{log.amount}</td>
                         <td className="py-4 px-3 text-gray-400">{log.recordedBy}</td>
-                        <td className="py-4 px-3 text-gray-400 font-normal max-w-[200px] truncate">{log.notes || "—"}</td>
+                        <td className="py-4 px-3 text-gray-400 font-normal max-w-[200px] truncate">
+                          <div className="flex items-center gap-2">
+                            <span>{log.notes || "—"}</span>
+                            {log.documentUrl && (
+                              <a 
+                                href={log.documentUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-amber-600 hover:text-amber-800 transition-colors p-1 hover:bg-amber-50 rounded"
+                                title="View Proof Document"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -1529,7 +1590,7 @@ export default function CollectionsPage() {
       {/* MODAL 1: RECONCILE CASH FROM ORDER */}
       {reconcileOrder && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Reconcile Cash Payment</h3>
               <button onClick={() => setReconcileOrder(null)} className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -1590,8 +1651,21 @@ export default function CollectionsPage() {
                                 <div className="font-black text-gray-900 uppercase text-[10px]">
                                   {item.label}
                                 </div>
-                                <div className="font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
-                                  -৳{item.amount}
+                                <div className="flex items-center gap-2">
+                                  {item.documentUrl && (
+                                    <a 
+                                      href={item.documentUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
+                                      title="View Proof Document"
+                                    >
+                                      <Eye className="w-3 h-3" /> View Proof
+                                    </a>
+                                  )}
+                                  <div className="font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
+                                    -৳{item.amount}
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5">
@@ -1601,8 +1675,8 @@ export default function CollectionsPage() {
                                 <span className="ml-auto text-slate-500 font-semibold">Remaining: <strong className="text-slate-700 font-black">৳{currentRemaining}</strong></span>
                               </div>
                               {item.notes && (
-                                <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit">
-                                  Remarks: "{item.notes}"
+                                <div className="text-[10px] text-gray-400 italic mt-1 font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 w-fit flex items-center gap-2">
+                                  <span>Remarks: "{item.notes}"</span>
                                 </div>
                               )}
                             </div>
@@ -1650,12 +1724,104 @@ export default function CollectionsPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Proof Document (Optional)</label>
+                {!documentUrl ? (
+                  <div className="relative border-2 border-dashed border-slate-200 hover:border-amber-600 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-amber-50/10 transition-all cursor-pointer group text-center">
+                    {isUploading ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <Loader2 className="w-6 h-6 text-amber-600 animate-spin" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider animate-pulse">Uploading Document...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            setIsUploading(true);
+                            setErrorMsg("");
+                            const formData = new FormData();
+                            formData.append("file", file);
+                            formData.append("folder", "collections");
+
+                            try {
+                              const token = localStorage.getItem("token");
+                              const res = await fetch("/api/admin/upload", {
+                                method: "POST",
+                                headers: {
+                                  Authorization: `Bearer ${token}`
+                                },
+                                body: formData
+                              });
+
+                              if (res.ok) {
+                                const data = await res.json();
+                                setDocumentUrl(data.url);
+                              } else {
+                                const errData = await res.json();
+                                setErrorMsg(errData.error || "Upload failed");
+                              }
+                            } catch (err: any) {
+                              setErrorMsg("Upload failed: " + err.message);
+                            } finally {
+                              setIsUploading(false);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-amber-600 transition-colors mb-1.5" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 group-hover:text-amber-600 transition-colors">Upload Payment Proof</span>
+                        <span className="text-[8px] text-slate-400 font-medium mt-0.5">Supports JPG, PNG, WEBP</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border border-slate-100 bg-slate-50/50 rounded-2xl p-3 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Image Thumbnail Preview */}
+                      <div className="relative w-12 h-12 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-inner flex items-center justify-center shrink-0">
+                        <img 
+                          src={documentUrl} 
+                          alt="Proof preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 shrink-0" /> Uploaded
+                        </span>
+                        <a 
+                          href={documentUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-[9px] font-black uppercase tracking-widest text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5 truncate hover:underline"
+                        >
+                          <Eye className="w-3 h-3" /> View Original
+                        </a>
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setDocumentUrl("")}
+                      className="bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 hover:border-rose-100 transition-all shadow-sm active:scale-95 shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={actionLoading}
                 className="w-full py-3 bg-amber-600 hover:bg-black disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-amber-900/10"
               >
-                {actionLoading ? "Saving Cash Receipt..." : "Record Payment & Clear Invoice"}
+                {actionLoading ? "Saving Cash Receipt..." : "Record Payment"}
               </button>
             </form>
           </div>
@@ -1665,7 +1831,7 @@ export default function CollectionsPage() {
       {/* MODAL 2: ADD DIRECT WALLET DEPOSIT */}
       {walletDepositShop && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Log Wallet Deposit</h3>
               <button onClick={() => setWalletDepositShop(null)} className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -1727,6 +1893,98 @@ export default function CollectionsPage() {
                   placeholder="e.g. Prepayment for monthly bulk order"
                   className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-black focus:outline-none rounded-xl text-sm font-bold text-gray-900 h-20"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Proof Document (Optional)</label>
+                {!documentUrl ? (
+                  <div className="relative border-2 border-dashed border-slate-200 hover:border-amber-600 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-amber-50/10 transition-all cursor-pointer group text-center">
+                    {isUploading ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <Loader2 className="w-6 h-6 text-amber-600 animate-spin" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider animate-pulse">Uploading Document...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            setIsUploading(true);
+                            setErrorMsg("");
+                            const formData = new FormData();
+                            formData.append("file", file);
+                            formData.append("folder", "collections");
+
+                            try {
+                              const token = localStorage.getItem("token");
+                              const res = await fetch("/api/admin/upload", {
+                                method: "POST",
+                                headers: {
+                                  Authorization: `Bearer ${token}`
+                                },
+                                body: formData
+                              });
+
+                              if (res.ok) {
+                                const data = await res.json();
+                                setDocumentUrl(data.url);
+                              } else {
+                                const errData = await res.json();
+                                setErrorMsg(errData.error || "Upload failed");
+                              }
+                            } catch (err: any) {
+                              setErrorMsg("Upload failed: " + err.message);
+                            } finally {
+                              setIsUploading(false);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-amber-600 transition-colors mb-1.5" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 group-hover:text-amber-600 transition-colors">Upload Payment Proof</span>
+                        <span className="text-[8px] text-slate-400 font-medium mt-0.5">Supports JPG, PNG, WEBP</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border border-slate-100 bg-slate-50/50 rounded-2xl p-3 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Image Thumbnail Preview */}
+                      <div className="relative w-12 h-12 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-inner flex items-center justify-center shrink-0">
+                        <img 
+                          src={documentUrl} 
+                          alt="Proof preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 shrink-0" /> Uploaded
+                        </span>
+                        <a 
+                          href={documentUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-[9px] font-black uppercase tracking-widest text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5 truncate hover:underline"
+                        >
+                          <Eye className="w-3 h-3" /> View Original
+                        </a>
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setDocumentUrl("")}
+                      className="bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 hover:border-rose-100 transition-all shadow-sm active:scale-95 shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold p-3 rounded-xl">
