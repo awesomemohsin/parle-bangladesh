@@ -49,14 +49,14 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown IP";
     const userAgent = request.headers.get("user-agent") || "Unknown Device";
     
-    // Check in User collection first
-    let user = await User.findOne({ 
+    // Check in Admin collection first to prioritize administrative access for users with dual roles
+    let user = await Admin.findOne({ 
       $or: [{ email: identifier }, { mobile: identifier }]
     });
     
-    // If not found, check in Admin collection
+    // If not found, check in User collection
     if (!user) {
-      user = await Admin.findOne({ 
+      user = await User.findOne({ 
         $or: [{ email: identifier }, { mobile: identifier }]
       });
     }
