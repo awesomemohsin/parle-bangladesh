@@ -410,8 +410,14 @@ export default function InventoryPage() {
 
       {/* Drill-down Modal */}
       {selectedMetric && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 lg:p-8 animate-in fade-in duration-300">
-           <Card className="w-full max-w-5xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div 
+          onClick={() => setSelectedMetric(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 lg:p-8 animate-in fade-in duration-300"
+        >
+           <Card 
+             onClick={(e) => e.stopPropagation()}
+             className="w-full max-w-5xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+           >
               <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                  <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center text-white shadow-lg">

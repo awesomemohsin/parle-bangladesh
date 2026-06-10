@@ -333,8 +333,14 @@ export default function CustomerApprovalsPage() {
       )}
       {/* CONFIRMATION POPUP MODAL */}
       {confirmAction && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setConfirmAction(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center gap-3 border-b pb-3 mb-4">
               <h3 className="text-md font-black text-gray-900 uppercase tracking-tighter italic">
                 {confirmAction.title}

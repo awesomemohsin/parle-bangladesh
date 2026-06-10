@@ -270,8 +270,14 @@ export default function JobCircularsAdmin() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[2rem] w-full max-w-3xl my-auto overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div 
+          onClick={() => setIsModalOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-3xl my-auto overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200"
+          >
             <div className="p-6 md:p-8 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
                <div>
                   <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Job Management</span>
