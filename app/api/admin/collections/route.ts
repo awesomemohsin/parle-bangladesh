@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
       }
 
       // B2C / Guest orders check: only direct collections are logged against the orderId
-      if (!order.userId) {
+      const isB2B = order.customerType === "retailer" || order.customerType === "dealer";
+      if (!isB2B) {
         const directLedgers = await TransactionLedger.find({ orderId }).sort({ createdAt: 1 }).lean();
         const history = directLedgers.map((l: any) => ({
           id: l._id.toString(),
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
           paymentMethod: l.paymentMethod,
           recordedBy: l.recordedBy,
           notes: l.notes,
+          documentUrl: l.documentUrl,
           createdAt: l.createdAt
         }));
         return NextResponse.json({
@@ -79,6 +81,7 @@ export async function GET(request: NextRequest) {
           paymentMethod: l.paymentMethod,
           recordedBy: l.recordedBy,
           notes: l.notes,
+          documentUrl: l.documentUrl,
           createdAt: l.createdAt
         }));
         return NextResponse.json({
@@ -123,6 +126,7 @@ export async function GET(request: NextRequest) {
                 paymentMethod: p.paymentMethod,
                 recordedBy: p.recordedBy,
                 notes: p.notes,
+                documentUrl: p.documentUrl,
                 createdAt: p.createdAt
               });
             }
@@ -138,6 +142,7 @@ export async function GET(request: NextRequest) {
                 paymentMethod: p.paymentMethod,
                 recordedBy: p.recordedBy,
                 notes: p.notes,
+                documentUrl: p.documentUrl,
                 createdAt: p.createdAt
               });
             }
@@ -290,7 +295,7 @@ export async function POST(request: NextRequest) {
 
     // A. Reconcile an outstanding order payment
     if (action === "reconcile") {
-      const { orderId, amountPaid, paymentMethod, notes } = body;
+      const { orderId, amountPaid, paymentMethod, notes, documentUrl } = body;
       const cashCollected = Number(amountPaid || 0);
 
       if (!orderId || cashCollected <= 0) {
@@ -321,6 +326,7 @@ export async function POST(request: NextRequest) {
           paymentMethod: paymentMethod || "cash",
           recordedBy: adminUser.email,
           notes: notes || `Reconciled B2B payment of ৳${cashCollected} by accounts department.`,
+          documentUrl,
         });
         await ledger.save();
 
@@ -351,6 +357,7 @@ export async function POST(request: NextRequest) {
             paymentMethod: paymentMethod || "cash",
             recordedBy: adminUser.email,
             notes: notes || `Reconciled B2C payment of ৳${cashCollected} by accounts department.`,
+            documentUrl,
           });
           await ledger.save();
         }
@@ -372,7 +379,7 @@ export async function POST(request: NextRequest) {
 
     // B. Direct Wallet Deposit (Advance payment)
     if (action === "wallet-deposit") {
-      const { userId, amount, paymentMethod, notes } = body;
+      const { userId, amount, paymentMethod, notes, documentUrl } = body;
       const depositAmount = Number(amount || 0);
 
       if (!userId || depositAmount <= 0) {
@@ -392,6 +399,7 @@ export async function POST(request: NextRequest) {
         paymentMethod: paymentMethod || "cash",
         recordedBy: adminUser.email,
         notes: notes || `Wallet Deposit of ৳${depositAmount}.`,
+        documentUrl,
       });
       await ledger.save();
 
