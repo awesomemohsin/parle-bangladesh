@@ -577,8 +577,12 @@ NotificationSchema.index({ role: 1 });
 NotificationSchema.index({ userId: 1 });
 NotificationSchema.index({ isRead: 1 });
 NotificationSchema.index({ createdAt: -1 });
+NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
-export const Notification = mongoose.models?.Notification || mongoose.model<INotification>("Notification", NotificationSchema, "notifications");
+if (mongoose.models && mongoose.models.Notification) {
+  delete mongoose.models.Notification;
+}
+export const Notification = mongoose.model<INotification>("Notification", NotificationSchema, "notifications");
 
 // --- PROMO CODE MODEL ---
 export interface IPromoCode extends Document {
