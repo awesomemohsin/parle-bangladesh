@@ -137,13 +137,22 @@ export async function DELETE(
       await creator.save();
 
       const { transporter, getOTPTemplate, SMTP_FROM } = require("@/lib/mail");
+      console.log(`\n==================================================\n[SECURITY DELETE OTP] Generated Code: ${generatedOtp} for ${creator.email}\n==================================================\n`);
       if (transporter && SMTP_FROM) {
-        await transporter.sendMail({
-          from: `"Parle Security" <${SMTP_FROM}>`,
-          to: creator.email,
-          subject: "Security Authorization: Admin Account Deletion",
-          html: getOTPTemplate(generatedOtp, creator.name || creator.email),
-        });
+        try {
+          await transporter.sendMail({
+            from: `"Parle Security" <${SMTP_FROM}>`,
+            to: creator.email,
+            subject: "Security Authorization: Admin Account Deletion",
+            html: getOTPTemplate(generatedOtp, creator.name || creator.email),
+          });
+        } catch (mailError) {
+          console.error("[SECURITY DELETE OTP] Failed to send email, but logged to console:", mailError);
+          // If not in development, rethrow the mail error to trigger 500 error
+          if (process.env.NODE_ENV !== "development") {
+            throw mailError;
+          }
+        }
       }
 
       return NextResponse.json({ 

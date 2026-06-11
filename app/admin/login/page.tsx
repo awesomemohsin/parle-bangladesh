@@ -59,8 +59,13 @@ export default function AdminLoginPage() {
           return
         }
 
-        if (data.user?.role === 'customer') {
+        if (data.user?.role === 'customer' && !data.user?.isSR) {
           setError('Access denied. Admin privileges required.')
+          return
+        }
+
+        if (data.user?.isSR) {
+          window.location.href = '/shop'
           return
         }
 
