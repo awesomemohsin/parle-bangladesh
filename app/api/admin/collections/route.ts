@@ -41,6 +41,14 @@ export async function GET(request: NextRequest) {
       // Fetch user info
       let dbUser: any = null;
       if (customerId && !customerId.startsWith("guest-") && mongoose.Types.ObjectId.isValid(customerId)) {
+        // Reconcile ledger dynamically on-demand to heal any potential calculation drifts
+        const { reconcileUserLedger } = await import("@/lib/ledger");
+        try {
+          await reconcileUserLedger(customerId);
+        } catch (err) {
+          console.error(`Failed to reconcile ledger for customer ${customerId}:`, err);
+        }
+
         dbUser = await User.findById(customerId).populate("referredBySR", "name email mobile").lean();
         if (!dbUser) {
           dbUser = await Admin.findById(customerId).lean();
