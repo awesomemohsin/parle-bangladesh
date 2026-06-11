@@ -11,7 +11,7 @@ interface User {
   id: string;
   email: string;
   mobile: string;
-  role: "super_admin" | "admin" | "moderator";
+  role: "super_admin" | "admin" | "moderator" | "sr";
   createdAt: string;
 }
 
@@ -23,7 +23,7 @@ export default function AdminUsersPage() {
     email: string;
     password: string;
     mobile: string;
-    role: "admin" | "moderator";
+    role: "admin" | "moderator" | "sr";
   }>({
     email: "",
     password: "",
@@ -224,11 +224,12 @@ export default function AdminUsersPage() {
                   <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                   <select
                     value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "moderator" })}
+                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "moderator" | "sr" })}
                     className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-2xl text-[12px] font-black uppercase appearance-none focus:ring-2 focus:ring-red-600/10"
                   >
                     <option value="admin">Admin</option>
                     <option value="moderator">Moderator</option>
+                    <option value="sr">Sales Representative (SR)</option>
                   </select>
                 </div>
               </div>
@@ -308,10 +309,12 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                        user.role === 'super_admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        user.role === 'super_admin' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        user.role === 'sr' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                        'bg-slate-100 text-slate-500 border-slate-200'
                       }`}>
-                        {user.role.replace("_", " ")}
+                        {user.role === 'sr' ? 'Sales Representative (SR)' : user.role.replace("_", " ")}
                       </span>
                     </td>
                     <td className="px-8 py-5">

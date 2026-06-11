@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Admin } from "@/lib/models";
+import { Admin, User } from "@/lib/models";
 import { logAdminActivity } from "@/lib/activity";
 import crypto from "crypto";
 
@@ -98,21 +98,28 @@ export async function DELETE(
 
     const { id } = await params;
     
-    const user = await Admin.findById(id);
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let user: any = await Admin.findById(id);
+    let isSRUser = false;
+    if (!user) {
+      user = await User.findOne({ _id: id, isSR: true });
+      if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      isSRUser = true;
+    }
 
     // Hierarchy Protections:
-    // 1. Superadmin cannot delete self
-    if (currentUser.role === ROLES.SUPER_ADMIN && currentUser.id === id) {
-      return NextResponse.json({ error: "Superadmin cannot delete themselves. Use another Superadmin account or Owner." }, { status: 403 });
-    }
-    // 2. Superadmin cannot delete other superadmins
-    if (currentUser.role === ROLES.SUPER_ADMIN && user.role === ROLES.SUPER_ADMIN) {
-      return NextResponse.json({ error: "Superadmin cannot delete other Superadmins. Only Owner can perform this." }, { status: 403 });
-    }
-    // 3. Owners cannot be deleted except potentially by another owner/self (lock it down)
-    if (user.role === ROLES.OWNER && currentUser.role !== ROLES.OWNER) {
-      return NextResponse.json({ error: "Cannot delete Owner account." }, { status: 403 });
+    if (!isSRUser) {
+      // 1. Superadmin cannot delete self
+      if (currentUser.role === ROLES.SUPER_ADMIN && currentUser.id === id) {
+        return NextResponse.json({ error: "Superadmin cannot delete themselves. Use another Superadmin account or Owner." }, { status: 403 });
+      }
+      // 2. Superadmin cannot delete other superadmins
+      if (currentUser.role === ROLES.SUPER_ADMIN && user.role === ROLES.SUPER_ADMIN) {
+        return NextResponse.json({ error: "Superadmin cannot delete other Superadmins. Only Owner can perform this." }, { status: 403 });
+      }
+      // 3. Owners cannot be deleted except potentially by another owner/self (lock it down)
+      if (user.role === ROLES.OWNER && currentUser.role !== ROLES.OWNER) {
+        return NextResponse.json({ error: "Cannot delete Owner account." }, { status: 403 });
+      }
     }
 
     const { searchParams } = new URL(request.url);
@@ -156,16 +163,29 @@ export async function DELETE(
     await creator.save();
     // --- END OTP LOGIC ---
 
-    await Admin.findByIdAndDelete(id);
-
-    // Log the deletion
-    await logAdminActivity({
-      adminEmail: currentUser.email,
-      action: "delete_admin",
-      targetId: id,
-      targetName: user.name || user.email,
-      details: `Permanently deleted administrative account: ${user.name} (${user.email})`
-    });
+    if (isSRUser) {
+      await User.findByIdAndDelete(id);
+      
+      // Log the deletion
+      await logAdminActivity({
+        adminEmail: currentUser.email,
+        action: "delete_admin",
+        targetId: id,
+        targetName: user.name || user.email,
+        details: `Permanently deleted Sales Representative: ${user.name} (${user.email})`
+      });
+    } else {
+      await Admin.findByIdAndDelete(id);
+      
+      // Log the deletion
+      await logAdminActivity({
+        adminEmail: currentUser.email,
+        action: "delete_admin",
+        targetId: id,
+        targetName: user.name || user.email,
+        details: `Permanently deleted administrative account: ${user.name} (${user.email})`
+      });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("User DELETE error:", error);
