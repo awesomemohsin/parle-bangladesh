@@ -2304,7 +2304,13 @@ export default function CollectionsPage() {
                     <div>Customer Since: <span className="text-gray-900">{selectedCustomerDetails.user.createdAt ? new Date(selectedCustomerDetails.user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</span></div>
                   </div>
                   <div className="space-y-1 md:text-right">
-                    <div>Wallet Balance: <span className="text-emerald-600">৳{selectedCustomerDetails.user.walletBalance.toLocaleString()}</span></div>
+                    <div>
+                      {selectedCustomerDetails.user.walletBalance < 0 ? (
+                        <>Outstanding Due: <span className="text-rose-600">৳{Math.abs(selectedCustomerDetails.user.walletBalance).toLocaleString()}</span></>
+                      ) : (
+                        <>Wallet Balance: <span className="text-emerald-600">৳{selectedCustomerDetails.user.walletBalance.toLocaleString()}</span></>
+                      )}
+                    </div>
                     {selectedCustomerDetails.user.customerType === "retailer" && !selectedCustomerDetails.user.isRetailerApproved && (
                       <div>Credit Limit: <span className="text-gray-900">৳{selectedCustomerDetails.user.creditLimit.toLocaleString()}</span></div>
                     )}
