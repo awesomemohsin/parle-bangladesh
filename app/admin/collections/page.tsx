@@ -112,6 +112,7 @@ export default function CollectionsPage() {
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
+  const [totalCollected, setTotalCollected] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") || "");
 
@@ -319,6 +320,7 @@ export default function CollectionsPage() {
         setCompletedOrders(data.completedOrders || []);
         setShops(data.shops || []);
         setLedgers(data.ledgers || []);
+        setTotalCollected(data.totalCollected || 0);
       }
     } catch (e) {
       console.error("Failed to load collections statistics", e);
@@ -731,7 +733,7 @@ export default function CollectionsPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Outstanding dues card */}
         <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-xl shadow-slate-100/50 flex items-center justify-between">
           <div>
@@ -751,7 +753,7 @@ export default function CollectionsPage() {
         <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-xl shadow-slate-100/50 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-              Total Prepayments / Wallets
+              Total Advance / Account Balance
             </span>
             <span className="text-3xl font-black text-emerald-500 tracking-tight italic">
               ৳{totalWalletBalances.toLocaleString()}
@@ -774,6 +776,21 @@ export default function CollectionsPage() {
           </div>
           <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
             <Calendar className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Total collected so far card */}
+        <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-xl shadow-slate-100/50 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+              Total Collections
+            </span>
+            <span className="text-3xl font-black text-blue-600 tracking-tight italic">
+              ৳{totalCollected.toLocaleString()}
+            </span>
+          </div>
+          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+            <DollarSign className="w-6 h-6" />
           </div>
         </div>
       </div>

@@ -548,6 +548,19 @@ export async function GET(request: NextRequest) {
         orderId: l.orderId ? l.orderId.toString() : undefined,
         userId: l.userId ? (userMap[l.userId.toString()] || null) : null
       }));
+
+      // Calculate total collected (collections + wallet deposits) matching date range filters if present
+      const collectionsTotalCond: any = { type: { $in: ["collection", "wallet_deposit"] } };
+      if (startDate || endDate) {
+        collectionsTotalCond.createdAt = {};
+        if (startDate) collectionsTotalCond.createdAt.$gte = new Date(startDate);
+        if (endDate) collectionsTotalCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+      }
+      const totalCollectionsSum = await TransactionLedger.aggregate([
+        { $match: collectionsTotalCond },
+        { $group: { _id: null, total: { $sum: "$amount" } } }
+      ]);
+      responseData.totalCollected = totalCollectionsSum[0]?.total || 0;
     }
 
     return NextResponse.json(responseData);
