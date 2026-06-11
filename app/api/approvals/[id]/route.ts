@@ -99,8 +99,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
            ['retailer', 'dealer'].includes(approvalRequest.newValue.toLowerCase()))
         );
 
-        const isConsensusReached = isB2BPromotion 
-          ? (hasAnindo || hasSaiful) 
+        // Standard promo codes only require a single Superadmin approval. Flat discounts require both.
+        const isSingleSuperadminPromo = approvalRequest.type === 'promo-code' && 
+          approvalRequest.targetDetails?.type === 'promo';
+
+        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo)
+          ? (hasAnindo || hasSaiful)
           : (hasAnindo && hasSaiful);
         
         if (isConsensusReached) {
