@@ -558,9 +558,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isAuthorized = [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR].includes(adminUser.role as any);
+    const allowedEmails = ["sohag@circlenetworkbd.net", "mdmohsin.work@gmail.com"];
+    const isAuthorized = allowedEmails.includes(adminUser.email?.toLowerCase().trim());
     if (!isAuthorized) {
-      return NextResponse.json({ error: "Forbidden: Insufficient permissions." }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden: Only authorized operators can update collections." }, { status: 403 });
     }
 
     const body = await request.json();
