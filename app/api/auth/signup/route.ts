@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
         role: user.role,
         isSR: user.isSR || false,
+        mobile: user.mobile,
       },
       message: "Signup successful",
     }, { status: 201 });

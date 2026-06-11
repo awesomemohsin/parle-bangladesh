@@ -378,6 +378,8 @@ export interface IOrder extends Document {
   reconciledBy?: string;
   reconciledAt?: Date;
   placedBySR?: string | mongoose.Types.ObjectId;
+  srDiscountPercent?: number;
+  srDiscountAmount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -438,6 +440,8 @@ const OrderSchema = new Schema<IOrder>(
     reconciledBy: { type: String },
     reconciledAt: { type: Date },
     placedBySR: { type: Schema.Types.ObjectId, ref: "User" },
+    srDiscountPercent: { type: Number },
+    srDiscountAmount: { type: Number },
   },
   { timestamps: true }
 );

@@ -237,15 +237,35 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     <span className="font-bold uppercase tracking-widest">Delivery Fee :</span>
                     <span className="font-bold">৳{(order.shippingCost || 0).toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Discount :</span>
-                      {order.promoCode && (
-                        <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
+                  {order.srDiscountAmount > 0 ? (
+                    <>
+                      {((order.discountAmount || 0) - order.srDiscountAmount) > 0 && (
+                        <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Coupon/Flat Discount :</span>
+                            {order.promoCode && (
+                              <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
+                            )}
+                          </div>
+                          <span className="font-bold text-green-600">-৳{((order.discountAmount || 0) - order.srDiscountAmount).toFixed(0)}</span>
+                        </div>
                       )}
+                      <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-teal-600">
+                        <span className="font-bold uppercase tracking-widest italic leading-none">SR Discount :</span>
+                        <span className="font-bold text-teal-600">-৳{order.srDiscountAmount.toFixed(0)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Discount :</span>
+                        {order.promoCode && (
+                          <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
+                        )}
+                      </div>
+                      <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
                     </div>
-                    <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
-                  </div>
+                  )}
                   <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-[11px] text-red-600">
                     <span className="font-black uppercase tracking-widest">Total Amount :</span>
                     <span className="font-black">৳{order.total.toFixed(0)}</span>

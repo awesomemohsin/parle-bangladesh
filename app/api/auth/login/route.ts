@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
         customerType: user.customerType || 'customer',
         tokenVersion: user.tokenVersion || 0,
         isSR: user.isSR || false,
+        mobile: user.mobile,
       },
     });
 

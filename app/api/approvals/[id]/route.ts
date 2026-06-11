@@ -70,6 +70,83 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         await PromoCode.findByIdAndUpdate(approvalRequest.targetId, { status: 'declined', isActive: false });
       }
 
+      // If it's an SR discount order, cancel the order and restore the stock
+      if (approvalRequest.type === 'order' && approvalRequest.field === 'srDiscount') {
+        const order = await Order.findById(approvalRequest.targetId);
+        if (order) {
+          const oldStatus = order.status;
+          order.status = "cancelled";
+          order.statusReason = `Negotiated discount declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`;
+          
+          if (!order.orderLogs) order.orderLogs = [];
+          order.orderLogs.push({
+            fromStatus: oldStatus,
+            toStatus: "cancelled",
+            changedBy: `System (Declined: ${userName})`,
+            reason: order.statusReason,
+            changedAt: new Date(),
+          });
+          
+          // Reset payment balances as it is cancelled
+          order.amountPaid = 0;
+          order.amountDue = 0;
+          order.paymentStatus = "pending";
+
+          await order.save();
+
+          if (order.userId) {
+            const { reconcileUserLedger } = await import("@/lib/ledger");
+            await reconcileUserLedger(order.userId.toString());
+          }
+
+          // Restore stock
+          for (const item of order.items) {
+            if (item.productId) {
+              const product = await Product.findById(item.productId);
+              if (product && product.variations) {
+                const varIndex = product.variations.findIndex((v: any) => {
+                  const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+                  const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+                  return weightMatch && flavorMatch;
+                });
+                
+                if (varIndex !== -1) {
+                  const variation = product.variations[varIndex];
+                  const holdField = `variations.${varIndex}.holdStock`;
+                  const stockField = `variations.${varIndex}.stock`;
+
+                  const update: any = { $inc: {} };
+                  update.$inc[holdField] = -item.quantity;
+                  update.$inc[stockField] = item.quantity;
+
+                  await StockLog.create({
+                    productId: product._id,
+                    productName: product.name,
+                    variationIndex: varIndex,
+                    weight: item.weight,
+                    flavor: item.flavor,
+                    oldStock: variation.stock || 0,
+                    newStock: (variation.stock || 0) + item.quantity,
+                    amount: item.quantity,
+                    reason: `Order Cancelled (Discount Declined) - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                    adminEmail: approvalRequest.requesterEmail,
+                  });
+
+                  await Product.updateOne({ _id: product._id }, update);
+                }
+              }
+            }
+          }
+
+          // Trigger Telegram Notification
+          try {
+            await notifyCriticalEvent(`Order cancelled`, order, order.statusReason);
+          } catch (notifyError) {
+            console.error("Failed to send status update notification from approval decline:", notifyError);
+          }
+        }
+      }
+
       return NextResponse.json({ message: "Request declined successfully", request: approvalRequest });
     }
 
@@ -103,13 +180,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const isSingleSuperadminPromo = approvalRequest.type === 'promo-code' && 
           approvalRequest.targetDetails?.type === 'promo';
 
-        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo)
+        // Custom SR checkout discounts require only a single Superadmin signature and bypass the Owner.
+        const isSingleSuperadminOrderDiscount = approvalRequest.type === 'order' &&
+          approvalRequest.field === 'srDiscount';
+
+        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo || isSingleSuperadminOrderDiscount)
           ? (hasAnindo || hasSaiful)
           : (hasAnindo && hasSaiful);
         
         if (isConsensusReached) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          const isFinancialOrStock = ['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order';
+          // Custom SR order discount is a 2-stage request (approved by single superadmin directly)
+          const isFinancialOrStock = (['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order') && !isSingleSuperadminOrderDiscount;
           
           if (!isFinancialOrStock) {
             // BASIC CONTENT: 2nd SuperAdmin is Final
@@ -123,6 +205,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                notificationTitle = "Customer Promotion Approved";
                notificationMessage = `Customer ${approvalRequest.targetName} has been successfully promoted to ${approvalRequest.newValue} by consensus.`;
                notificationLink = `/admin/customers`;
+             } else if (approvalRequest.type === "order" && approvalRequest.field === "srDiscount") {
+               notificationTitle = "Negotiated Order Discount Approved";
+               notificationMessage = `Negotiated discount for ${approvalRequest.targetName} has been approved. The order is now being processed.`;
+               notificationLink = `/admin/orders`;
              }
 
              // Notify Requester (Admin)
@@ -271,124 +357,150 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
     }
   } else if (approvalRequest.type === 'order') {
     const order = await Order.findById(approvalRequest.targetId);
-    if (order && approvalRequest.field === 'status') {
-      const oldStatus = order.status;
-      const newStatus = approvalRequest.newValue;
-      order.status = newStatus;
+    if (order) {
+      if (approvalRequest.field === 'status') {
+        const oldStatus = order.status;
+        const newStatus = approvalRequest.newValue;
+        order.status = newStatus;
 
-      const activeDuesStatuses = ["processing", "shipped", "delivered"];
-      const wasActiveDues = activeDuesStatuses.includes(oldStatus);
-      const isActiveDues = activeDuesStatuses.includes(newStatus);
-      if (!isActiveDues && wasActiveDues) {
-        order.amountPaid = 0;
-        order.amountDue = 0;
-        order.paymentStatus = "pending";
-      }
+        const activeDuesStatuses = ["processing", "shipped", "delivered"];
+        const wasActiveDues = activeDuesStatuses.includes(oldStatus);
+        const isActiveDues = activeDuesStatuses.includes(newStatus);
+        if (!isActiveDues && wasActiveDues) {
+          order.amountPaid = 0;
+          order.amountDue = 0;
+          order.paymentStatus = "pending";
+        }
 
-      if (!order.orderLogs) order.orderLogs = [];
-      order.orderLogs.push({
-        fromStatus: oldStatus,
-        toStatus: newStatus as any,
-        changedBy: `System (Approved: ${userName})`,
-        reason: `Final consensus approval reached.`,
-        changedAt: new Date(),
-      });
-      await order.save();
+        if (!order.orderLogs) order.orderLogs = [];
+        order.orderLogs.push({
+          fromStatus: oldStatus,
+          toStatus: newStatus as any,
+          changedBy: `System (Approved: ${userName})`,
+          reason: `Final consensus approval reached.`,
+          changedAt: new Date(),
+        });
+        await order.save();
 
-      if (order.userId) {
-        const { reconcileUserLedger } = await import("@/lib/ledger");
-        await reconcileUserLedger(order.userId.toString());
-      }
+        if (order.userId) {
+          const { reconcileUserLedger } = await import("@/lib/ledger");
+          await reconcileUserLedger(order.userId.toString());
+        }
 
-      // Adjust stock and log it upon approval of lost/damaged statuses
-      const restorableStatuses = ["cancelled", "damaged", "lost"];
-      if (restorableStatuses.includes(newStatus) && !restorableStatuses.includes(oldStatus)) {
-        for (const item of order.items) {
-          if (item.productId) {
-            const product = await Product.findById(item.productId);
-            if (product && product.variations) {
-              const varIndex = product.variations.findIndex((v: any) => {
-                const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
-                const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
-                return weightMatch && flavorMatch;
-              });
-              
-              if (varIndex !== -1) {
-                const variation = product.variations[varIndex];
-                const holdField = `variations.${varIndex}.holdStock`;
-                const stockField = `variations.${varIndex}.stock`;
-                const lostField = `variations.${varIndex}.lostCount`;
-                const damagedField = `variations.${varIndex}.damagedCount`;
-
-                const update: any = { $inc: {} };
+        // Adjust stock and log it upon approval of lost/damaged statuses
+        const restorableStatuses = ["cancelled", "damaged", "lost"];
+        if (restorableStatuses.includes(newStatus) && !restorableStatuses.includes(oldStatus)) {
+          for (const item of order.items) {
+            if (item.productId) {
+              const product = await Product.findById(item.productId);
+              if (product && product.variations) {
+                const varIndex = product.variations.findIndex((v: any) => {
+                  const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+                  const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+                  return weightMatch && flavorMatch;
+                });
                 
-                // Remove from hold anyway
-                update.$inc[holdField] = -item.quantity;
+                if (varIndex !== -1) {
+                  const variation = product.variations[varIndex];
+                  const holdField = `variations.${varIndex}.holdStock`;
+                  const stockField = `variations.${varIndex}.stock`;
+                  const lostField = `variations.${varIndex}.lostCount`;
+                  const damagedField = `variations.${varIndex}.damagedCount`;
 
-                if (newStatus === "cancelled") {
-                  // Return to stock
-                  update.$inc[stockField] = item.quantity;
+                  const update: any = { $inc: {} };
+                  
+                  // Remove from hold anyway
+                  update.$inc[holdField] = -item.quantity;
 
-                  await StockLog.create({
-                    productId: product._id,
-                    productName: product.name,
-                    variationIndex: varIndex,
-                    weight: item.weight,
-                    flavor: item.flavor,
-                    oldStock: variation.stock || 0,
-                    newStock: (variation.stock || 0) + item.quantity,
-                    amount: item.quantity,
-                    reason: `Order Cancelled - Order #${order._id.toString().slice(-8).toUpperCase()}`,
-                    adminEmail: approvalRequest.requesterEmail,
-                  });
-                } else if (newStatus === "lost") {
-                  update.$inc[lostField] = item.quantity;
+                  if (newStatus === "cancelled") {
+                    // Return to stock
+                    update.$inc[stockField] = item.quantity;
 
-                  await StockLog.create({
-                    productId: product._id,
-                    productName: product.name,
-                    variationIndex: varIndex,
-                    weight: item.weight,
-                    flavor: item.flavor,
-                    oldStock: variation.stock || 0,
-                    newStock: variation.stock || 0,
-                    amount: -item.quantity,
-                    reason: `Order Lost - Approved consensus - Order #${order._id.toString().slice(-8).toUpperCase()}`,
-                    adminEmail: approvalRequest.requesterEmail,
-                  });
-                } else if (newStatus === "damaged") {
-                  update.$inc[damagedField] = item.quantity;
+                    await StockLog.create({
+                      productId: product._id,
+                      productName: product.name,
+                      variationIndex: varIndex,
+                      weight: item.weight,
+                      flavor: item.flavor,
+                      oldStock: variation.stock || 0,
+                      newStock: (variation.stock || 0) + item.quantity,
+                      amount: item.quantity,
+                      reason: `Order Cancelled - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                      adminEmail: approvalRequest.requesterEmail,
+                    });
+                  } else if (newStatus === "lost") {
+                    update.$inc[lostField] = item.quantity;
 
-                  await StockLog.create({
-                    productId: product._id,
-                    productName: product.name,
-                    variationIndex: varIndex,
-                    weight: item.weight,
-                    flavor: item.flavor,
-                    oldStock: variation.stock || 0,
-                    newStock: variation.stock || 0,
-                    amount: -item.quantity,
-                    reason: `Order Damaged - Approved consensus - Order #${order._id.toString().slice(-8).toUpperCase()}`,
-                    adminEmail: approvalRequest.requesterEmail,
-                  });
+                    await StockLog.create({
+                      productId: product._id,
+                      productName: product.name,
+                      variationIndex: varIndex,
+                      weight: item.weight,
+                      flavor: item.flavor,
+                      oldStock: variation.stock || 0,
+                      newStock: variation.stock || 0,
+                      amount: -item.quantity,
+                      reason: `Order Lost - Approved consensus - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                      adminEmail: approvalRequest.requesterEmail,
+                    });
+                  } else if (newStatus === "damaged") {
+                    update.$inc[damagedField] = item.quantity;
+
+                    await StockLog.create({
+                      productId: product._id,
+                      productName: product.name,
+                      variationIndex: varIndex,
+                      weight: item.weight,
+                      flavor: item.flavor,
+                      oldStock: variation.stock || 0,
+                      newStock: variation.stock || 0,
+                      amount: -item.quantity,
+                      reason: `Order Damaged - Approved consensus - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                      adminEmail: approvalRequest.requesterEmail,
+                    });
+                  }
+
+                  await Product.updateOne({ _id: product._id }, update);
                 }
-
-                await Product.updateOne({ _id: product._id }, update);
               }
             }
           }
         }
-      }
 
-      // Telegram Notifications
-      try {
-        if (newStatus === ORDER_STATUS.PROCESSING && oldStatus === ORDER_STATUS.PENDING) {
-          await notifyOrderReady(order);
-        } else if (["cancelled", "damaged", "lost"].includes(newStatus) && oldStatus !== newStatus) {
-          await notifyCriticalEvent(`Order ${newStatus}`, order, "Approved change");
+        // Telegram Notifications
+        try {
+          if (newStatus === ORDER_STATUS.PROCESSING && oldStatus === ORDER_STATUS.PENDING) {
+            await notifyOrderReady(order);
+          } else if (["cancelled", "damaged", "lost"].includes(newStatus) && oldStatus !== newStatus) {
+            await notifyCriticalEvent(`Order ${newStatus}`, order, "Approved change");
+          }
+        } catch (notifyError) {
+          console.error("Failed to send status update notification from approval:", notifyError);
         }
-      } catch (notifyError) {
-        console.error("Failed to send status update notification from approval:", notifyError);
+      } else if (approvalRequest.field === 'srDiscount') {
+        const oldStatus = order.status;
+        order.status = "processing";
+
+        if (!order.orderLogs) order.orderLogs = [];
+        order.orderLogs.push({
+          fromStatus: oldStatus,
+          toStatus: "processing",
+          changedBy: `System (Approved: ${userName})`,
+          reason: `Superadmin approved negotiated discount: ${approvalRequest.newValue}`,
+          changedAt: new Date(),
+        });
+        await order.save();
+
+        if (order.userId) {
+          const { reconcileUserLedger } = await import("@/lib/ledger");
+          await reconcileUserLedger(order.userId.toString());
+        }
+
+        try {
+          await notifyOrderReady(order);
+        } catch (notifyError) {
+          console.error("Failed to send status update notification from approval:", notifyError);
+        }
       }
     }
   } else if (approvalRequest.type === 'promo-code') {

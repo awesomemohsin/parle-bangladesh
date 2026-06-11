@@ -124,6 +124,8 @@ function CheckoutContent() {
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
+  const [srDiscountPercent, setSrDiscountPercent] = useState<number>(0);
+  const [srDiscountTaka, setSrDiscountTaka] = useState<string>('');
 
   const [mounted, setMounted] = useState(false);
 
@@ -164,6 +166,46 @@ function CheckoutContent() {
         phone: !!targetProfile.mobile
       });
     }
+
+    // Fetch previous order address to autofill (but keep editable)
+    const fetchPreviousOrderAddress = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const activeShopId = localStorage.getItem("sr_active_shop_id");
+        const headers: Record<string, string> = {
+          'Authorization': `Bearer ${token}`
+        };
+        if (activeShopId) {
+          headers['x-on-behalf-of'] = activeShopId;
+        }
+
+        const res = await fetch('/api/orders?limit=1', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.orders && data.orders.length > 0) {
+            const lastOrder = data.orders[0];
+            setFormData(prev => ({
+              ...prev,
+              name: lastOrder.customerName || prev.name,
+              email: lastOrder.customerEmail || prev.email,
+              phone: lastOrder.customerPhone || prev.phone,
+              address: lastOrder.address || prev.address,
+              city: lastOrder.city || prev.city,
+              postalCode: lastOrder.postalCode || prev.postalCode,
+              shippingAddress: lastOrder.shippingAddress || prev.shippingAddress,
+              shippingCity: lastOrder.shippingCity || prev.shippingCity,
+              shippingPostalCode: lastOrder.shippingPostalCode || prev.shippingPostalCode,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch previous order address:", err);
+      }
+    };
+
+    fetchPreviousOrderAddress();
     
     setMounted(true);
   }, []);
@@ -282,11 +324,13 @@ function CheckoutContent() {
   const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
 
-  // The final total should be server-side net total + shippingCost
-  const grandTotal = Math.max(0, total + currentShippingCost);
+  const productSubtotal = subtotal;
+  const srDiscountAmount = user?.isSR ? Math.round(productSubtotal * (srDiscountPercent / 100)) : 0;
+
+  // The final total should be server-side net total + shippingCost - srDiscountAmount
+  const grandTotal = Math.max(0, total + currentShippingCost - srDiscountAmount);
   const displayPromoDiscount = promoDiscount || 0;
   const shippingCost = currentShippingCost;
-  const productSubtotal = subtotal;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -351,7 +395,9 @@ function CheckoutContent() {
           paymentMethod: formData.paymentMethod,
           deliveryMethod,
           promoCode,
-          discountAmount,
+          discountAmount: (discountAmount || 0) + srDiscountAmount,
+          srDiscountPercent,
+          srDiscountAmount,
         }),
       });
 
@@ -364,9 +410,7 @@ function CheckoutContent() {
       const order = await response.json();
       clearCart();
 
-      // Clear active shop session details if we were impersonating
-      localStorage.removeItem("sr_active_shop_id");
-      localStorage.removeItem("sr_active_shop_user");
+      // Keep active shop session details so the SR doesn't have to re-select the shop after placing an order
 
       if (order.paymentMethod === "sslcommerz" && order.gatewayUrl) {
         window.location.href = order.gatewayUrl;
@@ -773,6 +817,14 @@ function CheckoutContent() {
                   </div>
                 )}
 
+                {/* SR Negotiated Discount Row */}
+                {user?.isSR && srDiscountPercent > 0 && (
+                  <div className="flex justify-between text-teal-600 font-medium py-1">
+                    <span className="font-bold uppercase text-[9px] tracking-widest">SR Negotiated Discount</span>
+                    <span className="font-semibold">- ৳ {Math.round(srDiscountAmount)}</span>
+                  </div>
+                )}
+
                 {/* PROMO CODE INPUT SECTION */}
                 {!promoCode && (
                   <div className="py-3 border-y border-gray-100 my-2">
@@ -803,15 +855,55 @@ function CheckoutContent() {
                     )}
                   </div>
                 )}
+
+                {/* SR NEGOTIATED DISCOUNT INPUT */}
+                {user?.isSR && (
+                  <div className="py-3 border-b border-gray-100 my-2">
+                    <label className="text-[9px] font-black text-teal-600 uppercase tracking-widest block mb-2">
+                      Negotiated Discount
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.round(subtotal * 0.15)}
+                        step="1"
+                        placeholder="Discount ৳"
+                        value={srDiscountTaka}
+                        onChange={(e) => {
+                          const rawString = e.target.value;
+                          setSrDiscountTaka(rawString);
+                          
+                          const rawVal = Number(rawString) || 0;
+                          const maxDiscountTaka = Math.round(subtotal * 0.15);
+                          const val = Math.min(maxDiscountTaka, Math.max(0, rawVal));
+                          
+                          if (rawVal > maxDiscountTaka) {
+                            setSrDiscountTaka(maxDiscountTaka.toString());
+                          }
+                          
+                          if (subtotal > 0) {
+                            const pct = Math.min(15, (val / subtotal) * 100);
+                            setSrDiscountPercent(Number(pct.toFixed(4)));
+                          } else {
+                            setSrDiscountPercent(0);
+                          }
+                        }}
+                        className="w-full bg-white border border-gray-200 focus:border-teal-600 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
+                      />
+                      <span className="text-xs font-bold text-gray-500 shrink-0">৳</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className={`flex justify-between border-t border-gray-200 pt-3 items-end transition-all duration-300 ${isSyncing ? 'opacity-60 animate-pulse' : ''}`}>
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-bold text-gray-900 text-lg">Grand Total</span>
-                    {(discountAmount || 0) > 0 && !isSyncing && (
+                    {((discountAmount || 0) + srDiscountAmount) > 0 && !isSyncing && (
                       <span className="text-[10px] font-black text-white bg-green-600 px-2 py-1 rounded uppercase tracking-tighter shadow-sm animate-bounce-slow">
-                        Saved ৳{Math.round(discountAmount || 0)}
+                        Saved ৳{Math.round((discountAmount || 0) + srDiscountAmount)}
                       </span>
                     )}
                     {isSyncing && (

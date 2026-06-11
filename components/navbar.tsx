@@ -263,10 +263,10 @@ export default function Navbar() {
               {isAdminRoute && isLoggedIn && pathname !== '/auth/login' ? (
                 <NotificationCenter />
               ) : (
-                (isModerator || user?.isSR) && (
-                  <Link href={user?.isSR ? "/admin/promo-codes" : "/admin/dashboard"}>
+                isModerator && (
+                  <Link href="/admin/dashboard">
                     <Button size="sm" className="bg-gray-900 text-white font-black uppercase text-[9px] tracking-widest h-10 px-4 rounded-xl border-2 border-gray-900 hover:bg-white hover:text-gray-900 transition-all">
-                      {user?.isSR ? "Discounts Portal" : "Admin Panel"}
+                      Admin Panel
                     </Button>
                   </Link>
                 )
@@ -283,13 +283,16 @@ export default function Navbar() {
                 <div className="flex items-center gap-4">
                   <div className="flex flex-col items-end">
                     {isModerator ? (
-                      <Link href="/admin/profile" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate max-w-[180px] font-sans hover:text-red-600 transition-colors">
-                        {user?.email}
+                      <Link href="/admin/profile" className="text-[10px] font-black text-gray-900 uppercase tracking-widest truncate max-w-[180px] font-sans hover:text-red-600 transition-colors">
+                        {user?.name}
                       </Link>
                     ) : (
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate max-w-[180px] font-sans">{user?.email}</span>
+                      <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest truncate max-w-[180px] font-sans">{user?.name}</span>
                     )}
-                    <button onClick={handleLogout} className="text-[10px] font-black text-red-600 uppercase hover:underline transition-all font-sans leading-none mt-0.5">Logout</button>
+                    {user?.mobile && (
+                      <span className="text-[9px] font-bold text-gray-500 font-sans mt-0.5">{user.mobile}</span>
+                    )}
+                    <button onClick={handleLogout} className="text-[10px] font-black text-red-600 uppercase hover:underline transition-all font-sans leading-none mt-1">Logout</button>
                   </div>
                 </div>
               )}
@@ -486,7 +489,10 @@ export default function Navbar() {
                     <div className="p-5 bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden relative group">
                       <div className="relative z-10">
                         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic opacity-60">Connected Account</p>
-                        <p className="text-xs font-black text-white truncate font-sans mb-4">{user?.name || user?.email}</p>
+                        <p className="text-xs font-black text-white truncate font-sans mb-0.5">{user?.name}</p>
+                        {user?.mobile && (
+                          <p className="text-[10px] font-medium text-gray-400 font-sans mb-4">{user.mobile}</p>
+                        )}
 
                         <div className="grid grid-cols-1 gap-2">
                           {isModerator && (
@@ -496,10 +502,10 @@ export default function Navbar() {
                               </Button>
                             </Link>
                           )}
-                          {(isModerator || user?.isSR) && !isAdminRoute && (
-                            <Link href={user?.isSR ? "/admin/promo-codes" : "/admin/dashboard"} onClick={() => setIsMobileMenuOpen(false)}>
+                          {isModerator && !isAdminRoute && (
+                            <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                               <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
-                                {user?.isSR ? "Discounts Portal" : "Admin Panel"}
+                                Admin Panel
                               </Button>
                             </Link>
                           )}

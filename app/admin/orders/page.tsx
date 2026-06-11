@@ -50,6 +50,8 @@ interface Order {
   customerType?: string
   amountPaid?: number
   amountDue?: number
+  srDiscountPercent?: number
+  srDiscountAmount?: number
 }
 
 export default function AdminOrdersPage() {
@@ -543,6 +545,11 @@ export default function AdminOrdersPage() {
                         Promo Applied {order.promoCode ? `(${order.promoCode})` : ''} (-৳{(order.promoDiscount || 0).toFixed(0)})
                       </div>
                     )}
+                    {order.srDiscountAmount !== undefined && order.srDiscountAmount > 0 && (
+                      <div className="text-[10px] font-black text-teal-600 mt-1 uppercase tracking-tighter italic">
+                        Negotiated Discount ({order.srDiscountPercent}%) (-৳{order.srDiscountAmount.toFixed(0)})
+                      </div>
+                    )}
                     {order.pendingApproval && (
                       <div className="bg-amber-100 text-amber-700 text-[9px] font-black uppercase px-3 py-1.5 rounded shadow-sm animate-pulse border border-amber-300 mt-2 flex items-center gap-2 justify-center italic">
                         Pending Final Verification
@@ -740,6 +747,12 @@ export default function AdminOrdersPage() {
                           <div className="flex justify-between items-center text-[11px] text-green-600">
                             <span className="font-bold uppercase tracking-wider">Promo Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
                             <span className="font-bold">- ৳{(order.promoDiscount || 0).toFixed(0)}</span>
+                          </div>
+                        )}
+                        {order.srDiscountAmount !== undefined && order.srDiscountAmount > 0 && (
+                          <div className="flex justify-between items-center text-[11px] text-teal-600">
+                            <span className="font-bold uppercase tracking-wider">Negotiated Discount ({order.srDiscountPercent}%)</span>
+                            <span className="font-bold">- ৳{order.srDiscountAmount.toFixed(0)}</span>
                           </div>
                         )}
                         <div className="flex justify-between items-center border-t border-white/50 pt-2 mt-1">

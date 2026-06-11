@@ -167,7 +167,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               serverUser.customerType !== localUser.customerType || 
               serverUser.role !== localUser.role || 
               serverUser.status !== localUser.status ||
-              serverUser.email !== localUser.email
+              serverUser.email !== localUser.email ||
+              serverUser.mobile !== localUser.mobile ||
+              serverUser.name !== localUser.name
             ) {
               updateAuth(serverUser, token);
             }

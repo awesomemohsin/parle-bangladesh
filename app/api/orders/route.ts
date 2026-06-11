@@ -12,13 +12,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const user = getAuthUserFromRequest(request);
+    const context = await getEffectiveUserContext(request);
+    const user = context?.user;
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("q") || "";
     const statusQuery = searchParams.get("status") || "all";
-    const adminContext = searchParams.get("adminContext") === "true"; 
+    const adminContext = searchParams.get("adminContext") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
@@ -40,12 +41,12 @@ export async function GET(request: NextRequest) {
       if (flavorQuery) itemMatch.flavor = flavorQuery;
       matchStage.items = { $elemMatch: itemMatch };
     }
-    
+
     // If not admin context OR not an admin role, force identity filter
     const privilegedUser = hasAnyRole(user, [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR]);
-    
+
     if (!adminContext || !privilegedUser) {
-      matchStage = { 
+      matchStage = {
         ...matchStage,
         $or: [
           { userId: user.id },
@@ -103,10 +104,10 @@ export async function GET(request: NextRequest) {
         createdAt: { $lt: thirtyMinutesAgo }
       },
       {
-        $set: { 
-          status: "cancelled", 
+        $set: {
+          status: "cancelled",
           cancelReason: "Not paid in 30 minutes",
-          statusReason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes." 
+          statusReason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes."
         }
       }
     );
@@ -155,13 +156,13 @@ export async function GET(request: NextRequest) {
     const ordersRaw = await Order.aggregate(pipeline);
 
     // Fetch all pending order approvals
-    const pendingRequests = await ApprovalRequest.find({ 
-      type: "order", 
-      status: "pending" 
+    const pendingRequests = await ApprovalRequest.find({
+      type: "order",
+      status: "pending"
     }).lean();
 
     const pendingIds = new Set(pendingRequests.map((r: any) => r.targetId));
-    
+
     // Fetch user details in bulk to resolve customerType accurately
     const orderUserIds = Array.from(new Set(ordersRaw.map(o => o.userId).filter(Boolean)));
     const [dbUsers, dbAdmins] = await Promise.all([
@@ -176,16 +177,16 @@ export async function GET(request: NextRequest) {
       orderUserMap[a._id.toString()] = a.role || "admin";
     });
 
-    return NextResponse.json({ 
-      orders: ordersRaw.map(o => { 
-        o.id = o._id.toString(); 
+    return NextResponse.json({
+      orders: ordersRaw.map(o => {
+        o.id = o._id.toString();
         o.pendingApproval = pendingIds.has(o.id);
-        const resolvedType = o.userId 
-          ? (orderUserMap[o.userId.toString()] || o.customerType || "customer") 
+        const resolvedType = o.userId
+          ? (orderUserMap[o.userId.toString()] || o.customerType || "customer")
           : "guest";
         o.customerType = resolvedType;
-        delete o.idString; 
-        return o; 
+        delete o.idString;
+        return o;
       }),
       pagination: {
         total,
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const body = await request.json();
     const rawItems = Array.isArray(body.items) ? body.items : [];
-    
+
     // Securely calculate prices on the server based on user role
     // DEEP VERIFICATION: Checks tokenVersion and ensures user isn't stale
     const token = await import("@/lib/api-auth").then(m => m.getTokenFromRequest(request));
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
     if (token && !user) {
       return NextResponse.json({ error: "Session expired or role updated. Please login again." }, { status: 401 });
     }
-    
+
     let isDealer = false;
     let isRetailer = false;
     let userDiscount = undefined;
@@ -243,17 +244,17 @@ export async function POST(request: NextRequest) {
 
     const items = [];
     const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
-    
+
     const productIds = rawItems.map((item: any) => item.productId).filter(Boolean);
     const productSlugs = rawItems.map((item: any) => item.productSlug).filter(Boolean);
-    
+
     const products = await Product.find({
       $or: [
         { _id: { $in: productIds } },
         { slug: { $in: productSlugs } }
       ]
     }).lean();
-    
+
     const productMapById = new Map(products.map(p => [p._id.toString(), p]));
     const productMapBySlug = new Map(products.map(p => [p.slug, p]));
 
@@ -261,14 +262,14 @@ export async function POST(request: NextRequest) {
       const quantity = Number(item.quantity || 0);
       if (quantity <= 0) continue;
 
-      const product = item.productId 
+      const product = item.productId
         ? productMapById.get(item.productId)
         : (item.productSlug ? productMapBySlug.get(item.productSlug) : null);
 
       if (product) {
         const productIdStr = (product as any)._id?.toString();
         // Find if any flat discount applies to this product (regardless of minOrder for now)
-        const applicableFlat = flatDiscounts.find(d => 
+        const applicableFlat = flatDiscounts.find(d =>
           d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
         );
 
@@ -279,8 +280,8 @@ export async function POST(request: NextRequest) {
         });
 
         if (variation) {
-          const basePrice = isDealer && variation.dealerPrice 
-            ? variation.dealerPrice 
+          const basePrice = isDealer && variation.dealerPrice
+            ? variation.dealerPrice
             : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
           let effectiveVarDiscountPrice = variation.discountPrice;
 
@@ -333,15 +334,30 @@ export async function POST(request: NextRequest) {
 
     const totals = await calculateServerSideCart(items, body.promoCode, userDiscount, customerTypeStr);
     const subtotal = totals.subtotal;
-    const discountAmount = totals.discountAmount;
+    let discountAmount = totals.discountAmount;
     const ruleDiscount = totals.ruleDiscount || 0;
     const promoDiscount = totals.promoDiscount || 0;
-    
+
     const isB2BUser = customerTypeStr === "retailer" || customerTypeStr === "dealer";
     const baseShippingCharge = reqShippingCity === "Dhaka" ? 80 : 130;
     const shippingCost = (deliveryMethod === "pickup" || isB2BUser) ? 0 : (((subtotal - ruleDiscount) >= 1000 || totals.freeShippingGranted) ? 0 : baseShippingCharge);
     const tax = 0;
-    const total = subtotal + shippingCost - discountAmount;
+    let total = subtotal + shippingCost - discountAmount;
+
+    let srDiscountPercent = 0;
+    let srDiscountAmountVal = 0;
+    if (srUser && body.srDiscountPercent !== undefined) {
+      const inputPercent = Number(body.srDiscountPercent) || 0;
+      if (inputPercent > 0) {
+        if (inputPercent > 15) {
+          return NextResponse.json({ error: "Negotiated discount cannot exceed 15%" }, { status: 400 });
+        }
+        srDiscountPercent = inputPercent;
+        srDiscountAmountVal = Math.round(subtotal * (srDiscountPercent / 100));
+        discountAmount += srDiscountAmountVal;
+        total = Math.max(0, subtotal + shippingCost - discountAmount);
+      }
+    }
 
     // Credit limit check ONLY for probation retailers
     const isProbationRetailer = customerTypeStr === "retailer" && !user.isRetailerApproved;
@@ -360,11 +376,11 @@ export async function POST(request: NextRequest) {
       try {
         await Customer.findOneAndUpdate(
           { email: customerEmail },
-          { 
-            name: customerName, 
+          {
+            name: customerName,
             mobile: customerPhone,
             email: customerEmail,
-            role: "customer" 
+            role: "customer"
           },
           { upsert: true, returnDocument: 'after' }
         );
@@ -397,14 +413,41 @@ export async function POST(request: NextRequest) {
       isRestricted: totals.isRestricted,
       promoCode: body.promoCode,
       total,
-      status: srUser ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING,
+      status: (srUser && srDiscountPercent > 0) ? ORDER_STATUS.PENDING : (srUser ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING),
       customerType: customerTypeStr,
       amountPaid: 0,
       amountDue: total,
       placedBySR: srUser ? srUser.id : undefined,
+      srDiscountPercent,
+      srDiscountAmount: srDiscountAmountVal,
     });
 
     await order.save();
+
+    if (srUser && srDiscountPercent > 0) {
+      const approvalRequest = new ApprovalRequest({
+        requesterEmail: srUser.email,
+        type: "order",
+        targetId: order._id.toString(),
+        targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
+        field: "srDiscount",
+        oldValue: "0%",
+        newValue: `${srDiscountPercent}% (৳${srDiscountAmountVal})`,
+        targetDetails: order.toObject(),
+        status: "pending",
+        stage: "superadmin",
+      });
+
+      await approvalRequest.save();
+
+      // Trigger Telegram Notification for approval request
+      try {
+        const { notifyNewApprovalRequest } = await import("@/lib/telegram");
+        await notifyNewApprovalRequest(approvalRequest.toObject ? approvalRequest.toObject() : approvalRequest);
+      } catch (tgError) {
+        console.error("Telegram notification failed for SR discount approval request:", tgError);
+      }
+    }
 
     // Reconcile ledger for all registered users (B2B, customers, admins)
     if (user) {
@@ -460,11 +503,11 @@ export async function POST(request: NextRequest) {
             const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
             return weightMatch && flavorMatch;
           });
-          
+
           if (varIndex !== -1) {
             const holdField = `variations.${varIndex}.holdStock`;
             const stockField = `variations.${varIndex}.stock`;
-            
+
             const variation = product.variations[varIndex];
             const oldStockVal = variation.stock || 0;
             const newStockVal = oldStockVal - item.quantity;
@@ -483,12 +526,12 @@ export async function POST(request: NextRequest) {
 
             await Product.updateOne(
               { _id: product._id },
-              { 
-                $inc: { 
+              {
+                $inc: {
                   ordersCount: item.quantity,
-                  [holdField]: item.quantity, 
-                  [stockField]: -item.quantity 
-                } 
+                  [holdField]: item.quantity,
+                  [stockField]: -item.quantity
+                }
               }
             );
           } else {
@@ -517,8 +560,8 @@ export async function POST(request: NextRequest) {
         const isSandbox = process.env.SSLCOMMERZ_IS_SANDBOX === "true";
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-        const sslInitUrl = isSandbox 
-          ? "https://sandbox.sslcommerz.com/gwprocess/v4/api.php" 
+        const sslInitUrl = isSandbox
+          ? "https://sandbox.sslcommerz.com/gwprocess/v4/api.php"
           : "https://securepay.sslcommerz.com/gwprocess/v4/api.php";
 
         const payload = new URLSearchParams({
@@ -567,14 +610,14 @@ export async function POST(request: NextRequest) {
           }, { status: 201 });
         } else {
           console.error("SSLCommerz initiation response failed:", sslData);
-          return NextResponse.json({ 
-            error: "Payment gateway initiation failed: " + (sslData.failedreason || "Unknown response from SSLCommerz") 
+          return NextResponse.json({
+            error: "Payment gateway initiation failed: " + (sslData.failedreason || "Unknown response from SSLCommerz")
           }, { status: 400 });
         }
       } catch (err: any) {
         console.error("SSLCommerz fetch initiation error:", err);
-        return NextResponse.json({ 
-          error: "Failed to connect to payment gateway. Please try Cash on Delivery or retry." 
+        return NextResponse.json({
+          error: "Failed to connect to payment gateway. Please try Cash on Delivery or retry."
         }, { status: 500 });
       }
     }
@@ -583,7 +626,7 @@ export async function POST(request: NextRequest) {
     mappedOrder.id = mappedOrder._id.toString();
     delete mappedOrder._id;
     delete mappedOrder.__v;
-    
+
     return NextResponse.json(mappedOrder, { status: 201 });
   } catch (error: any) {
     console.error("Orders POST error:", error);
