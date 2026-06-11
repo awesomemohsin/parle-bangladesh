@@ -124,7 +124,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
         {/* Navigation */}
         <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar">
 
-          {/* SECTION 1: APPROVAL CENTER */}
+          {/* GROUP 1: APPROVAL CENTER */}
           {isAdmin && (
             <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
@@ -152,10 +152,10 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
             </div>
           )}
 
-          {/* SECTION 2: DAILY OPERATIONS */}
+          {/* GROUP 2: OPERATIONS & SALES */}
           <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
             <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Daily Tasks</p>
+              <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Operations & Sales</p>
             </div>
 
             <Link href="/admin/dashboard" onClick={onClose}>
@@ -163,22 +163,6 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                 Dashboard
               </Button>
             </Link>
-
-            {isAdmin && (
-              <Link href="/admin/revenue" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Revenue Analytics
-                </Button>
-              </Link>
-            )}
-
-            {isModerator && (
-              <Link href="/admin/collections" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
-                  Dues & Collections
-                </Button>
-              </Link>
-            )}
 
             {isModerator && (
               <Link href="/admin/orders" onClick={onClose}>
@@ -193,7 +177,98 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
               </Link>
             )}
 
+            {isSuperAdmin && (
+              <Link href="/admin/customers" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                  Customer Hub
+                </Button>
+              </Link>
+            )}
+
+            {isModerator && (
+              <Link href="/admin/collections" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                  Dues & Collections
+                </Button>
+              </Link>
+            )}
+
             {isAdmin && (
+              <Link href="/admin/revenue" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Revenue Analytics
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          {/* GROUP 3: PRODUCT & INVENTORY */}
+          {isModerator && (
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Product & Inventory</p>
+              </div>
+
+              <Link href="/admin/products" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Products
+                </Button>
+              </Link>
+
+              <Link href="/admin/inventory" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Inventory
+                </Button>
+              </Link>
+
+              <Link href="/admin/categories" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Categories
+                </Button>
+              </Link>
+
+              <Link href="/admin/stock-logs" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-rose-500">
+                  Stock Logs
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* GROUP 4: MARKETING & CAMPAIGNS */}
+          {isSuperAdmin && (
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Marketing & Campaigns</p>
+              </div>
+
+              <Link href="/admin/promo-codes" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Discounts
+                </Button>
+              </Link>
+
+              <Link href="/admin/offers" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                  Manage Offers
+                </Button>
+              </Link>
+
+              <Link href="/admin/promo-posters" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Promo Posters
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* GROUP 5: INQUIRIES & CAREERS */}
+          {isAdmin && (
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Inquiries & Careers</p>
+              </div>
+
               <Link href="/admin/contacts" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
                   Contact Inquiries
@@ -204,8 +279,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                   )}
                 </Button>
               </Link>
-            )}
-            {isAdmin && (
+
               <Link href="/admin/careers" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
                   Career Applications
@@ -216,49 +290,42 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                   )}
                 </Button>
               </Link>
-            )}
-          </div>
 
-          {/* SECTION 3: PRODUCT CATALOGUE */}
-          {isModerator && (
-            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
-              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Product Catalogue</p>
-              </div>
-
-              <Link href="/admin/inventory" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Inventory
-                </Button>
-              </Link>
-
-              <Link href="/admin/stock-logs" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-rose-500">
-                  Stock Logs
-                </Button>
-              </Link>
-
-              <Link href="/admin/categories" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Categories
-                </Button>
-              </Link>
-
-              <Link href="/admin/products" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Products
-                </Button>
-              </Link>
+              {isSuperAdmin && (
+                <Link href="/admin/careers/circulars" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                    Manage Circulars
+                  </Button>
+                </Link>
+              )}
             </div>
           )}
 
-          {/* SECTION 4: SYSTEM */}
+          {/* GROUP 6: SYSTEM & SECURITY */}
           {isSuperAdmin && (
             <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System</p>
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">System & Security</p>
               </div>
-              <Link href="/admin/users" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Admins</Button></Link>
+
+              <Link href="/admin/users" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Manage Admins
+                </Button>
+              </Link>
+
+              <Link href="/admin/activities" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Action Logs
+                </Button>
+              </Link>
+
+              <Link href="/admin/sessions" onClick={onClose}>
+                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                  Session Audit
+                </Button>
+              </Link>
+
               {user?.email === 'mdmohsin.work@gmail.com' && (
                 <Link href="/admin/verify-codes" onClick={onClose}>
                   <Button variant="ghost" className="w-full justify-start text-emerald-400 hover:text-white hover:bg-emerald-600/10 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
@@ -266,17 +333,10 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                   </Button>
                 </Link>
               )}
-              <Link href="/admin/customers" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">Customer Hub</Button></Link>
-              <Link href="/admin/careers/circulars" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Manage Circulars</Button></Link>
-              <Link href="/admin/promo-codes" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Discounts</Button></Link>
-              <Link href="/admin/promo-posters" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Promo Posters</Button></Link>
-              <Link href="/admin/offers" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">Manage Offers</Button></Link>
-              <Link href="/admin/activities" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Action Logs</Button></Link>
-              <Link href="/admin/sessions" onClick={onClose}><Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">Session Audit</Button></Link>
             </div>
           )}
 
-          {/* SECTION 5: EXTERNAL */}
+          {/* GROUP 7: EXTERNAL */}
           <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
             <Link href="/" onClick={onClose}>
               <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-white hover:bg-red-600/20 rounded-xl font-black uppercase text-[11px] tracking-widest py-3 italic">
