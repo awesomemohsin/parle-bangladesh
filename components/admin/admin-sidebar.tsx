@@ -11,7 +11,8 @@ interface User {
   id: string
   email: string
   name?: string
-  role: 'super_admin' | 'admin' | 'moderator' | 'owner'
+  role: 'super_admin' | 'admin' | 'moderator' | 'owner' | 'customer'
+  isSR?: boolean
 }
 
 export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
@@ -153,54 +154,56 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
           )}
 
           {/* GROUP 2: OPERATIONS & SALES */}
-          <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
-            <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Operations & Sales</p>
-            </div>
+          {!user?.isSR && (
+            <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
+              <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Operations & Sales</p>
+              </div>
 
-            <Link href="/admin/dashboard" onClick={onClose}>
-              <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                Dashboard
-              </Button>
-            </Link>
-
-            {isModerator && (
-              <Link href="/admin/orders" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
-                  Order Hub
-                  {(counts.pendingOrders + counts.processingOrders) > 0 && (
-                    <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
-                      {counts.pendingOrders + counts.processingOrders}
-                    </span>
-                  )}
-                </Button>
-              </Link>
-            )}
-
-            {isSuperAdmin && (
-              <Link href="/admin/customers" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
-                  Customer Hub
-                </Button>
-              </Link>
-            )}
-
-            {isModerator && (
-              <Link href="/admin/collections" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
-                  Dues & Collections
-                </Button>
-              </Link>
-            )}
-
-            {isAdmin && (
-              <Link href="/admin/revenue" onClick={onClose}>
+              <Link href="/admin/dashboard" onClick={onClose}>
                 <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Revenue Analytics
+                  Dashboard
                 </Button>
               </Link>
-            )}
-          </div>
+
+              {isModerator && (
+                <Link href="/admin/orders" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 relative group italic">
+                    Order Hub
+                    {(counts.pendingOrders + counts.processingOrders) > 0 && (
+                      <span className="absolute right-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20 group-hover:scale-110 transition-transform">
+                        {counts.pendingOrders + counts.processingOrders}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              )}
+
+              {isSuperAdmin && (
+                <Link href="/admin/customers" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                    Customer Hub
+                  </Button>
+                </Link>
+              )}
+
+              {isModerator && (
+                <Link href="/admin/collections" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                    Dues & Collections
+                  </Button>
+                </Link>
+              )}
+
+              {isAdmin && (
+                <Link href="/admin/revenue" onClick={onClose}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                    Revenue Analytics
+                  </Button>
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* GROUP 3: PRODUCT & INVENTORY */}
           {isModerator && (
@@ -236,7 +239,7 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
           )}
 
           {/* GROUP 4: MARKETING & CAMPAIGNS */}
-          {isSuperAdmin && (
+          {(isSuperAdmin || user?.isSR) && (
             <div className="bg-white/5 rounded-[1.5rem] p-2 border border-white/5">
               <div className="px-4 pb-2 pt-1 border-b border-white/5 mb-2">
                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] italic">Marketing & Campaigns</p>
@@ -248,17 +251,21 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, on
                 </Button>
               </Link>
 
-              <Link href="/admin/offers" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
-                  Manage Offers
-                </Button>
-              </Link>
+              {!user?.isSR && (
+                <>
+                  <Link href="/admin/offers" onClick={onClose}>
+                    <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic text-amber-500">
+                      Manage Offers
+                    </Button>
+                  </Link>
 
-              <Link href="/admin/promo-posters" onClick={onClose}>
-                <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
-                  Promo Posters
-                </Button>
-              </Link>
+                  <Link href="/admin/promo-posters" onClick={onClose}>
+                    <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase text-[11px] tracking-widest py-3 italic">
+                      Promo Posters
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           )}
 

@@ -51,6 +51,7 @@ export default function DiscountsAdmin() {
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -76,6 +77,12 @@ export default function DiscountsAdmin() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {}
+    }
     fetchDiscounts();
     fetchProducts();
   }, []);
@@ -452,13 +459,15 @@ export default function DiscountsAdmin() {
                        >
                          Promo Code
                        </button>
-                       <button 
-                         type="button"
-                         onClick={() => setType('flat')}
-                         className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${type === 'flat' ? 'bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-                       >
-                         Flat Discount
-                       </button>
+                       {!currentUser?.isSR && (
+                          <button 
+                            type="button"
+                            onClick={() => setType('flat')}
+                            className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${type === 'flat' ? 'bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            Flat Discount
+                          </button>
+                       )}
                     </div>
                   </div>
  

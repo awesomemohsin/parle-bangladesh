@@ -24,6 +24,13 @@ export async function GET(request: NextRequest) {
 
     const isHistory = status === 'all' || status === 'approved' || status === 'declined';
     
+    let isSR = false;
+    const { User } = require("@/lib/models");
+    const dbUser = await User.findById(user.id).lean() as any;
+    if (dbUser && dbUser.isSR) {
+      isSR = true;
+    }
+
     if (user.role === ROLES.OWNER || user.role === ROLES.SUPER_ADMIN) {
         if (!isHistory) {
           // Task View: pending requests for their stage
@@ -39,13 +46,18 @@ export async function GET(request: NextRequest) {
           // Historical View: anything approved or declined
           query.status = { $in: ["approved", "declined"] };
         }
-    } else if (user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR) {
-        // Regular admins and moderators see ALL finalized history
-        // PLUS their own pending requests
-        query.$or = [
-          { status: { $in: ["approved", "declined"] } },
-          { requesterEmail: user.email, status: "pending" }
-        ];
+    } else if (user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR || isSR) {
+        if (isSR) {
+          // SRs only see their own requests
+          query.requesterEmail = user.email;
+        } else {
+          // Regular admins and moderators see ALL finalized history
+          // PLUS their own pending requests
+          query.$or = [
+            { status: { $in: ["approved", "declined"] } },
+            { requesterEmail: user.email, status: "pending" }
+          ];
+        }
     } else {
         return NextResponse.json({ error: "Forbidden: Higher authorization required" }, { status: 403 });
     }
@@ -86,8 +98,24 @@ export async function POST(request: NextRequest) {
     const user = getAuthUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    let isSR = false;
+    const { User } = require("@/lib/models");
+    const dbUser = await User.findById(user.id).lean() as any;
+    if (dbUser && dbUser.isSR) {
+      isSR = true;
+    }
+
+    const isAdmin = hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER]);
+    if (!isAdmin && !isSR) {
+      return NextResponse.json({ error: "Forbidden: Higher authorization required" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { type, targetId, targetName, field, oldValue, newValue, variationIndex, weight, flavor } = body;
+
+    if (isSR && !isAdmin && type !== "promo-code") {
+      return NextResponse.json({ error: "Forbidden: Sales Representatives are only authorized to request promo code approvals." }, { status: 403 });
+    }
 
     if (!type || !targetId || !targetName || !field || oldValue === undefined || newValue === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

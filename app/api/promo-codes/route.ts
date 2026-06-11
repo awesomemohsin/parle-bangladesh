@@ -8,11 +8,19 @@ import { notifyNewApprovalRequest } from '@/lib/telegram';
 export async function GET(req: Request) {
   try {
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     await dbConnect();
+    let isSR = false;
+    const { User } = require("@/lib/models");
+    const dbUser = await User.findById(user.id).lean() as any;
+    if (dbUser && dbUser.isSR) {
+      isSR = true;
+    }
+
+    if (!isSR && !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const promoCodes = await PromoCode.find().sort({ createdAt: -1 }).lean();
     
     // Fetch all pending approval requests for promo-codes
@@ -69,12 +77,27 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await dbConnect();
+    let isSR = false;
+    const { User } = require("@/lib/models");
+    const dbUser = await User.findById(user.id).lean() as any;
+    if (dbUser && dbUser.isSR) {
+      isSR = true;
+    }
+
+    const isAdmin = hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER]);
+    if (!isSR && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
     const { code, type, discountType, discountAmount, maxUsage, expiresAt, isActive, allProducts, applicableProducts, applicableVariations, minOrderAmount, maxDiscountAmount, freeShipping } = body;
+
+    if (isSR && !isAdmin && type !== 'promo') {
+      return NextResponse.json({ error: 'Forbidden: Sales Representatives are only authorized to create promo codes, not flat discounts.' }, { status: 403 });
+    }
 
     if (type === 'promo' && !code) {
       return NextResponse.json({ error: 'Code is required for promo type' }, { status: 400 });

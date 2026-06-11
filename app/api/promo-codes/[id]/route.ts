@@ -8,12 +8,22 @@ import { notifyNewApprovalRequest } from '@/lib/telegram';
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await dbConnect();
+    let isSR = false;
+    const { User } = require("@/lib/models");
+    const dbUser = await User.findById(user.id).lean() as any;
+    if (dbUser && dbUser.isSR) {
+      isSR = true;
+    }
+
+    const isAdmin = hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER]);
+    if (!isSR && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const updates = await req.json();
-
     if ('code' in updates) {
       updates.code = updates.code.toUpperCase();
     }
@@ -28,12 +38,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
     }
 
-    await dbConnect();
     const { id } = await params;
     const existingPromo = await PromoCode.findById(id);
     
     if (!existingPromo) {
       return NextResponse.json({ error: 'Promo code not found' }, { status: 404 });
+    }
+
+    if (isSR && !isAdmin && (existingPromo.type !== 'promo' || updates.type === 'flat')) {
+      return NextResponse.json({ error: 'Forbidden: Sales Representatives are only authorized to modify promo codes, not flat discounts.' }, { status: 403 });
     }
 
     // ALL updates require Level 2 approval
@@ -117,17 +130,32 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = getAuthUserFromRequest(req as any);
-    if (!user || !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await dbConnect();
+    let isSR = false;
+    const { User } = require("@/lib/models");
+    const dbUser = await User.findById(user.id).lean() as any;
+    if (dbUser && dbUser.isSR) {
+      isSR = true;
+    }
+
+    const isAdmin = hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER]);
+    if (!isSR && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await dbConnect();
     const resolvedParams = await params;
-    const deletedPromo = await PromoCode.findByIdAndDelete(resolvedParams.id);
-
-    if (!deletedPromo) {
+    const existingPromo = await PromoCode.findById(resolvedParams.id);
+    if (!existingPromo) {
       return NextResponse.json({ error: 'Promo code not found' }, { status: 404 });
     }
+
+    if (isSR && !isAdmin && existingPromo.type !== 'promo') {
+      return NextResponse.json({ error: 'Forbidden: Sales Representatives are only authorized to delete promo codes, not flat discounts.' }, { status: 403 });
+    }
+
+    const deletedPromo = await PromoCode.findByIdAndDelete(resolvedParams.id);
 
     // Also delete any associated pending approval requests to prevent "ghost" requests
     await ApprovalRequest.deleteMany({ targetId: resolvedParams.id, type: 'promo-code' });

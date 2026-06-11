@@ -263,9 +263,11 @@ export default function Navbar() {
               {isAdminRoute && isLoggedIn && pathname !== '/auth/login' ? (
                 <NotificationCenter />
               ) : (
-                isModerator && (
-                  <Link href="/admin/dashboard">
-                    <Button size="sm" className="bg-gray-900 text-white font-black uppercase text-[9px] tracking-widest h-10 px-4 rounded-xl border-2 border-gray-900 hover:bg-white hover:text-gray-900 transition-all">Admin Panel</Button>
+                (isModerator || user?.isSR) && (
+                  <Link href={user?.isSR ? "/admin/promo-codes" : "/admin/dashboard"}>
+                    <Button size="sm" className="bg-gray-900 text-white font-black uppercase text-[9px] tracking-widest h-10 px-4 rounded-xl border-2 border-gray-900 hover:bg-white hover:text-gray-900 transition-all">
+                      {user?.isSR ? "Discounts Portal" : "Admin Panel"}
+                    </Button>
                   </Link>
                 )
               )}
@@ -494,10 +496,10 @@ export default function Navbar() {
                               </Button>
                             </Link>
                           )}
-                          {isModerator && !isAdminRoute && (
-                            <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                          {(isModerator || user?.isSR) && !isAdminRoute && (
+                            <Link href={user?.isSR ? "/admin/promo-codes" : "/admin/dashboard"} onClick={() => setIsMobileMenuOpen(false)}>
                               <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
-                                Admin Panel
+                                {user?.isSR ? "Discounts Portal" : "Admin Panel"}
                               </Button>
                             </Link>
                           )}

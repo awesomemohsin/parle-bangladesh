@@ -57,7 +57,7 @@ export default function AdminLayout({
         }
 
         // Role-based Security Layer
-        const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner';
+        const isAdmin = user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner' || user?.isSR;
 
 
         if (!isAdmin) {
