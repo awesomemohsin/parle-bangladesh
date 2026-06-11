@@ -736,7 +736,7 @@ export default function CollectionsPage() {
         <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-xl shadow-slate-100/50 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-              Outstanding Shop Dues
+              Outstanding Dues
             </span>
             <span className="text-3xl font-black text-rose-500 tracking-tight italic">
               ৳{totalOutstandingDues.toLocaleString()}
