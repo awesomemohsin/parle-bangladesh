@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
       orderUserMap[u._id.toString()] = u.customerType || u.role || "customer";
     });
     dbAdmins.forEach((a: any) => {
-      orderUserMap[a._id.toString()] = a.role || "admin";
+      orderUserMap[a._id.toString()] = a.role === "owner" ? "dealer" : (a.role || "admin");
     });
 
     return NextResponse.json({
@@ -238,7 +238,8 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Logged in as Admin/Superadmin/Owner/Moderator
-        customerTypeStr = user.role;
+        isDealer = user.role === "owner";
+        customerTypeStr = user.role === "owner" ? "dealer" : user.role;
       }
     }
 

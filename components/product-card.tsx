@@ -56,7 +56,7 @@ export default function ProductCard({
   const { items, addItem } = useCart();
   const { user } = useAuth();
   const [isFlying, setIsFlying] = useState(false);
-  const isDealer = user?.role === "customer" && user?.customerType === "dealer";
+  const isDealer = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
   const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
 
   // Intelligent Default Selection: Skip out-of-stock items for the main display

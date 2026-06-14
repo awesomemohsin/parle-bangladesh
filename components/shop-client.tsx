@@ -77,7 +77,7 @@ export default function ShopClient({
   }, []);
 
   const isB2BRole = user?.role === "customer";
-  const isDealer = isB2BRole && (activeShop ? activeShop.customerType : user?.customerType) === "dealer";
+  const isDealer = (isB2BRole && (activeShop ? activeShop.customerType : user?.customerType) === "dealer") || user?.role === "owner";
   const isRetailer = isB2BRole && (activeShop ? activeShop.customerType : user?.customerType) === "retailer";
   const searchParams = useSearchParams();
   const router = useRouter();
