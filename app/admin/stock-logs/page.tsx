@@ -41,9 +41,9 @@ export default function StockLogsPage() {
   const [totalLogs, setTotalLogs] = useState(0);
   const [totalReplenishments, setTotalReplenishments] = useState(0);
   const [totalDeductions, setTotalDeductions] = useState(0);
-  const limit = 20;
+  const limit = 50;
 
-  const fetchLogs = async (pageNum = page) => {
+  const fetchLogs = async (pageNum = page, isAppend = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -72,11 +72,16 @@ export default function StockLogsPage() {
       }
       
       const data = await res.json();
-      setLogs(data.logs || []);
+      if (isAppend) {
+        setLogs(prev => [...prev, ...(data.logs || [])]);
+      } else {
+        setLogs(data.logs || []);
+      }
       setTotalPages(data.pagination?.totalPages || 1);
       setTotalLogs(data.pagination?.total || 0);
       setTotalReplenishments(data.statistics?.replenishments || 0);
       setTotalDeductions(data.statistics?.deductions || 0);
+      setPage(pageNum);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Connection interrupted. Could not load stock logs.");
@@ -86,7 +91,7 @@ export default function StockLogsPage() {
   };
 
   useEffect(() => {
-    fetchLogs(1);
+    fetchLogs(1, false);
     setPage(1);
   }, [search, reason, admin, date]);
 
@@ -128,7 +133,10 @@ export default function StockLogsPage() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => fetchLogs(page)} 
+            onClick={() => {
+              setPage(1);
+              fetchLogs(1, false);
+            }} 
             disabled={loading}
             className="border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50"
           >
@@ -253,7 +261,7 @@ export default function StockLogsPage() {
         ) : error ? (
           <div className="p-8 text-center space-y-3">
             <p className="text-sm font-medium text-rose-500">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => fetchLogs(page)}>Retry Connection</Button>
+            <Button variant="outline" size="sm" onClick={() => { setPage(1); fetchLogs(1, false); }}>Retry Connection</Button>
           </div>
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -328,39 +336,30 @@ export default function StockLogsPage() {
           </div>
         )}
 
-        {/* Pagination Bar */}
+        {/* Pagination Bar - Show More */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-neutral-100 bg-neutral-50/50 px-6 py-4">
+          <div className="flex flex-col items-center justify-center border-t border-neutral-100 bg-neutral-50/50 px-6 py-5 gap-3">
             <span className="text-xs font-semibold text-neutral-500">
-              Showing page {page} of {totalPages} ({totalLogs} total entries)
+              Showing {logs.length} of {totalLogs} total entries
             </span>
 
-            <div className="flex items-center gap-2">
+            {page < totalPages && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                disabled={page === 1 || loading}
+                disabled={loading}
                 onClick={() => {
-                  setPage(p => p - 1);
-                  fetchLogs(page - 1);
+                  const nextPage = page + 1;
+                  fetchLogs(nextPage, true);
                 }}
-                className="border-neutral-200 text-neutral-700"
+                className="border-neutral-200 text-neutral-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 min-w-[150px] transition-all font-semibold"
               >
-                <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                {loading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Show More Logs
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={page === totalPages || loading}
-                onClick={() => {
-                  setPage(p => p + 1);
-                  fetchLogs(page + 1);
-                }}
-                className="border-neutral-200 text-neutral-700"
-              >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
+            )}
           </div>
         )}
       </Card>
