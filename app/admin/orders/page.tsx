@@ -715,18 +715,45 @@ export default function AdminOrdersPage() {
                 {expandedOrder === order.id && (
                   <div className="mt-4 pt-4 border-t border-gray-100 bg-slate-50/50 p-4 rounded-xl space-y-3">
                     <div className="max-w-xl space-y-3">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-sm border-b border-white/50 pb-2 last:border-0 last:pb-0">
-                          <div>
-                            <p className="font-bold text-gray-900">{item.name}</p>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase">{item.weight || 'Std Unit'} • {item.flavor || 'Original'}</p>
+                      {order.items.map((item, idx) => {
+                        const productLink = item.productSlug
+                          ? `/shop/products/${item.productSlug}?weight=${encodeURIComponent(item.weight || '')}&flavor=${encodeURIComponent(item.flavor || '')}`
+                          : undefined;
+
+                        return (
+                          <div key={idx} className="flex justify-between items-center text-sm border-b border-white/50 pb-2 last:border-0 last:pb-0">
+                            {productLink ? (
+                              <a
+                                href={productLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group/item-link hover:bg-white/50 p-1.5 -m-1.5 rounded-lg transition-all duration-200 cursor-pointer flex-1 mr-4"
+                                title="Click to view product details"
+                              >
+                                <div>
+                                  <p className="font-bold text-gray-900 group-hover/item-link:text-red-600 transition-colors group-hover/item-link:underline">
+                                    {item.name}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500 font-bold uppercase">
+                                    {item.weight || 'Std Unit'} • {item.flavor || 'Original'}
+                                  </p>
+                                </div>
+                              </a>
+                            ) : (
+                              <div>
+                                <p className="font-bold text-gray-900">{item.name}</p>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase">
+                                  {item.weight || 'Std Unit'} • {item.flavor || 'Original'}
+                                </p>
+                              </div>
+                            )}
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-gray-900 italic">৳{(item.price * item.quantity).toFixed(0)}</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase">Qty: {item.quantity} • ৳{item.price.toFixed(0)}/pc</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-gray-900 italic">৳{(item.price * item.quantity).toFixed(0)}</p>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase">Qty: {item.quantity}</p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
 
                       <div className="mt-4 pt-4 border-t border-white space-y-1.5">
                         <div className="flex justify-between items-center text-[11px] text-gray-600">

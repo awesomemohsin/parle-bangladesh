@@ -434,41 +434,67 @@ export default function MyOrdersPage() {
                   {/* Main Viewport */}
                   <div className="flex-1 flex flex-col justify-between self-stretch gap-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-1.5 p-0.5 bg-slate-50/50 rounded-lg border border-gray-50 hover:border-gray-200 transition-all group/item">
-                          <div className="relative w-8 h-8 bg-white rounded-md border border-gray-100 flex-shrink-0 overflow-hidden shadow-sm">
-                            {item.image ? (
-                              <NextImage
-                                src={item.image}
-                                alt={item.name}
-                                fill
-                                sizes="32px"
-                                className="object-cover group-hover/item:scale-110 transition-transform duration-500"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
-                                <ImageIcon className="w-5 h-5" />
-                              </div>
-                            )}
-                            <div className="absolute top-0 right-0 bg-red-600 text-white font-black text-[8px] px-1 rounded-bl-md">
-                              x{item.quantity}
-                            </div>
-                          </div>
-                          <div className="flex flex-col min-w-0 leading-none">
-                            <span className="font-black text-[10px] text-gray-900 leading-none uppercase truncate">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center gap-1.5 mt-0 leading-none">
-                              <span className="text-[9px] font-black text-red-600 leading-none">{formatCurrency(item.price)}</span>
-                              {(item.weight || item.flavor) && (
-                                <span className="text-[7px] text-gray-400 font-bold uppercase truncate border-l border-gray-200 pl-1.5 leading-none">
-                                  {[item.weight, item.flavor].filter(Boolean).join(' / ')}
-                                </span>
+                      {order.items.map((item, idx) => {
+                        const productLink = item.productSlug
+                          ? `/shop/products/${item.productSlug}?weight=${encodeURIComponent(item.weight || '')}&flavor=${encodeURIComponent(item.flavor || '')}`
+                          : undefined;
+
+                        const content = (
+                          <>
+                            <div className="relative w-8 h-8 bg-white rounded-md border border-gray-100 flex-shrink-0 overflow-hidden shadow-sm">
+                              {item.image ? (
+                                <NextImage
+                                  src={item.image}
+                                  alt={item.name}
+                                  fill
+                                  sizes="32px"
+                                  className="object-cover group-hover/item:scale-110 transition-transform duration-500"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
+                                  <ImageIcon className="w-5 h-5" />
+                                </div>
                               )}
+                              <div className="absolute top-0 right-0 bg-red-600 text-white font-black text-[8px] px-1 rounded-bl-md">
+                                x{item.quantity}
+                              </div>
                             </div>
+                            <div className="flex flex-col min-w-0 leading-none">
+                              <span className="font-black text-[10px] text-gray-900 leading-none uppercase truncate group-hover/item:text-red-600 group-hover/item:underline transition-colors">
+                                {item.name}
+                              </span>
+                              <div className="flex items-center gap-1.5 mt-0 leading-none">
+                                <span className="text-[9px] font-black text-red-600 leading-none">{formatCurrency(item.price)}</span>
+                                {(item.weight || item.flavor) && (
+                                  <span className="text-[7px] text-gray-400 font-bold uppercase truncate border-l border-gray-200 pl-1.5 leading-none">
+                                    {[item.weight, item.flavor].filter(Boolean).join(' / ')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        );
+
+                        return productLink ? (
+                          <Link
+                            key={idx}
+                            href={productLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 p-0.5 bg-slate-50/50 rounded-lg border border-gray-50 hover:border-gray-200 transition-all group/item cursor-pointer"
+                            title="Click to view product details"
+                          >
+                            {content}
+                          </Link>
+                        ) : (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 p-0.5 bg-slate-50/50 rounded-lg border border-gray-50 hover:border-gray-200 transition-all group/item"
+                          >
+                            {content}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Summary Segment - Compact */}
@@ -696,45 +722,67 @@ export default function MyOrdersPage() {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 mt-4">
-                  {previewOrder?.items.map((item, idx) => (
-                    <div key={idx} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:border-red-600 transition-all duration-300 flex flex-col group h-full">
-                      {/* Image Container - Highly compact */}
-                      <div className="relative w-full h-24 sm:h-36 bg-white flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-                        {item.image ? (
-                          <NextImage
-                            src={item.image}
-                            alt={item.name}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 20vw"
-                            className="object-contain p-2 sm:p-4 group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-100" />
-                        )}
+                  {previewOrder?.items.map((item, idx) => {
+                    const productLink = item.productSlug
+                      ? `/shop/products/${item.productSlug}?weight=${encodeURIComponent(item.weight || '')}&flavor=${encodeURIComponent(item.flavor || '')}`
+                      : undefined;
 
-                        <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-red-600 text-white font-black text-[7px] sm:text-[9px] px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md shadow-lg uppercase italic z-10">
-                          x{item.quantity}
-                        </div>
-                      </div>
-                      {/* Content Section */}
-                      <div className="p-2 sm:p-3 flex flex-col border-t border-gray-50 space-y-0">
-                        <div className="space-y-0">
-                          <h3 className="font-bold text-[10px] sm:text-xs text-gray-900 leading-none group-hover:text-red-600 transition-colors line-clamp-2 m-0 p-0">
-                            {item.name}
-                          </h3>
-                          <div className="m-0 p-0 leading-none">
-                            <span className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest truncate leading-none">
-                              {item.weight || item.flavor || "Standard"}
-                            </span>
+                    const topContent = (
+                      <>
+                        {/* Image Container - Highly compact */}
+                        <div className="relative w-full h-24 sm:h-36 bg-white flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+                          {item.image ? (
+                            <NextImage
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 20vw"
+                              className="object-contain p-2 sm:p-4 group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-100" />
+                          )}
+
+                          <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-red-600 text-white font-black text-[7px] sm:text-[9px] px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md shadow-lg uppercase italic z-10">
+                            x{item.quantity}
                           </div>
                         </div>
+                        {/* Content Section */}
+                        <div className="p-2 sm:p-3 pb-0 flex flex-col border-t border-gray-50 space-y-0">
+                          <div className="space-y-0">
+                            <h3 className="font-bold text-[10px] sm:text-xs text-gray-900 leading-none group-hover:text-red-600 transition-colors line-clamp-2 m-0 p-0 group-hover:underline">
+                              {item.name}
+                            </h3>
+                            <div className="m-0 p-0 leading-none">
+                              <span className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest truncate leading-none">
+                                {item.weight || item.flavor || "Standard"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
 
-                        <div className="m-0 p-0">
-                          <div className="flex items-center gap-0.5 leading-none">
-                            <span className="text-[10px] sm:text-xs font-bold text-red-600 leading-none">৳</span>
-                            <span className="text-sm sm:text-lg font-black text-gray-900 tracking-tighter leading-none">
-                              {item.price}
-                            </span>
+                    return (
+                      <div key={idx} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:border-red-600 transition-all duration-300 flex flex-col group h-full">
+                        {productLink ? (
+                          <Link href={productLink} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                            {topContent}
+                          </Link>
+                        ) : (
+                          <div>
+                            {topContent}
+                          </div>
+                        )}
+
+                        <div className="p-2 sm:p-3 pt-0 mt-auto flex flex-col space-y-2">
+                          <div className="m-0 p-0">
+                            <div className="flex items-center gap-0.5 leading-none">
+                              <span className="text-[10px] sm:text-xs font-bold text-red-600 leading-none">৳</span>
+                              <span className="text-sm sm:text-lg font-black text-gray-900 tracking-tighter leading-none">
+                                {item.price}
+                              </span>
+                            </div>
                           </div>
 
                           <Button
@@ -772,8 +820,8 @@ export default function MyOrdersPage() {
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
