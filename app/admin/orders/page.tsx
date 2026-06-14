@@ -59,7 +59,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
-  
+
   // Notification state
   const lastTotalOrders = useRef<number | null>(null)
   const isFirstLoad = useRef(true)
@@ -111,7 +111,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     const q = searchParams.get('q')
     const status = searchParams.get('status')
-    
+
     if (q !== null && q !== searchTerm) {
       setSearchTerm(q)
     }
@@ -185,26 +185,26 @@ export default function AdminOrdersPage() {
         const data = await response.json()
         const newOrders = data.orders || []
         const newTotal = data.pagination?.total || 0
-        
+
         // Notification Logic
         if (!isFirstLoad.current && lastTotalOrders.current !== null && newTotal > lastTotalOrders.current) {
           const diff = newTotal - lastTotalOrders.current
           const isModerator = userRole === 'moderator'
-          
+
           toast.success(isModerator ? `New order assigned to your queue!` : `You have ${diff} new order${diff > 1 ? 's' : ''}!`, {
-            description: isModerator 
-              ? "An order has been moved to 'Processing' for your attention." 
+            description: isModerator
+              ? "An order has been moved to 'Processing' for your attention."
               : "Refreshing the list to show latest updates.",
             icon: <BellRing className="w-4 h-4 text-emerald-500" />,
             duration: 10000,
             action: {
-                label: 'View',
-                onClick: () => {
-                    setPage(1)
-                    setSearchTerm('')
-                    if (isModerator) setStatusFilter('processing')
-                    else setStatusFilter('all')
-                }
+              label: 'View',
+              onClick: () => {
+                setPage(1)
+                setSearchTerm('')
+                if (isModerator) setStatusFilter('processing')
+                else setStatusFilter('all')
+              }
             }
           })
         }
@@ -219,7 +219,7 @@ export default function AdminOrdersPage() {
         } else {
           setOrders(newOrders)
         }
-        
+
         setTotalPages(data.pagination?.totalPages || 1)
         lastTotalOrders.current = newTotal
         isFirstLoad.current = false
@@ -269,7 +269,7 @@ export default function AdminOrdersPage() {
             orders.map((o) => (o.id === orderId ? { ...o, ...data.order, pendingApproval: data.pendingApproval ? true : o.pendingApproval } : o))
           )
         }
-        
+
         if (data.pendingApproval) {
           setTimeout(() => {
             alert("✓ Sync Initiated: This status change has been queued for authoritative verification.");
@@ -387,20 +387,18 @@ export default function AdminOrdersPage() {
         {/* Dropdown Filters - Right side */}
         <div className="flex gap-3 w-full xl:w-auto">
           <div className="flex-1 sm:w-36 relative">
-            <Filter className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
-              statusFilter === 'attention' ? 'text-amber-600' : 'text-gray-400'
-            }`} />
+            <Filter className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${statusFilter === 'attention' ? 'text-amber-600' : 'text-gray-400'
+              }`} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none text-xs font-bold uppercase cursor-pointer transition-all ${
-                statusFilter === 'attention'
+              className={`w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none text-xs font-bold uppercase cursor-pointer transition-all ${statusFilter === 'attention'
                   ? 'border-amber-500 bg-amber-50 text-amber-800 font-black shadow-sm ring-1 ring-amber-500'
                   : 'border-gray-200 bg-white text-gray-700'
-              }`}
+                }`}
             >
               <option value="all">All Statuses</option>
-              <option 
+              <option
                 value="attention"
                 className="bg-amber-50 text-amber-700 font-bold"
                 style={{ backgroundColor: '#fef3c7', color: '#b45309', fontWeight: 'bold' }}
@@ -438,23 +436,22 @@ export default function AdminOrdersPage() {
             const currentStatus = pendingChanges[order.id] || order.status;
             const hasChange = !!pendingChanges[order.id];
             return (
-              <Card 
-                key={order.id} 
-                className={`p-4 shadow-sm transition-all duration-300 ${
-                  order.customerType?.toLowerCase() === 'dealer' 
-                    ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500' 
-                  : order.customerType?.toLowerCase() === 'retailer'
-                    ? 'border-blue-300 bg-blue-50/20 shadow-blue-100/50 hover:border-blue-500'
-                  : order.customerType?.toLowerCase() === 'student'
-                    ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
-                  : order.customerType?.toLowerCase() === 'influencer'
-                    ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
-                  : order.customerType?.toLowerCase() === 'corporate'
-                    ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
-                  : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
-                    ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
-                  : 'border-gray-100/60 hover:shadow-md'
-                }`}
+              <Card
+                key={order.id}
+                className={`p-4 shadow-sm transition-all duration-300 ${order.customerType?.toLowerCase() === 'dealer'
+                    ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500'
+                    : order.customerType?.toLowerCase() === 'retailer'
+                      ? 'border-blue-300 bg-blue-50/20 shadow-blue-100/50 hover:border-blue-500'
+                      : order.customerType?.toLowerCase() === 'student'
+                        ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
+                        : order.customerType?.toLowerCase() === 'influencer'
+                          ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
+                          : order.customerType?.toLowerCase() === 'corporate'
+                            ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
+                            : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
+                              ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
+                              : 'border-gray-100/60 hover:shadow-md'
+                  }`}
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
                   <div>
@@ -463,14 +460,13 @@ export default function AdminOrdersPage() {
                         Order ID: {order.id.slice(-8).toUpperCase()}
                       </h3>
                       {order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) && (
-                        <div className={`flex items-center gap-1.5 px-2.5 py-1 text-white rounded-lg shadow-sm ${
-                          order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
-                          order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
-                          order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
-                          order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
-                          order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
-                          'bg-teal-600'
-                        }`}>
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 text-white rounded-lg shadow-sm ${order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
+                            order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
+                              order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
+                                order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
+                                  order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
+                                    'bg-teal-600'
+                          }`}>
                           <BellRing className="w-3 h-3 animate-pulse" />
                           <span className="text-[8px] font-black uppercase tracking-widest">
                             {order.customerType} Order
