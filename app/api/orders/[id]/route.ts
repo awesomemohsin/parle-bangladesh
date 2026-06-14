@@ -21,25 +21,74 @@ export async function GET(
 
     // Auto-cancel if unpaid online order is older than 30 minutes
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const updatedOrder = await Order.findOneAndUpdate(
-      {
-        _id: id,
-        paymentMethod: "sslcommerz",
-        paymentStatus: { $ne: "paid" },
-        status: { $nin: ["cancelled", "lost", "damaged", "delivered"] },
-        createdAt: { $lt: thirtyMinutesAgo }
-      },
-      {
-        $set: { 
-          status: "cancelled", 
-          cancelReason: "Not paid in 30 minutes",
-          statusReason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes." 
-        }
-      },
-      { new: true }
-    ).lean();
+    const orderToCancel = await Order.findOne({
+      _id: id,
+      paymentMethod: "sslcommerz",
+      paymentStatus: { $ne: "paid" },
+      status: { $nin: ["cancelled", "lost", "damaged", "delivered"] },
+      createdAt: { $lt: thirtyMinutesAgo }
+    });
 
-    const order = updatedOrder || await Order.findById(id).lean();
+    if (orderToCancel) {
+      const oldStatus = orderToCancel.status;
+      orderToCancel.status = "cancelled";
+      orderToCancel.cancelReason = "Not paid in 30 minutes";
+      orderToCancel.statusReason = "Payment timeout: Unpaid order cancelled automatically after 30 minutes.";
+      if (!orderToCancel.orderLogs) orderToCancel.orderLogs = [];
+      orderToCancel.orderLogs.push({
+        fromStatus: oldStatus,
+        toStatus: "cancelled",
+        changedBy: "system",
+        reason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes.",
+        changedAt: new Date()
+      });
+      await orderToCancel.save();
+
+      // Restore stock
+      const { Product, StockLog } = await import("@/lib/models");
+      for (const item of orderToCancel.items) {
+        if (item.productId) {
+          const product = await Product.findById(item.productId);
+          if (product && product.variations) {
+            const varIndex = product.variations.findIndex((v: any) => {
+              const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+              const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+              return weightMatch && flavorMatch;
+            });
+            
+            if (varIndex !== -1) {
+              const variation = product.variations[varIndex];
+              const holdField = `variations.${varIndex}.holdStock`;
+              const stockField = `variations.${varIndex}.stock`;
+
+              const update: any = {
+                $inc: {
+                  [holdField]: -item.quantity,
+                  [stockField]: item.quantity
+                }
+              };
+
+              await StockLog.create({
+                productId: product._id,
+                productName: product.name,
+                variationIndex: varIndex,
+                weight: item.weight,
+                flavor: item.flavor,
+                oldStock: variation.stock || 0,
+                newStock: (variation.stock || 0) + item.quantity,
+                amount: item.quantity,
+                reason: `System Auto-Cancelled (Payment Timeout) - Order #${orderToCancel._id.toString().slice(-8).toUpperCase()}`,
+                adminEmail: "system",
+              });
+
+              await Product.updateOne({ _id: product._id }, update);
+            }
+          }
+        }
+      }
+    }
+
+    const order = orderToCancel ? orderToCancel.toObject() : await Order.findById(id).lean();
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
