@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Package, Truck, CheckCircle2, Clock, MapPin, Hash, Mail, ArrowRight, ShoppingBag } from 'lucide-react';
+import { Search, Package, Truck, CheckCircle2, Clock, MapPin, Hash, Mail, ArrowRight, ShoppingBag, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function TrackOrderPage() {
+  const { user } = useAuth();
   const [orderId, setOrderId] = useState('');
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
@@ -100,6 +102,46 @@ export default function TrackOrderPage() {
             </Button>
           </form>
         </Card>
+
+        {/* Guest User Helper Tip */}
+        {!user && (
+          <div className="mb-12 p-6 bg-gradient-to-r from-red-50/50 via-orange-50/20 to-white border border-red-100/60 rounded-3xl shadow-sm hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-5 justify-between">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 flex items-center justify-center shrink-0 mt-1 md:mt-0">
+                  <UserPlus className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-1">
+                      Forgot your Order ID?
+                    </h3>
+                    <p className="text-xs text-gray-500 font-semibold leading-relaxed">
+                      If you checked out as a guest, sign up with your phone number to automatically sync and track all your orders.
+                    </p>
+                  </div>
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-[10px] font-black uppercase tracking-wider text-emerald-700 border border-emerald-100">
+                      ⚡ Instantly (&lt;10s)
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-[10px] font-black uppercase tracking-wider text-blue-700 border border-blue-100">
+                      ✉️ No Email Required
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-[10px] font-black uppercase tracking-wider text-purple-700 border border-purple-100">
+                      🔒 No OTP Required
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Link href="/auth/signup" className="w-full md:w-auto shrink-0">
+                <Button className="w-full md:w-auto h-12 px-8 bg-red-600 hover:bg-black text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-lg shadow-red-600/10 hover:shadow-none active:scale-95">
+                  Sign Up Instantly
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
