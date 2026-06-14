@@ -276,7 +276,7 @@ export default function OrderApprovalsPage() {
                              {request.targetDetails.items?.map((item: any, idx: number) => (
                                <div key={idx} className="flex justify-between text-[10px] items-center border-b border-gray-50 pb-1 last:border-0">
                                   <span className="font-bold text-gray-700 truncate max-w-[140px] uppercase">{item.name}</span>
-                                  <span className="text-gray-400 font-black">×{item.quantity}</span>
+                                  <span className="text-gray-400 font-black">×{item.quantity} • ৳{item.price?.toFixed(0)}/pc</span>
                                </div>
                              ))}
                           </div>

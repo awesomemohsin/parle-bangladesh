@@ -240,8 +240,8 @@ export default function ApprovalLogsPage() {
                                 <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{item.weight} • {item.flavor || 'Original'}</span>
                               </div>
                               <div className="text-right">
-                                <span className="text-[10px] font-black text-gray-900">x{item.quantity}</span>
-                                <p className="text-[9px] font-bold text-indigo-600">৳{item.price * item.quantity}</p>
+                                <span className="text-[10px] font-black text-gray-900">x{item.quantity} • ৳{item.price?.toFixed(0)}/pc</span>
+                                <p className="text-[9px] font-bold text-indigo-600">৳{(item.price * item.quantity).toFixed(0)}</p>
                               </div>
                             </div>
                           ))}
