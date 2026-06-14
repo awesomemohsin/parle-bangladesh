@@ -508,13 +508,12 @@ function CheckoutContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address (Optional)</label>
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      required
                       readOnly={prefilled.email}
                       className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.email ? 'opacity-70 cursor-not-allowed' : ''}`}
                       placeholder="john@example.com"

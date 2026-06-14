@@ -311,8 +311,16 @@ export async function POST(request: NextRequest) {
     const deliveryMethod = body.deliveryMethod || "shipping";
 
     const customerName = body.customerName || billingAddress.name;
-    const customerEmail = (body.customerEmail || body.email || billingAddress.email || "").toLowerCase().trim();
     const customerPhone = body.customerPhone || body.phone || billingAddress.phone;
+    let customerEmail = (body.customerEmail || body.email || billingAddress.email || "").toLowerCase().trim();
+
+    if (!customerEmail && customerPhone) {
+      const cleanPhone = customerPhone.replace(/\D/g, "");
+      if (cleanPhone) {
+        customerEmail = `${cleanPhone}@phone.parle.com`;
+      }
+    }
+
     const address = body.address || billingAddress.address;
     const city = body.city || billingAddress.city;
     const postalCode = body.postalCode || billingAddress.postalCode;
