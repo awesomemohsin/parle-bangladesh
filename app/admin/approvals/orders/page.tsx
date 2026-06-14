@@ -220,7 +220,7 @@ export default function OrderApprovalsPage() {
                       {request.targetName}
                     </h3>
                     <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                      Target ID: {request.targetId}
+                      Target ID: <a href={`/admin/orders?q=${request.targetId}`} target="_blank" rel="noopener noreferrer" className="text-rose-600 hover:text-rose-800 hover:underline font-mono font-bold select-all">{request.targetId}</a>
                     </p>
                   </div>
 

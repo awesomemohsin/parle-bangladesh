@@ -114,6 +114,45 @@ export default function StockLogsPage() {
     });
   };
 
+  const renderReason = (reasonText: string) => {
+    if (!reasonText) return "";
+
+    const regex = /Order\s*#([a-fA-F0-9]{8,24})/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(reasonText)) !== null) {
+      const matchIndex = match.index;
+      const fullMatch = match[0];
+      const orderIdSuffix = match[1];
+
+      if (matchIndex > lastIndex) {
+        parts.push(reasonText.substring(lastIndex, matchIndex));
+      }
+
+      parts.push(
+        <a 
+          key={matchIndex}
+          href={`/admin/orders?q=${orderIdSuffix}`} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-rose-600 hover:text-rose-800 hover:underline font-bold"
+        >
+          {fullMatch}
+        </a>
+      );
+
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < reasonText.length) {
+      parts.push(reasonText.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : reasonText;
+  };
+
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -319,7 +358,7 @@ export default function StockLogsPage() {
                       </td>
                       <td className="py-4.5 px-6">
                         <div className="max-w-xs truncate font-medium text-neutral-700" title={log.reason}>
-                          {log.reason}
+                          {renderReason(log.reason)}
                         </div>
                       </td>
                       <td className="py-4.5 px-6 text-neutral-500 text-xs font-mono">

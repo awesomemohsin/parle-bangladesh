@@ -171,7 +171,21 @@ export default function ApprovalLogsPage() {
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none mb-2">
-                        {request.type === 'order' ? `Order: ${request.targetName}` : request.targetName}
+                        {request.type === 'order' ? (
+                          <span>
+                            Order:{" "}
+                            <a
+                              href={`/admin/orders?q=${request.targetId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-rose-600 hover:text-rose-800 hover:underline font-bold"
+                            >
+                              {request.targetName}
+                            </a>
+                          </span>
+                        ) : (
+                          request.targetName
+                        )}
                       </h3>
                       {request.type === 'order' && request.targetDetails ? (
                         <div className="flex flex-wrap gap-2 items-center">
