@@ -189,7 +189,9 @@ export default function AdminProfilePage() {
                   <Mail className="w-4 h-4 text-gray-500" />
                   <div className="flex flex-col overflow-hidden w-full">
                     <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Email Identity</span>
-                    <span className="text-[11px] font-bold truncate">{profile?.email}</span>
+                    <span className="text-[11px] font-bold truncate">
+                      {profile?.email?.endsWith('@phone.parle.com') ? 'Not set' : profile?.email}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">

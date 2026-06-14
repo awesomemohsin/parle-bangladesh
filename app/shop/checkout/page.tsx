@@ -154,15 +154,18 @@ function CheckoutContent() {
     }
 
     if (targetProfile) {
+      const isVirtualEmail = targetProfile.email?.endsWith('@phone.parle.com');
+      const displayEmail = isVirtualEmail ? '' : (targetProfile.email || '');
+
       setFormData(prev => ({
         ...prev,
         name: targetProfile.name || prev.name,
-        email: targetProfile.email || prev.email,
+        email: displayEmail,
         phone: targetProfile.mobile || prev.phone,
       }));
       setPrefilled({
         name: !!targetProfile.name,
-        email: !!targetProfile.email,
+        email: !isVirtualEmail && !!targetProfile.email,
         phone: !!targetProfile.mobile
       });
     }
@@ -186,10 +189,13 @@ function CheckoutContent() {
           const data = await res.json();
           if (data.orders && data.orders.length > 0) {
             const lastOrder = data.orders[0];
+            const isLastEmailVirtual = lastOrder.customerEmail?.endsWith('@phone.parle.com');
+            const displayLastEmail = isLastEmailVirtual ? '' : (lastOrder.customerEmail || '');
+
             setFormData(prev => ({
               ...prev,
               name: lastOrder.customerName || prev.name,
-              email: lastOrder.customerEmail || prev.email,
+              email: displayLastEmail || prev.email,
               phone: lastOrder.customerPhone || prev.phone,
               address: lastOrder.address || prev.address,
               city: lastOrder.city || prev.city,

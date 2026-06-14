@@ -115,7 +115,8 @@ export default function CareersPage() {
       setFormData(prev => ({
         ...prev,
         fullname: user.name || "",
-        email: user.email || ""
+        phone: user.mobile || "",
+        email: user.email?.endsWith("@phone.parle.com") ? "" : (user.email || "")
       }));
     }
   }, [user]);
