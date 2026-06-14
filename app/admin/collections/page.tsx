@@ -18,7 +18,8 @@ import {
   RotateCcw,
   Upload,
   Eye,
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -327,6 +328,100 @@ export default function CollectionsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportCSV = (data: any[], headers: { label: string; key: string | ((item: any) => any) }[], filename: string) => {
+    const csvHeaders = headers.map(h => `"${h.label.replace(/"/g, '""')}"`).join(",");
+    
+    const csvRows = data.map(item => {
+      return headers.map(h => {
+        let value = typeof h.key === "function" ? h.key(item) : item[h.key];
+        if (value === undefined || value === null) value = "";
+        value = String(value);
+        return `"${value.replace(/"/g, '""')}"`;
+      }).join(",");
+    });
+
+    const csvContent = "\uFEFF" + [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportInvoices = () => {
+    const outstandingHeaders = [
+      { label: "Order ID", key: (o: any) => o.id },
+      { label: "Date", key: (o: any) => new Date(o.createdAt).toLocaleString() },
+      { label: "Customer Shop", key: (o: any) => o.customerName },
+      { label: "Customer Phone", key: (o: any) => o.customerPhone },
+      { label: "Customer Type", key: (o: any) => o.customerType || "" },
+      { label: "Grand Total (৳)", key: (o: any) => o.total },
+      { label: "Amount Paid (৳)", key: (o: any) => o.amountPaid || 0 },
+      { label: "Outstanding Due (৳)", key: (o: any) => o.amountDue ?? o.total },
+      { label: "Order Status", key: (o: any) => o.status },
+      { label: "Payment Status", key: (o: any) => o.paymentStatus }
+    ];
+    const dateRangeStr = startDate || endDate ? `_${startDate || "lifetime"}_to_${endDate || "today"}` : "";
+    handleExportCSV(sortedOrders, outstandingHeaders, `Outstanding_Invoices${dateRangeStr}.csv`);
+  };
+
+  const handleExportShops = () => {
+    const shopHeaders = [
+      { label: "Account ID", key: (s: any) => s.id },
+      { label: "Account Name", key: (s: any) => s.name },
+      { label: "Email", key: (s: any) => s.email || "" },
+      { label: "Mobile", key: (s: any) => s.mobile },
+      { label: "Account Type", key: (s: any) => s.customerType || "" },
+      { label: "Probation Status", key: (s: any) => s.customerType === "retailer" ? (s.isRetailerApproved ? "Approved" : "Probation") : "N/A" },
+      { label: "Total Order (৳)", key: (s: any) => s.totalOrderAmount || 0 },
+      { label: "Total Paid (৳)", key: (s: any) => s.totalPaidAmount || 0 },
+      { label: "Due Balance (৳)", key: (s: any) => s.totalDueAmount || 0 },
+      { label: "Wallet Balance (৳)", key: (s: any) => s.walletBalance || 0 },
+      { label: "Net Account Balance (৳)", key: (s: any) => (s.walletBalance || 0) - (s.dueBalance || 0) }
+    ];
+    handleExportCSV(sortedShops, shopHeaders, `Customer_Balances.csv`);
+  };
+
+  const handleExportCompleted = () => {
+    const completedHeaders = [
+      { label: "Order ID", key: (o: any) => o.id },
+      { label: "Date", key: (o: any) => new Date(o.createdAt).toLocaleString() },
+      { label: "Customer Shop", key: (o: any) => o.customerName },
+      { label: "Customer Phone", key: (o: any) => o.customerPhone },
+      { label: "Customer Type", key: (o: any) => o.customerType || "" },
+      { label: "Grand Total (৳)", key: (o: any) => o.total },
+      { label: "Amount Paid (৳)", key: (o: any) => o.amountPaid || 0 },
+      { label: "Outstanding Due (৳)", key: (o: any) => o.amountDue || 0 },
+      { label: "Order Status", key: (o: any) => o.status },
+      { label: "Payment Status", key: (o: any) => "PAID" }
+    ];
+    const dateRangeStr = startDate || endDate ? `_${startDate || "lifetime"}_to_${endDate || "today"}` : "";
+    handleExportCSV(sortedCompletedOrders, completedHeaders, `Completed_Invoices${dateRangeStr}.csv`);
+  };
+
+  const handleExportLedgers = () => {
+    const ledgerHeaders = [
+      { label: "Transaction ID", key: (l: any) => l.id },
+      { label: "Date", key: (l: any) => new Date(l.createdAt).toLocaleString() },
+      { label: "Shop Name", key: (l: any) => l.userId ? l.userId.name : "Guest Customer" },
+      { label: "Shop Mobile", key: (l: any) => l.userId ? l.userId.mobile : "" },
+      { label: "Customer Type", key: (l: any) => l.userId ? l.userId.customerType : "guest" },
+      { label: "Transaction Type", key: (l: any) => l.type },
+      { label: "Reference ID", key: (l: any) => l.type === "collection" ? (l.orderId || "") : (l.userId ? (l.userId.id || l.userId._id || "") : "") },
+      { label: "Payment Method", key: (l: any) => l.paymentMethod || "" },
+      { label: "Amount (৳)", key: (l: any) => l.amount },
+      { label: "Proof URL", key: (l: any) => l.documentUrl || "" },
+      { label: "Recorded By", key: (l: any) => l.recordedBy },
+      { label: "Notes", key: (l: any) => l.notes || "" }
+    ];
+    const dateRangeStr = startDate || endDate ? `_${startDate || "lifetime"}_to_${endDate || "today"}` : "";
+    handleExportCSV(filteredLedgers, ledgerHeaders, `Transaction_Ledgers${dateRangeStr}.csv`);
   };
 
   useEffect(() => {
@@ -920,19 +1015,29 @@ export default function CollectionsPage() {
                   </button>
                 </div>
 
-                {/* Order Status selector */}
-                <div className="flex items-center gap-2 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Order Status:</span>
-                  <select
-                    value={orderStatusFilter}
-                    onChange={(e) => setOrderStatusFilter(e.target.value)}
-                    className="h-8 px-3 text-[10px] font-black uppercase bg-white border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-all cursor-pointer min-w-[120px]"
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Order Status selector */}
+                  <div className="flex items-center gap-2 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Order Status:</span>
+                    <select
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value)}
+                      className="h-8 px-3 text-[10px] font-black uppercase bg-white border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-all cursor-pointer min-w-[120px]"
+                    >
+                      <option value="all">ALL STATUSES</option>
+                      <option value="processing">PROCESSING</option>
+                      <option value="shipped">SHIPPED</option>
+                      <option value="delivered">DELIVERED</option>
+                    </select>
+                  </div>
+                  <Button
+                    onClick={handleExportInvoices}
+                    variant="outline"
+                    className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 uppercase tracking-wider text-[10px] font-black h-11"
                   >
-                    <option value="all">ALL STATUSES</option>
-                    <option value="processing">PROCESSING</option>
-                    <option value="shipped">SHIPPED</option>
-                    <option value="delivered">DELIVERED</option>
-                  </select>
+                    <Download className="w-3.5 h-3.5" />
+                    Export CSV
+                  </Button>
                 </div>
               </div>
 
@@ -1016,7 +1121,16 @@ export default function CollectionsPage() {
                               <span className="text-[9px] text-gray-400 font-black shrink-0 w-3 text-center">
                                 {expandedOrderHistory === order.id ? "▼" : "▶"}
                               </span>
-                              <span>#{order.id.slice(-8).toUpperCase()}</span>
+                              <a
+                                href={`/admin/orders?q=${order.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                title="View details in orders list"
+                              >
+                                #{order.id.slice(-8).toUpperCase()}
+                              </a>
                             </td>
                             <td className="py-4 px-3 text-gray-400">
                               {new Date(order.createdAt).toLocaleString()}
@@ -1200,19 +1314,29 @@ export default function CollectionsPage() {
                   </button>
                 </div>
 
-                {/* Order Status selector */}
-                <div className="flex items-center gap-2 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Order Status:</span>
-                  <select
-                    value={orderStatusFilter}
-                    onChange={(e) => setOrderStatusFilter(e.target.value)}
-                    className="h-8 px-3 text-[10px] font-black uppercase bg-white border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-all cursor-pointer min-w-[120px]"
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Order Status selector */}
+                  <div className="flex items-center gap-2 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Order Status:</span>
+                    <select
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value)}
+                      className="h-8 px-3 text-[10px] font-black uppercase bg-white border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-all cursor-pointer min-w-[120px]"
+                    >
+                      <option value="all">ALL STATUSES</option>
+                      <option value="processing">PROCESSING</option>
+                      <option value="shipped">SHIPPED</option>
+                      <option value="delivered">DELIVERED</option>
+                    </select>
+                  </div>
+                  <Button
+                    onClick={handleExportCompleted}
+                    variant="outline"
+                    className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 uppercase tracking-wider text-[10px] font-black h-11"
                   >
-                    <option value="all">ALL STATUSES</option>
-                    <option value="processing">PROCESSING</option>
-                    <option value="shipped">SHIPPED</option>
-                    <option value="delivered">DELIVERED</option>
-                  </select>
+                    <Download className="w-3.5 h-3.5" />
+                    Export CSV
+                  </Button>
                 </div>
               </div>
 
@@ -1296,7 +1420,16 @@ export default function CollectionsPage() {
                               <span className="text-[9px] text-gray-400 font-black shrink-0 w-3 text-center">
                                 {expandedOrderHistory === order.id ? "▼" : "▶"}
                               </span>
-                              <span>#{order.id.slice(-8).toUpperCase()}</span>
+                              <a
+                                href={`/admin/orders?q=${order.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                title="View details in orders list"
+                              >
+                                #{order.id.slice(-8).toUpperCase()}
+                              </a>
                             </td>
                             <td className="py-4 px-3 text-gray-400">
                               {new Date(order.createdAt).toLocaleString()}
@@ -1427,51 +1560,61 @@ export default function CollectionsPage() {
           {activeTab === "shops" && (
             <div className="space-y-4 animate-in fade-in duration-300">
               {/* Shop Balances Role Selector Bar */}
-              <div className="flex flex-wrap items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
-                <button
-                  type="button"
-                  onClick={() => setShopFilter("all")}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    shopFilter === "all"
-                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                      : "text-gray-400 hover:text-gray-900"
-                  }`}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setShopFilter("all")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      shopFilter === "all"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    All Customers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShopFilter("retailer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      shopFilter === "retailer"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Retailers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShopFilter("dealer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      shopFilter === "dealer"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Dealers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShopFilter("b2b")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                      shopFilter === "b2b"
+                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                        : "text-gray-400 hover:text-gray-900"
+                    }`}
+                  >
+                    Retailer & Dealers
+                  </button>
+                </div>
+                <Button
+                  onClick={handleExportShops}
+                  variant="outline"
+                  className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 uppercase tracking-wider text-[10px] font-black h-11"
                 >
-                  All Customers
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShopFilter("retailer")}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    shopFilter === "retailer"
-                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                      : "text-gray-400 hover:text-gray-900"
-                  }`}
-                >
-                  Retailers
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShopFilter("dealer")}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    shopFilter === "dealer"
-                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                      : "text-gray-400 hover:text-gray-900"
-                  }`}
-                >
-                  Dealers
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShopFilter("b2b")}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    shopFilter === "b2b"
-                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                      : "text-gray-400 hover:text-gray-900"
-                  }`}
-                >
-                  Retailer & Dealers
-                </button>
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </Button>
               </div>
 
               <div className="overflow-x-auto">
@@ -1648,7 +1791,19 @@ export default function CollectionsPage() {
 
           {/* TAB 3: TRANSACTION LEDGERS */}
           {activeTab === "ledgers" && (
-            <div className="overflow-x-auto">
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <div className="flex justify-between items-center bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Transaction history trail</span>
+                <Button
+                  onClick={handleExportLedgers}
+                  variant="outline"
+                  className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 uppercase tracking-wider text-[10px] font-black h-11"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
@@ -1780,6 +1935,7 @@ export default function CollectionsPage() {
                 </tbody>
               </table>
             </div>
+          </div>
           )}
 
         </div>
