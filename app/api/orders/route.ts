@@ -46,12 +46,16 @@ export async function GET(request: NextRequest) {
     const privilegedUser = hasAnyRole(user, [ROLES.OWNER, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MODERATOR]);
 
     if (!adminContext || !privilegedUser) {
+      const cleanPhone = user.mobile ? user.mobile.replace(/\D/g, "") : "";
       matchStage = {
         ...matchStage,
         $or: [
           { userId: user.id },
           { customerEmail: user.email },
-          ...(user.mobile ? [{ customerPhone: user.mobile }] : [])
+          ...(user.mobile ? [
+            { customerPhone: user.mobile },
+            ...(cleanPhone ? [{ customerEmail: `${cleanPhone}@phone.parle.com` }] : [])
+          ] : [])
         ]
       };
     } else {
@@ -378,6 +382,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳10,000 probation limit. Please contact a Superadmin for approval.`
         }, { status: 400 });
+      }
+    }
+
+    // If logged-in user currently has a virtual email and checks out with a real email, update user profile email
+    if (user && user.email?.endsWith("@phone.parle.com") && !customerEmail.endsWith("@phone.parle.com")) {
+      try {
+        const emailExists = await User.findOne({ email: customerEmail });
+        if (!emailExists) {
+          await User.findByIdAndUpdate(user.id, { email: customerEmail });
+          
+          // Also update all past orders of this user to use their new real email!
+          await Order.updateMany(
+            { userId: user.id },
+            { $set: { customerEmail: customerEmail } }
+          );
+        }
+      } catch (userUpdateErr) {
+        console.error("Failed to update user virtual email to real email during order placement:", userUpdateErr);
       }
     }
 

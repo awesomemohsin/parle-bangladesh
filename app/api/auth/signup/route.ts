@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
-import { User, Admin } from "@/lib/models";
+import { User, Admin, Order } from "@/lib/models";
 import { generateToken, setAuthCookie, getTokenFromCookie } from "@/lib/auth";
 import { getVerifiedAuthUser } from "@/lib/api-auth";
 
@@ -65,6 +65,38 @@ export async function POST(request: NextRequest) {
       creditLimit: customerType === "retailer" ? 10000 : undefined,
       isRetailerApproved: false, // Default to probation retailer
     });
+
+    // Link any past guest orders matching this mobile number to the new user ID
+    try {
+      const cleanPhone = mobile.replace(/\D/g, "");
+      await Order.updateMany(
+        {
+          $and: [
+            {
+              $or: [
+                { userId: { $exists: false } },
+                { userId: null },
+                { userId: "" }
+              ]
+            },
+            {
+              $or: [
+                { customerPhone: mobile },
+                { customerPhone: cleanPhone }
+              ]
+            }
+          ]
+        },
+        {
+          $set: {
+            userId: user._id.toString(),
+            customerEmail: emailLower // Consolidate to their registered email!
+          }
+        }
+      );
+    } catch (linkErr) {
+      console.error("[Signup] Failed to link past guest orders to user ID:", linkErr);
+    }
 
     // Automatically queue retailer promotion consensus request if registered by an SR
     if (referredBySR && creatorEmail) {
