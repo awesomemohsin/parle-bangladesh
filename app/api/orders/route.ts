@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
         ...matchStage,
         $or: [
           { userId: user.id },
-          { customerEmail: user.email }
+          { customerEmail: user.email },
+          ...(user.mobile ? [{ customerPhone: user.mobile }] : [])
         ]
       };
     } else {
