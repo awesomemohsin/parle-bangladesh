@@ -124,6 +124,7 @@ function CheckoutContent() {
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
+  const [emailReadOnly, setEmailReadOnly] = useState(false);
   const [srDiscountPercent, setSrDiscountPercent] = useState<number>(0);
   const [srDiscountTaka, setSrDiscountTaka] = useState<string>('');
 
@@ -217,6 +218,34 @@ function CheckoutContent() {
   }, []);
 
   useEffect(() => {
+    if (!mounted) return;
+    const phone = formData.phone.trim();
+    const mobileRegex = /^01[3-9]\d{8}$/;
+    
+    if (mobileRegex.test(phone)) {
+      const lookupEmail = async () => {
+        try {
+          const res = await fetch(`/api/users/lookup?phone=${phone}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.email) {
+              setFormData(prev => ({ ...prev, email: data.email }));
+              setEmailReadOnly(true);
+            } else {
+              setEmailReadOnly(false);
+            }
+          }
+        } catch (err) {
+          console.error("Error looking up email by phone:", err);
+        }
+      };
+      lookupEmail();
+    } else {
+      setEmailReadOnly(false);
+    }
+  }, [formData.phone, mounted]);
+
+  useEffect(() => {
     return () => {
       // Clear promo code when leaving checkout
       // We wrap it in a check to ensure it only happens when navigating AWAY
@@ -260,7 +289,7 @@ function CheckoutContent() {
     ];
 
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 font-sans">
+      <div className="min-h-[60vh] bg-white flex flex-col items-center pt-12 pb-24 p-8 font-sans">
         <div className="relative flex items-center justify-center mb-8">
           <div className="w-24 h-24 border-8 border-red-50 rounded-full animate-pulse" />
           <div className="w-24 h-24 border-8 border-red-600 border-t-transparent rounded-full animate-spin absolute" />
@@ -520,8 +549,8 @@ function CheckoutContent() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      readOnly={prefilled.email}
-                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${prefilled.email ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      readOnly={prefilled.email || emailReadOnly}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${(prefilled.email || emailReadOnly) ? 'opacity-70 cursor-not-allowed' : ''}`}
                       placeholder="john@example.com"
                     />
                   </div>
