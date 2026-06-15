@@ -104,7 +104,17 @@ export async function GET(
     // If it's a logged-in order, verify the user or if it was placed by the current SR.
     const isPlacedByCurrentSR = order.placedBySR && user && order.placedBySR.toString() === user.id;
 
-    if (order.userId && (!user || user.id !== order.userId.toString()) && !isAdmin && !isPlacedByCurrentSR) {
+    // Check if the order's customer is a B2B shop referred by the current SR
+    let isReferredShop = false;
+    if (order.userId && user) {
+      const { User } = await import("@/lib/models");
+      const shopOwner = await User.findById(order.userId).select("referredBySR").lean() as any;
+      if (shopOwner && shopOwner.referredBySR && shopOwner.referredBySR.toString() === user.id) {
+        isReferredShop = true;
+      }
+    }
+
+    if (order.userId && (!user || user.id !== order.userId.toString()) && !isAdmin && !isPlacedByCurrentSR && !isReferredShop) {
       return NextResponse.json({ error: "Unauthorized access to this order" }, { status: 403 });
     }
 

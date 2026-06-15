@@ -47,11 +47,25 @@ export async function GET(request: NextRequest) {
 
     if (!adminContext || !privilegedUser) {
       const cleanPhone = user.mobile ? user.mobile.replace(/\D/g, "") : "";
+      
+      let srQuery: any[] = [];
+      if (user.isSR) {
+        // Fetch B2B shops referred by this SR
+        const referredShops = await User.find({ referredBySR: user.id }).select("_id").lean();
+        const referredShopIds = referredShops.map(s => s._id.toString());
+        srQuery = [
+          { placedBySR: new mongoose.Types.ObjectId(user.id) },
+          { placedBySR: user.id },
+          { userId: { $in: referredShopIds } }
+        ];
+      }
+
       matchStage = {
         ...matchStage,
         $or: [
           { userId: user.id },
           { customerEmail: user.email },
+          ...srQuery,
           ...(user.mobile ? [
             { customerPhone: user.mobile },
             ...(cleanPhone ? [{ customerEmail: `${cleanPhone}@phone.parle.com` }] : [])
