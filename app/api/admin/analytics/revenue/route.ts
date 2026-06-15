@@ -69,15 +69,25 @@ export async function GET(request: NextRequest) {
 
     const pendingStats = await Order.aggregate([
       { $match: pendingQuery },
-      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
+      { $unwind: "$items" },
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          total: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
-          totalOrders: { $addToSet: "$_id" }
+          totalRevenue: { $sum: productId ? "$itemRevenue" : "$total" },
+          totalOrders: { $addToSet: "$_id" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       },
-      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" } } }
+      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" }, totalProducts: 1 } }
     ]);
 
     // 4. CALCULATE LOSS (Lost, Damaged)
@@ -141,14 +151,40 @@ export async function GET(request: NextRequest) {
         }));
     });
 
+    // 5.1 CALCULATE FILTERED/RANGE STATS OVERALL (DELIVERED ONLY)
+    const rangeSummaryStats = await Order.aggregate([
+      { $match: query },
+      { $unwind: "$items" },
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          total: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: productId ? "$itemRevenue" : "$total" },
+          totalOrders: { $addToSet: "$_id" },
+          totalProducts: { $sum: "$itemQuantity" }
+        }
+      },
+      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" }, totalProducts: 1 } }
+    ]);
+    const rStats = rangeSummaryStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 };
+
     return NextResponse.json({
       lifetime: lifetimeStats[0] || { totalRevenue: 0, totalOrders: 0 },
       daily: dailyStats[0] || { totalRevenue: 0, totalOrders: 0 },
-      pending: pendingStats[0] || { totalRevenue: 0, totalOrders: 0 },
+      pending: pendingStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 },
       loss: lossStats[0] || { totalRevenue: 0, totalOrders: 0 },
       range: {
-        totalRevenue: rangeStats.reduce((acc, curr) => acc + curr.totalRevenue, 0),
-        totalOrders: new Set(rangeStats.flatMap(rs => rs.orders)).size,
+        totalRevenue: rStats.totalRevenue,
+        totalOrders: rStats.totalOrders,
+        totalProducts: rStats.totalProducts,
         items: rangeStats
       },
       logs: formattedLogs

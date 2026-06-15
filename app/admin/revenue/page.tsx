@@ -219,7 +219,7 @@ export default function RevenuePage() {
           { 
             label: "Pending Sales", 
             value: `৳${(data?.pending?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.pending?.totalOrders || 0} Orders in Pipeline`, 
+            sub: `${data?.pending?.totalOrders || 0} Orders in Pipeline (${data?.pending?.totalProducts || 0} Products)`, 
             icon: RefreshCw, 
             color: "text-amber-600", 
             bg: "bg-amber-50",
@@ -237,7 +237,7 @@ export default function RevenuePage() {
           { 
             label: "Selected Period", 
             value: `৳${(data?.range?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.range?.totalOrders || 0} Delivered in Range`, 
+            sub: `${data?.range?.totalOrders || 0} Delivered in Range (${data?.range?.totalProducts || 0} Products)`, 
             icon: DollarSign, 
             color: "text-blue-600", 
             bg: "bg-blue-50",
