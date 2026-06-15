@@ -195,9 +195,9 @@ function CheckoutContent() {
 
             setFormData(prev => ({
               ...prev,
-              name: lastOrder.customerName || prev.name,
-              email: displayLastEmail || prev.email,
-              phone: lastOrder.customerPhone || prev.phone,
+              name: prev.name || lastOrder.customerName || '',
+              email: prev.email || displayLastEmail || '',
+              phone: prev.phone || lastOrder.customerPhone || '',
               address: lastOrder.address || prev.address,
               city: lastOrder.city || prev.city,
               postalCode: lastOrder.postalCode || prev.postalCode,
@@ -721,20 +721,15 @@ function CheckoutContent() {
           <div className="space-y-4 lg:sticky lg:top-8 h-fit">
             {/* Order Summary */}
             <div className="relative bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-hidden">
-              <AnimatePresence>
+              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b flex items-center justify-between">
+                <span>Order Summary</span>
                 {isSyncing && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-white/80 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center gap-2"
-                  >
-                    <div className="w-8 h-8 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
-                    <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest animate-pulse">Recalculating Totals...</span>
-                  </motion.div>
+                  <span className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase tracking-widest animate-pulse">
+                    <span className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                    Syncing...
+                  </span>
                 )}
-              </AnimatePresence>
-              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Order Summary</h2>
+              </h2>
               {campaignNotices && campaignNotices.length > 0 && (
                 <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                   {/* Flat Discount Requirement Notice */}
@@ -826,14 +821,7 @@ function CheckoutContent() {
                         Coupon ({promoCode}):
                       </span>
                       <div className="flex items-center gap-2">
-                        {isSyncing && displayPromoDiscount === 0 ? (
-                          <span className="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-wider animate-pulse">
-                            <span className="w-2.5 h-2.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
-                            Calculating...
-                          </span>
-                        ) : (
-                          <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
-                        )}
+                        <span className="font-semibold text-green-600">- ৳ {Math.round(displayPromoDiscount)}</span>
                         <button
                           type="button"
                           onClick={removePromo}
@@ -931,18 +919,13 @@ function CheckoutContent() {
                 )}
               </div>
 
-              <div className={`flex justify-between border-t border-gray-200 pt-3 items-end transition-all duration-300 ${isSyncing ? 'opacity-60 animate-pulse' : ''}`}>
+              <div className="flex justify-between border-t border-gray-200 pt-3 items-end transition-all duration-300">
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-bold text-gray-900 text-lg">Grand Total</span>
-                    {((discountAmount || 0) + srDiscountAmount) > 0 && !isSyncing && (
+                    {((discountAmount || 0) + srDiscountAmount) > 0 && (
                       <span className="text-[10px] font-black text-white bg-green-600 px-2 py-1 rounded uppercase tracking-tighter shadow-sm animate-bounce-slow">
                         Saved ৳{Math.round((discountAmount || 0) + srDiscountAmount)}
-                      </span>
-                    )}
-                    {isSyncing && (
-                      <span className="text-[9px] font-black text-white bg-amber-500 px-2 py-1 rounded uppercase tracking-tighter shadow-sm">
-                        Updating...
                       </span>
                     )}
                   </div>

@@ -16,6 +16,7 @@ export interface CartItem {
   discountAmount?: number;
   discountedPrice?: number;
   discountedTotal?: number;
+  variationDiscountPrice?: number;
 }
 
 export interface PromoDetails {
@@ -26,6 +27,8 @@ export interface PromoDetails {
   maxDiscountAmount?: number;
   allProducts: boolean;
   applicableProducts: string[];
+  applicableVariations?: string[];
+  minOrderAmount?: number;
   freeShipping?: boolean;
 }
 
@@ -43,6 +46,7 @@ export interface Cart {
   applicableSubtotal?: number;
   freeShippingGranted?: boolean;
   campaignNotices?: Array<{ offer: string; action: string }>;
+  flatRules?: any[];
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -103,6 +107,7 @@ function normalizeItem(item: any): CartItem | null {
     discountAmount: item.discountAmount !== undefined ? Number(item.discountAmount) : undefined,
     discountedPrice: item.discountedPrice !== undefined ? Number(item.discountedPrice) : undefined,
     discountedTotal: item.discountedTotal !== undefined ? Number(item.discountedTotal) : undefined,
+    variationDiscountPrice: item.variationDiscountPrice !== undefined ? Number(item.variationDiscountPrice) : undefined,
   };
 }
 
@@ -117,6 +122,370 @@ export function getItemKey(item: any): string {
 
 export function itemMatchesKey(item: CartItem, key: string): boolean {
   return getItemKey(item) === key;
+}
+
+function calculateClientSideTotals(
+  items: CartItem[],
+  promoCode?: string,
+  promoDetails?: PromoDetails,
+  flatRules: any[] = [],
+  user: any = null
+) {
+  const isDealer = user && (user.role === 'owner' || (user.role === 'customer' && user.customerType === 'dealer'));
+  const isRetailer = user && user.role === 'customer' && user.customerType === 'retailer';
+  const isPrivilegedCustomer = isDealer || isRetailer;
+
+  // 1. Fetch user discount if applicable
+  let userDiscount: { percent: number; expiresAt: Date } | undefined = undefined;
+  if (!isPrivilegedCustomer && user && user.flatDiscountPercent && user.flatDiscountExpiresAt) {
+    const expiresAt = new Date(user.flatDiscountExpiresAt);
+    if (expiresAt > new Date()) {
+      userDiscount = {
+        percent: user.flatDiscountPercent,
+        expiresAt
+      };
+    }
+  }
+
+  // 2. Subtotal of items (using item.price)
+  const subtotal = items.reduce((sum, item) => {
+    return sum + (item.price || 0) * (item.quantity || 0);
+  }, 0);
+
+  let freeShippingGranted = false;
+  let flatDiscountTotal = 0;
+  const ruleUsage = new Map<string, number>();
+
+  // Pre-calculate subtotal of targeted products for each flat discount rule
+  const ruleSubtotals = new Map<string, number>();
+  
+  // Filter active flat rules if user is not a dealer or retailer
+  const activeFlatRules = isPrivilegedCustomer ? [] : (flatRules || []);
+
+  activeFlatRules.forEach(rule => {
+    let ruleSubtotal = 0;
+    items.forEach(item => {
+      const pId = item.productId;
+      const itemVarKey = `${pId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      
+      const applies = rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId) && (
+          !rule.applicableVariations ||
+          rule.applicableVariations.length === 0 ||
+          rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
+        )
+      );
+      
+      if (applies) {
+        ruleSubtotal += (item.price || 0) * (item.quantity || 0);
+      }
+    });
+    ruleSubtotals.set(rule._id ? rule._id.toString() : String(rule.id || ''), ruleSubtotal);
+  });
+
+  // Calculate Best Flat Discount per item (variation vs user vs campaign flat)
+  const updatedItems = items.map(item => {
+    const productId = item.productId;
+    const itemPrice = Number(item.price) || 0;
+    const itemQuantity = Number(item.quantity) || 0;
+    const originalItemSubtotal = itemPrice * itemQuantity;
+
+    // 1. Candidate A: Variation Discount
+    const variationDiscountAmount = (!isPrivilegedCustomer && item.variationDiscountPrice && item.variationDiscountPrice > 0 && item.variationDiscountPrice < itemPrice)
+      ? (itemPrice - item.variationDiscountPrice) * itemQuantity
+      : 0;
+
+    // 2. Candidate B: User Discount
+    let userDiscountAmount = 0;
+    if (userDiscount && userDiscount.percent > 0) {
+      userDiscountAmount = (originalItemSubtotal * userDiscount.percent) / 100;
+      userDiscountAmount = Math.min(originalItemSubtotal, userDiscountAmount);
+    }
+
+    let bestRuleId = null;
+    let bestDiscountForItem = 0;
+
+    // Initialize with Variation Discount
+    if (variationDiscountAmount > 0) {
+      bestDiscountForItem = variationDiscountAmount;
+      bestRuleId = 'variation-discount';
+    }
+
+    // Compare with User Discount
+    if (userDiscount && userDiscountAmount > bestDiscountForItem) {
+      bestDiscountForItem = userDiscountAmount;
+      bestRuleId = `user-flat-${userDiscount.percent}`;
+    }
+
+    // Compare with Campaign-based Flat Discounts
+    activeFlatRules.forEach(rule => {
+      const itemVarKey = `${productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      const appliesToProduct = rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId) && (
+          !rule.applicableVariations ||
+          rule.applicableVariations.length === 0 ||
+          rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
+        )
+      );
+      const ruleKey = rule._id ? rule._id.toString() : String(rule.id || '');
+      const applicableSubtotal = ruleSubtotals.get(ruleKey) || 0;
+      const minOrderMet = applicableSubtotal >= (Number(rule.minOrderAmount) || 0);
+
+      if (appliesToProduct && minOrderMet) {
+        let currentDiscount = 0;
+        const amount = Number(rule.discountAmount || 0);
+
+        if (rule.discountType === 'percentage') {
+          currentDiscount = (originalItemSubtotal * amount) / 100;
+        } else {
+          currentDiscount = amount * itemQuantity;
+        }
+        
+        currentDiscount = Math.min(originalItemSubtotal, currentDiscount);
+
+        if (currentDiscount > bestDiscountForItem) {
+          bestDiscountForItem = currentDiscount;
+          bestRuleId = ruleKey;
+        }
+
+        // Track free shipping granted by active, qualified flat rules
+        if (rule.freeShipping) {
+          freeShippingGranted = true;
+        }
+      }
+    });
+
+    const updatedItem = { ...item };
+    
+    if (bestRuleId && bestDiscountForItem > 0) {
+      if (bestRuleId === 'variation-discount' || bestRuleId.startsWith('user-flat-')) {
+        flatDiscountTotal += bestDiscountForItem;
+      } else {
+        const currentRuleTotal = ruleUsage.get(bestRuleId) || 0;
+        ruleUsage.set(bestRuleId, currentRuleTotal + bestDiscountForItem);
+        (updatedItem as any)._appliedRuleId = bestRuleId;
+      }
+    }
+
+    // Attach calculated discount info
+    updatedItem.discountAmount = bestDiscountForItem;
+    updatedItem.discountedPrice = itemQuantity > 0 ? Math.round((originalItemSubtotal - bestDiscountForItem) / itemQuantity) : itemPrice;
+    updatedItem.discountedTotal = Math.round(originalItemSubtotal - bestDiscountForItem);
+
+    return updatedItem;
+  });
+
+  // Apply max caps to each rule's total discount and prepare scaling factors
+  const capScalingFactors = new Map<string, number>();
+
+  activeFlatRules.forEach(rule => {
+    const ruleId = rule._id ? rule._id.toString() : String(rule.id || '');
+    const usedAmount = ruleUsage.get(ruleId) || 0;
+    const maxCap = Number(rule.maxDiscountAmount || 0);
+    
+    if (maxCap > 0 && usedAmount > maxCap) {
+      flatDiscountTotal += maxCap;
+      capScalingFactors.set(ruleId, maxCap / usedAmount);
+    } else {
+      flatDiscountTotal += usedAmount;
+    }
+  });
+
+  // Scale down item-level discounts if the rule cap was exceeded
+  const finalItems = updatedItems.map(item => {
+    const ruleId = (item as any)._appliedRuleId;
+    if (ruleId && capScalingFactors.has(ruleId)) {
+      const scale = capScalingFactors.get(ruleId)!;
+      item.discountAmount = (item.discountAmount || 0) * scale;
+
+      const itemPrice = Number(item.price) || 0;
+      const itemQuantity = Number(item.quantity) || 0;
+      const originalItemSubtotal = itemPrice * itemQuantity;
+
+      item.discountedPrice = itemQuantity > 0 ? Math.round((originalItemSubtotal - item.discountAmount) / itemQuantity) : itemPrice;
+      item.discountedTotal = Math.round(originalItemSubtotal - item.discountAmount);
+    }
+    delete (item as any)._appliedRuleId;
+    return item;
+  });
+
+  // Calculate Promo Discount (stacks on top of remaining total)
+  let promoDiscount = 0;
+  let applicableSubtotal = 0;
+
+  if (promoDetails && !isDealer) {
+    const remainingTotal = subtotal - flatDiscountTotal;
+    
+    // Check if minimum order amount is met
+    const currentMinOrder = Number(promoDetails.minOrderAmount || 0);
+    if (currentMinOrder > 0 && remainingTotal < currentMinOrder) {
+      applicableSubtotal = 0;
+    } else if (promoDetails.allProducts === true) {
+      applicableSubtotal = subtotal;
+    } else {
+      const restrictedIds = (promoDetails.applicableProducts || [])
+        .map((id: any) => id?.toString()?.trim()?.toLowerCase())
+        .filter(Boolean);
+      
+      const applicableVariations = promoDetails.applicableVariations || [];
+      
+      if (restrictedIds.length > 0) {
+        finalItems.forEach(item => {
+          const possibleIds = [
+            item.productId,
+            item.productSlug
+          ].map(id => id?.toString()?.trim()?.toLowerCase()).filter(Boolean);
+          
+          const isMatch = possibleIds.some(id => restrictedIds.includes(id));
+          if (isMatch) {
+             const itemVarKey = `${item.productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+             const isVarMatch = applicableVariations.length === 0 || 
+               applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase());
+               
+             if (isVarMatch) {
+               const itemPrice = Number(item.price) || 0;
+               const itemDiscountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : itemPrice;
+               applicableSubtotal += itemDiscountedPrice * (Number(item.quantity) || 0);
+             }
+          }
+        });
+      } else {
+        applicableSubtotal = 0;
+      }
+    }
+
+    if (applicableSubtotal > 0) {
+      const amount = Number(promoDetails.discountAmount || 0);
+      if (amount > 0) {
+        if (promoDetails.discountType === 'percentage') {
+          promoDiscount = (applicableSubtotal * amount) / 100;
+          
+          // Apply max discount cap if set
+          const maxCap = Number(promoDetails.maxDiscountAmount || 0);
+          if (maxCap > 0 && promoDiscount > maxCap) {
+            promoDiscount = maxCap;
+          }
+        } else {
+          promoDiscount = Math.min(applicableSubtotal, amount);
+        }
+        
+        // Final cap: Cannot exceed remaining balance
+        promoDiscount = Math.min(remainingTotal, promoDiscount);
+      }
+    }
+
+    if (promoDetails.freeShipping) {
+      freeShippingGranted = true;
+    }
+  }
+
+  const totalDiscount = flatDiscountTotal + promoDiscount;
+  const total = subtotal - totalDiscount;
+
+  // Calculate dynamic campaign progress notices
+  const campaignNotices: Array<{ offer: string; action: string; unlocked?: boolean }> = [];
+
+  activeFlatRules.forEach(rule => {
+    const minOrder = Number(rule.minOrderAmount || 0);
+    if (minOrder <= 0) return;
+
+    const targetedItems = finalItems.filter(item => {
+      const pId = item.productId;
+      const itemVarKey = `${pId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      return rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId) && (
+          !rule.applicableVariations ||
+          rule.applicableVariations.length === 0 ||
+          rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
+        )
+      );
+    });
+
+    if (targetedItems.length === 0) return;
+
+    const sampleItem = targetedItems[0];
+    const productName = sampleItem.productName || "packs";
+    const unitPrice = Number(sampleItem.price) || 150;
+    
+    let variationSuffix = "";
+    const pId = sampleItem.productId;
+    if (rule.applicableVariations && rule.applicableVariations.length > 0 && pId) {
+      const targetedVars = rule.applicableVariations.filter((v: string) => 
+        v.trim().toLowerCase().startsWith(pId.toLowerCase() + ":")
+      );
+      if (targetedVars.length > 0) {
+        const varNames = targetedVars.map((v: string) => {
+          const parts = v.split(":");
+          const weight = parts[1] ? parts[1].trim() : "";
+          const flavor = parts[2] ? parts[2].trim() : "";
+          return [weight, flavor].filter(Boolean).join(" - ");
+        }).filter(Boolean);
+        if (varNames.length > 0) {
+          variationSuffix = ` (${varNames.join(", ")})`;
+        }
+      }
+    } else {
+      const varNames = Array.from(new Set(targetedItems.map(item => {
+        return [item.weight, item.flavor].filter(Boolean).join(" - ");
+      }).filter(Boolean)));
+      if (varNames.length > 0) {
+        variationSuffix = ` (${varNames.join(", ")})`;
+      }
+    }
+    
+    const targetQty = Math.round(minOrder / unitPrice);
+    const originalTotal = targetQty * unitPrice;
+    
+    let ruleDiscountAmount = 0;
+    if (rule.discountType === 'percentage') {
+      ruleDiscountAmount = (originalTotal * Number(rule.discountAmount)) / 100;
+      const maxCap = Number(rule.maxDiscountAmount || 0);
+      if (maxCap > 0 && ruleDiscountAmount > maxCap) {
+        ruleDiscountAmount = maxCap;
+      }
+    } else {
+      ruleDiscountAmount = Number(rule.discountAmount) * targetQty;
+    }
+    
+    const discountedTotal = Math.round(originalTotal - ruleDiscountAmount);
+    const currentQty = targetedItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    
+    const isMet = currentQty >= targetQty;
+    const freeShippingText = rule.freeShipping ? " + Free Shipping" : "";
+
+    if (isMet) {
+      const ruleId = rule._id ? rule._id.toString() : String(rule.id || '');
+      const usedAmount = ruleUsage.get(ruleId) || 0;
+      const actualSaved = usedAmount > 0 ? Math.min(usedAmount, Number(rule.maxDiscountAmount || 99999999)) : ruleDiscountAmount;
+      campaignNotices.push({
+        offer: `Get ${targetQty} packs of ${productName}${variationSuffix} for ৳${discountedTotal}${freeShippingText}!`,
+        action: `✓ Offer Unlocked! You saved ৳${Math.round(actualSaved)}!`,
+        unlocked: true
+      });
+    } else {
+      const remainingQty = Math.max(0, targetQty - currentQty);
+      campaignNotices.push({
+        offer: `Get ${targetQty} packs of ${productName}${variationSuffix} for ৳${discountedTotal}${freeShippingText}!`,
+        action: `Add ${remainingQty} more pack${remainingQty > 1 ? 's' : ''} to unlock this offer!`,
+        unlocked: false
+      });
+    }
+  });
+
+  return {
+    items: finalItems,
+    subtotal: Number(subtotal) || 0,
+    discountAmount: Number(totalDiscount) || 0,
+    promoDiscount: Number(promoDiscount) || 0,
+    ruleDiscount: Number(flatDiscountTotal) || 0,
+    total: Number(total) || 0,
+    promoCode: promoDetails ? promoDetails.code : undefined,
+    promoDetails,
+    isRestricted: promoDetails ? !promoDetails.allProducts : false,
+    applicableSubtotal: Number(applicableSubtotal) || 0,
+    freeShippingGranted,
+    campaignNotices
+  };
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -150,14 +519,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             isRestricted: parsed.isRestricted,
             applicableSubtotal: parsed.applicableSubtotal,
             freeShippingGranted: parsed.freeShippingGranted,
-            campaignNotices: parsed.campaignNotices || []
+            campaignNotices: parsed.campaignNotices || [],
+            flatRules: parsed.flatRules || []
           };
         } catch (e) {
           console.error("Cart initial parse failed:", e);
         }
       }
     }
-    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0, freeShippingGranted: false };
+    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0, freeShippingGranted: false, flatRules: [] };
   });
 
   const syncFromStorage = useCallback(() => {
@@ -183,7 +553,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           isRestricted: parsed.isRestricted,
           applicableSubtotal: parsed.applicableSubtotal,
           freeShippingGranted: parsed.freeShippingGranted,
-          campaignNotices: parsed.campaignNotices || []
+          campaignNotices: parsed.campaignNotices || [],
+          flatRules: parsed.flatRules || []
         });
       } catch (e) {
         console.error("Cart sync parse failed:", e);
@@ -261,7 +632,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 freeShippingGranted: data.freeShippingGranted,
                 promoCode: prev.promoCode || data.promoCode, 
                 promoDetails: prev.promoDetails || data.promoDetails,
-                campaignNotices: data.campaignNotices || []
+                campaignNotices: data.campaignNotices || [],
+                flatRules: data.flatRules || []
               };
             });
           }
@@ -379,6 +751,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               return prev;
             }
 
+            if (prev.items.length === 0) {
+              return prev;
+            }
+
             return {
               ...prev,
               items: mergedItems,
@@ -392,7 +768,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               freeShippingGranted: data.freeShippingGranted,
               promoCode: data.promoCode,
               promoDetails: data.promoDetails,
-              campaignNotices: data.campaignNotices || []
+              campaignNotices: data.campaignNotices || [],
+              flatRules: data.flatRules || prev.flatRules || []
             };
           });
         }
@@ -444,11 +821,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, user);
+      const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
-        items: newItems, 
-        itemCount: newItemCount
+        items: calculated.items, 
+        itemCount: newItemCount,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: calculated.promoDiscount,
+        ruleDiscount: calculated.ruleDiscount,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
       };
     });
   }, [user]);
@@ -456,14 +841,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback((key: string) => {
     setCart(prev => {
       const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
-      const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, user);
+      const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
-        items: newItems, 
-        itemCount: newItemCount
+        items: calculated.items, 
+        itemCount: newItemCount,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: calculated.promoDiscount,
+        ruleDiscount: calculated.ruleDiscount,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
       };
     });
-  }, []);
+  }, [user]);
 
   const updateQuantity = useCallback((key: string, quantity: number) => {
     setCart(prev => {
@@ -487,35 +880,65 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             return i;
           });
 
-      const newItemCount = newItems.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, user);
+      const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
-        items: newItems, 
-        itemCount: newItemCount
+        items: calculated.items, 
+        itemCount: newItemCount,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: calculated.promoDiscount,
+        ruleDiscount: calculated.ruleDiscount,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
       };
     });
   }, [user]);
 
   const applyPromo = useCallback((details: PromoDetails) => {
-    setCart(prev => ({ 
-      ...prev, 
-      promoCode: details.code, 
-      promoDetails: details,
-      promoDiscount: 0,
-      discountAmount: 0,
-      ruleDiscount: 0,
-      isRestricted: !details.allProducts,
-      applicableSubtotal: 0,
-      freeShippingGranted: details.freeShipping || false
-    }));
-  }, []);
+    setCart(prev => {
+      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, user);
+      return { 
+        ...prev, 
+        promoCode: details.code, 
+        promoDetails: details,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: calculated.promoDiscount,
+        ruleDiscount: calculated.ruleDiscount,
+        isRestricted: !details.allProducts,
+        applicableSubtotal: calculated.applicableSubtotal,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
+      };
+    });
+  }, [user]);
 
   const removePromo = useCallback(() => {
-    setCart(prev => ({ ...prev, promoCode: undefined, discountAmount: 0, promoDetails: undefined }));
-  }, []);
+    setCart(prev => {
+      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, user);
+      return { 
+        ...prev, 
+        promoCode: undefined, 
+        promoDetails: undefined,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: 0,
+        ruleDiscount: calculated.ruleDiscount,
+        isRestricted: false,
+        applicableSubtotal: 0,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
+      };
+    });
+  }, [user]);
 
   const clearCart = useCallback(() => {
-    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false });
+    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false, flatRules: [] });
   }, []);
 
   const contextValue: CartContextType = {

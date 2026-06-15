@@ -69,7 +69,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       items: refreshedItems,
-      ...totals
+      ...totals,
+      flatRules: flatDiscounts
     });
   } catch (error: any) {
     console.error("Cart GET err:", error);
@@ -162,7 +163,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       items: refreshedItems,
-      ...totals
+      ...totals,
+      flatRules: flatDiscounts
     });
   } catch (error: any) {
     console.error("Cart POST err:", error);

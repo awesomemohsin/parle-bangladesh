@@ -362,7 +362,7 @@ export default function CartPage() {
                                     {item.quantity > 1 ? `৳${item.price} x ${item.quantity}` : 'Price'}
                                   </p>
                                   <div className="flex flex-col items-end justify-center min-h-[36px] sm:min-h-[40px]">
-                                    <div className={`transition-opacity duration-200 ${isSyncing && updatingKeys.has(itemKey) ? 'opacity-50' : 'opacity-100'}`}>
+                                    <div className="transition-all duration-200">
                                       {discountedTotal !== undefined && discountedTotal < originalTotal ? (
                                         <>
                                           <div className="flex items-center gap-1 font-bold text-gray-400 text-[10px] sm:text-xs line-through">
@@ -498,28 +498,23 @@ export default function CartPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic text-right flex-shrink-0">
                       <span className="text-base sm:text-xl text-red-600 not-italic">৳</span>
-                      <span className={`transition-opacity duration-200 ${isSyncing ? 'opacity-50' : 'opacity-100'}`}>
+                      <span className="transition-opacity duration-200 opacity-100">
                         {Math.round(cartDisplayTotal)}
                       </span>
                     </div>
                   </div>
-
+ 
                   <Button
                     onClick={handleCheckout}
-                    disabled={isCheckingOut || isSyncing}
+                    disabled={isCheckingOut}
                     className="w-full h-16 rounded-2xl bg-gray-900 hover:bg-red-600 text-white font-black uppercase tracking-[0.2em] transition-all shadow-2xl shadow-slate-200 active:scale-95 text-xs group disabled:opacity-75 disabled:cursor-not-allowed"
                   >
                     <span className="flex items-center gap-3">
+                      Proceed to Checkout
                       {isSyncing ? (
-                        <>
-                          Recalculating
-                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-                        </>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
                       ) : (
-                        <>
-                          Proceed to Checkout
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       )}
                     </span>
                   </Button>
