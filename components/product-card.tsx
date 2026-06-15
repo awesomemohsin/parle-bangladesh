@@ -72,11 +72,24 @@ export default function ProductCard({
   }, [variations]);
 
   const [activeVarIndex, setActiveVarIndex] = useState(defaultIndex);
+  const [manualVarIndex, setManualVarIndex] = useState<number | null>(null);
 
   // Sync index when defaultIndex changes
   useEffect(() => {
     setActiveVarIndex(defaultIndex);
+    setManualVarIndex(null); // Reset manual selection when default changes
   }, [defaultIndex]);
+
+  // Auto-play cycling (every 3s when not hovered and no manual selection exists)
+  useEffect(() => {
+    if (!variations || variations.length <= 1 || isHovered || manualVarIndex !== null) return;
+
+    const interval = setInterval(() => {
+      setActiveVarIndex((prev) => (prev + 1) % variations.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [variations.length, isHovered, manualVarIndex]);
 
   // Automatically cycle through variations on hover to preview options (Desktop)
   useEffect(() => {
@@ -89,12 +102,12 @@ export default function ProductCard({
     return () => clearInterval(interval);
   }, [variations.length, isHovered]);
 
-  // Revert to default variation when hover ends
+  // Revert to default or manually selected variation when hover ends
   useEffect(() => {
     if (!isHovered) {
-      setActiveVarIndex(defaultIndex);
+      setActiveVarIndex(manualVarIndex !== null ? manualVarIndex : defaultIndex);
     }
-  }, [isHovered, defaultIndex]);
+  }, [isHovered, defaultIndex, manualVarIndex]);
 
   const fallbackImg = (variations && variations.find(varObj => varObj.image)?.image) || "";
   const currentVar = (variations && variations[activeVarIndex]) || (variations && variations[0]) || {};
@@ -304,6 +317,7 @@ export default function ProductCard({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setManualVarIndex(idx);
                       setActiveVarIndex(idx);
                     }}
                     title={label}
