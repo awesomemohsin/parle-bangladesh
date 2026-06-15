@@ -369,7 +369,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     isRestricted: promoDetails ? !promoDetails.allProducts : false,
     applicableSubtotal: Number(applicableSubtotal) || 0,
     freeShippingGranted: freeShippingGranted,
-    campaignNotices: campaignNotices
+    campaignNotices: campaignNotices,
+    appliedRuleIds: Array.from(ruleUsage.keys())
   };
 
   return result;

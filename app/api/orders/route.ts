@@ -594,6 +594,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (totals.appliedRuleIds && totals.appliedRuleIds.length > 0) {
+      await PromoCode.updateMany(
+        { _id: { $in: totals.appliedRuleIds } },
+        { $inc: { currentUsage: 1 } }
+      );
+    }
+
     // SSLCommerz payment initiation logic
     if (body.paymentMethod === "sslcommerz") {
       try {
