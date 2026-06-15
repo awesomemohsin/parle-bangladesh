@@ -114,7 +114,10 @@ export async function GET(request: NextRequest) {
           paymentStatus: o.paymentStatus,
           status: o.status,
           address: `${o.address}, ${o.city} - ${o.postalCode}`,
-          createdAt: o.createdAt
+          createdAt: o.createdAt,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          customerEmail: o.customerEmail
         })),
         payments: allPayments.map((p: any) => ({
           id: p._id.toString(),
@@ -190,7 +193,7 @@ export async function GET(request: NextRequest) {
           orderId,
           orderTotal: order.total,
           history,
-          due: order.amountDue ?? order.total
+          due: order.paymentStatus === "paid" ? 0 : (order.amountDue || order.total)
         });
       }
 
@@ -380,7 +383,15 @@ export async function GET(request: NextRequest) {
             _id: "$userId",
             totalOrderAmount: { $sum: "$total" },
             totalPaidAmount: { $sum: "$amountPaid" },
-            totalDueAmount: { $sum: "$amountDue" }
+            totalDueAmount: {
+              $sum: {
+                $cond: {
+                  if: { $eq: ["$paymentStatus", "paid"] },
+                  then: 0,
+                  else: { $cond: { if: { $gt: ["$amountDue", 0] }, then: "$amountDue", else: "$total" } }
+                }
+              }
+            }
           }
         }
       ]);
@@ -437,7 +448,15 @@ export async function GET(request: NextRequest) {
             email: { $first: "$customerEmail" },
             totalOrderAmount: { $sum: "$total" },
             totalPaidAmount: { $sum: "$amountPaid" },
-            totalDueAmount: { $sum: "$amountDue" },
+            totalDueAmount: {
+              $sum: {
+                $cond: {
+                  if: { $eq: ["$paymentStatus", "paid"] },
+                  then: 0,
+                  else: { $cond: { if: { $gt: ["$amountDue", 0] }, then: "$amountDue", else: "$total" } }
+                }
+              }
+            },
             createdAt: { $min: "$createdAt" },
             updatedAt: { $max: "$createdAt" }
           }

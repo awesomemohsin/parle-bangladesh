@@ -56,6 +56,9 @@ interface Order {
   createdAt: string;
   customerType?: string;
   status: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
 }
 
 interface Shop {
@@ -363,7 +366,7 @@ export default function CollectionsPage() {
       { label: "Customer Type", key: (o: any) => o.customerType || "" },
       { label: "Grand Total (৳)", key: (o: any) => o.total },
       { label: "Amount Paid (৳)", key: (o: any) => o.amountPaid || 0 },
-      { label: "Outstanding Due (৳)", key: (o: any) => o.amountDue ?? o.total },
+      { label: "Outstanding Due (৳)", key: (o: any) => o.paymentStatus === "paid" ? 0 : (o.amountDue || o.total) },
       { label: "Order Status", key: (o: any) => o.status },
       { label: "Payment Status", key: (o: any) => o.paymentStatus }
     ];
@@ -1144,7 +1147,7 @@ export default function CollectionsPage() {
                             </td>
                             <td className="py-4 px-3 font-black text-gray-900">৳{order.total}</td>
                             <td className="py-4 px-3 text-emerald-500">৳{order.amountPaid || 0}</td>
-                            <td className="py-4 px-3 text-rose-500 font-black">৳{order.amountDue ?? order.total}</td>
+                            <td className="py-4 px-3 text-rose-500 font-black">৳{order.paymentStatus === "paid" ? 0 : (order.amountDue || order.total)}</td>
                             <td className="py-4 px-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
                                 order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -1168,7 +1171,7 @@ export default function CollectionsPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setReconcileOrder(order);
-                                  setCashAmount(String(order.amountDue ?? order.total));
+                                  setCashAmount(String(order.paymentStatus === "paid" ? 0 : (order.amountDue || order.total)));
                                 }}
                                 className="bg-amber-600 hover:bg-black text-white px-4 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95 shrink-0"
                               >
@@ -1972,13 +1975,31 @@ export default function CollectionsPage() {
                   <span>Shopkeeper / Store</span>
                   <span className="text-gray-900">{reconcileOrder.customerName}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Mobile Number</span>
+                  <span className="text-gray-900 font-mono">{reconcileOrder.customerPhone || "—"}</span>
+                </div>
+                {reconcileOrder.customerEmail && (
+                  <div className="flex justify-between">
+                    <span>Email Address</span>
+                    <span className="text-gray-900">{reconcileOrder.customerEmail}</span>
+                  </div>
+                )}
+                {(reconcileOrder.address || reconcileOrder.city) && (
+                  <div className="flex justify-between">
+                    <span>Billing Destination</span>
+                    <span className="text-gray-900 text-right max-w-[200px] truncate" title={`${reconcileOrder.address || ""}${reconcileOrder.city ? `, ${reconcileOrder.city}` : ""}${reconcileOrder.postalCode ? ` - ${reconcileOrder.postalCode}` : ""}`}>
+                      {reconcileOrder.address ? `${reconcileOrder.address}${reconcileOrder.city ? `, ${reconcileOrder.city}` : ""}` : reconcileOrder.city}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-slate-200/50 pt-2 mt-2 font-black">
                   <span>Total Order Invoice</span>
                   <span className="text-gray-900">৳{reconcileOrder.total}</span>
                 </div>
                 <div className="flex justify-between text-rose-500 font-black">
                   <span>Outstanding Dues</span>
-                  <span>৳{reconcileOrder.amountDue ?? reconcileOrder.total}</span>
+                  <span>৳{reconcileOrder.paymentStatus === "paid" ? 0 : (reconcileOrder.amountDue || reconcileOrder.total)}</span>
                 </div>
               </div>
 
@@ -2530,6 +2551,17 @@ export default function CollectionsPage() {
                             </a>
                             <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</span>
                           </div>
+                          {(order.customerName || order.customerPhone) && (
+                            <div className="text-[10px] font-bold text-gray-700 flex items-center gap-1.5 flex-wrap">
+                              {order.customerName && <span>{order.customerName}</span>}
+                              {order.customerPhone && (
+                                <>
+                                  <span className="text-gray-300">|</span>
+                                  <span className="font-mono text-gray-500">{order.customerPhone}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
                           <div className="text-[10px] text-gray-500 max-w-md truncate">{order.address}</div>
                         </div>
                         <div className="text-right shrink-0 space-y-1">
