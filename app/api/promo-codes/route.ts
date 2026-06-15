@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     if (!isSR && !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const promoCodes = await PromoCode.find().sort({ createdAt: -1 }).lean();
+    const promoCodes = await PromoCode.find().sort({ isActive: -1, updatedAt: -1, createdAt: -1 }).lean();
     
     // Fetch all pending approval requests for promo-codes
     const pendingApprovals = await ApprovalRequest.find({

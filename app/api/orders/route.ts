@@ -588,17 +588,33 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.promoCode) {
-      await PromoCode.findOneAndUpdate(
+      const updatedPromo = await PromoCode.findOneAndUpdate(
         { code: body.promoCode.toUpperCase() },
-        { $inc: { currentUsage: 1 } }
+        { $inc: { currentUsage: 1 } },
+        { new: true }
       );
+      if (updatedPromo && updatedPromo.currentUsage >= updatedPromo.maxUsage) {
+        await PromoCode.updateOne(
+          { _id: updatedPromo._id },
+          { isActive: false }
+        );
+      }
     }
 
     if (totals.appliedRuleIds && totals.appliedRuleIds.length > 0) {
-      await PromoCode.updateMany(
-        { _id: { $in: totals.appliedRuleIds } },
-        { $inc: { currentUsage: 1 } }
-      );
+      for (const ruleId of totals.appliedRuleIds) {
+        const updatedRule = await PromoCode.findByIdAndUpdate(
+          ruleId,
+          { $inc: { currentUsage: 1 } },
+          { new: true }
+        );
+        if (updatedRule && updatedRule.currentUsage >= updatedRule.maxUsage) {
+          await PromoCode.updateOne(
+            { _id: updatedRule._id },
+            { isActive: false }
+          );
+        }
+      }
     }
 
     // SSLCommerz payment initiation logic

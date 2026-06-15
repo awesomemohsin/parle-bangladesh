@@ -18,10 +18,10 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   const isPrivilegedCustomer = isDealer || isRetailer;
 
   // 1. Fetch current active flat discounts
-  const flatDiscounts = isPrivilegedCustomer ? [] : await PromoCode.find({ 
+  const flatDiscounts = isPrivilegedCustomer ? [] : (await PromoCode.find({ 
     type: 'flat', 
     isActive: true 
-  }).lean();
+  }).lean()).filter(d => d.currentUsage < d.maxUsage);
 
   // 2. Fetch promo code if provided
   let promoDetails: any = null;
@@ -31,7 +31,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
       isActive: true,
       type: 'promo' 
     }).lean();
-    if (promo) {
+    if (promo && promo.currentUsage < promo.maxUsage) {
       promoDetails = JSON.parse(JSON.stringify(promo));
     }
   }
