@@ -831,6 +831,17 @@ export default function AdminCustomersPage() {
                             </a>
                             <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</span>
                           </div>
+                          {(order.customerName || order.customerPhone) && (
+                            <div className="text-[10px] font-bold text-gray-700 flex items-center gap-1.5 flex-wrap">
+                              {order.customerName && <span>{order.customerName}</span>}
+                              {order.customerPhone && (
+                                <>
+                                  <span className="text-gray-300">|</span>
+                                  <span className="font-mono text-gray-500">{order.customerPhone}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
                           <div className="text-[10px] text-gray-500 max-w-md truncate">{order.address}</div>
                         </div>
                         <div className="text-right shrink-0 space-y-1">

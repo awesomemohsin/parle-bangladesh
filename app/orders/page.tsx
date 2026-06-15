@@ -89,13 +89,15 @@ interface Order {
 }
 
 export default function MyOrdersPage() {
-  const { addItem } = useCart();
+  const { addItem, clearCart } = useCart();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [activeShop, setActiveShop] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSR, setIsSR] = useState(false);
   const [isDealer, setIsDealer] = useState(false);
 
   // Modal state
@@ -117,14 +119,30 @@ export default function MyOrdersPage() {
 
         const user = JSON.parse(userStr);
         setIsAdmin(user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner');
+        setIsSR(!!user?.isSR);
         setIsDealer(user?.customerType === 'dealer');
+
+        const activeShopStr = localStorage.getItem("sr_active_shop_user");
+        if (activeShopStr) {
+          try {
+            setActiveShop(JSON.parse(activeShopStr));
+          } catch (e) { }
+        }
 
         const params = new URLSearchParams()
         if (search) params.append('q', search)
         if (status !== 'all') params.append('status', status)
 
+        const activeShopId = localStorage.getItem("sr_active_shop_id");
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`
+        };
+        if (activeShopId) {
+          headers["x-on-behalf-of"] = activeShopId;
+        }
+
         const res = await fetch(`/api/orders?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers
         });
 
         if (!res.ok) {
@@ -207,9 +225,40 @@ export default function MyOrdersPage() {
     }, 800);
   };
 
+  const handleClearShop = () => {
+    localStorage.removeItem("sr_active_shop_id");
+    localStorage.removeItem("sr_active_shop_user");
+    sessionStorage.removeItem("cart_synced");
+    clearCart();
+    setActiveShop(null);
+    window.location.reload();
+  };
+
   return (
     <>
       <div className="max-w-6xl mx-auto px-4 py-8 main-content">
+        {isSR && activeShop && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-6 shadow-lg flex flex-col sm:flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-amber-600/10 rounded-xl flex items-center justify-center text-amber-500 border border-amber-500/20">
+                <ShoppingBag className="w-4 h-4 animate-pulse" />
+              </div>
+              <div className="text-xs text-left">
+                <p className="font-bold text-gray-400 leading-none">SR Mode: Showing orders for</p>
+                <p className="text-sm font-black text-white uppercase mt-1">
+                  {activeShop.name} <span className="text-gray-400 font-normal font-mono text-xs">({activeShop.mobile})</span>
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleClearShop}
+              className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-slate-600 text-[10px] font-black uppercase tracking-widest px-4 py-2 h-9 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 shrink-0"
+            >
+              See All Shops Orders
+            </Button>
+          </div>
+        )}
+
         {/* Mini Profile Header */}
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-8">
           <div>
@@ -270,42 +319,39 @@ export default function MyOrdersPage() {
             {orders.map((order) => (
               <Card
                 key={order.id}
-                className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group ${
-                  order.customerType?.toLowerCase() === 'dealer' 
-                    ? "border-amber-200 hover:border-amber-500 bg-amber-50/5" 
-                  : order.customerType?.toLowerCase() === 'retailer'
-                    ? "border-blue-200 hover:border-blue-500 bg-blue-50/5"
-                  : order.customerType?.toLowerCase() === 'student'
-                    ? "border-rose-200 hover:border-rose-500 bg-rose-50/5"
-                  : order.customerType?.toLowerCase() === 'influencer'
-                    ? "border-violet-200 hover:border-violet-500 bg-violet-50/5"
-                  : order.customerType?.toLowerCase() === 'corporate'
-                    ? "border-indigo-200 hover:border-indigo-500 bg-indigo-50/5"
-                  : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
-                    ? "border-teal-200 hover:border-teal-500 bg-teal-50/5"
-                    : "border-gray-100 hover:border-red-600"
-                }`}
+                className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group ${order.customerType?.toLowerCase() === 'dealer'
+                    ? "border-amber-200 hover:border-amber-500 bg-amber-50/5"
+                    : order.customerType?.toLowerCase() === 'retailer'
+                      ? "border-blue-200 hover:border-blue-500 bg-blue-50/5"
+                      : order.customerType?.toLowerCase() === 'student'
+                        ? "border-rose-200 hover:border-rose-500 bg-rose-50/5"
+                        : order.customerType?.toLowerCase() === 'influencer'
+                          ? "border-violet-200 hover:border-violet-500 bg-violet-50/5"
+                          : order.customerType?.toLowerCase() === 'corporate'
+                            ? "border-indigo-200 hover:border-indigo-500 bg-indigo-50/5"
+                            : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
+                              ? "border-teal-200 hover:border-teal-500 bg-teal-50/5"
+                              : "border-gray-100 hover:border-red-600"
+                  }`}
               >
                 {/* Header Bar - More Compact */}
-                <div className={`${
-                  order.customerType?.toLowerCase() === 'dealer' ? "bg-amber-50" :
-                  order.customerType?.toLowerCase() === 'retailer' ? "bg-blue-50" :
-                  order.customerType?.toLowerCase() === 'student' ? "bg-rose-50/50" :
-                  order.customerType?.toLowerCase() === 'influencer' ? "bg-violet-50/50" :
-                  order.customerType?.toLowerCase() === 'corporate' ? "bg-indigo-50/50" :
-                  order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) ? "bg-teal-50/50" :
-                  "bg-slate-50/80"
-                } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
+                <div className={`${order.customerType?.toLowerCase() === 'dealer' ? "bg-amber-50" :
+                    order.customerType?.toLowerCase() === 'retailer' ? "bg-blue-50" :
+                      order.customerType?.toLowerCase() === 'student' ? "bg-rose-50/50" :
+                        order.customerType?.toLowerCase() === 'influencer' ? "bg-violet-50/50" :
+                          order.customerType?.toLowerCase() === 'corporate' ? "bg-indigo-50/50" :
+                            order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) ? "bg-teal-50/50" :
+                              "bg-slate-50/80"
+                  } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
                   <div className="flex items-center gap-3">
                     {order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) && (
-                      <div className={`flex items-center gap-1.5 px-2 py-0.5 text-white rounded-md ${
-                        order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
-                        order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
-                        order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
-                        order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
-                        order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
-                        'bg-teal-600'
-                      }`}>
+                      <div className={`flex items-center gap-1.5 px-2 py-0.5 text-white rounded-md ${order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
+                          order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
+                            order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
+                              order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
+                                order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
+                                  'bg-teal-600'
+                        }`}>
                         <ShieldCheck className="w-2.5 h-2.5" />
                         <span className="text-[7px] font-black uppercase tracking-widest">
                           {order.customerType} Order
@@ -406,8 +452,8 @@ export default function MyOrdersPage() {
 
                 {(order.statusReason || order.cancelReason) && (
                   <div className={`px-4 py-1.5 border-b text-[10px] font-bold ${order.status === 'cancelled' ? 'bg-red-50/30 text-red-700 border-red-50' :
-                      order.status === 'damaged' ? 'bg-amber-50/30 text-amber-700 border-amber-50' :
-                        'bg-gray-50/30 text-gray-700 border-gray-50'
+                    order.status === 'damaged' ? 'bg-amber-50/30 text-amber-700 border-amber-50' :
+                      'bg-gray-50/30 text-gray-700 border-gray-50'
                     }`}>
                     <span className="uppercase tracking-widest text-[8px] opacity-60 mr-2">{order.status} REASON:</span>
                     {order.statusReason || order.cancelReason}
@@ -416,17 +462,17 @@ export default function MyOrdersPage() {
 
                 {/* Card Body - Highly Compact */}
                 <div className="p-2 flex flex-col md:flex-row gap-2">
-                  {/* Admin Role Section - Smaller */}
-                  {isAdmin && (
+                  {/* Admin / SR Role Section - Smaller */}
+                  {(isAdmin || isSR) && (
                     <div className="md:w-36 shrink-0 flex flex-col gap-1 border-r border-gray-50 pr-2">
                       <div className="flex items-center gap-2 mb-1">
                         <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
-                        <span className="text-[9px] font-black text-gray-900 uppercase tracking-widest">Admin Intel</span>
+                        <span className="text-[9px] font-black text-gray-900 uppercase tracking-widest">{isAdmin ? 'Admin Intel' : 'Buyer Profile'}</span>
                       </div>
                       <div>
                         <p className="text-xs font-black text-gray-900 truncate leading-tight mb-1">{order.customerName}</p>
-                        <p className="text-[8px] font-bold text-gray-300 uppercase truncate leading-none mb-0.5">{order.customerEmail}</p>
-                        <p className="text-[8px] font-black text-gray-300 uppercase leading-none">{order.customerPhone}</p>
+                        <p className="text-[8px] font-bold text-gray-400 uppercase truncate leading-none mb-0.5">{order.customerEmail}</p>
+                        <p className="text-[8px] font-black text-gray-500 uppercase leading-none">{order.customerPhone}</p>
                       </div>
                     </div>
                   )}
@@ -649,8 +695,17 @@ export default function MyOrdersPage() {
                   <div>
                     <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Order Information</h4>
                     <div className="space-y-1.5 text-[11px] text-gray-700 leading-tight">
-                      <div><span className="font-bold text-gray-400">Order ID:</span> <span className="font-mono font-black text-gray-900">{previewOrder?.id}</span></div>
-                      <div><span className="font-bold text-gray-400">Placement Date:</span> <span className="font-black text-gray-900">{previewOrder?.createdAt ? new Date(previewOrder.createdAt).toLocaleString() : ''}</span></div>
+                      <div><span className="font-bold text-gray-400">Order ID:</span> <span className="font-mono font-black text-gray-900">#{previewOrder?.id.slice(-8).toUpperCase()}</span></div>
+                      <div><span className="font-bold text-gray-400">Order Date:</span> <span className="font-black text-gray-900">{previewOrder?.createdAt ? new Date(previewOrder.createdAt).toLocaleString() : ''}</span></div>
+                      {previewOrder?.customerName && (
+                        <div><span className="font-bold text-gray-400">Customer Name:</span> <span className="font-black text-gray-900">{previewOrder.customerName}</span></div>
+                      )}
+                      {previewOrder?.customerPhone && (
+                        <div><span className="font-bold text-gray-400">Contact Number:</span> <span className="font-black text-gray-900 font-mono">{previewOrder.customerPhone}</span></div>
+                      )}
+                      {previewOrder?.customerEmail && (
+                        <div><span className="font-bold text-gray-400">Email Address:</span> <span className="font-black text-gray-900">{previewOrder.customerEmail}</span></div>
+                      )}
                       <div><span className="font-bold text-gray-400">Delivery Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.deliveryMethod || 'Standard Delivery'}</span></div>
                       <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.address}, {previewOrder?.city} {previewOrder?.postalCode}</span></div>
                     </div>
@@ -706,7 +761,7 @@ export default function MyOrdersPage() {
                       )}
                       {previewOrder?.paymentMethod === 'sslcommerz' && previewOrder?.paymentDetails && (
                         <div className="space-y-1.5 mt-2.5 p-3 bg-slate-50 rounded-lg border border-slate-100 text-[10px] font-medium text-gray-600">
-                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Transaction ID:</span> <span className="font-mono font-black text-emerald-600">{previewOrder.id}</span></div>
+                          <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Transaction ID:</span> <span className="font-mono font-black text-emerald-600">#{previewOrder.id.slice(-8).toUpperCase()}</span></div>
                           <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Bank Transaction ID:</span> <span className="font-mono font-black text-red-600">{previewOrder.paymentDetails.bank_tran_id || 'N/A'}</span></div>
                           <div><span className="text-gray-400 font-bold uppercase tracking-tight text-[8px]">Validation ID:</span> <span className="font-mono font-black text-purple-600">{previewOrder.paymentDetails.val_id || 'N/A'}</span></div>
                           {previewOrder.paymentDetails.verifiedAt && (
