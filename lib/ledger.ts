@@ -216,13 +216,13 @@ export async function runBackgroundCleanups() {
     }
   }
 
-  // 2. Clean up pending SR negotiated discount approvals older than 24 hours
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  // 2. Clean up pending SR negotiated discount approvals older than 48 hours
+  const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
   const expiredApprovals = await ApprovalRequest.find({
     type: "order",
     field: "srDiscount",
     status: "pending",
-    createdAt: { $lt: twentyFourHoursAgo }
+    createdAt: { $lt: fortyEightHoursAgo }
   });
 
   for (const req of expiredApprovals) {
@@ -235,7 +235,7 @@ export async function runBackgroundCleanups() {
         if (!req.comments) req.comments = [];
         req.comments.push({
           user: "system",
-          text: "Auto-expired: Negotiated discount approval request was not approved within 24 hours.",
+          text: "Auto-expired: Negotiated discount approval request was not approved within 48 hours.",
           date: new Date()
         });
         await req.save({ session });
@@ -245,7 +245,7 @@ export async function runBackgroundCleanups() {
           await cancelOrderAndRestoreStock(
             order,
             "Negotiated discount declined by Superadmin",
-            "Auto-expired: Negotiated discount approval request was not approved within 24 hours.",
+            "Auto-expired: Negotiated discount approval request was not approved within 48 hours.",
             "system",
             session
           );
@@ -254,7 +254,7 @@ export async function runBackgroundCleanups() {
           await Notification.create([{
             userId: req.requesterEmail,
             title: "Request Declined (Expired)",
-            message: `Your change request for ${req.targetName} was declined during the Initial Verification Phase. Reason: Auto-expired after 24 hours without approval.`,
+            message: `Your change request for ${req.targetName} was declined during the Initial Verification Phase. Reason: Auto-expired after 48 hours without approval.`,
             type: "alert",
             targetLink: `/admin/orders`
           }], { session });
