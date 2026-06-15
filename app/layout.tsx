@@ -32,6 +32,7 @@ import dynamic from 'next/dynamic'
 const PromoModal = dynamic(() => import('@/components/promo-modal'))
 const CareerCTA = dynamic(() => import('@/components/career-cta'))
 import SRShopSelector from '@/components/sr-shop-selector'
+import ScrollToTop from '@/components/scroll-to-top'
 
 export default function RootLayout({
   children,
@@ -44,6 +45,7 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <Toaster position="top-center" richColors />
+            <ScrollToTop />
             <PromoModal />
             <Navbar />
             <main className="flex-grow pt-[104px]">
