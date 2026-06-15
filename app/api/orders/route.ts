@@ -113,23 +113,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Auto-cancel unpaid online orders older than 30 minutes
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    await Order.updateMany(
-      {
-        paymentMethod: "sslcommerz",
-        paymentStatus: { $ne: "paid" },
-        status: { $nin: ["cancelled", "lost", "damaged", "delivered"] },
-        createdAt: { $lt: thirtyMinutesAgo }
-      },
-      {
-        $set: {
-          status: "cancelled",
-          cancelReason: "Not paid in 30 minutes",
-          statusReason: "Payment timeout: Unpaid order cancelled automatically after 30 minutes."
-        }
-      }
-    );
+    // Run background cleanups (unpaid payments, pending SR negotiated discount approvals)
+    try {
+      const { runBackgroundCleanups } = await import("@/lib/ledger");
+      await runBackgroundCleanups();
+    } catch (cleanupErr) {
+      console.error("Failed to run passive background cleanups in GET /api/orders:", cleanupErr);
+    }
 
     // Get total count
     const total = await Order.countDocuments(matchStage);
@@ -300,6 +290,12 @@ export async function POST(request: NextRequest) {
         });
 
         if (variation) {
+          if ((variation.stock || 0) < quantity) {
+            return NextResponse.json({
+              error: `Insufficient stock for product ${(product as any).name} (${item.weight || ""} ${item.flavor || ""}). Available stock: ${variation.stock || 0}`
+            }, { status: 400 });
+          }
+
           const basePrice = isDealer && variation.dealerPrice
             ? variation.dealerPrice
             : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
