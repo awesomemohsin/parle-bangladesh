@@ -56,6 +56,7 @@ export default function ProductCard({
   const { items, addItem } = useCart();
   const { user } = useAuth();
   const [isFlying, setIsFlying] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const isDealer = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
   const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
 
@@ -77,16 +78,23 @@ export default function ProductCard({
     setActiveVarIndex(defaultIndex);
   }, [defaultIndex]);
 
-  // Automatically cycle through variations every 3 seconds if there are multiple variations
+  // Automatically cycle through variations on hover to preview options (Desktop)
   useEffect(() => {
-    if (!variations || variations.length <= 1) return;
+    if (!variations || variations.length <= 1 || !isHovered) return;
 
     const interval = setInterval(() => {
       setActiveVarIndex((prev) => (prev + 1) % variations.length);
-    }, 3000);
+    }, 1500); // Faster cycle on hover for responsive preview
 
     return () => clearInterval(interval);
-  }, [variations.length]);
+  }, [variations.length, isHovered]);
+
+  // Revert to default variation when hover ends
+  useEffect(() => {
+    if (!isHovered) {
+      setActiveVarIndex(defaultIndex);
+    }
+  }, [isHovered, defaultIndex]);
 
   const fallbackImg = (variations && variations.find(varObj => varObj.image)?.image) || "";
   const currentVar = (variations && variations[activeVarIndex]) || (variations && variations[0]) || {};
@@ -196,7 +204,11 @@ export default function ProductCard({
   const productUrl = `/shop/products/${slug}${variationParams.toString() ? `?${variationParams.toString()}` : ''}`;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full">
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full"
+    >
       {hasAnyRetailDiscount && (
         <div className="absolute top-4 left-4 z-10">
           <span className="bg-red-600 text-white font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-lg">
@@ -278,6 +290,33 @@ export default function ProductCard({
               {activeVariation.weight || (!activeVariation.flavor ? "Standard" : "")}
             </motion.span>
           </AnimatePresence>
+
+          {/* Clickable Variant Indicators for Desktop/Mobile */}
+          {variations && variations.length > 1 && (
+            <div className="flex items-center gap-1 z-20">
+              {variations.map((v, idx) => {
+                const isActive = idx === activeVarIndex;
+                const label = [v.weight, v.flavor].filter(Boolean).join(" - ");
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setActiveVarIndex(idx);
+                    }}
+                    title={label}
+                    className={`h-1.5 rounded-full transition-all duration-300 border-0 cursor-pointer ${
+                      isActive 
+                        ? "w-3.5 bg-red-600" 
+                        : "w-1.5 bg-gray-200 hover:bg-gray-400"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-0.5 mb-2.5 sm:mb-3.5 min-h-[2rem] sm:min-h-[2.5rem] justify-center overflow-hidden">

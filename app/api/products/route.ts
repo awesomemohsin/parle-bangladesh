@@ -34,10 +34,8 @@ export async function GET(request: NextRequest) {
     }
     
     if (searchQuery) {
-      query.$or = [
-        { name: new RegExp(searchQuery, "i") },
-        { slug: new RegExp(searchQuery, "i") },
-      ];
+      // Leverage MongoDB text index for fast full-word searches
+      query.$text = { $search: searchQuery };
     }
 
     let sort: any = { serial: 1, createdAt: -1 };
@@ -49,7 +47,17 @@ export async function GET(request: NextRequest) {
       sort = { "variations.0.price": -1 };
     }
 
-    const total = await Product.countDocuments(query);
+    let total = await Product.countDocuments(query);
+
+    // Fallback to substring regex search for partial typing if text search yields 0 matches
+    if (searchQuery && total === 0) {
+      delete query.$text;
+      query.$or = [
+        { name: new RegExp(searchQuery, "i") },
+        { slug: new RegExp(searchQuery, "i") },
+      ];
+      total = await Product.countDocuments(query);
+    }
     
     const products = await Product.find(query, { images: { $slice: 1 } })
       .sort(sort)

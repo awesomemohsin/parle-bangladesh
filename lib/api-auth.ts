@@ -18,6 +18,15 @@ export function getAuthUserFromRequest(
   return verifyToken(token);
 }
 
+interface CacheEntry {
+  tokenVersion: number;
+  isValid: boolean;
+  expiresAt: number;
+}
+
+const verifiedUserCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+
 /**
  * DEEP VERIFICATION: Checks the tokenVersion against the database.
  * If the version doesn't match (e.g., after a promotion/demotion), it returns null.
@@ -28,6 +37,14 @@ export async function getVerifiedAuthUser(
   const user = getAuthUserFromRequest(request);
   if (!user) return null;
 
+  const cacheKey = `${user.id}:${user.tokenVersion || 0}`;
+  const now = Date.now();
+  const cached = verifiedUserCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.isValid ? user : null;
+  }
+
   try {
     const { User, Admin } = await import("@/lib/models");
     
@@ -37,8 +54,25 @@ export async function getVerifiedAuthUser(
       dbUser = await Admin.findById(user.id).select("tokenVersion").lean();
     }
     
+    const isValid = !!(dbUser && (dbUser.tokenVersion || 0) === (user.tokenVersion || 0));
+
+    verifiedUserCache.set(cacheKey, {
+      tokenVersion: user.tokenVersion || 0,
+      isValid,
+      expiresAt: now + CACHE_TTL_MS
+    });
+
+    // Clean up expired cache items if it grows large
+    if (verifiedUserCache.size > 500) {
+      for (const [k, v] of verifiedUserCache.entries()) {
+        if (v.expiresAt < now) {
+          verifiedUserCache.delete(k);
+        }
+      }
+    }
+
     // If the user isn't found in either or the version doesn't match
-    if (!dbUser || (dbUser.tokenVersion || 0) !== (user.tokenVersion || 0)) {
+    if (!isValid) {
       console.log(`[Auth] Session invalid for ${user.email}. DB: ${dbUser?.tokenVersion}, Token: ${user.tokenVersion}`);
       return null;
     }
