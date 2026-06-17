@@ -387,7 +387,7 @@ export default function MyOrdersPage() {
                     </span>
                     {(order.paymentMethod === 'sslcommerz' || order.paymentMethod === 'cash_on_delivery') && (
                       (() => {
-                        const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
+                        const isPaid = order.paymentStatus === 'paid' || (!['cancelled', 'lost', 'damaged'].includes(order.status) && order.amountDue !== undefined && order.amountDue <= 0);
                         const isPartial = order.paymentStatus === 'partial' && (order.amountDue !== undefined && order.amountDue > 0);
                         if (isPaid) {
                           return (
@@ -722,7 +722,7 @@ export default function MyOrdersPage() {
                       <div>
                         <span className="font-bold text-gray-400">Payment Status:</span>{' '}
                         {(() => {
-                          const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.amountDue !== undefined && previewOrder?.amountDue <= 0);
+                          const isPaid = previewOrder?.paymentStatus === 'paid' || (previewOrder?.status && !['cancelled', 'lost', 'damaged'].includes(previewOrder.status) && previewOrder?.amountDue !== undefined && previewOrder?.amountDue <= 0);
                           const isPartial = previewOrder?.paymentStatus === 'partial' && (previewOrder?.amountDue !== undefined && previewOrder?.amountDue > 0);
                           if (isPaid) {
                             return (

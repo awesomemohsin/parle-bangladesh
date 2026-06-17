@@ -489,7 +489,7 @@ export default function AdminOrdersPage() {
                         {order.paymentMethod === 'sslcommerz' ? '💳 Online' : '💵 COD'}
                       </span>
                       {(() => {
-                        const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
+                        const isPaid = order.paymentStatus === 'paid' || (!['cancelled', 'lost', 'damaged'].includes(order.status) && order.amountDue !== undefined && order.amountDue <= 0);
                         const isPartial = order.paymentStatus === 'partial' && (order.amountDue !== undefined && order.amountDue > 0);
                         if (isPaid) {
                           return (

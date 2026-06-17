@@ -271,7 +271,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     <span className="font-black">৳{order.total.toFixed(0)}</span>
                   </div>
                   {(() => {
-                    const isPaid = order.paymentStatus === 'paid' || (order.amountDue !== undefined && order.amountDue <= 0);
+                    const isPaid = order.paymentStatus === 'paid' || (!['cancelled', 'lost', 'damaged'].includes(order.status) && order.amountDue !== undefined && order.amountDue <= 0);
 
                     const paymentReceived = order.amountPaid !== undefined ? order.amountPaid : (isPaid ? order.total : 0);
 
