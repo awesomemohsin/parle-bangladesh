@@ -59,6 +59,7 @@ interface Order {
   address?: string;
   city?: string;
   postalCode?: string;
+  updatedAt?: string;
 }
 
 interface Shop {
@@ -142,6 +143,10 @@ export default function CollectionsPage() {
     "createdAt" | "id" | "customerName" | "total" | "amountPaid" | "amountDue" | "status"
   >("createdAt");
   const [invoiceSortOrder, setInvoiceSortOrder] = useState<"asc" | "desc">("desc");
+  const [completedSortBy, setCompletedSortBy] = useState<
+    "createdAt" | "updatedAt" | "id" | "customerName" | "total" | "amountPaid" | "amountDue" | "status"
+  >("updatedAt");
+  const [completedSortOrder, setCompletedSortOrder] = useState<"asc" | "desc">("desc");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
 
@@ -160,6 +165,27 @@ export default function CollectionsPage() {
       return <span className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1">↕</span>;
     }
     return invoiceSortOrder === "asc" ? (
+      <span className="text-gray-900 font-extrabold ml-1">▲</span>
+    ) : (
+      <span className="text-gray-900 font-extrabold ml-1">▼</span>
+    );
+  };
+
+  const handleCompletedInvoiceSort = (field: typeof completedSortBy) => {
+    if (completedSortBy === field) {
+      setCompletedSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setCompletedSortBy(field);
+      const numericFields = ["total", "amountPaid", "amountDue"];
+      setCompletedSortOrder(numericFields.includes(field) ? "desc" : "asc");
+    }
+  };
+
+  const renderCompletedInvoiceSortIndicator = (field: typeof completedSortBy) => {
+    if (completedSortBy !== field) {
+      return <span className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1">↕</span>;
+    }
+    return completedSortOrder === "asc" ? (
       <span className="text-gray-900 font-extrabold ml-1">▲</span>
     ) : (
       <span className="text-gray-900 font-extrabold ml-1">▼</span>
@@ -395,6 +421,7 @@ export default function CollectionsPage() {
     const completedHeaders = [
       { label: "Order ID", key: (o: any) => o.id },
       { label: "Date", key: (o: any) => new Date(o.createdAt).toLocaleString() },
+      { label: "Last Updated", key: (o: any) => new Date(o.updatedAt || o.createdAt).toLocaleString() },
       { label: "Customer Shop", key: (o: any) => o.customerName },
       { label: "Customer Phone", key: (o: any) => o.customerPhone },
       { label: "Customer Type", key: (o: any) => o.customerType || "" },
@@ -700,8 +727,16 @@ export default function CollectionsPage() {
   });
 
   const sortedCompletedOrders = [...filteredCompletedOrders].sort((a, b) => {
-    let valA: any = a[invoiceSortBy];
-    let valB: any = b[invoiceSortBy];
+    let valA: any;
+    let valB: any;
+
+    if (completedSortBy === "updatedAt") {
+      valA = a.updatedAt || a.createdAt;
+      valB = b.updatedAt || b.createdAt;
+    } else {
+      valA = a[completedSortBy];
+      valB = b[completedSortBy];
+    }
 
     if (typeof valA === "string") valA = valA.toLowerCase();
     if (typeof valB === "string") valB = valB.toLowerCase();
@@ -709,8 +744,8 @@ export default function CollectionsPage() {
     if (valA === undefined || valA === null) valA = 0;
     if (valB === undefined || valB === null) valB = 0;
 
-    if (valA < valB) return invoiceSortOrder === "asc" ? -1 : 1;
-    if (valA > valB) return invoiceSortOrder === "asc" ? 1 : -1;
+    if (valA < valB) return completedSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return completedSortOrder === "asc" ? 1 : -1;
     return 0;
   });
 
@@ -1348,59 +1383,67 @@ export default function CollectionsPage() {
                   <thead>
                     <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                       <th 
-                        onClick={() => handleInvoiceSort("id")}
+                        onClick={() => handleCompletedInvoiceSort("id")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Order ID {renderInvoiceSortIndicator("id")}
+                          Order ID {renderCompletedInvoiceSortIndicator("id")}
                         </div>
                       </th>
                       <th 
-                        onClick={() => handleInvoiceSort("createdAt")}
+                        onClick={() => handleCompletedInvoiceSort("createdAt")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Date {renderInvoiceSortIndicator("createdAt")}
+                          Order Date {renderCompletedInvoiceSortIndicator("createdAt")}
                         </div>
                       </th>
                       <th 
-                        onClick={() => handleInvoiceSort("customerName")}
+                        onClick={() => handleCompletedInvoiceSort("updatedAt")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Customer Shop {renderInvoiceSortIndicator("customerName")}
+                          Last Updated {renderCompletedInvoiceSortIndicator("updatedAt")}
                         </div>
                       </th>
                       <th 
-                        onClick={() => handleInvoiceSort("total")}
+                        onClick={() => handleCompletedInvoiceSort("customerName")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Grand Total {renderInvoiceSortIndicator("total")}
+                          Customer Shop {renderCompletedInvoiceSortIndicator("customerName")}
                         </div>
                       </th>
                       <th 
-                        onClick={() => handleInvoiceSort("amountPaid")}
+                        onClick={() => handleCompletedInvoiceSort("total")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Paid {renderInvoiceSortIndicator("amountPaid")}
+                          Grand Total {renderCompletedInvoiceSortIndicator("total")}
                         </div>
                       </th>
                       <th 
-                        onClick={() => handleInvoiceSort("amountDue")}
+                        onClick={() => handleCompletedInvoiceSort("amountPaid")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Outstanding Dues {renderInvoiceSortIndicator("amountDue")}
+                          Paid {renderCompletedInvoiceSortIndicator("amountPaid")}
                         </div>
                       </th>
                       <th 
-                        onClick={() => handleInvoiceSort("status")}
+                        onClick={() => handleCompletedInvoiceSort("amountDue")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
                         <div className="flex items-center">
-                          Order Status {renderInvoiceSortIndicator("status")}
+                          Outstanding Dues {renderCompletedInvoiceSortIndicator("amountDue")}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleCompletedInvoiceSort("status")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Order Status {renderCompletedInvoiceSortIndicator("status")}
                         </div>
                       </th>
                       <th className="py-4 px-3">Payment Status</th>
@@ -1410,7 +1453,7 @@ export default function CollectionsPage() {
                   <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
                     {filteredCompletedOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-gray-400 uppercase tracking-wider">No completed paid invoices found.</td>
+                        <td colSpan={10} className="py-8 text-center text-gray-400 uppercase tracking-wider">No completed paid invoices found.</td>
                       </tr>
                     ) : (
                       sortedCompletedOrders.map((order) => (
@@ -1436,6 +1479,9 @@ export default function CollectionsPage() {
                             </td>
                             <td className="py-4 px-3 text-gray-400">
                               {new Date(order.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-3 text-gray-400">
+                              {new Date(order.updatedAt || order.createdAt).toLocaleString()}
                             </td>
                             <td className="py-4 px-3">
                               <div className="flex items-center gap-2">
@@ -1477,7 +1523,7 @@ export default function CollectionsPage() {
                           {/* EXPANDED INLINE AUDIT TRAIL */}
                           {expandedOrderHistory === order.id && (
                             <tr className="bg-slate-50/60 border-y border-slate-100">
-                              <td colSpan={9} className="py-3 px-6">
+                              <td colSpan={10} className="py-3 px-6">
                                 <div className="max-w-2xl bg-white rounded-2xl p-5 border border-slate-100 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                                   <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-slate-200/50 pb-2 flex justify-between items-center">
                                     <span>Detailed Allocation & Payment Audit Trail</span>

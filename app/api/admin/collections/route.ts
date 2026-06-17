@@ -328,7 +328,7 @@ export async function GET(request: NextRequest) {
         if (startDate) queryCond.createdAt.$gte = new Date(startDate);
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
       }
-      const completedOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
+      const completedOrders = await Order.find(queryCond).sort({ updatedAt: -1 }).lean();
       
       // Bulk resolve user types (including admins)
       const orderUserIds = Array.from(new Set(completedOrders.map((o: any) => o.userId).filter(Boolean)));
