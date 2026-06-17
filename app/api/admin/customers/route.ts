@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
     if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    
+
     // Only super_admin and owner can manage customers
     if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: "Access denied. High-level authorization required." }, { status: 403 });
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       type: "customer",
       status: "pending"
     }).select("targetId").lean();
-    
+
     const pendingIds = new Set(pendingPromotions.map(p => p.targetId.toString()));
 
     // 1. Get all registered customers
@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
 
     // 2. Aggregate order statistics for ALL emails (including guests)
     const orderStats = await Order.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           status: { $ne: ORDER_STATUS.CANCELLED }
-        } 
+        }
       },
       {
         $group: {
@@ -142,9 +142,9 @@ export async function GET(request: NextRequest) {
     // 5. Apply Search Filtering
     let filtered = customersList;
     if (search) {
-      filtered = customersList.filter(c => 
-        c.name?.toLowerCase().includes(search) || 
-        c.email?.toLowerCase().includes(search) || 
+      filtered = customersList.filter(c =>
+        c.name?.toLowerCase().includes(search) ||
+        c.email?.toLowerCase().includes(search) ||
         c.mobile?.toLowerCase().includes(search)
       );
     }
@@ -152,20 +152,23 @@ export async function GET(request: NextRequest) {
     // 6. Compute dynamic counts based on active search
     const counts = {
       all: filtered.length,
-      guest: filtered.filter(c => c.customerType === "guest").length,
       customer: filtered.filter(c => c.customerType === "customer").length,
+      guest: filtered.filter(c => c.customerType === "guest").length,
       retailer: filtered.filter(c => c.customerType === "retailer").length,
       dealer: filtered.filter(c => c.customerType === "dealer").length,
+      staff: filtered.filter(c => ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType)).length,
       student: filtered.filter(c => c.customerType === "student").length,
       influencer: filtered.filter(c => c.customerType === "influencer").length,
       corporate: filtered.filter(c => c.customerType === "corporate").length,
-      other: filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate"].includes(c.customerType)).length,
+      other: filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate", "admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType)).length,
     };
 
     // 7. Apply Role/Type Filtering
     if (customerType) {
-      if (customerType === "other") {
-        filtered = filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate"].includes(c.customerType));
+      if (customerType === "staff") {
+        filtered = filtered.filter(c => ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType));
+      } else if (customerType === "other") {
+        filtered = filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate", "admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType));
       } else {
         filtered = filtered.filter(c => c.customerType === customerType);
       }
@@ -188,7 +191,7 @@ export async function GET(request: NextRequest) {
       return sortOrder === "desc" ? valB - valA : valA - valB;
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       customers: filtered.slice(0, 100),
       counts
     });
@@ -205,11 +208,11 @@ export async function PATCH(request: NextRequest) {
   try {
     await connectDB();
     const currentUser = getAuthUserFromRequest(request);
-    
+
     if (!currentUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     if (!hasAnyRole(currentUser, [ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: "Forbidden: SuperAdmin only" }, { status: 403 });
     }
@@ -233,7 +236,7 @@ export async function PATCH(request: NextRequest) {
 
     const oldType = customer.customerType;
     let pendingApproval = false;
-    
+
     if (customerType && customerType !== customer.customerType) {
       if (customerType === "customer") {
         // DEMOTION: Applies instantly without approval
@@ -292,7 +295,7 @@ export async function PATCH(request: NextRequest) {
       // Force logout by incrementing version
       customer.tokenVersion = (customer.tokenVersion || 0) + 1;
     }
-    
+
     if (pendingApproval) {
       await logAdminActivity({
         adminEmail: currentUser.email,
@@ -302,7 +305,7 @@ export async function PATCH(request: NextRequest) {
         details: `Queued promotion request for customer ${customer.email}: Type ${oldType}->${customerType}`
       });
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "Promotion queued for Superadmin consensus",
         pendingApproval: true
       });
@@ -318,7 +321,7 @@ export async function PATCH(request: NextRequest) {
       details: `Updated customer ${customer.email}: Type ${oldType}->${customer.customerType}`
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "Customer updated successfully",
       customer: {
         id: customer._id.toString(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,7 @@ export default function AdminCustomersPage() {
     customer: 0,
     retailer: 0,
     dealer: 0,
+    staff: 0,
     student: 0,
     influencer: 0,
     corporate: 0,
@@ -292,11 +293,20 @@ export default function AdminCustomersPage() {
     { value: "guest", label: "Guest", count: counts.guest, activeStyle: "bg-gray-500 text-white shadow-lg shadow-gray-500/10 border-gray-500", inactiveStyle: "bg-white text-gray-400 hover:text-gray-600 border-gray-105" },
     { value: "retailer", label: "Retailer", count: counts.retailer, activeStyle: "bg-blue-600 text-white shadow-lg shadow-blue-600/10 border-blue-600", inactiveStyle: "bg-blue-50/50 text-blue-700 border-blue-100 hover:bg-blue-50" },
     { value: "dealer", label: "Dealer", count: counts.dealer, activeStyle: "bg-amber-600 text-white shadow-lg shadow-amber-600/10 border-amber-600", inactiveStyle: "bg-amber-50/50 text-amber-700 border-amber-100 hover:bg-amber-50" },
+    { value: "staff", label: "Staffs", count: counts.staff, activeStyle: "bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 border-emerald-600", inactiveStyle: "bg-emerald-50/50 text-emerald-700 border-emerald-100 hover:bg-emerald-50" },
     { value: "student", label: "Student", count: counts.student, activeStyle: "bg-rose-600 text-white shadow-lg shadow-rose-600/10 border-rose-600", inactiveStyle: "bg-rose-50/50 text-rose-700 border-rose-100 hover:bg-rose-50" },
     { value: "influencer", label: "Influencer", count: counts.influencer, activeStyle: "bg-violet-600 text-white shadow-lg shadow-violet-600/10 border-violet-600", inactiveStyle: "bg-violet-50/50 text-violet-700 border-violet-100 hover:bg-violet-50" },
     { value: "corporate", label: "Corporate", count: counts.corporate, activeStyle: "bg-sky-600 text-white shadow-lg shadow-sky-600/10 border-sky-600", inactiveStyle: "bg-sky-50/50 text-sky-700 border-sky-100 hover:bg-sky-50" },
     { value: "other", label: "Other", count: counts.other, activeStyle: "bg-indigo-600 text-white shadow-lg shadow-indigo-600/10 border-indigo-600", inactiveStyle: "bg-indigo-50/50 text-indigo-700 border-indigo-100 hover:bg-indigo-50" },
   ];
+
+  const customerStats = useMemo(() => {
+    let totalCustomers = customers.length;
+    let totalOrders = customers.reduce((sum, c) => sum + (c.ordersCount || 0), 0);
+    let totalProducts = customers.reduce((sum, c) => sum + (c.totalProducts || 0), 0);
+    let totalSpent = customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
+    return { totalCustomers, totalOrders, totalProducts, totalSpent };
+  }, [customers]);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -319,7 +329,7 @@ export default function AdminCustomersPage() {
 
       {/* Filter Tabs */}
       <div 
-        className="flex items-center gap-2 mb-6 p-2 bg-gray-50/60 rounded-2xl border border-gray-100/80 overflow-x-auto [&::-webkit-scrollbar]:hidden scroll-smooth"
+        className="flex items-center gap-1.5 mb-6 p-1.5 bg-gray-50/60 rounded-xl border border-gray-100/80 overflow-x-auto [&::-webkit-scrollbar]:hidden scroll-smooth"
         style={{ scrollbarWidth: "none" }}
       >
         {filterTabs.map((tab) => (
@@ -328,13 +338,13 @@ export default function AdminCustomersPage() {
             type="button"
             onClick={() => setSelectedType(tab.value)}
             className={`
-              flex items-center gap-1 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-200 shrink-0 select-none
+              flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all duration-200 shrink-0 select-none
               ${selectedType === tab.value ? tab.activeStyle : tab.inactiveStyle}
               hover:scale-[1.02] active:scale-[0.98] cursor-pointer
             `}
           >
             {tab.label}
-            <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[9px] font-black tracking-tight leading-none transition-colors duration-200 ${
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[8px] font-black tracking-tight leading-none transition-colors duration-200 ${
               selectedType === tab.value 
                 ? 'bg-white/20 text-white' 
                 : 'bg-black/5 text-gray-500'
@@ -343,6 +353,26 @@ export default function AdminCustomersPage() {
             </span>
           </button>
         ))}
+      </div>
+
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/50 p-4 rounded-3xl border border-slate-100 mb-6">
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Customers</span>
+          <span className="text-base font-black text-slate-800 mt-1">{customerStats.totalCustomers}</span>
+        </div>
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Orders</span>
+          <span className="text-base font-black text-slate-800 mt-1">{customerStats.totalOrders}</span>
+        </div>
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Products Purchased</span>
+          <span className="text-base font-black text-slate-800 mt-1">{customerStats.totalProducts}</span>
+        </div>
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Spent</span>
+          <span className="text-base font-black text-red-600 mt-1">৳{customerStats.totalSpent.toLocaleString()}</span>
+        </div>
       </div>
 
       <Card className="overflow-hidden border-none shadow-xl shadow-gray-100 rounded-2xl">
@@ -467,6 +497,8 @@ export default function AdminCustomersPage() {
                             ? 'bg-gray-100 text-gray-400'
                           : customer.customerType === 'customer'
                             ? 'bg-slate-100 text-slate-500'
+                          : ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(customer.customerType)
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                             : 'bg-teal-50 text-teal-700 border border-teal-100'
                         }`}>
                           {customer.customerType?.replace("_", " ")}
