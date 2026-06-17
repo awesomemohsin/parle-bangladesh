@@ -339,10 +339,12 @@ export async function POST(request: NextRequest) {
     const address = body.address || billingAddress.address;
     const city = body.city || billingAddress.city;
     const postalCode = body.postalCode || billingAddress.postalCode;
+    const thana = body.thana || billingAddress.thana;
 
     const reqShippingAddress = deliveryMethod === "pickup" ? "Collection Point Pickup" : (shippingAddress.address || address);
     const reqShippingCity = deliveryMethod === "pickup" ? "N/A" : (shippingAddress.city || city);
     const reqShippingPostalCode = deliveryMethod === "pickup" ? "N/A" : (shippingAddress.postalCode || postalCode);
+    const reqShippingThana = deliveryMethod === "pickup" ? "N/A" : (shippingAddress.thana || thana);
 
     const missing = [];
     if (!customerName) missing.push("Name");
@@ -350,6 +352,7 @@ export async function POST(request: NextRequest) {
     if (!customerPhone) missing.push("Phone");
     if (!address) missing.push("Billing Address");
     if (!city) missing.push("Billing City");
+    if (!thana) missing.push("Billing Thana / Police Station");
     if (!postalCode) missing.push("Billing Postal Code");
 
     if (missing.length > 0) {
@@ -363,7 +366,7 @@ export async function POST(request: NextRequest) {
     const promoDiscount = totals.promoDiscount || 0;
 
     const isB2BUser = customerTypeStr === "retailer" || customerTypeStr === "dealer";
-    const baseShippingCharge = reqShippingCity === "Dhaka" ? 80 : 130;
+    const baseShippingCharge = (reqShippingCity === "Dhaka" || reqShippingCity === "Dhaka Metro") ? 80 : 130;
     const shippingCost = (deliveryMethod === "pickup" || isB2BUser) ? 0 : (((subtotal - ruleDiscount) >= 1000 || totals.freeShippingGranted) ? 0 : baseShippingCharge);
     const tax = 0;
     let total = subtotal + shippingCost - discountAmount;
@@ -439,9 +442,11 @@ export async function POST(request: NextRequest) {
       address,
       city,
       postalCode,
+      thana,
       shippingAddress: reqShippingAddress,
       shippingCity: reqShippingCity,
       shippingPostalCode: reqShippingPostalCode,
+      shippingThana: reqShippingThana,
       deliveryMethod,
       instruction,
       paymentMethod: body.paymentMethod || "cash_on_delivery",
@@ -641,14 +646,14 @@ export async function POST(request: NextRequest) {
           ipn_url: `${appUrl}/api/payment/sslcommerz/ipn`,
           cus_name: customerName,
           cus_email: customerEmail,
-          cus_add1: address,
+          cus_add1: thana ? `${address}, ${thana}` : address,
           cus_city: city,
           cus_postcode: postalCode,
           cus_country: "Bangladesh",
           cus_phone: customerPhone,
           shipping_method: "YES",
           ship_name: customerName,
-          ship_add1: reqShippingAddress,
+          ship_add1: reqShippingThana && reqShippingThana !== "N/A" ? `${reqShippingAddress}, ${reqShippingThana}` : reqShippingAddress,
           ship_city: reqShippingCity,
           ship_postcode: reqShippingPostalCode,
           ship_country: "Bangladesh",

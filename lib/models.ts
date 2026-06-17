@@ -350,6 +350,7 @@ export interface IOrder extends Document {
   address: string;
   city: string;
   postalCode: string;
+  thana?: string;
   paymentMethod: string;
   paymentStatus?: string;
   paymentDetails?: any;
@@ -370,6 +371,7 @@ export interface IOrder extends Document {
   shippingAddress?: string;
   shippingCity?: string;
   shippingPostalCode?: string;
+  shippingThana?: string;
   deliveryMethod?: string;
   orderLogs?: IOrderLog[];
   customerType?: string; // 'retailer', 'dealer'
@@ -412,6 +414,7 @@ const OrderSchema = new Schema<IOrder>(
     address: { type: String, required: true },
     city: { type: String, required: true },
     postalCode: { type: String, required: true },
+    thana: { type: String },
     paymentMethod: { type: String, required: true },
     paymentStatus: { type: String, default: "pending" },
     paymentDetails: { type: Schema.Types.Mixed },
@@ -432,6 +435,7 @@ const OrderSchema = new Schema<IOrder>(
     shippingAddress: { type: String },
     shippingCity: { type: String },
     shippingPostalCode: { type: String },
+    shippingThana: { type: String },
     deliveryMethod: { type: String, default: "shipping" },
     orderLogs: { type: [OrderLogSchema], default: [] },
     customerType: { type: String, default: "customer" },

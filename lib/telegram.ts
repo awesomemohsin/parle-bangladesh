@@ -56,10 +56,11 @@ export async function notifyNewOrder(order: any) {
 
   const isPickup = order.deliveryMethod === 'pickup';
 
-  // Format: Address, City - PostalCode
+  // Format: Address, Thana, City - PostalCode
+  const thanaSuffix = order.shippingThana || order.thana ? `, ${order.shippingThana || order.thana}` : '';
   const displayAddress = isPickup
     ? "Collection Point - Yassin Tower"
-    : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
+    : `${order.shippingAddress || order.address}${thanaSuffix}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
   const title = order.customerType === 'dealer' ? '🌟 NEW DEALER ORDER' : '🌟 NEW PENDING ORDER';
 
@@ -100,10 +101,11 @@ export async function notifyOrderReady(order: any) {
 
   const isPickup = order.deliveryMethod === 'pickup';
 
-  // Format: Address, City - PostalCode
+  // Format: Address, Thana, City - PostalCode
+  const thanaSuffix = order.shippingThana || order.thana ? `, ${order.shippingThana || order.thana}` : '';
   const displayAddress = isPickup
     ? "Collection Point - Yassin Tower"
-    : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
+    : `${order.shippingAddress || order.address}${thanaSuffix}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
   const title = order.customerType === 'dealer' ? '🚚 NEW DEALER ORDER (PROCESSING)' : '🚚 NEW PROCESSING ORDER';
 

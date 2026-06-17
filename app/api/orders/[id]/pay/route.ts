@@ -42,14 +42,18 @@ export async function GET(
       ipn_url: `${appUrl}/api/payment/sslcommerz/ipn`,
       cus_name: order.customerName,
       cus_email: order.customerEmail,
-      cus_add1: order.address,
+      cus_add1: order.thana ? `${order.address}, ${order.thana}` : order.address,
       cus_city: order.city,
       cus_postcode: order.postalCode,
       cus_country: "Bangladesh",
       cus_phone: order.customerPhone,
       shipping_method: "YES",
       ship_name: order.customerName,
-      ship_add1: order.shippingAddress || order.address,
+      ship_add1: (() => {
+        const addr = order.shippingAddress || order.address;
+        const thana = order.shippingThana || order.thana;
+        return thana && thana !== "N/A" ? `${addr}, ${thana}` : addr;
+      })(),
       ship_city: order.shippingCity || order.city,
       ship_postcode: order.shippingPostalCode || order.postalCode,
       ship_country: "Bangladesh",
