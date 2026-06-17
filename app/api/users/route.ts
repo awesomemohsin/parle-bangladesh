@@ -115,9 +115,42 @@ export async function POST(request: NextRequest) {
 
     const adminExists = await Admin.findOne({ email });
     const userExists = await User.findOne({ email });
-    if (adminExists || userExists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
     if (role === "sr") {
+      if (adminExists) {
+        return NextResponse.json({ error: "Email already in use as Admin" }, { status: 409 });
+      }
+      
+      if (userExists) {
+        // Upgrade existing user to SR
+        userExists.isSR = true;
+        if (password) {
+          userExists.password = hashPassword(password);
+        }
+        if (name) {
+          userExists.name = name;
+        }
+        if (body.mobile) {
+          userExists.mobile = body.mobile;
+        }
+        await userExists.save();
+
+        await logAdminActivity({
+          adminEmail: currentUser.email,
+          action: "create_admin",
+          targetId: userExists._id.toString(),
+          targetName: userExists.name,
+          details: `Upgraded existing user to Sales Representative: ${userExists.name} (${userExists.email})`
+        });
+
+        const result = userExists.toObject() as any;
+        delete result.password;
+        result.id = result._id.toString();
+        result.role = "sr";
+
+        return NextResponse.json({ user: result }, { status: 200 });
+      }
+
       const user = new User({ 
         email, 
         password: hashPassword(password), 
@@ -146,6 +179,9 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ user: result }, { status: 201 });
     } else {
+      if (adminExists) {
+        return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+      }
       const user = new Admin({ email, password: hashPassword(password), name, role, status: "active", mobile: body.mobile || "01000000000" });
       await user.save();
 
