@@ -4,6 +4,82 @@ import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
 import { Order } from "@/lib/models";
 
+function getFilterStages(customerTypeFilter: string) {
+  if (customerTypeFilter === "all") return [];
+  
+  let matchCond: any = {};
+  if (customerTypeFilter === "customer") {
+    matchCond = { resolvedCustomerType: { $in: ["customer", "guest"] } };
+  } else if (customerTypeFilter === "b2b") {
+    matchCond = { resolvedCustomerType: { $in: ["retailer", "dealer"] } };
+  } else if (customerTypeFilter === "staff") {
+    matchCond = { resolvedCustomerType: { $in: ["admin", "super_admin", "moderator", "owner"] } };
+  } else if (customerTypeFilter === "other") {
+    matchCond = { resolvedCustomerType: { $nin: ["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"] } };
+  }
+
+  return [
+    {
+      $lookup: {
+        from: "users",
+        let: { userIdStr: "$userId" },
+        pipeline: [
+          { $addFields: { idStr: { $toString: "$_id" } } },
+          { $match: { $expr: { $eq: ["$idStr", "$$userIdStr"] } } }
+        ],
+        as: "userDoc"
+      }
+    },
+    {
+      $lookup: {
+        from: "admins",
+        let: { userIdStr: "$userId" },
+        pipeline: [
+          { $addFields: { idStr: { $toString: "$_id" } } },
+          { $match: { $expr: { $eq: ["$idStr", "$$userIdStr"] } } }
+        ],
+        as: "adminDoc"
+      }
+    },
+    {
+      $addFields: {
+        resolvedUser: { $arrayElemAt: ["$userDoc", 0] },
+        resolvedAdmin: { $arrayElemAt: ["$adminDoc", 0] }
+      }
+    },
+    {
+      $addFields: {
+        resolvedCustomerType: {
+          $cond: {
+            if: { $or: [{ $eq: ["$userId", null] }, { $eq: ["$userId", ""] }] },
+            then: "guest",
+            else: {
+              $cond: {
+                if: { $ne: ["$resolvedUser", null] },
+                then: { $ifNull: ["$resolvedUser.customerType", { $ifNull: ["$resolvedUser.role", "customer"] }] },
+                else: {
+                  $cond: {
+                    if: { $ne: ["$resolvedAdmin", null] },
+                    then: {
+                      $cond: {
+                        if: { $eq: ["$resolvedAdmin.role", "owner"] },
+                        then: "owner",
+                        else: { $ifNull: ["$resolvedAdmin.role", "admin"] }
+                      }
+                    },
+                    else: { $ifNull: ["$customerType", "customer"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    { $match: matchCond }
+  ];
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -16,6 +92,9 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const productId = searchParams.get("productId");
+    const customerType = searchParams.get("customerType") || "all";
+
+    const filterStages = getFilterStages(customerType);
 
     // Build the query - ONLY DELIVERED for standard revenue tracking
     let query: any = { status: 'delivered' };
@@ -33,6 +112,7 @@ export async function GET(request: NextRequest) {
 
     const lifetimeStats = await Order.aggregate([
       { $match: lifetimeQuery },
+      ...filterStages,
       ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
@@ -52,6 +132,7 @@ export async function GET(request: NextRequest) {
 
     const dailyStats = await Order.aggregate([
       { $match: dailyQuery },
+      ...filterStages,
       ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
@@ -69,6 +150,7 @@ export async function GET(request: NextRequest) {
 
     const pendingStats = await Order.aggregate([
       { $match: pendingQuery },
+      ...filterStages,
       { $unwind: "$items" },
       ...(productId ? [{ $match: { "items.productId": productId } }] : []),
       {
@@ -96,6 +178,7 @@ export async function GET(request: NextRequest) {
 
     const lossStats = await Order.aggregate([
       { $match: lossQuery },
+      ...filterStages,
       ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
       {
         $group: {
@@ -110,6 +193,7 @@ export async function GET(request: NextRequest) {
     // 5. CALCULATE FILTERED/RANGE STATS (DELIVERED ONLY)
     const rangeStats = await Order.aggregate([
       { $match: query },
+      ...filterStages,
       { $unwind: "$items" },
       // Apply product filter if provided
       ...(productId ? [{ $match: { "items.productId": productId } }] : []),
@@ -126,10 +210,20 @@ export async function GET(request: NextRequest) {
     ]);
 
     // 6. GET DETAILED ITEM LOGS (DELIVERED ONLY for Sales List)
-    const detailedLogs = await Order.find(query)
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
+    let detailedLogs;
+    if (customerType === "all") {
+      detailedLogs = await Order.find(query)
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean();
+    } else {
+      detailedLogs = await Order.aggregate([
+        { $match: query },
+        ...filterStages,
+        { $sort: { createdAt: -1 } },
+        { $limit: 100 }
+      ]);
+    }
 
     const formattedLogs = detailedLogs.flatMap((order: any) => {
       // For delivered orders, the sale date is the delivery date (updatedAt or from logs)
@@ -154,6 +248,7 @@ export async function GET(request: NextRequest) {
     // 5.1 CALCULATE FILTERED/RANGE STATS OVERALL (DELIVERED ONLY)
     const rangeSummaryStats = await Order.aggregate([
       { $match: query },
+      ...filterStages,
       { $unwind: "$items" },
       ...(productId ? [{ $match: { "items.productId": productId } }] : []),
       {

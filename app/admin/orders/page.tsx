@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X, User } from 'lucide-react'
 import { OrderInvoice } from '@/components/admin/order-invoice'
 import { toast } from 'sonner'
 import { useSearchParams } from 'next/navigation'
@@ -85,6 +85,7 @@ export default function AdminOrdersPage() {
     return 'all'
   })
   const [sortBy, setSortBy] = useState('newest')
+  const [customerTypeFilter, setCustomerTypeFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
@@ -113,12 +114,16 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     const q = searchParams.get('q')
     const status = searchParams.get('status')
+    const customerType = searchParams.get('customerTypeFilter')
 
     if (q !== null && q !== searchTerm) {
       setSearchTerm(q)
     }
     if (status !== null && status !== statusFilter) {
       setStatusFilter(status)
+    }
+    if (customerType !== null && customerType !== customerTypeFilter) {
+      setCustomerTypeFilter(customerType)
     }
   }, [searchParams])
 
@@ -135,7 +140,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     setPage(1)
     isFirstLoad.current = true // Reset for new filter context
-  }, [debouncedSearch, statusFilter, sortBy, startDate, endDate])
+  }, [debouncedSearch, statusFilter, customerTypeFilter, sortBy, startDate, endDate])
 
   useEffect(() => {
     fetchOrders(false, page > 1) // isBackground=false, isAppend=page > 1
@@ -146,7 +151,7 @@ export default function AdminOrdersPage() {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [debouncedSearch, statusFilter, page, sortBy, startDate, endDate])
+  }, [debouncedSearch, statusFilter, customerTypeFilter, page, sortBy, startDate, endDate])
 
   const handlePrint = (id: string) => {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
@@ -167,6 +172,9 @@ export default function AdminOrdersPage() {
         } else {
           params.append('status', statusFilter)
         }
+      }
+      if (customerTypeFilter !== 'all') {
+        params.append('customerTypeFilter', customerTypeFilter)
       }
       if (startDate) params.append('startDate', startDate)
       if (endDate) params.append('endDate', endDate)
@@ -204,6 +212,7 @@ export default function AdminOrdersPage() {
               onClick: () => {
                 setPage(1)
                 setSearchTerm('')
+                setCustomerTypeFilter('all')
                 if (isModerator) setStatusFilter('processing')
                 else setStatusFilter('all')
               }
@@ -395,8 +404,8 @@ export default function AdminOrdersPage() {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className={`w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none text-xs font-bold uppercase cursor-pointer transition-all ${statusFilter === 'attention'
-                  ? 'border-amber-500 bg-amber-50 text-amber-800 font-black shadow-sm ring-1 ring-amber-500'
-                  : 'border-gray-200 bg-white text-gray-700'
+                ? 'border-amber-500 bg-amber-50 text-amber-800 font-black shadow-sm ring-1 ring-amber-500'
+                : 'border-gray-200 bg-white text-gray-700'
                 }`}
             >
               <option value="all">All Statuses</option>
@@ -414,6 +423,20 @@ export default function AdminOrdersPage() {
               <option value="delivered">Delivered</option>
               <option value="damaged">Damaged</option>
               <option value="lost">Lost</option>
+            </select>
+          </div>
+          <div className="flex-1 sm:w-44 relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <select
+              value={customerTypeFilter}
+              onChange={(e) => setCustomerTypeFilter(e.target.value)}
+              className="w-full pl-9 pr-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-xs font-bold uppercase bg-white cursor-pointer"
+            >
+              <option value="all">All Orders</option>
+              <option value="customer">Customers</option>
+              <option value="b2b">Retailers & Dealer</option>
+              <option value="staff">Staffs (Admins/Superadmins)</option>
+              <option value="other">Others (Corporate/Influencer)</option>
             </select>
           </div>
           <div className="flex-1 sm:w-48 relative">
@@ -441,18 +464,18 @@ export default function AdminOrdersPage() {
               <Card
                 key={order.id}
                 className={`p-4 shadow-sm transition-all duration-300 ${order.customerType?.toLowerCase() === 'dealer'
-                    ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500'
-                    : order.customerType?.toLowerCase() === 'retailer'
-                      ? 'border-blue-300 bg-blue-50/20 shadow-blue-100/50 hover:border-blue-500'
-                      : order.customerType?.toLowerCase() === 'student'
-                        ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
-                        : order.customerType?.toLowerCase() === 'influencer'
-                          ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
-                          : order.customerType?.toLowerCase() === 'corporate'
-                            ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
-                            : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
-                              ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
-                              : 'border-gray-100/60 hover:shadow-md'
+                  ? 'border-amber-300 bg-amber-50/20 shadow-amber-100/50 hover:border-amber-500'
+                  : order.customerType?.toLowerCase() === 'retailer'
+                    ? 'border-blue-300 bg-blue-50/20 shadow-blue-100/50 hover:border-blue-500'
+                    : order.customerType?.toLowerCase() === 'student'
+                      ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
+                      : order.customerType?.toLowerCase() === 'influencer'
+                        ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
+                        : order.customerType?.toLowerCase() === 'corporate'
+                          ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
+                          : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
+                            ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
+                            : 'border-gray-100/60 hover:shadow-md'
                   }`}
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-2">
@@ -463,11 +486,11 @@ export default function AdminOrdersPage() {
                       </h3>
                       {order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) && (
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 text-white rounded-lg shadow-sm ${order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
-                            order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
-                              order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
-                                order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
-                                  order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
-                                    'bg-teal-600'
+                          order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
+                            order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
+                              order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
+                                order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
+                                  'bg-teal-600'
                           }`}>
                           <BellRing className="w-3 h-3 animate-pulse" />
                           <span className="text-[8px] font-black uppercase tracking-widest">

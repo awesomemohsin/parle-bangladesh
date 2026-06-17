@@ -11,7 +11,8 @@ import {
   Filter,
   RefreshCw,
   FileText,
-  RotateCcw
+  RotateCcw,
+  User
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,8 @@ export default function RevenuePage() {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: new Date().toISOString().split('T')[0],
-    productId: "all"
+    productId: "all",
+    customerType: "all"
   });
 
   const fetchData = async () => {
@@ -43,6 +45,7 @@ export default function RevenuePage() {
       if (filters.startDate) query.append("startDate", filters.startDate);
       if (filters.endDate) query.append("endDate", filters.endDate);
       if (filters.productId !== "all") query.append("productId", filters.productId);
+      if (filters.customerType !== "all") query.append("customerType", filters.customerType);
 
       const res = await fetch(`/api/admin/analytics/revenue?${query.toString()}`, {
         headers: {
@@ -95,7 +98,8 @@ export default function RevenuePage() {
     setFilters({
       startDate: "",
       endDate: new Date().toISOString().split('T')[0],
-      productId: "all"
+      productId: "all",
+      customerType: "all"
     });
   };
 
@@ -199,6 +203,23 @@ export default function RevenuePage() {
               >
                 <option value="all">ALL PRODUCTS</option>
                 {products.map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name.toUpperCase()}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 px-3 md:px-4 flex-1 md:flex-none justify-between md:justify-start">
+            <div className="flex items-center gap-2">
+              <User className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+              <select
+                value={filters.customerType}
+                onChange={(e) => setFilters({ ...filters, customerType: e.target.value })}
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer pr-2 md:pr-4"
+              >
+                <option value="all">All Orders</option>
+                <option value="customer">Customers</option>
+                <option value="b2b">Retailers & Dealer</option>
+                <option value="staff">Staffs (Admins/Superadmins)</option>
+                <option value="other">Others (Corporate/Influencer)</option>
               </select>
             </div>
           </div>

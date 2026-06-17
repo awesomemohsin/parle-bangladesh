@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("q") || "";
     const statusQuery = searchParams.get("status") || "all";
+    const customerTypeFilter = searchParams.get("customerTypeFilter") || "all";
     const adminContext = searchParams.get("adminContext") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -121,11 +122,127 @@ export async function GET(request: NextRequest) {
       console.error("Failed to run passive background cleanups in GET /api/orders:", cleanupErr);
     }
 
-    // Get total count
-    const total = await Order.countDocuments(matchStage);
+    // Lookup and resolve customerType stages
+    const lookupStages = [
+      {
+        $lookup: {
+          from: "users",
+          let: { userIdStr: "$userId" },
+          pipeline: [
+            {
+              $addFields: { idStr: { $toString: "$_id" } }
+            },
+            {
+              $match: {
+                $expr: { $eq: ["$idStr", "$$userIdStr"] }
+              }
+            }
+          ],
+          as: "userDoc"
+        }
+      },
+      {
+        $lookup: {
+          from: "admins",
+          let: { userIdStr: "$userId" },
+          pipeline: [
+            {
+              $addFields: { idStr: { $toString: "$_id" } }
+            },
+            {
+              $match: {
+                $expr: { $eq: ["$idStr", "$$userIdStr"] }
+              }
+            }
+          ],
+          as: "adminDoc"
+        }
+      },
+      {
+        $addFields: {
+          resolvedUser: { $arrayElemAt: ["$userDoc", 0] },
+          resolvedAdmin: { $arrayElemAt: ["$adminDoc", 0] }
+        }
+      },
+      {
+        $addFields: {
+          resolvedCustomerType: {
+            $cond: {
+              if: { $or: [{ $eq: ["$userId", null] }, { $eq: ["$userId", ""] }] },
+              then: "guest",
+              else: {
+                $cond: {
+                  if: { $ne: ["$resolvedUser", null] },
+                  then: { $ifNull: ["$resolvedUser.customerType", { $ifNull: ["$resolvedUser.role", "customer"] }] },
+                  else: {
+                    $cond: {
+                      if: { $ne: ["$resolvedAdmin", null] },
+                      then: {
+                        $cond: {
+                          if: { $eq: ["$resolvedAdmin.role", "owner"] },
+                          then: "owner",
+                          else: { $ifNull: ["$resolvedAdmin.role", "admin"] }
+                        }
+                      },
+                      else: { $ifNull: ["$customerType", "customer"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ];
+
+    // Get total count accounting for search query and role filter
+    let total = 0;
+    if (!searchQuery && customerTypeFilter === "all") {
+      total = await Order.countDocuments(matchStage);
+    } else {
+      const countPipeline = [
+        { $match: matchStage },
+        {
+          $addFields: {
+            idString: { $toString: "$_id" }
+          }
+        }
+      ] as any[];
+      if (searchQuery) {
+        const searchRegex = new RegExp(searchQuery, "i");
+        countPipeline.push({
+          $match: {
+            $or: [
+              { idString: searchRegex },
+              { customerName: searchRegex },
+              { customerEmail: searchRegex },
+              { customerPhone: searchRegex },
+              { "items.name": searchRegex }
+            ]
+          }
+        });
+      }
+      if (customerTypeFilter !== "all") {
+        countPipeline.push(...lookupStages);
+        let matchCond: any = {};
+        if (customerTypeFilter === "customer") {
+          matchCond = { resolvedCustomerType: { $in: ["customer", "guest"] } };
+        } else if (customerTypeFilter === "b2b") {
+          matchCond = { resolvedCustomerType: { $in: ["retailer", "dealer"] } };
+        } else if (customerTypeFilter === "staff") {
+          matchCond = { resolvedCustomerType: { $in: ["admin", "super_admin", "moderator", "owner"] } };
+        } else if (customerTypeFilter === "other") {
+          matchCond = { resolvedCustomerType: { $nin: ["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"] } };
+        }
+        countPipeline.push({ $match: matchCond });
+      }
+      countPipeline.push({ $count: "total" });
+      const countResult = await Order.aggregate(countPipeline);
+      total = countResult[0]?.total || 0;
+    }
 
     // Pipeline
-    const pipeline: any[] = [
+    let pipeline: any[] = [
       { $match: matchStage },
       {
         $addFields: {
@@ -158,9 +275,28 @@ export async function GET(request: NextRequest) {
     else if (sortQuery === "total-high") sortStage = { total: -1 };
     else if (sortQuery === "total-low") sortStage = { total: 1 };
 
-    pipeline.push({ $sort: sortStage });
-    pipeline.push({ $skip: skip });
-    pipeline.push({ $limit: limit });
+    if (customerTypeFilter !== "all") {
+      pipeline.push(...lookupStages);
+      let matchCond: any = {};
+      if (customerTypeFilter === "customer") {
+        matchCond = { resolvedCustomerType: { $in: ["customer", "guest"] } };
+      } else if (customerTypeFilter === "b2b") {
+        matchCond = { resolvedCustomerType: { $in: ["retailer", "dealer"] } };
+      } else if (customerTypeFilter === "staff") {
+        matchCond = { resolvedCustomerType: { $in: ["admin", "super_admin", "moderator", "owner"] } };
+      } else if (customerTypeFilter === "other") {
+        matchCond = { resolvedCustomerType: { $nin: ["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"] } };
+      }
+      pipeline.push({ $match: matchCond });
+      pipeline.push({ $sort: sortStage });
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
+    } else {
+      pipeline.push({ $sort: sortStage });
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
+      pipeline.push(...lookupStages);
+    }
 
     const ordersRaw = await Order.aggregate(pipeline);
 
@@ -172,29 +308,18 @@ export async function GET(request: NextRequest) {
 
     const pendingIds = new Set(pendingRequests.map((r: any) => r.targetId));
 
-    // Fetch user details in bulk to resolve customerType accurately
-    const orderUserIds = Array.from(new Set(ordersRaw.map(o => o.userId).filter(Boolean)));
-    const [dbUsers, dbAdmins] = await Promise.all([
-      User.find({ _id: { $in: orderUserIds } }).select("customerType role").lean(),
-      Admin.find({ _id: { $in: orderUserIds } }).select("role").lean()
-    ]);
-    const orderUserMap: Record<string, string> = {};
-    dbUsers.forEach((u: any) => {
-      orderUserMap[u._id.toString()] = u.customerType || u.role || "customer";
-    });
-    dbAdmins.forEach((a: any) => {
-      orderUserMap[a._id.toString()] = a.role === "owner" ? "dealer" : (a.role || "admin");
-    });
-
     return NextResponse.json({
       orders: ordersRaw.map(o => {
         o.id = o._id.toString();
         o.pendingApproval = pendingIds.has(o.id);
-        const resolvedType = o.userId
-          ? (orderUserMap[o.userId.toString()] || o.customerType || "customer")
-          : "guest";
-        o.customerType = resolvedType;
+        o.customerType = o.resolvedCustomerType || "guest";
+        
         delete o.idString;
+        delete o.userDoc;
+        delete o.adminDoc;
+        delete o.resolvedUser;
+        delete o.resolvedAdmin;
+        delete o.resolvedCustomerType;
         return o;
       }),
       pagination: {
