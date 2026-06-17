@@ -7,8 +7,8 @@ import { ArrowLeft, Check, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
-import { BD_DISTRICTS } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
+import { THANA_POSTCODES } from '@/lib/postcodes';
 
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
@@ -81,6 +81,22 @@ function CheckoutContent() {
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
+  // Cascading Location States
+  const [divisions, setDivisions] = useState<{id: number; name: string}[]>([]);
+  const [allDistricts, setAllDistricts] = useState<{id: number; name: string; divisionId: number}[]>([]);
+
+  // Selected Division/District IDs (defaults to Dhaka Division = 6, Dhaka Metro District = 65)
+  const [billingDivisionId, setBillingDivisionId] = useState<string>('6');
+  const [billingDistrictId, setBillingDistrictId] = useState<string>('65');
+  const [shippingDivisionId, setShippingDivisionId] = useState<string>('6');
+  const [shippingDistrictId, setShippingDistrictId] = useState<string>('65');
+
+  // Available Thanas lists loaded dynamically from API
+  const [billingThanas, setBillingThanas] = useState<string[]>([]);
+  const [shippingThanas, setShippingThanas] = useState<string[]>([]);
+
+  // Previous order state for async resolution
+  const [previousOrder, setPreviousOrder] = useState<any>(null);
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim() || isValidatingPromo) return;
@@ -113,10 +129,12 @@ function CheckoutContent() {
     email: '',
     phone: '',
     address: '',
-    city: 'Dhaka',
+    city: 'Dhaka Metro',
+    thana: '',
     postalCode: '',
     shippingAddress: '',
-    shippingCity: 'Dhaka',
+    shippingCity: 'Dhaka Metro',
+    shippingThana: '',
     shippingPostalCode: '',
     instruction: '',
     paymentMethod: 'cash_on_delivery',
@@ -189,22 +207,7 @@ function CheckoutContent() {
         if (res.ok) {
           const data = await res.json();
           if (data.orders && data.orders.length > 0) {
-            const lastOrder = data.orders[0];
-            const isLastEmailVirtual = lastOrder.customerEmail?.endsWith('@phone.parle.com');
-            const displayLastEmail = isLastEmailVirtual ? '' : (lastOrder.customerEmail || '');
-
-            setFormData(prev => ({
-              ...prev,
-              name: prev.name || lastOrder.customerName || '',
-              email: prev.email || displayLastEmail || '',
-              phone: prev.phone || lastOrder.customerPhone || '',
-              address: lastOrder.address || prev.address,
-              city: lastOrder.city || prev.city,
-              postalCode: lastOrder.postalCode || prev.postalCode,
-              shippingAddress: lastOrder.shippingAddress || prev.shippingAddress,
-              shippingCity: lastOrder.shippingCity || prev.shippingCity,
-              shippingPostalCode: lastOrder.shippingPostalCode || prev.shippingPostalCode,
-            }));
+            setPreviousOrder(data.orders[0]);
           }
         }
       } catch (err) {
@@ -212,6 +215,39 @@ function CheckoutContent() {
       }
     };
 
+    const fetchDivisions = async () => {
+      try {
+        const res = await fetch('https://billing.circlenetworkbd.net/api/getDivision');
+        if (res.ok) {
+          const data = await res.json();
+          setDivisions(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch divisions:", e);
+      }
+    };
+
+    const fetchAllDistricts = async () => {
+      const divisionIds = [1, 2, 3, 4, 5, 6, 7, 8];
+      const districtsList: {id: number; name: string; divisionId: number}[] = [];
+      try {
+        await Promise.all(divisionIds.map(async (divId) => {
+          const res = await fetch(`https://billing.circlenetworkbd.net/api/getDistrict/${divId}`);
+          if (res.ok) {
+            const data = await res.json();
+            Object.values(data).forEach((d: any) => {
+              districtsList.push({ id: d.id, name: d.name, divisionId: divId });
+            });
+          }
+        }));
+        setAllDistricts(districtsList);
+      } catch (e) {
+        console.error("Failed to fetch all districts:", e);
+      }
+    };
+
+    fetchDivisions();
+    fetchAllDistricts();
     fetchPreviousOrderAddress();
     
     setMounted(true);
@@ -244,6 +280,124 @@ function CheckoutContent() {
       setEmailReadOnly(false);
     }
   }, [formData.phone, mounted]);
+
+  // Load upazilas for billing district ID
+  useEffect(() => {
+    if (!billingDistrictId) {
+      setBillingThanas([]);
+      return;
+    }
+    const fetchBillingThanas = async () => {
+      try {
+        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${billingDistrictId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const thanas = Object.values(data).map((u: any) => u.name).sort();
+          setBillingThanas(thanas);
+        }
+      } catch (e) {
+        console.error("Failed to fetch billing thanas:", e);
+      }
+    };
+    fetchBillingThanas();
+  }, [billingDistrictId]);
+
+  // Load upazilas for shipping district ID
+  useEffect(() => {
+    if (!shippingDistrictId) {
+      setShippingThanas([]);
+      return;
+    }
+    const fetchShippingThanas = async () => {
+      try {
+        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${shippingDistrictId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const thanas = Object.values(data).map((u: any) => u.name).sort();
+          setShippingThanas(thanas);
+        }
+      } catch (e) {
+        console.error("Failed to fetch shipping thanas:", e);
+      }
+    };
+    fetchShippingThanas();
+  }, [shippingDistrictId]);
+
+  // Handle billing thana change: reset/auto-select postcode
+  useEffect(() => {
+    if (formData.thana) {
+      const codes = THANA_POSTCODES[formData.thana] || ["1000"];
+      if (codes.length === 1) {
+        setFormData(prev => ({ ...prev, postalCode: codes[0] }));
+      } else {
+        if (!codes.includes(formData.postalCode)) {
+          setFormData(prev => ({ ...prev, postalCode: "" }));
+        }
+      }
+    } else {
+      setFormData(prev => ({ ...prev, postalCode: "" }));
+    }
+  }, [formData.thana]);
+
+  // Handle shipping thana change: reset/auto-select postcode
+  useEffect(() => {
+    if (formData.shippingThana) {
+      const codes = THANA_POSTCODES[formData.shippingThana] || ["1000"];
+      if (codes.length === 1) {
+        setFormData(prev => ({ ...prev, shippingPostalCode: codes[0] }));
+      } else {
+        if (!codes.includes(formData.shippingPostalCode)) {
+          setFormData(prev => ({ ...prev, shippingPostalCode: "" }));
+        }
+      }
+    } else {
+      setFormData(prev => ({ ...prev, shippingPostalCode: "" }));
+    }
+  }, [formData.shippingThana]);
+
+  // Asynchronous historic address resolver
+  useEffect(() => {
+    if (allDistricts.length === 0 || !previousOrder) return;
+
+    const lastOrder = previousOrder;
+    const isLastEmailVirtual = lastOrder.customerEmail?.endsWith('@phone.parle.com');
+    const displayLastEmail = isLastEmailVirtual ? '' : (lastOrder.customerEmail || '');
+
+    // Resolve billing district ID and division ID
+    const billDist = allDistricts.find(d => d.name === lastOrder.city);
+    if (billDist) {
+      setBillingDivisionId(String(billDist.divisionId));
+      setBillingDistrictId(String(billDist.id));
+    }
+
+    // Resolve shipping district ID and division ID
+    let shipDist = null;
+    if (lastOrder.shippingCity && lastOrder.shippingCity !== 'N/A') {
+      shipDist = allDistricts.find(d => d.name === lastOrder.shippingCity);
+    }
+    if (shipDist) {
+      setShippingDivisionId(String(shipDist.divisionId));
+      setShippingDistrictId(String(shipDist.id));
+    } else if (billDist) {
+      setShippingDivisionId(String(billDist.divisionId));
+      setShippingDistrictId(String(billDist.id));
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      name: prev.name || lastOrder.customerName || '',
+      email: prev.email || displayLastEmail || '',
+      phone: prev.phone || lastOrder.customerPhone || '',
+      address: lastOrder.address || prev.address,
+      city: lastOrder.city || prev.city,
+      thana: lastOrder.thana || prev.thana || '',
+      postalCode: lastOrder.postalCode || prev.postalCode,
+      shippingAddress: lastOrder.shippingAddress || prev.shippingAddress,
+      shippingCity: lastOrder.shippingCity || prev.shippingCity,
+      shippingThana: lastOrder.shippingThana || prev.shippingThana || '',
+      shippingPostalCode: lastOrder.shippingPostalCode || prev.shippingPostalCode,
+    }));
+  }, [allDistricts, previousOrder]);
 
   useEffect(() => {
     return () => {
@@ -356,7 +510,7 @@ function CheckoutContent() {
   const isB2BUser = user?.customerType === 'retailer' || user?.customerType === 'dealer';
   const isFreeDelivery = total >= 1000 || !!freeShippingGranted || isB2BUser;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
-  const baseShippingCharge = destinationCity === 'Dhaka' ? 80 : 130;
+  const baseShippingCharge = (destinationCity === 'Dhaka' || destinationCity === 'Dhaka Metro') ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
 
   const productSubtotal = subtotal;
@@ -367,11 +521,60 @@ function CheckoutContent() {
   const displayPromoDiscount = promoDiscount || 0;
   const shippingCost = currentShippingCost;
 
+  const getBillingPostalCodes = () => {
+    if (!formData.thana) return [];
+    const codes = [...(THANA_POSTCODES[formData.thana] || ["1000"])];
+    if (formData.postalCode && !codes.includes(formData.postalCode)) {
+      codes.push(formData.postalCode);
+    }
+    return codes;
+  };
+
+  const getShippingPostalCodes = () => {
+    const thana = sameAsBilling ? formData.thana : formData.shippingThana;
+    const currentCode = sameAsBilling ? formData.postalCode : formData.shippingPostalCode;
+    if (!thana) return [];
+    const codes = [...(THANA_POSTCODES[thana] || ["1000"])];
+    if (currentCode && !codes.includes(currentCode)) {
+      codes.push(currentCode);
+    }
+    return codes;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleBillingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const divId = e.target.value;
+    setBillingDivisionId(divId);
+    setBillingDistrictId('');
+    setFormData(prev => ({ ...prev, city: '', thana: '' }));
+  };
+
+  const handleBillingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const distId = e.target.value;
+    setBillingDistrictId(distId);
+    
+    const dist = allDistricts.find(d => String(d.id) === distId);
+    setFormData(prev => ({ ...prev, city: dist ? dist.name : '', thana: '' }));
+  };
+
+  const handleShippingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const divId = e.target.value;
+    setShippingDivisionId(divId);
+    setShippingDistrictId('');
+    setFormData(prev => ({ ...prev, shippingCity: '', shippingThana: '' }));
+  };
+
+  const handleShippingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const distId = e.target.value;
+    setShippingDistrictId(distId);
+    
+    const dist = allDistricts.find(d => String(d.id) === distId);
+    setFormData(prev => ({ ...prev, shippingCity: dist ? dist.name : '', shippingThana: '' }));
+  };
 
   const handleSameAsBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSameAsBilling(e.target.checked);
@@ -419,11 +622,13 @@ function CheckoutContent() {
             email: formData.email,
             address: formData.address,
             city: formData.city,
+            thana: formData.thana,
             postalCode: formData.postalCode,
           },
           shippingAddress: {
             address: sameAsBilling ? formData.address : formData.shippingAddress,
             city: sameAsBilling ? formData.city : formData.shippingCity,
+            thana: sameAsBilling ? formData.thana : formData.shippingThana,
             postalCode: sameAsBilling ? formData.postalCode : formData.shippingPostalCode,
           },
           instruction: formData.instruction,
@@ -586,32 +791,69 @@ function CheckoutContent() {
                     placeholder="House #, Road #"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Division *</label>
+                    <select
+                      value={billingDivisionId}
+                      onChange={handleBillingDivisionChange}
+                      required
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
+                    >
+                      <option value="">-- Select Division --</option>
+                      {divisions.map(div => (
+                        <option key={div.id} value={div.id}>{div.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City / District *</label>
                     <select
                       name="city"
-                      value={formData.city}
+                      value={billingDistrictId}
+                      onChange={handleBillingDistrictChange}
+                      required
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
+                    >
+                      <option value="">-- Select District --</option>
+                      {allDistricts.filter(d => String(d.divisionId) === billingDivisionId).map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thana / Police Station *</label>
+                    <select
+                      name="thana"
+                      value={formData.thana}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none"
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
                     >
-                      {BD_DISTRICTS.map(d => (
-                        <option key={d} value={d}>{d}</option>
+                      <option value="">-- Select Thana --</option>
+                      {billingThanas.map(t => (
+                        <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
-                    <input
-                      type="text"
+                    <select
                       name="postalCode"
                       value={formData.postalCode}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
-                      placeholder="1000"
-                    />
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
+                    >
+                      <option value="">-- Select Postal Code --</option>
+                      {getBillingPostalCodes().map(pc => (
+                        <option key={pc} value={pc}>{pc}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -667,49 +909,86 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
-                      <input
-                        type="text"
-                        name="shippingAddress"
-                        value={sameAsBilling ? formData.address : formData.shippingAddress}
-                        onChange={handleInputChange}
-                        required
-                        readOnly={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                        placeholder="House #, Road #"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
+                    <input
+                      type="text"
+                      name="shippingAddress"
+                      value={sameAsBilling ? formData.address : formData.shippingAddress}
+                      onChange={handleInputChange}
+                      required
+                      readOnly={sameAsBilling}
+                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      placeholder="House #, Road #"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Division *</label>
+                      <select
+                        value={sameAsBilling ? billingDivisionId : shippingDivisionId}
+                        onChange={handleShippingDivisionChange}
+                        required
+                        disabled={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      >
+                        <option value="">-- Select Division --</option>
+                        {divisions.map(div => (
+                          <option key={div.id} value={div.id}>{div.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City / District *</label>
                       <select
                         name="shippingCity"
-                        value={sameAsBilling ? formData.city : formData.shippingCity}
+                        value={sameAsBilling ? billingDistrictId : shippingDistrictId}
+                        onChange={handleShippingDistrictChange}
+                        required
+                        disabled={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      >
+                        <option value="">-- Select District --</option>
+                        {allDistricts.filter(d => String(d.divisionId) === (sameAsBilling ? billingDivisionId : shippingDivisionId)).map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Thana / Police Station *</label>
+                      <select
+                        name="shippingThana"
+                        value={sameAsBilling ? formData.thana : formData.shippingThana}
                         onChange={handleInputChange}
                         required
                         disabled={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
                       >
-                        {BD_DISTRICTS.map(d => (
-                          <option key={d} value={d}>{d}</option>
+                        <option value="">-- Select Thana --</option>
+                        {(sameAsBilling ? billingThanas : shippingThanas).map(t => (
+                          <option key={t} value={t}>{t}</option>
                         ))}
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
-                      <input
-                        type="text"
+                      <select
                         name="shippingPostalCode"
                         value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
                         onChange={handleInputChange}
                         required
-                        readOnly={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                        placeholder="1000"
-                      />
+                        disabled={sameAsBilling}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      >
+                        <option value="">-- Select Postal Code --</option>
+                        {getShippingPostalCodes().map(pc => (
+                          <option key={pc} value={pc}>{pc}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
