@@ -31,9 +31,11 @@ interface Order {
   address: string
   city: string
   postalCode: string
+  thana?: string
   shippingAddress?: string
   shippingCity?: string
   shippingPostalCode?: string
+  shippingThana?: string
   instruction?: string
   createdAt: string
   pendingApproval?: boolean
@@ -646,7 +648,7 @@ export default function AdminOrdersPage() {
                   <div className="sm:col-span-2 lg:col-span-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Billing Destination</p>
                     <p className="text-sm font-bold text-gray-600 leading-tight">
-                      {order.address}, {order.city} - {order.postalCode}
+                      {order.address}{order.thana ? `, PS: ${order.thana}` : ''}, Dist: {order.city} - {order.postalCode}
                     </p>
                   </div>
                   {order.paymentMethod === 'sslcommerz' && order.paymentDetails && (
@@ -675,7 +677,7 @@ export default function AdminOrdersPage() {
                     <p className="text-sm font-bold text-gray-600 leading-tight">
                       {order.deliveryMethod === 'pickup'
                         ? 'Collection Point Pickup'
-                        : `${order.shippingAddress || order.address}, ${order.shippingCity || order.city} - ${order.shippingPostalCode || order.postalCode}`}
+                        : `${order.shippingAddress || order.address}${order.shippingThana || order.thana ? `, PS: ${order.shippingThana || order.thana}` : ''}, Dist: ${order.shippingCity || order.city} - ${order.shippingPostalCode || order.postalCode}`}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">

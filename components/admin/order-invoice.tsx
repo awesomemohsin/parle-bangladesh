@@ -145,7 +145,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   <p className="font-black text-gray-900 uppercase leading-none">{order.customerName}</p>
                   <p className="text-gray-600 leading-tight mt-1 text-[9px]">
                     <span className="font-bold text-gray-900 uppercase mr-1">Billing Address:</span>
-                    {order.address}, {order.city} {order.postalCode}
+                    {order.address}{order.thana ? `, PS: ${order.thana}` : ''}, Dist: {order.city} {order.postalCode}
                   </p>
                   <p className="mt-1 font-bold text-gray-900 leading-none">{order.customerPhone}</p>
                 </div>
@@ -214,7 +214,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                           </>
                         ) : (
                           <p className="text-[10px] font-black text-gray-900 uppercase leading-tight">
-                            {order.address}, {order.city} {order.postalCode}
+                            {order.shippingAddress || order.address}{order.shippingThana || order.thana ? `, PS: ${order.shippingThana || order.thana}` : ''}, Dist: {order.shippingCity || order.city} {order.shippingPostalCode || order.postalCode}
                           </p>
                         )}
                       </div>

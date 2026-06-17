@@ -83,6 +83,11 @@ interface Order {
   address?: string;
   city?: string;
   postalCode?: string;
+  thana?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingPostalCode?: string;
+  shippingThana?: string;
   customerType?: string;
   amountPaid?: number;
   amountDue?: number;
@@ -707,7 +712,7 @@ export default function MyOrdersPage() {
                         <div><span className="font-bold text-gray-400">Email Address:</span> <span className="font-black text-gray-900">{previewOrder.customerEmail}</span></div>
                       )}
                       <div><span className="font-bold text-gray-400">Delivery Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.deliveryMethod || 'Standard Delivery'}</span></div>
-                      <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.address}, {previewOrder?.city} {previewOrder?.postalCode}</span></div>
+                      <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.shippingAddress || previewOrder?.address}{previewOrder?.shippingThana || previewOrder?.thana ? `, PS: ${previewOrder?.shippingThana || previewOrder?.thana}` : ''}, Dist: {previewOrder?.shippingCity || previewOrder?.city} {previewOrder?.shippingPostalCode || previewOrder?.postalCode}</span></div>
                     </div>
                   </div>
                   <div>
