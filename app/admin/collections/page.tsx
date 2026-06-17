@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { 
-  DollarSign, 
-  Check, 
-  Search, 
-  User, 
-  CreditCard, 
-  Calendar, 
-  FileText, 
-  PlusCircle, 
-  Award, 
-  X, 
+import {
+  DollarSign,
+  Check,
+  Search,
+  User,
+  CreditCard,
+  Calendar,
+  FileText,
+  PlusCircle,
+  Award,
+  X,
   AlertTriangle,
   RefreshCw,
   RotateCcw,
@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 const renderTypeBadge = (customerType: string | undefined) => {
   if (!customerType) return null;
   const type = customerType.toLowerCase();
-  
+
   let classes = "bg-slate-100 text-slate-500 border-slate-200";
   if (type === "dealer") classes = "bg-amber-50 text-amber-700 border-amber-200";
   else if (type === "retailer") classes = "bg-blue-50 text-blue-700 border-blue-200";
@@ -132,8 +132,8 @@ export default function CollectionsPage() {
       setShopFilter("all");
     }
   }, [searchParams]);
-  const [shopFilter, setShopFilter] = useState<"b2b" | "retailer" | "dealer" | "all">("all");
-  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "b2b" | "retailer" | "dealer">("all");
+  const [shopFilter, setShopFilter] = useState<"all" | "customer" | "b2b" | "staff" | "other">("all");
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "customer" | "b2b" | "staff" | "other">("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [shopSortBy, setShopSortBy] = useState<
     "id" | "updatedAt" | "name" | "mobile" | "customerType" | "isRetailerApproved" | "dueBalance" | "walletBalance" | "creditLimit" | "accountBalance" | "totalOrderAmount" | "totalPaidAmount" | "totalDueAmount"
@@ -248,7 +248,7 @@ export default function CollectionsPage() {
       setExpandedHistoryData(null);
       return;
     }
-    
+
     setExpandedOrderHistory(orderId);
     setExpandedHistoryData(null);
     setExpandedLoading(true);
@@ -269,7 +269,7 @@ export default function CollectionsPage() {
       setExpandedLoading(false);
     }
   };
-  
+
   // Form states
   const [cashAmount, setCashAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -361,7 +361,7 @@ export default function CollectionsPage() {
 
   const handleExportCSV = (data: any[], headers: { label: string; key: string | ((item: any) => any) }[], filename: string) => {
     const csvHeaders = headers.map(h => `"${h.label.replace(/"/g, '""')}"`).join(",");
-    
+
     const csvRows = data.map(item => {
       return headers.map(h => {
         let value = typeof h.key === "function" ? h.key(item) : item[h.key];
@@ -370,6 +370,27 @@ export default function CollectionsPage() {
         return `"${value.replace(/"/g, '""')}"`;
       }).join(",");
     });
+
+    if (data.length > 0) {
+      const totalsRow = headers.map((h, index) => {
+        if (index === 0) {
+          return `"TOTAL"`;
+        }
+        if (h.label.includes("(৳)") || h.label.toLowerCase().includes("amount")) {
+          let sum = 0;
+          data.forEach(item => {
+            let val = typeof h.key === "function" ? h.key(item) : item[h.key];
+            let num = parseFloat(val);
+            if (!isNaN(num)) {
+              sum += num;
+            }
+          });
+          return `"${sum}"`;
+        }
+        return `""`;
+      }).join(",");
+      csvRows.push(totalsRow);
+    }
 
     const csvContent = "\uFEFF" + [csvHeaders, ...csvRows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -499,7 +520,7 @@ export default function CollectionsPage() {
   // Recalculate top stats cards
   const totalOutstandingDues = shops.reduce((sum, s) => sum + (s.dueBalance || 0), 0);
   const totalWalletBalances = shops.reduce((sum, s) => sum + (s.walletBalance || 0), 0);
-  
+
   // Calculate today's collections
   const today = new Date().toISOString().split("T")[0];
   const todayCollections = ledgers
@@ -666,16 +687,18 @@ export default function CollectionsPage() {
       o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.customerPhone.includes(searchQuery) ||
       o.id.slice(-8).toUpperCase().includes(searchQuery.toUpperCase());
-    
+
     if (!matchesSearch) return false;
 
     // Filter by customer/shop type
     if (invoiceFilter === "b2b") {
       if (o.customerType !== "retailer" && o.customerType !== "dealer") return false;
-    } else if (invoiceFilter === "retailer") {
-      if (o.customerType !== "retailer") return false;
-    } else if (invoiceFilter === "dealer") {
-      if (o.customerType !== "dealer") return false;
+    } else if (invoiceFilter === "customer") {
+      if (o.customerType !== "customer" && o.customerType !== "guest") return false;
+    } else if (invoiceFilter === "staff") {
+      if (o.customerType !== "admin" && o.customerType !== "super_admin" && o.customerType !== "moderator" && o.customerType !== "owner") return false;
+    } else if (invoiceFilter === "other") {
+      if (["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
     }
 
     // Filter by order status
@@ -706,16 +729,18 @@ export default function CollectionsPage() {
       o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.customerPhone.includes(searchQuery) ||
       o.id.slice(-8).toUpperCase().includes(searchQuery.toUpperCase());
-    
+
     if (!matchesSearch) return false;
 
     // Filter by customer/shop type
     if (invoiceFilter === "b2b") {
       if (o.customerType !== "retailer" && o.customerType !== "dealer") return false;
-    } else if (invoiceFilter === "retailer") {
-      if (o.customerType !== "retailer") return false;
-    } else if (invoiceFilter === "dealer") {
-      if (o.customerType !== "dealer") return false;
+    } else if (invoiceFilter === "customer") {
+      if (o.customerType !== "customer" && o.customerType !== "guest") return false;
+    } else if (invoiceFilter === "staff") {
+      if (o.customerType !== "admin" && o.customerType !== "super_admin" && o.customerType !== "moderator" && o.customerType !== "owner") return false;
+    } else if (invoiceFilter === "other") {
+      if (["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
     }
 
     // Filter by order status
@@ -750,22 +775,23 @@ export default function CollectionsPage() {
   });
 
   const filteredShops = shops.filter(s => {
-    const matchesSearch = 
+    const matchesSearch =
       s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.mobile.includes(searchQuery) ||
       (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     if (!matchesSearch) return false;
 
+    const type = s.customerType?.toLowerCase();
     if (shopFilter === "b2b") {
-      return s.customerType === "retailer" || s.customerType === "dealer";
-    }
-    if (shopFilter === "retailer") {
-      return s.customerType === "retailer";
-    }
-    if (shopFilter === "dealer") {
-      return s.customerType === "dealer";
+      if (type !== "retailer" && type !== "dealer") return false;
+    } else if (shopFilter === "customer") {
+      if (type !== "customer" && type !== "guest") return false;
+    } else if (shopFilter === "staff") {
+      if (type !== "admin" && type !== "super_admin" && type !== "moderator" && type !== "owner") return false;
+    } else if (shopFilter === "other") {
+      if (["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"].includes(type || "")) return false;
     }
     return true; // "all" shows all customer types
   });
@@ -806,6 +832,31 @@ export default function CollectionsPage() {
       (l.notes || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       l.recordedBy.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const invoiceStats = useMemo(() => {
+    let totalOrders = filteredOrders.length;
+    let grandTotal = filteredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    let totalPaid = filteredOrders.reduce((sum, o) => sum + (o.amountPaid || 0), 0);
+    let totalDue = filteredOrders.reduce((sum, o) => sum + (o.paymentStatus === "paid" ? 0 : (o.amountDue || o.total)), 0);
+    return { totalOrders, grandTotal, totalPaid, totalDue };
+  }, [filteredOrders]);
+
+  const completedStats = useMemo(() => {
+    let totalOrders = filteredCompletedOrders.length;
+    let grandTotal = filteredCompletedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    let totalPaid = filteredCompletedOrders.reduce((sum, o) => sum + (o.amountPaid || 0), 0);
+    let totalDue = filteredCompletedOrders.reduce((sum, o) => sum + (o.amountDue || 0), 0);
+    return { totalOrders, grandTotal, totalPaid, totalDue };
+  }, [filteredCompletedOrders]);
+
+  const shopStats = useMemo(() => {
+    let totalShops = filteredShops.length;
+    let totalOrders = filteredShops.reduce((sum, s) => sum + (s.totalOrderAmount || 0), 0);
+    let totalPaid = filteredShops.reduce((sum, s) => sum + (s.totalPaidAmount || 0), 0);
+    let totalDue = filteredShops.reduce((sum, s) => sum + (s.totalDueAmount || 0), 0);
+    let netBalance = filteredShops.reduce((sum, s) => sum + ((s.walletBalance || 0) - (s.dueBalance || 0)), 0);
+    return { totalShops, totalOrders, totalPaid, totalDue, netBalance };
+  }, [filteredShops]);
 
   return (
     <div className="space-y-8 p-1">
@@ -854,9 +905,9 @@ export default function CollectionsPage() {
             </button>
           </div>
 
-          <Button 
-            onClick={fetchData} 
-            variant="outline" 
+          <Button
+            onClick={fetchData}
+            variant="outline"
             className="border-2 border-gray-200 rounded-xl hover:bg-gray-50 flex items-center gap-2 uppercase tracking-wider text-xs font-black h-11"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -933,41 +984,37 @@ export default function CollectionsPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1 bg-gray-100/70 p-1.5 rounded-2xl w-full md:w-auto">
           <button
             onClick={() => { setActiveTab("invoices"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
-              activeTab === "invoices"
-                ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                : "text-gray-400 hover:text-gray-900"
-            }`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${activeTab === "invoices"
+              ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+              : "text-gray-400 hover:text-gray-900"
+              }`}
           >
             Outstanding Invoices ({orders.length})
           </button>
           <button
             onClick={() => { setActiveTab("shops"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
-              activeTab === "shops"
-                ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                : "text-gray-400 hover:text-gray-900"
-            }`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${activeTab === "shops"
+              ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+              : "text-gray-400 hover:text-gray-900"
+              }`}
           >
             Customer Balances ({shops.length})
           </button>
           <button
             onClick={() => { setActiveTab("completed"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
-              activeTab === "completed"
-                ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                : "text-gray-400 hover:text-gray-900"
-            }`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${activeTab === "completed"
+              ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+              : "text-gray-400 hover:text-gray-900"
+              }`}
           >
             Completed Invoices ({completedOrders.length})
           </button>
           <button
             onClick={() => { setActiveTab("ledgers"); setSearchQuery(""); }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${
-              activeTab === "ledgers"
-                ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                : "text-gray-400 hover:text-gray-900"
-            }`}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto text-center ${activeTab === "ledgers"
+              ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+              : "text-gray-400 hover:text-gray-900"
+              }`}
           >
             Transaction Ledgers ({ledgers.length})
           </button>
@@ -982,10 +1029,10 @@ export default function CollectionsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
               activeTab === "invoices" || activeTab === "completed"
-                ? "Search invoice, shop, phone..." 
-                : activeTab === "shops" 
-                ? "Search shop name or mobile..."
-                : "Search log details..."
+                ? "Search invoice, shop, phone..."
+                : activeTab === "shops"
+                  ? "Search shop name or mobile..."
+                  : "Search log details..."
             }
             className="w-full pl-9 pr-4 py-2.5 bg-white border-2 border-gray-100 rounded-2xl focus:outline-none focus:border-black transition-all text-xs font-bold text-gray-900 shadow-inner"
           />
@@ -1000,7 +1047,7 @@ export default function CollectionsPage() {
         </div>
       ) : (
         <div className="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-xl shadow-slate-100/20 overflow-hidden">
-          
+
           {/* TAB 1: OUTSTANDING INVOICES */}
           {activeTab === "invoices" && (
             <div className="space-y-4 animate-in fade-in duration-300">
@@ -1010,46 +1057,52 @@ export default function CollectionsPage() {
                   <button
                     type="button"
                     onClick={() => setInvoiceFilter("all")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "all"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "all"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    All Invoices
+                    All Orders
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("customer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "customer"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
+                  >
+                    Customers
                   </button>
                   <button
                     type="button"
                     onClick={() => setInvoiceFilter("b2b")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "b2b"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "b2b"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Retailer & Dealers
+                    Retailers & Dealer
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInvoiceFilter("retailer")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "retailer"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    onClick={() => setInvoiceFilter("staff")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "staff"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Retailers
+                    Staffs
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInvoiceFilter("dealer")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "dealer"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    onClick={() => setInvoiceFilter("other")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "other"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Dealers
+                    Others (Corporate/Influencer)
                   </button>
                 </div>
 
@@ -1079,11 +1132,31 @@ export default function CollectionsPage() {
                 </div>
               </div>
 
+              {/* Stats Bar */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Invoices</span>
+                  <span className="text-base font-black text-slate-800 mt-1">{invoiceStats.totalOrders}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Grand Total</span>
+                  <span className="text-base font-black text-slate-800 mt-1">৳{invoiceStats.grandTotal.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Paid</span>
+                  <span className="text-base font-black text-emerald-600 mt-1">৳{invoiceStats.totalPaid.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Outstanding Due</span>
+                  <span className="text-base font-black text-rose-500 mt-1">৳{invoiceStats.totalDue.toLocaleString()}</span>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("id")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1091,7 +1164,7 @@ export default function CollectionsPage() {
                           Order ID {renderInvoiceSortIndicator("id")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("createdAt")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1099,7 +1172,7 @@ export default function CollectionsPage() {
                           Date {renderInvoiceSortIndicator("createdAt")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("customerName")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1107,7 +1180,7 @@ export default function CollectionsPage() {
                           Customer Shop {renderInvoiceSortIndicator("customerName")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("total")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1115,7 +1188,7 @@ export default function CollectionsPage() {
                           Grand Total {renderInvoiceSortIndicator("total")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("amountPaid")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1123,7 +1196,7 @@ export default function CollectionsPage() {
                           Paid {renderInvoiceSortIndicator("amountPaid")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("amountDue")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1131,7 +1204,7 @@ export default function CollectionsPage() {
                           Outstanding Dues {renderInvoiceSortIndicator("amountDue")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleInvoiceSort("status")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1151,7 +1224,7 @@ export default function CollectionsPage() {
                     ) : (
                       sortedOrders.map((order) => (
                         <React.Fragment key={order.id}>
-                          <tr 
+                          <tr
                             className="hover:bg-slate-50/50 transition-colors cursor-pointer select-none border-b border-gray-100 last:border-b-0"
                             onClick={() => toggleRowExpand(order.id)}
                           >
@@ -1184,25 +1257,23 @@ export default function CollectionsPage() {
                             <td className="py-4 px-3 text-emerald-500">৳{order.amountPaid || 0}</td>
                             <td className="py-4 px-3 text-rose-500 font-black">৳{order.paymentStatus === "paid" ? 0 : (order.amountDue || order.total)}</td>
                             <td className="py-4 px-3">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
                                 order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                'bg-blue-50 text-blue-700 border-blue-200'
-                              }`}>
+                                  'bg-blue-50 text-blue-700 border-blue-200'
+                                }`}>
                                 {order.status}
                               </span>
                             </td>
                             <td className="py-4 px-3">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                order.paymentStatus === "partial" 
-                                  ? "bg-amber-50 text-amber-600 border-amber-200" 
-                                  : "bg-rose-50 text-rose-600 border-rose-200"
-                              }`}>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${order.paymentStatus === "partial"
+                                ? "bg-amber-50 text-amber-600 border-amber-200"
+                                : "bg-rose-50 text-rose-600 border-rose-200"
+                                }`}>
                                 {order.paymentStatus}
                               </span>
                             </td>
                             <td className="py-4 px-3 text-right">
-                              <Button 
+                              <Button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setReconcileOrder(order);
@@ -1224,7 +1295,7 @@ export default function CollectionsPage() {
                                     <span>Detailed Allocation & Payment Audit Trail</span>
                                     {expandedLoading && <span className="text-amber-600 animate-pulse text-[8px] tracking-normal font-bold uppercase">Retrieving...</span>}
                                   </h4>
-                                  
+
                                   {expandedLoading && !expandedHistoryData ? (
                                     <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
                                       Retrieving Ledger History...
@@ -1254,9 +1325,9 @@ export default function CollectionsPage() {
                                                   </div>
                                                   <div className="flex items-center gap-2">
                                                     {item.documentUrl && (
-                                                      <a 
-                                                        href={item.documentUrl} 
-                                                        target="_blank" 
+                                                      <a
+                                                        href={item.documentUrl}
+                                                        target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
                                                         title="View Proof Document"
@@ -1309,46 +1380,52 @@ export default function CollectionsPage() {
                   <button
                     type="button"
                     onClick={() => setInvoiceFilter("all")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "all"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "all"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    All Invoices
+                    All Orders
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceFilter("customer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "customer"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
+                  >
+                    Customers
                   </button>
                   <button
                     type="button"
                     onClick={() => setInvoiceFilter("b2b")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "b2b"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "b2b"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Retailer & Dealers
+                    Retailers & Dealer
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInvoiceFilter("retailer")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "retailer"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    onClick={() => setInvoiceFilter("staff")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "staff"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Retailers
+                    Staffs
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInvoiceFilter("dealer")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      invoiceFilter === "dealer"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    onClick={() => setInvoiceFilter("other")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${invoiceFilter === "other"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Dealers
+                    Others (Corporate/Influencer)
                   </button>
                 </div>
 
@@ -1378,11 +1455,31 @@ export default function CollectionsPage() {
                 </div>
               </div>
 
+              {/* Stats Bar */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Invoices</span>
+                  <span className="text-base font-black text-slate-800 mt-1">{completedStats.totalOrders}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Grand Total</span>
+                  <span className="text-base font-black text-slate-800 mt-1">৳{completedStats.grandTotal.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Paid</span>
+                  <span className="text-base font-black text-emerald-600 mt-1">৳{completedStats.totalPaid.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Remaining Due</span>
+                  <span className="text-base font-black text-rose-500 mt-1">৳{completedStats.totalDue.toLocaleString()}</span>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("id")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1390,7 +1487,7 @@ export default function CollectionsPage() {
                           Order ID {renderCompletedInvoiceSortIndicator("id")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("createdAt")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1398,7 +1495,7 @@ export default function CollectionsPage() {
                           Order Date {renderCompletedInvoiceSortIndicator("createdAt")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("updatedAt")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1406,7 +1503,7 @@ export default function CollectionsPage() {
                           Last Updated {renderCompletedInvoiceSortIndicator("updatedAt")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("customerName")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1414,7 +1511,7 @@ export default function CollectionsPage() {
                           Customer Shop {renderCompletedInvoiceSortIndicator("customerName")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("total")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1422,7 +1519,7 @@ export default function CollectionsPage() {
                           Grand Total {renderCompletedInvoiceSortIndicator("total")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("amountPaid")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1430,7 +1527,7 @@ export default function CollectionsPage() {
                           Paid {renderCompletedInvoiceSortIndicator("amountPaid")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("amountDue")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1438,7 +1535,7 @@ export default function CollectionsPage() {
                           Outstanding Dues {renderCompletedInvoiceSortIndicator("amountDue")}
                         </div>
                       </th>
-                      <th 
+                      <th
                         onClick={() => handleCompletedInvoiceSort("status")}
                         className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
                       >
@@ -1458,7 +1555,7 @@ export default function CollectionsPage() {
                     ) : (
                       sortedCompletedOrders.map((order) => (
                         <React.Fragment key={order.id}>
-                          <tr 
+                          <tr
                             className="hover:bg-slate-50/50 transition-colors cursor-pointer select-none border-b border-gray-100 last:border-b-0"
                             onClick={() => toggleRowExpand(order.id)}
                           >
@@ -1494,11 +1591,10 @@ export default function CollectionsPage() {
                             <td className="py-4 px-3 text-emerald-500">৳{order.amountPaid || 0}</td>
                             <td className="py-4 px-3 text-gray-400 font-normal">৳{order.amountDue || 0}</td>
                             <td className="py-4 px-3">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
                                 order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                'bg-blue-50 text-blue-700 border-blue-200'
-                              }`}>
+                                  'bg-blue-50 text-blue-700 border-blue-200'
+                                }`}>
                                 {order.status}
                               </span>
                             </td>
@@ -1508,7 +1604,7 @@ export default function CollectionsPage() {
                               </span>
                             </td>
                             <td className="py-4 px-3 text-right">
-                              <Button 
+                              <Button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleRowExpand(order.id);
@@ -1529,7 +1625,7 @@ export default function CollectionsPage() {
                                     <span>Detailed Allocation & Payment Audit Trail</span>
                                     {expandedLoading && <span className="text-amber-600 animate-pulse text-[8px] tracking-normal font-bold uppercase">Retrieving...</span>}
                                   </h4>
-                                  
+
                                   {expandedLoading && !expandedHistoryData ? (
                                     <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
                                       Retrieving Ledger History...
@@ -1559,9 +1655,9 @@ export default function CollectionsPage() {
                                                   </div>
                                                   <div className="flex items-center gap-2">
                                                     {item.documentUrl && (
-                                                      <a 
-                                                        href={item.documentUrl} 
-                                                        target="_blank" 
+                                                      <a
+                                                        href={item.documentUrl}
+                                                        target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
                                                         title="View Proof Document"
@@ -1614,46 +1710,52 @@ export default function CollectionsPage() {
                   <button
                     type="button"
                     onClick={() => setShopFilter("all")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      shopFilter === "all"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${shopFilter === "all"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    All Customers
+                    All Accounts
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShopFilter("retailer")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      shopFilter === "retailer"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    onClick={() => setShopFilter("customer")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${shopFilter === "customer"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Retailers
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShopFilter("dealer")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      shopFilter === "dealer"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
-                  >
-                    Dealers
+                    Customers
                   </button>
                   <button
                     type="button"
                     onClick={() => setShopFilter("b2b")}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      shopFilter === "b2b"
-                        ? "bg-white text-gray-900 shadow-md shadow-gray-200"
-                        : "text-gray-400 hover:text-gray-900"
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${shopFilter === "b2b"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
                   >
-                    Retailer & Dealers
+                    Retailers & Dealer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShopFilter("staff")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${shopFilter === "staff"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
+                  >
+                    Staffs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShopFilter("other")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${shopFilter === "other"
+                      ? "bg-white text-gray-900 shadow-md shadow-gray-200"
+                      : "text-gray-400 hover:text-gray-900"
+                      }`}
+                  >
+                    Others (Corporate/Influencer)
                   </button>
                 </div>
                 <Button
@@ -1666,176 +1768,200 @@ export default function CollectionsPage() {
                 </Button>
               </div>
 
+              {/* Stats Bar */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Accounts</span>
+                  <span className="text-base font-black text-slate-800 mt-1">{shopStats.totalShops}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Orders</span>
+                  <span className="text-base font-black text-slate-800 mt-1">৳{shopStats.totalOrders.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Paid</span>
+                  <span className="text-base font-black text-emerald-600 mt-1">৳{shopStats.totalPaid.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Total Due</span>
+                  <span className="text-base font-black text-rose-500 mt-1">৳{shopStats.totalDue.toLocaleString()}</span>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Net Wallet Balance</span>
+                  <span className={`text-base font-black mt-1 ${shopStats.netBalance >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                    {shopStats.netBalance >= 0 ? "+" : ""}৳{shopStats.netBalance.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    <th 
-                      onClick={() => handleSort("id")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Account ID {renderSortIndicator("id")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("name")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Account Name {renderSortIndicator("name")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("mobile")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Mobile {renderSortIndicator("mobile")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("customerType")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Account Type {renderSortIndicator("customerType")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("isRetailerApproved")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Probation Status {renderSortIndicator("isRetailerApproved")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("totalOrderAmount")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Total Order {renderSortIndicator("totalOrderAmount")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("totalPaidAmount")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Total Paid {renderSortIndicator("totalPaidAmount")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("totalDueAmount")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Due {renderSortIndicator("totalDueAmount")}
-                      </div>
-                    </th>
-                    <th 
-                      onClick={() => handleSort("accountBalance")} 
-                      className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center">
-                        Account Balance {renderSortIndicator("accountBalance")}
-                      </div>
-                    </th>
-                    <th className="py-4 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
-                  {sortedShops.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-gray-400 uppercase tracking-wider">No shop profiles found.</td>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      <th
+                        onClick={() => handleSort("id")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Account ID {renderSortIndicator("id")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("name")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Account Name {renderSortIndicator("name")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("mobile")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Mobile {renderSortIndicator("mobile")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("customerType")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Account Type {renderSortIndicator("customerType")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("isRetailerApproved")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Probation Status {renderSortIndicator("isRetailerApproved")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("totalOrderAmount")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Total Order {renderSortIndicator("totalOrderAmount")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("totalPaidAmount")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Total Paid {renderSortIndicator("totalPaidAmount")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("totalDueAmount")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Due {renderSortIndicator("totalDueAmount")}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort("accountBalance")}
+                        className="py-4 px-3 cursor-pointer select-none hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          Account Balance {renderSortIndicator("accountBalance")}
+                        </div>
+                      </th>
+                      <th className="py-4 px-3 text-right">Actions</th>
                     </tr>
-                  ) : (
-                    sortedShops.map((shop) => (
-                      <tr key={shop.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 px-3 font-mono font-black text-gray-900">
-                          #{shop.id.slice(-8).toUpperCase()}
-                        </td>
-                        <td className="py-4 px-3">
-                          <span className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</span>
-                          <div className="text-[10px] text-gray-400">{shop.email}</div>
-                        </td>
-                        <td className="py-4 px-3 text-gray-500">{shop.mobile}</td>
-                        <td className="py-4 px-3 uppercase tracking-wider text-[10px]">
-                          <span className={`px-2 py-0.5 rounded font-black border ${
-                            shop.customerType?.toLowerCase() === "dealer" 
-                              ? "bg-amber-50 text-amber-700 border-amber-200" 
-                              : shop.customerType?.toLowerCase() === "retailer" 
-                              ? "bg-blue-50 text-blue-700 border-blue-200" 
-                              : shop.customerType?.toLowerCase() === "guest" 
-                              ? "bg-gray-100 text-gray-400 border-gray-200" 
-                              : "bg-slate-100 text-slate-600 border-slate-200"
-                          }`}>
-                            {shop.customerType}
-                          </span>
-                        </td>
-                        <td className="py-4 px-3">
-                          {shop.customerType === "retailer" ? (
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
-                              shop.isRetailerApproved 
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
-                                : "bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
-                            }`}>
-                              {shop.isRetailerApproved ? "Approved" : "Probation"}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-3 font-bold text-gray-900">
-                          ৳{(shop.totalOrderAmount || 0).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-3 font-bold text-emerald-600">
-                          ৳{(shop.totalPaidAmount || 0).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-3 font-bold text-rose-500">
-                          ৳{(shop.totalDueAmount || 0).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-3">
-                          {(() => {
-                            const balance = (shop.walletBalance || 0) - (shop.dueBalance || 0);
-                            if (balance < 0) {
-                              return <span className="text-rose-500 font-black">-৳{Math.abs(balance)}</span>;
-                            }
-                            if (balance > 0) {
-                              return <span className="text-emerald-500 font-black">+৳{balance}</span>;
-                            }
-                            return <span className="text-gray-400 font-normal">৳0</span>;
-                          })()}
-                        </td>
-                        <td className="py-4 px-3 text-right flex items-center justify-end gap-2">
-                          {shop.customerType !== "Guest" ? (
-                            <Button
-                              onClick={() => {
-                                setWalletDepositShop(shop);
-                                setCashAmount("");
-                              }}
-                              className="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
-                            >
-                              Add Deposit
-                            </Button>
-                          ) : (
-                            <span className="text-gray-400 text-[10px] font-black uppercase italic tracking-wider px-3">No Wallet</span>
-                          )}
-                          <Button
-                            onClick={() => fetchCustomerDetails(shop.id, shop.customerType === "Guest" ? shop.mobile : undefined)}
-                            className="bg-amber-600 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
-                          >
-                            Details
-                          </Button>
-                        </td>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
+                    {sortedShops.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-gray-400 uppercase tracking-wider">No shop profiles found.</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      sortedShops.map((shop) => (
+                        <tr key={shop.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-3 font-mono font-black text-gray-900">
+                            #{shop.id.slice(-8).toUpperCase()}
+                          </td>
+                          <td className="py-4 px-3">
+                            <span className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</span>
+                            <div className="text-[10px] text-gray-400">{shop.email}</div>
+                          </td>
+                          <td className="py-4 px-3 text-gray-500">{shop.mobile}</td>
+                          <td className="py-4 px-3 uppercase tracking-wider text-[10px]">
+                            <span className={`px-2 py-0.5 rounded font-black border ${shop.customerType?.toLowerCase() === "dealer"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : shop.customerType?.toLowerCase() === "retailer"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : shop.customerType?.toLowerCase() === "guest"
+                                  ? "bg-gray-100 text-gray-400 border-gray-200"
+                                  : "bg-slate-100 text-slate-600 border-slate-200"
+                              }`}>
+                              {shop.customerType}
+                            </span>
+                          </td>
+                          <td className="py-4 px-3">
+                            {shop.customerType === "retailer" ? (
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${shop.isRetailerApproved
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                : "bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
+                                }`}>
+                                {shop.isRetailerApproved ? "Approved" : "Probation"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-3 font-bold text-gray-900">
+                            ৳{(shop.totalOrderAmount || 0).toLocaleString()}
+                          </td>
+                          <td className="py-4 px-3 font-bold text-emerald-600">
+                            ৳{(shop.totalPaidAmount || 0).toLocaleString()}
+                          </td>
+                          <td className="py-4 px-3 font-bold text-rose-500">
+                            ৳{(shop.totalDueAmount || 0).toLocaleString()}
+                          </td>
+                          <td className="py-4 px-3">
+                            {(() => {
+                              const balance = (shop.walletBalance || 0) - (shop.dueBalance || 0);
+                              if (balance < 0) {
+                                return <span className="text-rose-500 font-black">-৳{Math.abs(balance)}</span>;
+                              }
+                              if (balance > 0) {
+                                return <span className="text-emerald-500 font-black">+৳{balance}</span>;
+                              }
+                              return <span className="text-gray-400 font-normal">৳0</span>;
+                            })()}
+                          </td>
+                          <td className="py-4 px-3 text-right flex items-center justify-end gap-2">
+                            {shop.customerType !== "Guest" ? (
+                              <Button
+                                onClick={() => {
+                                  setWalletDepositShop(shop);
+                                  setCashAmount("");
+                                }}
+                                className="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
+                              >
+                                Add Deposit
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400 text-[10px] font-black uppercase italic tracking-wider px-3">No Wallet</span>
+                            )}
+                            <Button
+                              onClick={() => fetchCustomerDetails(shop.id, shop.customerType === "Guest" ? shop.mobile : undefined)}
+                              className="bg-amber-600 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
+                            >
+                              Details
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
           )}
 
           {/* TAB 3: TRANSACTION LEDGERS */}
@@ -1853,67 +1979,66 @@ export default function CollectionsPage() {
                 </Button>
               </div>
               <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    <th className="py-4 px-3">Transaction ID</th>
-                    <th className="py-4 px-3">Date</th>
-                    <th className="py-4 px-3">Shop Profile</th>
-                    <th className="py-4 px-3">Transaction Type</th>
-                    <th className="py-4 px-3">Reference ID</th>
-                    <th className="py-4 px-3">Payment Method</th>
-                    <th className="py-4 px-3">Amount</th>
-                    <th className="py-4 px-3">Proof</th>
-                    <th className="py-4 px-3">Recorded By</th>
-                    <th className="py-4 px-3">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
-                  {filteredLedgers.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="py-8 text-center text-gray-400 uppercase tracking-wider">No transaction ledger logs found.</td>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      <th className="py-4 px-3">Transaction ID</th>
+                      <th className="py-4 px-3">Date</th>
+                      <th className="py-4 px-3">Shop Profile</th>
+                      <th className="py-4 px-3">Transaction Type</th>
+                      <th className="py-4 px-3">Reference ID</th>
+                      <th className="py-4 px-3">Payment Method</th>
+                      <th className="py-4 px-3">Amount</th>
+                      <th className="py-4 px-3">Proof</th>
+                      <th className="py-4 px-3">Recorded By</th>
+                      <th className="py-4 px-3">Notes</th>
                     </tr>
-                  ) : (
-                    filteredLedgers.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 px-3 font-mono font-black text-gray-900">
-                          #{log.id.slice(-8).toUpperCase()}
-                        </td>
-                        <td className="py-4 px-3 text-gray-400">
-                          {new Date(log.createdAt).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-3">
-                          {log.userId ? (
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-gray-900">{log.userId.name}</span>
-                                {renderTypeBadge(log.userId.customerType)}
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs font-bold text-gray-700">
+                    {filteredLedgers.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-8 text-center text-gray-400 uppercase tracking-wider">No transaction ledger logs found.</td>
+                      </tr>
+                    ) : (
+                      filteredLedgers.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-3 font-mono font-black text-gray-900">
+                            #{log.id.slice(-8).toUpperCase()}
+                          </td>
+                          <td className="py-4 px-3 text-gray-400">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </td>
+                          <td className="py-4 px-3">
+                            {log.userId ? (
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-gray-900">{log.userId.name}</span>
+                                  {renderTypeBadge(log.userId.customerType)}
+                                </div>
+                                <div className="text-[9px] text-gray-400">{log.userId.mobile}</div>
                               </div>
-                              <div className="text-[9px] text-gray-400">{log.userId.mobile}</div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400 font-bold">Guest Customer</span>
-                              {renderTypeBadge("guest")}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-4 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
-                            log.type === "collection" 
-                              ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
-                              : log.type === "wallet_deposit" 
-                              ? "bg-blue-50 text-blue-600 border-blue-200" 
-                              : "bg-slate-100 text-slate-600 border-slate-200"
-                          }`}>
-                            {log.type.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td className="py-4 px-3 font-mono text-[10px] text-gray-600 font-bold">
-                          {(() => {
-                            if (log.type === "collection") {
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400 font-bold">Guest Customer</span>
+                                {renderTypeBadge("guest")}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-4 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${log.type === "collection"
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                              : log.type === "wallet_deposit"
+                                ? "bg-blue-50 text-blue-600 border-blue-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                              }`}>
+                              {log.type.replace("_", " ")}
+                            </span>
+                          </td>
+                          <td className="py-4 px-3 font-mono text-[10px] text-gray-600 font-bold">
+                            {(() => {
+                              if (log.type === "collection") {
                                 return log.orderId ? (
-                                  <a 
+                                  <a
                                     href={`/admin/orders?q=${log.orderId}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -1923,68 +2048,68 @@ export default function CollectionsPage() {
                                     #{log.orderId.slice(-8).toUpperCase()}
                                   </a>
                                 ) : "—";
-                            }
-                            if (log.type === "wallet_deposit" || log.type === "wallet_deduction") {
-                              const userIdStr = log.userId ? (log.userId.id || (log.userId as any)._id?.toString()) : null;
-                              return userIdStr ? (
-                                <a 
-                                  href={`/admin/collections?tab=shops&q=${userIdStr}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 hover:underline transition-colors text-left font-mono text-[10px] font-bold"
-                                  title="View Customer Balance"
-                                >
-                                  #{userIdStr.slice(-8).toUpperCase()}
-                                </a>
-                              ) : "—";
-                            }
-                            return "—";
-                          })()}
-                        </td>
-                        <td className="py-4 px-3 uppercase tracking-wider text-[10px] text-gray-500">
-                          {log.paymentMethod.startsWith("bank") ? (
-                            <div className="flex flex-col">
-                              <span className="font-bold">BANK TRANSFER</span>
-                              {log.paymentMethod !== "bank" && (
-                                <span className="text-[9px] text-amber-600 font-black tracking-normal normal-case mt-0.5">
-                                  {log.paymentMethod === "bank_ucb" ? "UCB Bank" : 
-                                   log.paymentMethod === "bank_brac" ? "Brac Bank" : 
-                                   log.paymentMethod === "bank_nrbc" ? "NRBC Bank" : 
-                                   log.paymentMethod.replace("bank_", "").toUpperCase() + " Bank"}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            formatPaymentMethod(log.paymentMethod)
-                          )}
-                        </td>
-                        <td className="py-4 px-3 font-black text-gray-900">৳{log.amount}</td>
-                        <td className="py-4 px-3">
-                          {log.documentUrl ? (
-                            <a 
-                              href={log.documentUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
-                              title="View Proof Document"
-                            >
-                              <Eye className="w-3 h-3" /> View Proof
-                            </a>
-                          ) : (
-                            <span className="text-gray-400 font-normal">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-3 text-gray-400">{log.recordedBy}</td>
-                        <td className="py-4 px-3 text-gray-400 font-normal max-w-[200px] truncate">
-                          <span>{log.notes || "—"}</span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                              }
+                              if (log.type === "wallet_deposit" || log.type === "wallet_deduction") {
+                                const userIdStr = log.userId ? (log.userId.id || (log.userId as any)._id?.toString()) : null;
+                                return userIdStr ? (
+                                  <a
+                                    href={`/admin/collections?tab=shops&q=${userIdStr}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 hover:underline transition-colors text-left font-mono text-[10px] font-bold"
+                                    title="View Customer Balance"
+                                  >
+                                    #{userIdStr.slice(-8).toUpperCase()}
+                                  </a>
+                                ) : "—";
+                              }
+                              return "—";
+                            })()}
+                          </td>
+                          <td className="py-4 px-3 uppercase tracking-wider text-[10px] text-gray-500">
+                            {log.paymentMethod.startsWith("bank") ? (
+                              <div className="flex flex-col">
+                                <span className="font-bold">BANK TRANSFER</span>
+                                {log.paymentMethod !== "bank" && (
+                                  <span className="text-[9px] text-amber-600 font-black tracking-normal normal-case mt-0.5">
+                                    {log.paymentMethod === "bank_ucb" ? "UCB Bank" :
+                                      log.paymentMethod === "bank_brac" ? "Brac Bank" :
+                                        log.paymentMethod === "bank_nrbc" ? "NRBC Bank" :
+                                          log.paymentMethod.replace("bank_", "").toUpperCase() + " Bank"}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              formatPaymentMethod(log.paymentMethod)
+                            )}
+                          </td>
+                          <td className="py-4 px-3 font-black text-gray-900">৳{log.amount}</td>
+                          <td className="py-4 px-3">
+                            {log.documentUrl ? (
+                              <a
+                                href={log.documentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
+                                title="View Proof Document"
+                              >
+                                <Eye className="w-3 h-3" /> View Proof
+                              </a>
+                            ) : (
+                              <span className="text-gray-400 font-normal">—</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-3 text-gray-400">{log.recordedBy}</td>
+                          <td className="py-4 px-3 text-gray-400 font-normal max-w-[200px] truncate">
+                            <span>{log.notes || "—"}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
           )}
 
         </div>
@@ -1992,11 +2117,11 @@ export default function CollectionsPage() {
 
       {/* MODAL 1: RECONCILE CASH FROM ORDER */}
       {reconcileOrder && (
-        <div 
+        <div
           onClick={() => setReconcileOrder(null)}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
           >
@@ -2080,9 +2205,9 @@ export default function CollectionsPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {item.documentUrl && (
-                                    <a 
-                                      href={item.documentUrl} 
-                                      target="_blank" 
+                                    <a
+                                      href={item.documentUrl}
+                                      target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 border border-amber-200 bg-amber-50/50 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none"
                                       title="View Proof Document"
@@ -2235,9 +2360,9 @@ export default function CollectionsPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Image Thumbnail Preview */}
                       <div className="relative w-12 h-12 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-inner flex items-center justify-center shrink-0">
-                        <img 
-                          src={documentUrl} 
-                          alt="Proof preview" 
+                        <img
+                          src={documentUrl}
+                          alt="Proof preview"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -2245,9 +2370,9 @@ export default function CollectionsPage() {
                         <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
                           <Check className="w-3.5 h-3.5 shrink-0" /> Uploaded
                         </span>
-                        <a 
-                          href={documentUrl} 
-                          target="_blank" 
+                        <a
+                          href={documentUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-[9px] font-black uppercase tracking-widest text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5 truncate hover:underline"
                         >
@@ -2255,7 +2380,7 @@ export default function CollectionsPage() {
                         </a>
                       </div>
                     </div>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setDocumentUrl("")}
                       className="bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 hover:border-rose-100 transition-all shadow-sm active:scale-95 shrink-0"
@@ -2280,11 +2405,11 @@ export default function CollectionsPage() {
 
       {/* MODAL 2: ADD DIRECT WALLET DEPOSIT */}
       {walletDepositShop && (
-        <div 
+        <div
           onClick={() => setWalletDepositShop(null)}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
           >
@@ -2435,9 +2560,9 @@ export default function CollectionsPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Image Thumbnail Preview */}
                       <div className="relative w-12 h-12 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-inner flex items-center justify-center shrink-0">
-                        <img 
-                          src={documentUrl} 
-                          alt="Proof preview" 
+                        <img
+                          src={documentUrl}
+                          alt="Proof preview"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -2445,9 +2570,9 @@ export default function CollectionsPage() {
                         <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
                           <Check className="w-3.5 h-3.5 shrink-0" /> Uploaded
                         </span>
-                        <a 
-                          href={documentUrl} 
-                          target="_blank" 
+                        <a
+                          href={documentUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-[9px] font-black uppercase tracking-widest text-amber-600 hover:text-amber-800 transition-colors flex items-center gap-0.5 truncate hover:underline"
                         >
@@ -2455,7 +2580,7 @@ export default function CollectionsPage() {
                         </a>
                       </div>
                     </div>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setDocumentUrl("")}
                       className="bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 hover:border-rose-100 transition-all shadow-sm active:scale-95 shrink-0"
@@ -2485,18 +2610,18 @@ export default function CollectionsPage() {
 
       {/* MODAL 3: CUSTOMER DETAILS / PROFILE VIEW */}
       {selectedCustomerDetails && (
-        <div 
+        <div
           onClick={() => setSelectedCustomerDetails(null)}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Customer Profile & Details</h3>
-              <button 
-                onClick={() => setSelectedCustomerDetails(null)} 
+              <button
+                onClick={() => setSelectedCustomerDetails(null)}
                 className="text-gray-400 hover:text-gray-900 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -2512,25 +2637,23 @@ export default function CollectionsPage() {
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Customer ID: #{selectedCustomerDetails.user.id.slice(-8).toUpperCase()}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded font-black border uppercase text-[9px] ${
-                      selectedCustomerDetails.user.customerType?.toLowerCase() === "dealer" 
-                        ? "bg-amber-50 text-amber-700 border-amber-200" 
-                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "retailer" 
-                        ? "bg-blue-50 text-blue-700 border-blue-200" 
-                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest" 
-                        ? "bg-gray-100 text-gray-400 border-gray-200" 
-                        : selectedCustomerDetails.user.customerType?.toLowerCase() !== "customer"
-                        ? "bg-teal-50 text-teal-700 border-teal-200"
-                        : "bg-slate-100 text-slate-600 border-slate-200"
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded font-black border uppercase text-[9px] ${selectedCustomerDetails.user.customerType?.toLowerCase() === "dealer"
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : selectedCustomerDetails.user.customerType?.toLowerCase() === "retailer"
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest"
+                          ? "bg-gray-100 text-gray-400 border-gray-200"
+                          : selectedCustomerDetails.user.customerType?.toLowerCase() !== "customer"
+                            ? "bg-teal-50 text-teal-700 border-teal-200"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
+                      }`}>
                       {selectedCustomerDetails.user.customerType?.replace("_", " ")}
                     </span>
                     {selectedCustomerDetails.user.customerType === "retailer" && (
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
-                        selectedCustomerDetails.user.isRetailerApproved 
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
-                          : "bg-rose-50 text-rose-600 border-rose-200"
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${selectedCustomerDetails.user.isRetailerApproved
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                        : "bg-rose-50 text-rose-600 border-rose-200"
+                        }`}>
                         {selectedCustomerDetails.user.isRetailerApproved ? "Approved" : "Probation"}
                       </span>
                     )}
@@ -2555,10 +2678,10 @@ export default function CollectionsPage() {
                       <div>Credit Limit: <span className="text-gray-900">৳{selectedCustomerDetails.user.creditLimit.toLocaleString()}</span></div>
                     )}
                     <div>Account Created By: <span className="text-gray-900">
-                      {selectedCustomerDetails.user.customerType === "Guest" ? "Guest Checkout" : 
-                       selectedCustomerDetails.user.referredBySR 
-                        ? `SR (${selectedCustomerDetails.user.referredBySR.name})` 
-                        : "Self"}
+                      {selectedCustomerDetails.user.customerType === "Guest" ? "Guest Checkout" :
+                        selectedCustomerDetails.user.referredBySR
+                          ? `SR (${selectedCustomerDetails.user.referredBySR.name})`
+                          : "Self"}
                     </span></div>
                   </div>
                 </div>
@@ -2580,14 +2703,14 @@ export default function CollectionsPage() {
                   <div className="text-center py-4 text-xs font-bold italic text-gray-400">No orders recorded for this customer.</div>
                 ) : (
                   <div className="space-y-2.5">
-                    {(showAllOrders 
-                      ? selectedCustomerDetails.orders 
+                    {(showAllOrders
+                      ? selectedCustomerDetails.orders
                       : selectedCustomerDetails.orders.slice(0, 5)
                     ).map((order) => (
                       <div key={order.id} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between text-xs gap-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <a 
+                            <a
                               href={`/admin/orders?q=${order.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -2613,18 +2736,16 @@ export default function CollectionsPage() {
                         <div className="text-right shrink-0 space-y-1">
                           <div className="font-black text-gray-900">৳{order.total.toLocaleString()}</div>
                           <div className="flex items-center gap-1.5 justify-end">
-                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
-                              order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
                               order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              'bg-blue-50 text-blue-700 border-blue-200'
-                            }`}>
+                                'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}>
                               {order.status}
                             </span>
-                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
-                              order.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${order.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                               order.paymentStatus === 'partial' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              'bg-rose-50 text-rose-700 border-rose-200'
-                            }`}>
+                                'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
                               {order.paymentStatus}
                             </span>
                           </div>
@@ -2652,8 +2773,8 @@ export default function CollectionsPage() {
                   <div className="text-center py-4 text-xs font-bold italic text-gray-400">No payment transaction records.</div>
                 ) : (
                   <div className="space-y-2.5">
-                    {(showAllPayments 
-                      ? selectedCustomerDetails.payments 
+                    {(showAllPayments
+                      ? selectedCustomerDetails.payments
                       : selectedCustomerDetails.payments.slice(0, 5)
                     ).map((pm) => (
                       <div key={pm.id} className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1.5 text-xs">
@@ -2670,22 +2791,21 @@ export default function CollectionsPage() {
                             >
                               #{pm.id.slice(-8).toUpperCase()}
                             </button>
-                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
-                              pm.type === "collection" 
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
-                                : pm.type === "wallet_deposit" 
-                                ? "bg-blue-50 text-blue-600 border-blue-200" 
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${pm.type === "collection"
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                              : pm.type === "wallet_deposit"
+                                ? "bg-blue-50 text-blue-600 border-blue-200"
                                 : "bg-slate-100 text-slate-600 border-slate-200"
-                            }`}>
+                              }`}>
                               {pm.type.replace("_", " ")}
                             </span>
                             <span className="text-[10px] text-gray-400">{new Date(pm.createdAt).toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             {pm.documentUrl && (
-                              <a 
-                                href={pm.documentUrl} 
-                                target="_blank" 
+                              <a
+                                href={pm.documentUrl}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-amber-600 hover:text-amber-800 font-bold hover:underline inline-flex items-center gap-0.5 text-[10px]"
                               >
@@ -2726,11 +2846,11 @@ export default function CollectionsPage() {
 
       {/* CONFIRMATION POPUP MODAL */}
       {confirmAction && (
-        <div 
+        <div
           onClick={() => setConfirmAction(null)}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
           >
