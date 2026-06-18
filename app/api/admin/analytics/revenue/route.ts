@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest, hasAnyRole } from "@/lib/api-auth";
 import { ROLES } from "@/lib/constants";
 import connectDB from "@/lib/db";
-import { Order } from "@/lib/models";
+import { Order, User } from "@/lib/models";
+import mongoose from "mongoose";
 
 function getFilterStages(customerTypeFilter: string) {
   if (customerTypeFilter === "all") return [];
@@ -110,6 +111,33 @@ export async function GET(request: NextRequest) {
     const lifetimeQuery: any = { status: 'delivered' };
     if (productId) lifetimeQuery["items.productId"] = productId;
 
+    // Define activeRangeQuery, pendingQuery, lossQuery early to apply SR filters consistently
+    const activeRangeQuery: any = { status: { $in: ['pending', 'processing', 'shipped', 'delivered'] } };
+    if (startDate || endDate) {
+      activeRangeQuery.createdAt = {};
+      if (startDate) activeRangeQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) activeRangeQuery.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+    }
+    if (productId) activeRangeQuery["items.productId"] = productId;
+
+    const pendingQuery: any = { status: { $in: ['pending', 'processing', 'shipped'] } };
+    if (productId) pendingQuery["items.productId"] = productId;
+
+    const lossQuery: any = { status: { $in: ['lost', 'damaged'] } };
+    if (productId) lossQuery["items.productId"] = productId;
+
+    const srId = searchParams.get("srId");
+    if (srId && srId !== "all") {
+      const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+      const srFilter = { $in: [srId, srIdObj].filter(Boolean) };
+      query.placedBySR = srFilter;
+      lifetimeQuery.placedBySR = srFilter;
+      activeRangeQuery.placedBySR = srFilter;
+      pendingQuery.placedBySR = srFilter;
+      lossQuery.placedBySR = srFilter;
+    }
+
+
     const lifetimeStats = await Order.aggregate([
       { $match: lifetimeQuery },
       ...filterStages,
@@ -145,8 +173,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // 3. CALCULATE PENDING SALES (Pending, Processing, Shipped)
-    const pendingQuery: any = { status: { $in: ['pending', 'processing', 'shipped'] } };
-    if (productId) pendingQuery["items.productId"] = productId;
+    // pendingQuery is already declared and filtered early
+
 
     const pendingStats = await Order.aggregate([
       { $match: pendingQuery },
@@ -173,8 +201,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // 4. CALCULATE LOSS (Lost, Damaged)
-    const lossQuery: any = { status: { $in: ['lost', 'damaged'] } };
-    if (productId) lossQuery["items.productId"] = productId;
+    // lossQuery is already declared and filtered early
+
 
     const lossStats = await Order.aggregate([
       { $match: lossQuery },
@@ -271,18 +299,118 @@ export async function GET(request: NextRequest) {
     ]);
     const rStats = rangeSummaryStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 };
 
+    // 5.2 CALCULATE ACTIVE RANGE STATS (Pending, Processing, Shipped, Delivered)
+    // activeRangeQuery is already declared and filtered early
+
+
+    const activeRangeStats = await Order.aggregate([
+      { $match: activeRangeQuery },
+      ...filterStages,
+      { $unwind: "$items" },
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          total: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: productId ? "$itemRevenue" : "$total" },
+          totalOrders: { $addToSet: "$_id" },
+          totalProducts: { $sum: "$itemQuantity" }
+        }
+      },
+      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" }, totalProducts: 1 } }
+    ]);
+    const aStats = activeRangeStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 };
+
+    // Fetch detailed orders for modal drill-down
+    const drillDownPending = await Order.aggregate([
+      { $match: pendingQuery },
+      ...filterStages,
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      { $sort: { createdAt: -1 } },
+      { $limit: 50 }
+    ]);
+
+    const drillDownDaily = await Order.aggregate([
+      { $match: dailyQuery },
+      ...filterStages,
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      { $sort: { updatedAt: -1 } },
+      { $limit: 50 }
+    ]);
+
+    const drillDownLoss = await Order.aggregate([
+      { $match: lossQuery },
+      ...filterStages,
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      { $sort: { createdAt: -1 } },
+      { $limit: 50 }
+    ]);
+
+    // Fetch all sales representatives
+    const salesReps = await User.find({ isSR: true }).select("name email mobile").lean();
+    const salesRepresentatives = salesReps.map((sr: any) => ({
+      id: sr._id.toString(),
+      name: sr.name,
+      email: sr.email,
+      mobile: sr.mobile
+    }));
+
     return NextResponse.json({
+      salesRepresentatives,
       lifetime: lifetimeStats[0] || { totalRevenue: 0, totalOrders: 0 },
+
       daily: dailyStats[0] || { totalRevenue: 0, totalOrders: 0 },
       pending: pendingStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 },
       loss: lossStats[0] || { totalRevenue: 0, totalOrders: 0 },
+      activeRange: {
+        totalRevenue: aStats.totalRevenue,
+        totalOrders: aStats.totalOrders,
+        totalProducts: aStats.totalProducts
+      },
       range: {
         totalRevenue: rStats.totalRevenue,
         totalOrders: rStats.totalOrders,
         totalProducts: rStats.totalProducts,
         items: rangeStats
       },
-      logs: formattedLogs
+      logs: formattedLogs,
+      drillDown: {
+        pending: drillDownPending.map((o: any) => ({
+          id: o._id.toString(),
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          total: o.total,
+          status: o.status,
+          createdAt: o.createdAt,
+          items: o.items.map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price }))
+        })),
+        daily: drillDownDaily.map((o: any) => ({
+          id: o._id.toString(),
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          total: o.total,
+          status: o.status,
+          updatedAt: o.updatedAt,
+          createdAt: o.createdAt,
+          items: o.items.map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price }))
+        })),
+        loss: drillDownLoss.map((o: any) => ({
+          id: o._id.toString(),
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          total: o.total,
+          status: o.status,
+          createdAt: o.createdAt,
+          items: o.items.map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price }))
+        }))
+      }
     });
 
   } catch (error) {

@@ -12,7 +12,9 @@ import {
   RefreshCw,
   FileText,
   RotateCcw,
-  User
+  User,
+  ShoppingCart,
+  X
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,12 +33,19 @@ export default function RevenuePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
+  const [salesRepresentatives, setSalesRepresentatives] = useState<any[]>([]);
+  const [selectedChartDate, setSelectedChartDate] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: new Date().toISOString().split('T')[0],
     productId: "all",
-    customerType: "all"
+    customerType: "all",
+    srId: "all"
   });
+  const [drillDownModal, setDrillDownModal] = useState<{
+    title: string;
+    orders: any[];
+  } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -46,6 +55,7 @@ export default function RevenuePage() {
       if (filters.endDate) query.append("endDate", filters.endDate);
       if (filters.productId !== "all") query.append("productId", filters.productId);
       if (filters.customerType !== "all") query.append("customerType", filters.customerType);
+      if (filters.srId && filters.srId !== "all") query.append("srId", filters.srId);
 
       const res = await fetch(`/api/admin/analytics/revenue?${query.toString()}`, {
         headers: {
@@ -55,6 +65,9 @@ export default function RevenuePage() {
       if (res.ok) {
         const json = await res.json();
         setData(json);
+        if (json.salesRepresentatives) {
+          setSalesRepresentatives(json.salesRepresentatives);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -63,11 +76,21 @@ export default function RevenuePage() {
     }
   };
 
+  const filteredLogs = useMemo(() => {
+    if (!data?.logs) return [];
+    if (!selectedChartDate) return data.logs;
+    return data.logs.filter((log: any) => {
+      const logDate = new Date(log.date).toLocaleDateString("en-GB");
+      return logDate === selectedChartDate;
+    });
+  }, [data?.logs, selectedChartDate]);
+
   const handleExportCSV = () => {
-    if (!data?.logs || data.logs.length === 0) return;
+    const logsToExport = selectedChartDate ? filteredLogs : data?.logs;
+    if (!logsToExport || logsToExport.length === 0) return;
 
     const headers = ["Order ID", "Sale Date", "Product", "SKU", "Unit Price", "Quantity", "Total Money", "Status"];
-    const rows = data.logs.map((log: any) => [
+    const rows = logsToExport.map((log: any) => [
       `#${log.orderId.slice(-6)}`,
       new Date(log.date).toLocaleString('en-GB'),
       log.productName,
@@ -99,8 +122,10 @@ export default function RevenuePage() {
       startDate: "",
       endDate: new Date().toISOString().split('T')[0],
       productId: "all",
-      customerType: "all"
+      customerType: "all",
+      srId: "all"
     });
+    setSelectedChartDate(null);
   };
 
   const fetchProducts = async () => {
@@ -119,6 +144,7 @@ export default function RevenuePage() {
 
   useEffect(() => {
     fetchData();
+    setSelectedChartDate(null);
   }, [filters]);
 
   const chartData = useMemo(() => {
@@ -127,14 +153,14 @@ export default function RevenuePage() {
     // Group logs by date for chart
     const groups: { [key: string]: number } = {};
     data.logs.forEach((log: any) => {
-      const date = new Date(log.date).toLocaleDateString();
+      const date = new Date(log.date).toLocaleDateString("en-GB");
       groups[date] = (groups[date] || 0) + log.total;
     });
 
     return Object.entries(groups).map(([date, amount]) => ({
       date,
       revenue: amount
-    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    })).sort((a, b) => new Date(a.date.split('/').reverse().join('-')).getTime() - new Date(b.date.split('/').reverse().join('-')).getTime());
   }, [data]);
 
   if (loading && !data) {
@@ -224,6 +250,25 @@ export default function RevenuePage() {
             </div>
           </div>
 
+          {/* SR Dropdown Filter */}
+          <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 px-3 md:px-4 flex-1 md:flex-none justify-between md:justify-start">
+            <div className="flex items-center gap-2">
+              <User className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+              <select
+                value={filters.srId}
+                onChange={(e) => setFilters({ ...filters, srId: e.target.value })}
+                className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer pr-2 md:pr-4"
+              >
+                <option value="all">ALL Orders</option>
+                {salesRepresentatives.map((sr: any) => (
+                  <option key={sr.id} value={sr.id}>
+                    {sr.name.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <button
             onClick={fetchData}
             title="Refresh Data"
@@ -237,96 +282,120 @@ export default function RevenuePage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         {[
-          { 
-            label: "Pending Sales", 
-            value: `৳${(data?.pending?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.pending?.totalOrders || 0} Orders in Pipeline (${data?.pending?.totalProducts || 0} Products)`, 
-            icon: RefreshCw, 
-            color: "text-amber-600", 
+          {
+            label: "Pending Sales",
+            value: `৳${(data?.pending?.totalRevenue || 0).toLocaleString()}`,
+            sub: `${data?.pending?.totalOrders || 0} Orders in Pipeline (${data?.pending?.totalProducts || 0} Products)`,
+            icon: RefreshCw,
+            color: "text-amber-600",
             bg: "bg-amber-50",
-            tag: "In Progress"
+            tag: "In Progress",
+            onClick: () => setDrillDownModal({ title: "Pending Sales Details", orders: data?.drillDown?.pending || [] })
           },
-          { 
-            label: "Today's Sales", 
-            value: `৳${(data?.daily?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.daily?.totalOrders || 0} Delivered Today`, 
-            icon: Clock, 
-            color: "text-emerald-600", 
+          {
+            label: "Today's Sales",
+            value: `৳${(data?.daily?.totalRevenue || 0).toLocaleString()}`,
+            sub: `${data?.daily?.totalOrders || 0} Delivered Today`,
+            icon: Clock,
+            color: "text-emerald-600",
             bg: "bg-emerald-50",
-            tag: "Delivered Only"
+            tag: "Delivered Only",
+            onClick: () => setDrillDownModal({ title: "Today's Sales Details", orders: data?.drillDown?.daily || [] })
           },
-          { 
-            label: "Selected Period", 
-            value: `৳${(data?.range?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.range?.totalOrders || 0} Delivered in Range (${data?.range?.totalProducts || 0} Products)`, 
-            icon: DollarSign, 
-            color: "text-blue-600", 
+          {
+            label: "Selected Period",
+            value: `৳${(data?.range?.totalRevenue || 0).toLocaleString()}`,
+            sub: `${data?.range?.totalOrders || 0} Delivered in Range (${data?.range?.totalProducts || 0} Products)`,
+            icon: DollarSign,
+            color: "text-blue-600",
             bg: "bg-blue-50",
             tag: "Delivered Only"
           },
-          { 
-            label: "Avg Order Value", 
-            value: `৳${Math.round((data?.range?.totalRevenue || 0) / (data?.range?.totalOrders || 1)).toLocaleString()}`, 
-            sub: "Delivered Orders Avg", 
-            icon: BarChart3, 
-            color: "text-indigo-600", 
+          {
+            label: "Avg Order Value",
+            value: `৳${Math.round((data?.range?.totalRevenue || 0) / (data?.range?.totalOrders || 1)).toLocaleString()}`,
+            sub: "Delivered Orders Avg",
+            icon: BarChart3,
+            color: "text-indigo-600",
             bg: "bg-indigo-50",
             tag: "Analytics"
           },
-          { 
-            label: "Lost & Damaged", 
-            value: `৳${(data?.loss?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.loss?.totalOrders || 0} Reported Incidents`, 
-            icon: Package, 
-            color: "text-gray-600", 
+          {
+            label: "Lost & Damaged",
+            value: `৳${(data?.loss?.totalRevenue || 0).toLocaleString()}`,
+            sub: `${data?.loss?.totalOrders || 0} Reported Incidents`,
+            icon: Package,
+            color: "text-gray-600",
             bg: "bg-gray-100",
-            tag: "System Loss"
+            tag: "System Loss",
+            onClick: () => setDrillDownModal({ title: "Lost & Damaged Incidents Details", orders: data?.drillDown?.loss || [] })
           },
-          { 
-            label: "Lifetime Sale", 
-            value: `৳${(data?.lifetime?.totalRevenue || 0).toLocaleString()}`, 
-            sub: `${data?.lifetime?.totalOrders || 0} Lifetime Delivered`, 
-            icon: TrendingUp, 
-            color: "text-red-600", 
+          {
+            label: "Lifetime Sale",
+            value: `৳${(data?.lifetime?.totalRevenue || 0).toLocaleString()}`,
+            sub: `${data?.lifetime?.totalOrders || 0} Lifetime Delivered`,
+            icon: TrendingUp,
+            color: "text-red-600",
             bg: "bg-red-50",
             tag: "Delivered Only"
           },
-        ].map((stat, i) => (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            key={i}
-            className="p-4 md:p-8 bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-100 flex flex-col gap-4 md:gap-6 relative overflow-hidden group"
-          >
-            <div className="flex justify-between items-start relative z-10">
-              <div className={`p-2.5 md:p-4 ${stat.bg} ${stat.color} rounded-xl md:rounded-2xl group-hover:scale-110 transition-transform`}>
-                <stat.icon className="w-4 h-4 md:w-6 md:h-6" />
+          {
+            label: "Total Orders",
+            value: `৳${(data?.activeRange?.totalRevenue || 0).toLocaleString()}`,
+            sub: `${data?.activeRange?.totalOrders || 0} Active Orders in Range (${data?.activeRange?.totalProducts || 0} Products)`,
+            icon: ShoppingCart,
+            color: "text-violet-600",
+            bg: "bg-violet-50",
+            tag: "Active Range"
+          },
+        ].map((stat, i) => {
+          const isTotalOrders = stat.label === "Total Orders";
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              key={i}
+              onClick={stat.onClick}
+              className={`p-4 md:p-8 bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-100 flex relative overflow-hidden group transition-all ${isTotalOrders
+                  ? "col-span-full flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+                  : "flex-col gap-4 md:gap-6"
+                } ${stat.onClick
+                  ? "cursor-pointer hover:shadow-2xl hover:shadow-gray-300/60 hover:-translate-y-1 hover:border-slate-300"
+                  : ""
+                }`}
+            >
+              <div className={`flex relative z-10 ${isTotalOrders ? "flex-col sm:flex-row-reverse sm:items-center sm:justify-between w-full gap-4" : "flex-col w-full gap-4 md:gap-6"}`}>
+                <div className={`flex justify-between items-start ${isTotalOrders ? "sm:items-center gap-4 shrink-0" : ""}`}>
+                  <div className={`p-2.5 md:p-4 ${stat.bg} ${stat.color} rounded-xl md:rounded-2xl group-hover:scale-110 transition-transform`}>
+                    <stat.icon className="w-4 h-4 md:w-6 md:h-6" />
+                  </div>
+                  <div className="hidden sm:flex flex-col items-end">
+                    <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-none mb-2">Security</span>
+                    <span className={`text-[9px] font-black uppercase tracking-tighter px-3 py-1 rounded-full border ${stat.tag === 'Delivered Only' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        stat.tag === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          stat.tag === 'System Loss' ? 'bg-red-50 text-red-600 border-red-100' :
+                            stat.tag === 'Active Range' ? 'bg-violet-50 text-violet-600 border-violet-100' :
+                              'bg-gray-50 text-gray-500 border-gray-200'
+                      }`}>
+                      {stat.tag}
+                    </span>
+                  </div>
+                </div>
+                <div className="relative z-10">
+                  <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block italic">{stat.label}</span>
+                  <p className={`text-xl font-black text-gray-900 tracking-tighter tabular-nums ${isTotalOrders ? "md:text-5xl" : "md:text-4xl"}`}>{stat.value}</p>
+                  <p className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 md:mt-2 flex items-center gap-1 md:gap-2">
+                    <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                    {stat.sub}
+                  </p>
+                </div>
               </div>
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-none mb-2">Security</span>
-                <span className={`text-[9px] font-black uppercase tracking-tighter px-3 py-1 rounded-full border ${
-                  stat.tag === 'Delivered Only' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                  stat.tag === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                  stat.tag === 'System Loss' ? 'bg-red-50 text-red-600 border-red-100' :
-                  'bg-gray-50 text-gray-500 border-gray-200'
-                }`}>
-                  {stat.tag}
-                </span>
-              </div>
-            </div>
-            <div className="relative z-10">
-              <span className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block italic">{stat.label}</span>
-              <p className="text-xl md:text-4xl font-black text-gray-900 tracking-tighter tabular-nums">{stat.value}</p>
-              <p className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 md:mt-2 flex items-center gap-1 md:gap-2">
-                <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                {stat.sub}
-              </p>
-            </div>
-            {/* Background Accent */}
-            <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${stat.bg} opacity-10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700`} />
-          </motion.div>
-        ))}
+              {/* Background Accent */}
+              <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${stat.bg} opacity-10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700`} />
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Visual Analytics */}
@@ -348,7 +417,15 @@ export default function RevenuePage() {
 
           <div className="h-[200px] md:h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart
+                data={chartData}
+                onClick={(e) => {
+                  if (e && e.activeLabel) {
+                    setSelectedChartDate(e.activeLabel);
+                  }
+                }}
+                className="cursor-pointer"
+              >
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#dc2626" stopOpacity={0.1} />
@@ -432,6 +509,30 @@ export default function RevenuePage() {
           </div>
         </div>
 
+        {selectedChartDate && (
+          <div className="px-8 py-3 bg-slate-50 border-b border-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Table Filter:</span>
+              <span className="bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-xl text-[10px] font-extrabold flex items-center gap-1.5 shadow-sm">
+                Date: {selectedChartDate}
+                <button
+                  onClick={() => setSelectedChartDate(null)}
+                  className="hover:text-black transition-colors rounded-full p-0.5"
+                  title="Clear Filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            </div>
+            <button
+              onClick={() => setSelectedChartDate(null)}
+              className="text-[9px] font-black text-red-600 hover:text-black uppercase tracking-widest leading-none border-b border-red-600/30 hover:border-black transition-all"
+            >
+              Clear Filter
+            </button>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -447,7 +548,7 @@ export default function RevenuePage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               <AnimatePresence mode="popLayout">
-                {data?.logs?.map((log: any, i: number) => (
+                {filteredLogs?.map((log: any, i: number) => (
                   <motion.tr
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -482,9 +583,8 @@ export default function RevenuePage() {
                     </td>
                     <td className="px-8 py-5 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${
-                          log.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${log.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
                           {log.status}
                         </span>
                         {log.status === 'delivered' && (
@@ -517,6 +617,105 @@ export default function RevenuePage() {
           background: #e2e8f0;
         }
       `}</style>
+
+      {/* Drill-down details modal */}
+      <AnimatePresence>
+        {drillDownModal && (
+          <div
+            onClick={() => setDrillDownModal(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm cursor-pointer"
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col cursor-default"
+            >
+              {/* Modal Header */}
+              <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                  <h3 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
+                    {drillDownModal.title}
+                  </h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic mt-1">
+                    Showing up to 50 matching records
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDrillDownModal(null)}
+                  className="p-2.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+                {drillDownModal.orders.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 font-bold uppercase tracking-wider text-xs">
+                    No matching orders found.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                          <th className="py-3 px-4">Order ID</th>
+                          <th className="py-3 px-4">Date</th>
+                          <th className="py-3 px-4">Customer</th>
+                          <th className="py-3 px-4">Items / Products</th>
+                          <th className="py-3 px-4 text-center">Status</th>
+                          <th className="py-3 px-4 text-right">Total Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {drillDownModal.orders.map((order, idx) => (
+                          <tr key={order.id || idx} className="hover:bg-slate-50/50 transition-colors text-xs font-medium text-slate-700">
+                            <td className="py-4 px-4 font-mono font-bold text-gray-400">
+                              #{order.id.slice(-6).toUpperCase()}
+                            </td>
+                            <td className="py-4 px-4">
+                              {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="font-bold text-gray-900">{order.customerName}</div>
+                              <div className="text-[10px] text-gray-400 font-bold">{order.customerPhone}</div>
+                            </td>
+                            <td className="py-4 px-4 max-w-xs">
+                              <div className="space-y-1">
+                                {order.items.map((item: any, i: number) => (
+                                  <div key={i} className="flex items-center gap-1.5 text-[11px] leading-tight">
+                                    <span className="font-black text-red-600">{item.quantity}x</span>
+                                    <span className="text-gray-800 font-bold truncate max-w-[150px]" title={item.name}>{item.name}</span>
+                                    <span className="text-gray-400 text-[10px]">(@ ৳{item.price})</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${order.status === 'delivered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                  order.status === 'lost' || order.status === 'damaged' ? 'bg-red-50 text-red-700 border border-red-100' :
+                                    order.status === 'cancelled' ? 'bg-gray-100 text-gray-500 border border-gray-200' :
+                                      'bg-amber-50 text-amber-700 border border-amber-100'
+                                }`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right font-black text-gray-900">
+                              ৳{order.total.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
