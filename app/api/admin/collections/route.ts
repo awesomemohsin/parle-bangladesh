@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type") || "all";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const srId = searchParams.get("srId");
 
     if (type === "customer-details") {
       const customerId = searchParams.get("customerId");
@@ -283,12 +284,11 @@ export async function GET(request: NextRequest) {
         status: { $in: ["processing", "shipped", "delivered"] },
         paymentStatus: { $ne: "paid" }
       };
-      if (startDate || endDate) {
-        queryCond.createdAt = {};
-        if (startDate) queryCond.createdAt.$gte = new Date(startDate);
-        if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
-      }
       const outstandingOrders = await Order.find(queryCond).sort({ createdAt: -1 }).lean();
+      if (srId) {
+        const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+        queryCond.placedBySR = { $in: [srId, srIdObj].filter(Boolean) };
+      }
       
       // Bulk resolve user types (including admins)
       const orderUserIds = Array.from(new Set(outstandingOrders.map((o: any) => o.userId).filter(Boolean)));
@@ -315,6 +315,34 @@ export async function GET(request: NextRequest) {
           _id: undefined
         };
       });
+
+      // Calculate Total Orders stats (pending, processing, shipped, delivered)
+      const totalOrdersCond: any = {
+        status: { $in: ["pending", "processing", "shipped", "delivered"] }
+      };
+      if (startDate || endDate) {
+        totalOrdersCond.createdAt = {};
+        if (startDate) totalOrdersCond.createdAt.$gte = new Date(startDate);
+        if (endDate) totalOrdersCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+      }
+      if (srId) {
+        const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+        totalOrdersCond.placedBySR = { $in: [srId, srIdObj].filter(Boolean) };
+      }
+      const totalOrdersSum = await Order.aggregate([
+        { $match: totalOrdersCond },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: "$total" },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      responseData.totalOrdersStats = {
+        amount: totalOrdersSum[0]?.totalAmount || 0,
+        count: totalOrdersSum[0]?.count || 0
+      };
     }
 
     // 1b. Completed Invoices (Processing, Shipped, Delivered, paymentStatus === "paid")
@@ -327,6 +355,10 @@ export async function GET(request: NextRequest) {
         queryCond.createdAt = {};
         if (startDate) queryCond.createdAt.$gte = new Date(startDate);
         if (endDate) queryCond.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+      }
+      if (srId) {
+        const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+        queryCond.placedBySR = { $in: [srId, srIdObj].filter(Boolean) };
       }
       const completedOrders = await Order.find(queryCond).sort({ updatedAt: -1 }).lean();
       
@@ -359,24 +391,32 @@ export async function GET(request: NextRequest) {
 
     // 2. Shops / Retailers / Dealers with outstanding dues or wallet balances
     if (type === "all" || type === "shops") {
-      // Find all customers or retailers or users with non-zero balances
-      const B2BShops = await User.find({
+      const B2BShopsQuery: any = {
         $or: [
           { role: "customer" },
           { walletBalance: { $ne: 0 } }
         ]
-      })
+      };
+      if (srId) {
+        const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+        B2BShopsQuery.referredBySR = { $in: [srId, srIdObj].filter(Boolean) };
+      }
+      const B2BShops = await User.find(B2BShopsQuery)
         .select("name email mobile walletBalance creditLimit customerType isSR isRetailerApproved createdAt updatedAt")
         .sort({ updatedAt: -1 })
         .lean();
 
-      // Aggregate order statistics for users
+      const orderStatsCond: any = {
+        userId: { $nin: [null, ""], $exists: true },
+        status: { $in: ["processing", "shipped", "delivered"] }
+      };
+      if (srId) {
+        const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+        orderStatsCond.placedBySR = { $in: [srId, srIdObj].filter(Boolean) };
+      }
       const orderStats = await Order.aggregate([
         {
-          $match: {
-            userId: { $nin: [null, ""], $exists: true },
-            status: { $in: ["processing", "shipped", "delivered"] }
-          }
+          $match: orderStatsCond
         },
         {
           $group: {
@@ -429,17 +469,21 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      // Aggregate guest checkout orders (where userId is missing/null/empty)
+      const guestMatchCond: any = {
+        $or: [
+          { userId: { $exists: false } },
+          { userId: null },
+          { userId: "" }
+        ],
+        status: { $in: ["processing", "shipped", "delivered"] }
+      };
+      if (srId) {
+        const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+        guestMatchCond.placedBySR = { $in: [srId, srIdObj].filter(Boolean) };
+      }
       const guestOrderStats = await Order.aggregate([
         {
-          $match: {
-            $or: [
-              { userId: { $exists: false } },
-              { userId: null },
-              { userId: "" }
-            ],
-            status: { $in: ["processing", "shipped", "delivered"] }
-          }
+          $match: guestMatchCond
         },
         {
           $group: {
@@ -580,6 +624,16 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: "$amount" } } }
       ]);
       responseData.totalCollected = totalCollectionsSum[0]?.total || 0;
+    }
+
+    if (type === "all") {
+      const salesReps = await User.find({ isSR: true }).select("name email mobile").lean();
+      responseData.salesRepresentatives = salesReps.map((sr: any) => ({
+        id: sr._id.toString(),
+        name: sr.name,
+        email: sr.email,
+        mobile: sr.mobile
+      }));
     }
 
     return NextResponse.json(responseData);
@@ -734,6 +788,36 @@ export async function POST(request: NextRequest) {
     // C. Approve Retailer / Lift Probation Limit
     if (action === "approve-retailer") {
       return NextResponse.json({ error: "Direct retailer approval is disabled. Retailer accounts must be approved via the Consensus Promotions dashboard." }, { status: 403 });
+    }
+
+    // D. Force Reconcile All Ledgers
+    if (action === "force-reconcile-all") {
+      const users = await User.find({}).select("_id").lean();
+      const admins = await Admin.find({}).select("_id").lean();
+      const allAccountIds = [
+        ...users.map((u: any) => u._id.toString()),
+        ...admins.map((a: any) => a._id.toString())
+      ];
+
+      const { reconcileUserLedger } = await import("@/lib/ledger");
+      
+      let reconciledCount = 0;
+      let failedCount = 0;
+
+      for (const id of allAccountIds) {
+        try {
+          await reconcileUserLedger(id);
+          reconciledCount++;
+        } catch (err) {
+          console.error(`Failed to reconcile ledger for ID ${id}:`, err);
+          failedCount++;
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully reconciled ${reconciledCount} accounts. Failed: ${failedCount}.`
+      });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

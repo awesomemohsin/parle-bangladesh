@@ -106,7 +106,7 @@ export default function AdminLayout({
     );
   }
 
-  if (pathname.includes('/invoice')) {
+  if (pathname.includes('/invoice') || pathname.includes('/statement')) {
     return <>{children}</>;
   }
 

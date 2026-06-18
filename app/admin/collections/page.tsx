@@ -19,7 +19,8 @@ import {
   Upload,
   Eye,
   Loader2,
-  Download
+  Download,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -60,6 +61,7 @@ interface Order {
   city?: string;
   postalCode?: string;
   updatedAt?: string;
+  userId?: string;
 }
 
 interface Shop {
@@ -118,6 +120,10 @@ export default function CollectionsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
   const [totalCollected, setTotalCollected] = useState(0);
+  const [totalOrdersStats, setTotalOrdersStats] = useState({ amount: 0, count: 0 });
+  const [salesRepresentatives, setSalesRepresentatives] = useState<any[]>([]);
+  const [selectedSR, setSelectedSR] = useState<string>("all");
+  const [reconcileAllLoading, setReconcileAllLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") || "");
 
@@ -281,6 +287,79 @@ export default function CollectionsPage() {
   const [documentUrl, setDocumentUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
+  const [depositModalOrders, setDepositModalOrders] = useState<Order[]>([]);
+  const [depositModalLoading, setDepositModalLoading] = useState(false);
+
+  useEffect(() => {
+    if (walletDepositShop) {
+      setDepositModalLoading(true);
+      const token = localStorage.getItem("token");
+      fetch(`/api/admin/collections?type=customer-details&customerId=${walletDepositShop.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.orders) {
+          // Filter to only processing, shipped, delivered, AND unpaid orders
+          const unpaid = data.orders.filter((o: any) => 
+            o.paymentStatus !== "paid" && 
+            ["processing", "shipped", "delivered"].includes(o.status)
+          );
+          // Sort by createdAt ascending (FIFO)
+          unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          setDepositModalOrders(unpaid);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch customer details for deposit modal", err);
+      })
+      .finally(() => {
+        setDepositModalLoading(false);
+      });
+    } else {
+      setDepositModalOrders([]);
+    }
+  }, [walletDepositShop]);
+
+  const simulatedAllocations = useMemo(() => {
+    let remaining = parseFloat(cashAmount) || 0;
+    const allocations = depositModalOrders.map(order => {
+      const due = order.amountDue !== undefined ? order.amountDue : order.total;
+      let allocated = 0;
+      let statusAfter = order.paymentStatus;
+      
+      if (remaining > 0) {
+        if (remaining >= due) {
+          allocated = due;
+          remaining -= due;
+          statusAfter = "paid";
+        } else {
+          allocated = remaining;
+          remaining = 0;
+          statusAfter = "partial";
+        }
+      }
+      
+      return {
+        id: order.id,
+        total: order.total,
+        dueBefore: due,
+        allocated,
+        dueAfter: due - allocated,
+        statusAfter,
+        createdAt: order.createdAt
+      };
+    });
+    
+    return {
+      allocations,
+      leftoverWalletCredit: remaining
+    };
+  }, [depositModalOrders, cashAmount]);
+
+
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<{
     user: {
       id: string;
@@ -339,6 +418,7 @@ export default function CollectionsPage() {
       query.append("type", "all");
       if (startDate) query.append("startDate", startDate);
       if (endDate) query.append("endDate", endDate);
+      if (selectedSR !== "all") query.append("srId", selectedSR);
       const res = await fetch(`/api/admin/collections?${query.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -351,11 +431,41 @@ export default function CollectionsPage() {
         setShops(data.shops || []);
         setLedgers(data.ledgers || []);
         setTotalCollected(data.totalCollected || 0);
+        setTotalOrdersStats(data.totalOrdersStats || { amount: 0, count: 0 });
+        setSalesRepresentatives(data.salesRepresentatives || []);
       }
     } catch (e) {
       console.error("Failed to load collections statistics", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForceReconcileAll = async () => {
+    if (!confirm("Are you sure you want to force reconcile all customer and admin ledgers? This will re-calculate balances and orders from transaction logs.")) return;
+    setReconcileAllLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/admin/collections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "force-reconcile-all" })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message || "All ledgers reconciled successfully.");
+        await fetchData();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to reconcile ledgers.");
+      }
+    } catch (err) {
+      alert("Error reconciling ledgers: " + err);
+    } finally {
+      setReconcileAllLoading(false);
     }
   };
 
@@ -477,7 +587,7 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, selectedSR]);
 
   useEffect(() => {
     if (!reconcileOrder) {
@@ -913,11 +1023,38 @@ export default function CollectionsPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Console
           </Button>
+
+          <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 px-3 md:px-4 h-11">
+            <User className="w-3.5 h-3.5 text-gray-400" />
+            <select
+              value={selectedSR}
+              onChange={(e) => setSelectedSR(e.target.value)}
+              className="bg-transparent text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer pr-2 md:pr-4"
+            >
+              <option value="all">ALL SALES REPS</option>
+              {salesRepresentatives.map((sr) => (
+                <option key={sr.id} value={sr.id}>
+                  {sr.name.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Button
+            onClick={handleForceReconcileAll}
+            disabled={reconcileAllLoading}
+            variant="outline"
+            className="border-2 border-rose-200 hover:bg-rose-50 rounded-xl flex items-center gap-2 uppercase tracking-wider text-xs font-black text-rose-600 h-11 shadow-sm disabled:opacity-50"
+          >
+            <Loader2 className={`w-3.5 h-3.5 ${reconcileAllLoading ? 'animate-spin' : 'hidden'}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${reconcileAllLoading ? 'hidden' : ''}`} />
+            Reconcile All
+          </Button>
         </div>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Outstanding dues card */}
         <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-xl shadow-slate-100/50 flex items-center justify-between">
           <div>
@@ -975,6 +1112,24 @@ export default function CollectionsPage() {
           </div>
           <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
             <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Total Orders card */}
+        <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-xl shadow-slate-100/50 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+              Total Orders
+            </span>
+            <span className="text-3xl font-black text-indigo-600 tracking-tight italic">
+              ৳{totalOrdersStats.amount.toLocaleString()}
+            </span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">
+              {totalOrdersStats.count} Active Orders
+            </span>
+          </div>
+          <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+            <Package className="w-6 h-6" />
           </div>
         </div>
       </div>
@@ -2591,6 +2746,60 @@ export default function CollectionsPage() {
                 )}
               </div>
 
+              {/* LIVE SIMULATION PREVIEW */}
+              {walletDepositShop && (
+                <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50/50 space-y-3">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex justify-between items-center">
+                    <span>Reconciliation Simulator (FIFO)</span>
+                    {depositModalLoading && <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" />}
+                  </h4>
+                  
+                  {depositModalLoading ? (
+                    <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
+                      Simulating allocation logic...
+                    </div>
+                  ) : depositModalOrders.length === 0 ? (
+                    <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl text-emerald-800 text-[10px] font-medium leading-relaxed">
+                      No outstanding unpaid orders found. The full deposit of <strong className="text-emerald-700 font-extrabold">৳{(parseFloat(cashAmount) || 0).toLocaleString()}</strong> will credit their wallet balance.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5 max-h-[200px] overflow-y-auto pr-1">
+                      {simulatedAllocations.allocations.map((alloc) => (
+                        <div key={alloc.id} className="bg-white border border-slate-100 rounded-xl p-2.5 space-y-1.5 text-[11px] font-medium text-slate-500">
+                          <div className="flex justify-between items-center">
+                            <span className="font-extrabold text-slate-700">Invoice #{alloc.id.slice(-8).toUpperCase()}</span>
+                            <span className="text-[9px] font-bold text-gray-400">{new Date(alloc.createdAt).toLocaleDateString("en-GB")}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span>Due Before: ৳{alloc.dueBefore.toLocaleString()}</span>
+                            <span>Allocated: <strong className={alloc.allocated > 0 ? "text-emerald-600 font-extrabold" : "text-slate-400"}>৳{alloc.allocated.toLocaleString()}</strong></span>
+                          </div>
+                          <div className="flex justify-between items-center border-t border-slate-100 pt-1.5 mt-1">
+                            <span className="text-[9.5px]">Due After: <strong className="text-slate-800 font-extrabold">৳{alloc.dueAfter.toLocaleString()}</strong></span>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${
+                              alloc.statusAfter === "paid" 
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                                : alloc.statusAfter === "partial" 
+                                  ? "bg-amber-50 text-amber-600 border-amber-200"
+                                  : "bg-rose-50 text-rose-500 border-rose-100"
+                            }`}>
+                              {alloc.statusAfter}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {simulatedAllocations.leftoverWalletCredit > 0 && (
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold rounded-xl flex items-center justify-between">
+                          <span>Leftover Wallet Credit:</span>
+                          <span className="text-emerald-700 font-extrabold">+৳{simulatedAllocations.leftoverWalletCredit.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold p-3 rounded-xl">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
                 <span>If the shop has outstanding dues, this deposit will automatically clear the dues first. Any leftover funds will credit the wallet.</span>
@@ -2620,12 +2829,22 @@ export default function CollectionsPage() {
           >
             <div className="flex items-center justify-between border-b pb-3 mb-4">
               <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Customer Profile & Details</h3>
-              <button
-                onClick={() => setSelectedCustomerDetails(null)}
-                className="text-gray-400 hover:text-gray-900 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                {selectedCustomerDetails.user.customerType !== "Guest" && (
+                  <Button
+                    onClick={() => window.open(`/admin/collections/statement/${selectedCustomerDetails.user.id}`, '_blank')}
+                    className="bg-amber-600 hover:bg-black text-white px-3 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all"
+                  >
+                    PDF Statement
+                  </Button>
+                )}
+                <button
+                  onClick={() => setSelectedCustomerDetails(null)}
+                  className="text-gray-400 hover:text-gray-900 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-6">
