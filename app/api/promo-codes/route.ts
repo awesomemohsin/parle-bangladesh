@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     if (!isSR && !hasAnyRole(user, [ROLES.ADMIN, ROLES.MODERATOR, ROLES.SUPER_ADMIN, ROLES.OWNER])) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const promoCodes = await PromoCode.find().sort({ isActive: -1, updatedAt: -1, createdAt: -1 }).lean();
+    const promoCodes = await PromoCode.find().lean();
     
     // Fetch all pending approval requests for promo-codes
     const pendingApprovals = await ApprovalRequest.find({
@@ -66,6 +66,30 @@ export async function GET(req: Request) {
         return promo;
       })
     );
+
+    // Sort by status priority:
+    // 1. Pending approval ('pending')
+    // 2. Live / Active ('approved' & isActive === true)
+    // 3. Other (inactive/declined)
+    // Within each group, sort by latest update/creation time descending.
+    resolvedPromoCodes.sort((a, b) => {
+      const getPriority = (promo: any) => {
+        if (promo.status === 'pending') return 3;
+        if (promo.status === 'approved' && promo.isActive) return 2;
+        return 1;
+      };
+
+      const pA = getPriority(a);
+      const pB = getPriority(b);
+
+      if (pA !== pB) {
+        return pB - pA;
+      }
+
+      const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
 
     return NextResponse.json(resolvedPromoCodes);
   } catch (error: any) {
