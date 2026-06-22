@@ -1719,7 +1719,7 @@ export const THANA_POSTCODES: Record<string, string[]> = {
     "4420"
   ],
   "Guimara": [
-    "1000"
+    "4440"
   ],
   "Khagrachhari Sadar": [
     "4400"
@@ -1740,12 +1740,7 @@ export const THANA_POSTCODES: Record<string, string[]> = {
     "4410"
   ],
   "Ramgarh": [
-    "3720",
-    "3721",
-    "3722",
-    "3723",
-    "3724",
-    "3725"
+    "4440"
   ],
   "Kamalnagar": [
     "1000"
@@ -1778,12 +1773,9 @@ export const THANA_POSTCODES: Record<string, string[]> = {
     "3725"
   ],
   "Ramgati": [
-    "3720",
-    "3721",
-    "3722",
-    "3723",
-    "3724",
-    "3725"
+    "3730",
+    "3731",
+    "3732"
   ],
   "Begumganj": [
     "3820",

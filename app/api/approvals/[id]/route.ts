@@ -530,7 +530,11 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
       }
       
       promoCode.status = 'approved';
-      promoCode.isActive = true;
+      if (approvalRequest.field === 'update' && approvalRequest.targetDetails && approvalRequest.targetDetails.isActive !== undefined) {
+        promoCode.isActive = approvalRequest.targetDetails.isActive;
+      } else {
+        promoCode.isActive = true;
+      }
       await promoCode.save();
     }
   } else if (approvalRequest.type === 'customer') {

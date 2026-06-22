@@ -299,25 +299,25 @@ export default function CollectionsPage() {
           Authorization: `Bearer ${token}`
         }
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.orders) {
-          // Filter to only processing, shipped, delivered, AND unpaid orders
-          const unpaid = data.orders.filter((o: any) => 
-            o.paymentStatus !== "paid" && 
-            ["processing", "shipped", "delivered"].includes(o.status)
-          );
-          // Sort by createdAt ascending (FIFO)
-          unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-          setDepositModalOrders(unpaid);
-        }
-      })
-      .catch(err => {
-        console.error("Failed to fetch customer details for deposit modal", err);
-      })
-      .finally(() => {
-        setDepositModalLoading(false);
-      });
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.orders) {
+            // Filter to only processing, shipped, delivered, AND unpaid orders
+            const unpaid = data.orders.filter((o: any) =>
+              o.paymentStatus !== "paid" &&
+              ["processing", "shipped", "delivered"].includes(o.status)
+            );
+            // Sort by createdAt ascending (FIFO)
+            unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            setDepositModalOrders(unpaid);
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch customer details for deposit modal", err);
+        })
+        .finally(() => {
+          setDepositModalLoading(false);
+        });
     } else {
       setDepositModalOrders([]);
     }
@@ -329,7 +329,7 @@ export default function CollectionsPage() {
       const due = order.amountDue !== undefined ? order.amountDue : order.total;
       let allocated = 0;
       let statusAfter = order.paymentStatus;
-      
+
       if (remaining > 0) {
         if (remaining >= due) {
           allocated = due;
@@ -341,7 +341,7 @@ export default function CollectionsPage() {
           statusAfter = "partial";
         }
       }
-      
+
       return {
         id: order.id,
         total: order.total,
@@ -352,7 +352,7 @@ export default function CollectionsPage() {
         createdAt: order.createdAt
       };
     });
-    
+
     return {
       allocations,
       leftoverWalletCredit: remaining
@@ -1048,7 +1048,7 @@ export default function CollectionsPage() {
           >
             <Loader2 className={`w-3.5 h-3.5 ${reconcileAllLoading ? 'animate-spin' : 'hidden'}`} />
             <RefreshCw className={`w-3.5 h-3.5 ${reconcileAllLoading ? 'hidden' : ''}`} />
-            Reconcile All
+            Update Dues
           </Button>
         </div>
       </div>
@@ -2753,7 +2753,7 @@ export default function CollectionsPage() {
                     <span>Reconciliation Simulator (FIFO)</span>
                     {depositModalLoading && <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" />}
                   </h4>
-                  
+
                   {depositModalLoading ? (
                     <div className="py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider animate-pulse">
                       Simulating allocation logic...
@@ -2776,19 +2776,18 @@ export default function CollectionsPage() {
                           </div>
                           <div className="flex justify-between items-center border-t border-slate-100 pt-1.5 mt-1">
                             <span className="text-[9.5px]">Due After: <strong className="text-slate-800 font-extrabold">৳{alloc.dueAfter.toLocaleString()}</strong></span>
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${
-                              alloc.statusAfter === "paid" 
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
-                                : alloc.statusAfter === "partial" 
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${alloc.statusAfter === "paid"
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                : alloc.statusAfter === "partial"
                                   ? "bg-amber-50 text-amber-600 border-amber-200"
                                   : "bg-rose-50 text-rose-500 border-rose-100"
-                            }`}>
+                              }`}>
                               {alloc.statusAfter}
                             </span>
                           </div>
                         </div>
                       ))}
-                      
+
                       {simulatedAllocations.leftoverWalletCredit > 0 && (
                         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold rounded-xl flex items-center justify-between">
                           <span>Leftover Wallet Credit:</span>
