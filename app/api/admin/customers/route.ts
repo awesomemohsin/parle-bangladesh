@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      customers: filtered.slice(0, 100),
+      customers: filtered,
       counts
     });
   } catch (error) {

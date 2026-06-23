@@ -437,8 +437,10 @@ export default function AdminCustomersPage() {
                   </td>
                 </tr>
               ) : (
-                customers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
+                customers.map((customer) => {
+                  const isStaff = ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(customer.customerType?.toLowerCase());
+                  return (
+                    <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2 mb-1">
@@ -537,7 +539,11 @@ export default function AdminCustomersPage() {
                           )}
                           Profile
                         </Button>
-                        {!customer.isGuest ? (
+                        {isStaff ? (
+                          <div className="text-[9px] font-black text-emerald-600 uppercase tracking-wider bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
+                            Staff
+                          </div>
+                        ) : !customer.isGuest ? (
                           <Button
                             size="sm"
                             onClick={() => {
@@ -586,7 +592,7 @@ export default function AdminCustomersPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                ); })
               )}
             </tbody>
           </table>
