@@ -2137,12 +2137,12 @@ export default function CollectionsPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                      <th className="py-4 px-3">Transaction ID</th>
-                      <th className="py-4 px-3">Date</th>
-                      <th className="py-4 px-3">Shop Profile</th>
-                      <th className="py-4 px-3">Transaction Type</th>
-                      <th className="py-4 px-3">Reference ID</th>
-                      <th className="py-4 px-3">Payment Method</th>
+                      <th className="py-4 px-3">TxID</th>
+                      <th className="py-4 px-3">Tx Time</th>
+                      <th className="py-4 px-3">Account Info</th>
+                      <th className="py-4 px-3">Tx Type</th>
+                      <th className="py-4 px-3">Reference</th>
+                      <th className="py-4 px-3">Method</th>
                       <th className="py-4 px-3">Amount</th>
                       <th className="py-4 px-3">Proof</th>
                       <th className="py-4 px-3">Recorded By</th>
@@ -2155,30 +2155,39 @@ export default function CollectionsPage() {
                         <td colSpan={10} className="py-8 text-center text-gray-400 uppercase tracking-wider">No transaction ledger logs found.</td>
                       </tr>
                     ) : (
-                      filteredLedgers.map((log) => (
-                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-4 px-3 font-mono font-black text-gray-900">
-                            #{log.id.slice(-8).toUpperCase()}
-                          </td>
-                          <td className="py-4 px-3 text-gray-400">
-                            {new Date(log.createdAt).toLocaleString()}
-                          </td>
-                          <td className="py-4 px-3">
-                            {log.userId ? (
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-gray-900">{log.userId.name}</span>
-                                  {renderTypeBadge(log.userId.customerType)}
+                      filteredLedgers.map((log) => {
+                        const u = log.userId;
+                        return (
+                          <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-4 px-3 font-mono font-black text-gray-900">
+                              #{log.id.slice(-8).toUpperCase()}
+                            </td>
+                            <td className="py-4 px-3 text-gray-400 text-[10px] whitespace-nowrap">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-3">
+                              {u ? (
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => fetchCustomerDetails(u.id, ['guest', 'Guest'].includes(u.customerType) ? u.mobile : undefined)}
+                                      className="font-mono text-[9px] font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none shrink-0"
+                                      title="View Customer Profile"
+                                    >
+                                      #{u.id.startsWith("guest-") ? u.id.replace("guest-", "").slice(-8).toUpperCase() : u.id.slice(-8).toUpperCase()}
+                                    </button>
+                                    <span className="font-bold text-gray-900">{u.name}</span>
+                                    {renderTypeBadge(u.customerType)}
+                                  </div>
+                                  <div className="text-[9px] text-gray-400">{u.mobile}</div>
                                 </div>
-                                <div className="text-[9px] text-gray-400">{log.userId.mobile}</div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400 font-bold">Guest Customer</span>
-                                {renderTypeBadge("guest")}
-                              </div>
-                            )}
-                          </td>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 font-bold">Guest Customer</span>
+                                  {renderTypeBadge("guest")}
+                                </div>
+                              )}
+                            </td>
                           <td className="py-4 px-3">
                             <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${log.type === "collection"
                               ? "bg-emerald-50 text-emerald-600 border-emerald-200"
@@ -2259,7 +2268,8 @@ export default function CollectionsPage() {
                             <span>{log.notes || "—"}</span>
                           </td>
                         </tr>
-                      ))
+                      );
+                    })
                     )}
                   </tbody>
                 </table>
@@ -2777,10 +2787,10 @@ export default function CollectionsPage() {
                           <div className="flex justify-between items-center border-t border-slate-100 pt-1.5 mt-1">
                             <span className="text-[9.5px]">Due After: <strong className="text-slate-800 font-extrabold">৳{alloc.dueAfter.toLocaleString()}</strong></span>
                             <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${alloc.statusAfter === "paid"
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                : alloc.statusAfter === "partial"
-                                  ? "bg-amber-50 text-amber-600 border-amber-200"
-                                  : "bg-rose-50 text-rose-500 border-rose-100"
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                              : alloc.statusAfter === "partial"
+                                ? "bg-amber-50 text-amber-600 border-amber-200"
+                                : "bg-rose-50 text-rose-500 border-rose-100"
                               }`}>
                               {alloc.statusAfter}
                             </span>

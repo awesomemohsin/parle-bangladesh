@@ -604,13 +604,53 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      responseData.ledgers = ledgers.map((l: any) => ({
-        ...l,
-        id: l._id.toString(),
-        _id: undefined,
-        orderId: l.orderId ? l.orderId.toString() : undefined,
-        userId: l.userId ? (userMap[l.userId.toString()] || null) : null
-      }));
+      // Extract unique order IDs for guest orders where userId is missing
+      const guestOrderIds = Array.from(
+        new Set(
+          ledgers
+            .filter((l: any) => !l.userId && l.orderId)
+            .map((l: any) => l.orderId)
+        )
+      );
+
+      // Fetch guest order customer details
+      const dbOrders = await Order.find({ _id: { $in: guestOrderIds } })
+        .select("customerName customerPhone customerEmail customerType")
+        .lean();
+
+      const orderMap: Record<string, any> = {};
+      dbOrders.forEach((o: any) => {
+        orderMap[o._id.toString()] = {
+          name: o.customerName,
+          email: o.customerEmail,
+          mobile: o.customerPhone,
+          customerType: o.customerType || "guest"
+        };
+      });
+
+      responseData.ledgers = ledgers.map((l: any) => {
+        let resolvedUserId = null;
+        if (l.userId) {
+          resolvedUserId = userMap[l.userId.toString()] || null;
+        } else if (l.orderId && orderMap[l.orderId.toString()]) {
+          const oInfo = orderMap[l.orderId.toString()];
+          resolvedUserId = {
+            id: `guest-${oInfo.mobile}`,
+            name: oInfo.name || "Guest Customer",
+            email: oInfo.email || "",
+            mobile: oInfo.mobile || "",
+            customerType: oInfo.customerType || "guest"
+          };
+        }
+
+        return {
+          ...l,
+          id: l._id.toString(),
+          _id: undefined,
+          orderId: l.orderId ? l.orderId.toString() : undefined,
+          userId: resolvedUserId
+        };
+      });
 
       // Calculate total collected (collections + wallet deposits) matching date range filters if present
       const collectionsTotalCond: any = { type: { $in: ["collection", "wallet_deposit"] } };
