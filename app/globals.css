@@ -160,4 +160,49 @@
   .animate-shimmer {
     animation: shimmer 2s infinite;
   }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInRight {
+    from {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes flyToCart {
+    0% {
+      transform: translate(0, 0) scale(1) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(0, -600px) scale(0.2) rotate(720deg);
+      opacity: 0;
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+
+  .animate-fade-in-right {
+    animation: fadeInRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-fly-to-cart {
+    animation: flyToCart 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
 }

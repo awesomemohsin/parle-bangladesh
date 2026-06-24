@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeProductImagePath } from "@/lib/utils";
 import { useCart, getItemKey } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +56,8 @@ export default function ProductCard({
   const { user } = useAuth();
   const [isFlying, setIsFlying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [fadeState, setFadeState] = useState(true);
+
   const isDealer = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
   const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
 
@@ -79,6 +80,12 @@ export default function ProductCard({
     setActiveVarIndex(defaultIndex);
     setManualVarIndex(null); // Reset manual selection when default changes
   }, [defaultIndex]);
+
+  useEffect(() => {
+    setFadeState(false);
+    const timer = setTimeout(() => setFadeState(true), 80);
+    return () => clearTimeout(timer);
+  }, [activeVarIndex]);
 
   // Auto-play cycling (every 3s when not hovered and no manual selection exists)
   useEffect(() => {
@@ -232,44 +239,26 @@ export default function ProductCard({
       {/* Image Container */}
       <Link href={productUrl}>
         <div className="relative w-full h-40 sm:h-48 bg-white overflow-hidden flex items-center justify-center p-2 sm:p-3.5">
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              key={activeVarIndex}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.45, ease: "easeInOut" }}
-              className="absolute inset-0 p-2 sm:p-3.5 flex items-center justify-center"
-            >
-              <div className="relative w-full h-full">
-                <Image
-                  src={productImg}
-                  alt={name}
-                  fill
-                  priority={priority}
-                  className="object-contain p-1 sm:p-1.5 group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-              </div>
-            </motion.div>
-          </AnimatePresence>
+          <div className={`absolute inset-0 p-2 sm:p-3.5 flex items-center justify-center transition-opacity duration-300 ${fadeState ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="relative w-full h-full">
+              <Image
+                src={productImg}
+                alt={name}
+                fill
+                priority={priority}
+                className="object-contain p-1 sm:p-1.5 group-hover:scale-105 transition-transform duration-500"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </div>
+          </div>
           {/* Flavor badge overlay with eye-catching premium gradient */}
-          <AnimatePresence mode="popLayout">
-            {activeVariation.flavor && (
-              <motion.div
-                key={activeVariation.flavor}
-                initial={{ opacity: 0, scale: 0.8, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: 8 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-20"
-              >
-                <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-[7.5px] sm:text-[9.5px] uppercase tracking-normal sm:tracking-widest px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-white/20 select-none whitespace-nowrap">
-                  {activeVariation.flavor}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {activeVariation.flavor && (
+            <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-20">
+              <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-[7.5px] sm:text-[9.5px] uppercase tracking-normal sm:tracking-widest px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-white/20 select-none whitespace-nowrap">
+                {activeVariation.flavor}
+              </span>
+            </div>
+          )}
           {isOutOfStock && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30 backdrop-blur-[1px]">
               <span className="bg-white text-gray-900 border border-red-600 px-3 py-0.5 sm:px-4 sm:py-1 font-black text-[10px] sm:text-sm uppercase tracking-tighter">Out of Stock</span>
@@ -291,22 +280,13 @@ export default function ProductCard({
           </h3>
         </Link>
         <div className="flex items-center justify-between mb-1.5 sm:mb-2 min-h-[1rem] sm:min-h-[1.25rem] overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={activeVarIndex}
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest"
-            >
-              {activeVariation.weight || (!activeVariation.flavor ? "Standard" : "")}
-            </motion.span>
-          </AnimatePresence>
+          <span className="text-[10px] sm:text-xs font-bold text-gray-750 uppercase tracking-widest transition-opacity duration-200">
+            {activeVariation.weight || (!activeVariation.flavor ? "Standard" : "")}
+          </span>
 
           {/* Clickable Variant Indicators for Desktop/Mobile */}
           {variations && variations.length > 1 && (
-            <div className="flex items-center gap-1 z-20">
+            <div className="flex items-center gap-0.5 z-20">
               {variations.map((v, idx) => {
                 const isActive = idx === activeVarIndex;
                 const label = [v.weight, v.flavor].filter(Boolean).join(" - ");
@@ -321,12 +301,15 @@ export default function ProductCard({
                       setActiveVarIndex(idx);
                     }}
                     title={label}
-                    className={`h-1.5 rounded-full transition-all duration-300 border-0 cursor-pointer ${
+                    aria-label={`Select variant: ${label}`}
+                    className="h-11 w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
+                  >
+                    <span className={`h-1.5 rounded-full transition-all duration-300 ${
                       isActive 
                         ? "w-3.5 bg-red-600" 
-                        : "w-1.5 bg-gray-200 hover:bg-gray-400"
-                    }`}
-                  />
+                        : "w-1.5 bg-gray-300 hover:bg-gray-400"
+                    }`} />
+                  </button>
                 );
               })}
             </div>
@@ -334,41 +317,32 @@ export default function ProductCard({
         </div>
 
         <div className="flex flex-col gap-0.5 mb-2.5 sm:mb-3.5 min-h-[2rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeVarIndex}
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="flex flex-col gap-0.5"
-            >
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
-                <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
-                  {Math.round(currentPrice)}
-                </span>
-                {hasDealerPrice && (
-                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-100 flex-shrink-0">
-                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-amber-600" />
-                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer</span>
-                  </div>
-                )}
-                {hasRetailerPrice && (
-                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-teal-100 flex-shrink-0">
-                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-teal-600" />
-                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer</span>
-                  </div>
-                )}
-              </div>
-              {hasAnyRetailDiscount && (
-                <div className="flex items-center gap-1 opacity-40">
-                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">৳</span>
-                  <span className="text-[9px] sm:text-[10px] text-gray-500 line-through font-bold">{Math.round(activeVariation.price)}</span>
+          <div className="flex flex-col gap-0.5 transition-opacity duration-200">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
+              <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
+                {Math.round(currentPrice)}
+              </span>
+              {hasDealerPrice && (
+                <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-100 flex-shrink-0">
+                  <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-amber-600" />
+                  <span className="text-[7px] sm:text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer</span>
                 </div>
               )}
-            </motion.div>
-          </AnimatePresence>
+              {hasRetailerPrice && (
+                <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-teal-100 flex-shrink-0">
+                  <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-teal-600" />
+                  <span className="text-[7px] sm:text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer</span>
+                </div>
+              )}
+            </div>
+            {hasAnyRetailDiscount && (
+              <div className="flex items-center gap-1 opacity-45">
+                <span className="text-[9px] sm:text-[10px] font-bold text-gray-600">৳</span>
+                <span className="text-[9px] sm:text-[10px] text-gray-600 line-through font-bold">{Math.round(activeVariation.price)}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Button */}
@@ -382,25 +356,11 @@ export default function ProductCard({
           </Button>
 
           {/* Flying Dot Animation */}
-          <AnimatePresence>
-            {isFlying && (
-              <motion.div
-                initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-                animate={{
-                  x: 0,
-                  y: -800,
-                  scale: 0.2,
-                  opacity: 0,
-                  rotate: 720
-                }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1, ease: "circOut" }}
-                className="absolute left-1/2 top-1/2 -ml-4 -mt-4 w-10 h-10 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-black z-50 pointer-events-none shadow-2xl"
-              >
-                +1
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isFlying && (
+            <div className="absolute left-1/2 top-1/2 -ml-4 -mt-4 w-10 h-10 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-black z-50 pointer-events-none shadow-2xl animate-fly-to-cart">
+              +1
+            </div>
+          )}
         </div>
       </div>
     </div>

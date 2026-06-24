@@ -313,7 +313,7 @@ export default function ShopClient({
       {/* Top Banner Promotional Section */}
       {topBanner && (
         <div className="mb-8 relative w-full aspect-[7/1] rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden bg-slate-50 shadow-xl border border-slate-100 group animate-in fade-in duration-700">
-          <Link href={topBanner.link} className="block relative w-full h-full">
+          <Link href={topBanner.link} className="block relative w-full h-full" aria-label={`Explore offer: ${topBanner.altText || 'Banner promotion'}`}>
             <Image
               src={topBanner.imageUrl}
               alt={topBanner.altText}
@@ -379,7 +379,7 @@ export default function ShopClient({
                     key={promo._id}
                     className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col h-full min-h-[280px] sm:min-h-[360px]"
                   >
-                    <Link href={promo.link} className="absolute inset-0 z-10" />
+                    <Link href={promo.link} className="absolute inset-0 z-10" aria-label={`View special promotion: ${promo.altText || 'Offer Details'}`} />
 
                     {/* Image Container */}
                     <div className="relative w-full flex-grow overflow-hidden bg-slate-50">

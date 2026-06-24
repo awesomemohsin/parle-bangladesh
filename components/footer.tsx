@@ -24,19 +24,19 @@ export default function Footer() {
                 <h3 className="text-[25px] sm:text-[20px] font-black text-red-600 uppercase tracking-tighter italic leading-none">
                   Parle <span className="text-gray-900">Bangladesh</span>
                 </h3>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Official Distributor Hub</p>
+                <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Official Distributor Hub</p>
               </div>
             </Link>
-            <div className="flex items-center gap-2">
-              <Link href="https://www.facebook.com/parlebangladesh/" target="_blank" className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-red-600 hover:bg-black hover:text-white transition-all shadow-sm"><Facebook className="w-4 h-4" /></Link>
-              <Link href="https://wa.me/8801958113002" target="_blank" className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-red-600 hover:bg-black hover:text-white transition-all shadow-sm"><MessageCircle className="w-4 h-4" /></Link>
+            <div className="flex items-center gap-2.5">
+              <Link href="https://www.facebook.com/parlebangladesh/" target="_blank" className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-red-600 hover:bg-black hover:text-white transition-all shadow-sm" aria-label="Visit our Facebook page"><Facebook className="w-5 h-5" /></Link>
+              <Link href="https://wa.me/8801958113002" target="_blank" className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-red-600 hover:bg-black hover:text-white transition-all shadow-sm" aria-label="Contact us on WhatsApp"><MessageCircle className="w-5 h-5" /></Link>
             </div>
           </div>
 
           {/* 2. Catalog Group (Top Right on Mobile | Same Line on Desktop) */}
           <div className="pt-[68px] lg:pt-2 text-right lg:text-left flex flex-col items-end lg:items-start">
             <h4 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-4 border-r-2 lg:border-r-0 lg:border-l-2 border-red-600 pr-2 lg:pr-0 lg:pl-2">Catalog</h4>
-            <ul className="space-y-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <ul className="space-y-3 text-[10px] font-black text-gray-700 uppercase tracking-widest">
               {['Biscuits', 'Wafers'].map((item) => (
                 <li key={item}><Link href={`/shop/categories/${item.toLowerCase()}`} className="hover:text-red-600 transition-colors uppercase">{item}</Link></li>
               ))}
@@ -46,7 +46,7 @@ export default function Footer() {
           {/* 3. Support Group (Left Aligned Always) */}
           <div className="pt-2">
             <h4 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-4 border-l-2 border-red-600 pl-2">Support</h4>
-            <ul className="space-y-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <ul className="space-y-3 text-[10px] font-black text-gray-700 uppercase tracking-widest">
               <li><Link href="/orders" className="hover:text-red-600 transition-colors uppercase">Track Order</Link></li>
               <li><Link href="/about" className="hover:text-red-600 transition-colors uppercase">About Us</Link></li>
               <li><Link href="/contact" className="hover:text-red-600 transition-colors uppercase">Help Center</Link></li>
@@ -85,7 +85,7 @@ export default function Footer() {
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><Building2 className="w-6 h-6 text-blue-600" /></div>
                 <div>
                   <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Corporate <span className="text-blue-600">Inquiry Hub</span></h5>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Bulk orders & institutional queries</p>
+                  <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-0.5">Bulk orders & institutional queries</p>
                 </div>
               </div>
               <Link href="/contact?type=corporate#contact-form" className="w-full xl:w-auto bg-black hover:bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
@@ -99,7 +99,7 @@ export default function Footer() {
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><MapPin className="w-6 h-6 text-red-600" /></div>
                 <div>
                   <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Become <span className="text-red-600">An Official Dealer</span></h5>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Partner with us in your location</p>
+                  <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-0.5">Partner with us in your location</p>
                 </div>
               </div>
               <Link href="/contact?type=dealer#contact-form" className="w-full xl:w-auto bg-black hover:bg-red-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
@@ -111,7 +111,7 @@ export default function Footer() {
       </div>
 
       <div className="bg-slate-50 py-4 text-center border-t border-slate-100 flex flex-col items-center gap-1.5">
-        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">&copy; {new Date().getFullYear()} Parle Bangladesh. All rights reserved.</p>
+        <p className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em]">&copy; {new Date().getFullYear()} Parle Bangladesh. All rights reserved.</p>
       </div>
     </footer>
   );

@@ -5,7 +5,11 @@ import { Analytics } from '@vercel/analytics/next'
 import Script from 'next/script'
 import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
@@ -23,7 +27,6 @@ export const metadata: Metadata = {
 }
 
 import Navbar from '@/components/navbar'
-import Footer from '@/components/footer'
 import { CartProvider } from '@/lib/contexts/CartContext'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { Toaster } from 'sonner'
@@ -31,7 +34,8 @@ import dynamic from 'next/dynamic'
 
 const PromoModal = dynamic(() => import('@/components/promo-modal'))
 const CareerCTA = dynamic(() => import('@/components/career-cta'))
-import SRShopSelector from '@/components/sr-shop-selector'
+const SRShopSelector = dynamic(() => import('@/components/sr-shop-selector'))
+const Footer = dynamic(() => import('@/components/footer'))
 import ScrollToTop from '@/components/scroll-to-top'
 
 export default function RootLayout({
@@ -60,7 +64,7 @@ export default function RootLayout({
         {process.env.NEXT_PUBLIC_META_PIXEL_ID && (
           <>
             {/* Meta Pixel Code */}
-            <Script id="meta-pixel" strategy="afterInteractive">
+            <Script id="meta-pixel" strategy="lazyOnload">
               {`
                 !function(f,b,e,v,n,t,s)
                 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?

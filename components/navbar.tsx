@@ -20,7 +20,6 @@ import {
   Lock,
   Truck
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
 import { useAuth } from '@/hooks/useAuth'
@@ -196,7 +195,7 @@ export default function Navbar() {
               {isAdminRoute ? (
                 <NotificationCenter />
               ) : (
-                <Link href="/shop/cart" className="relative p-2 text-gray-700 hover:text-red-600 transition-colors">
+                <Link href="/shop/cart" className="relative p-3 text-gray-700 hover:text-red-600 transition-colors" aria-label="View Shopping Cart">
                   <ShoppingCart className="w-6 h-6" />
                   {mounted && itemCount > 0 && (
                     <span className="absolute top-0 right-0 h-4 w-4 bg-red-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg">
@@ -207,7 +206,8 @@ export default function Navbar() {
               )}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="p-2 text-gray-900 border-2 border-gray-100 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-sm"
+                className="p-2.5 text-gray-900 border-2 border-gray-100 rounded-xl bg-white hover:bg-gray-50 transition-all shadow-sm"
+                aria-label="Open mobile menu"
               >
                 <Menu className="w-6 h-6" />
               </button>
@@ -330,207 +330,199 @@ export default function Navbar() {
       </div>
     </nav>
 
-    <AnimatePresence>
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[10000] flex justify-end">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
+    {/* Mobile Menu Sidebar */}
+    <div className={`lg:hidden fixed inset-0 z-[10000] flex justify-end transition-all duration-300 ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}>
+      {/* Backdrop */}
+      <div 
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+      />
 
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'tween', duration: 0.3, ease: 'easeOut' }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-80 bg-white h-full shadow-2xl flex flex-col border-l border-gray-100"
-          >
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <span className="text-xs font-black text-gray-900 uppercase tracking-[0.3em]">
-                {isAdminRoute ? 'Admin Engine' : 'Menu Navigation'}
-              </span>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      {/* Sidebar Panel */}
+      <div
+        className={`relative w-80 bg-white h-full shadow-2xl flex flex-col border-l border-gray-100 transition-transform duration-300 ease-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <span className="text-xs font-black text-gray-900 uppercase tracking-[0.3em]">
+            {isAdminRoute ? 'Admin Engine' : 'Menu Navigation'}
+          </span>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors" aria-label="Close menu">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-6 bg-white">
-              {isAdminRoute ? (
-                <>
-                  {(isSuperAdmin || isOwner) && (
-                    <div className="space-y-2">
-                      <p className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-3 ml-1 italic">Approval Center</p>
-                      <div className="flex flex-col gap-2">
-                        <Link href="/admin/approvals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100 group shadow-sm transition-all">
-                          <Shield className="w-4 h-4 text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Pending Approvals</span>
-                        </Link>
-                        <Link href="/admin/approvals/logs" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Historical Logs</span>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Daily Operations</p>
-                    <div className="flex flex-col gap-2">
-                      <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                        <LayoutDashboard className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Dashboard</span>
-                      </Link>
-                      {isModerator && (
-                        <Link href="/admin/orders" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Package className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Order Management</span>
-                        </Link>
-                      )}
-                      {isAdmin && (
-                        <Link href="/admin/contacts" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Mail className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Contact Inquiries</span>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-
-                  {isAdmin && (
-                    <div className="space-y-2">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Catalogue</p>
-                      <div className="flex flex-col gap-2">
-                        <Link href="/admin/inventory" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <ShoppingCart className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Inventory Management</span>
-                        </Link>
-                        <Link href="/admin/products" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Products List</span>
-                        </Link>
-                        <Link href="/admin/categories" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <ListFilter className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Categories</span>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-
-                  {isSuperAdmin && (
-                    <div className="space-y-2">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">System Control</p>
-                      <div className="flex flex-col gap-2">
-                        <Link href="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Users className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Manage Users</span>
-                        </Link>
-                        <Link href="/admin/promo-codes" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Promo Codes</span>
-                        </Link>
-                        <Link href="/admin/activities" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
-                          <Shield className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">System Logs</span>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-4">
-                    <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-5 bg-red-600 text-white rounded-2xl shadow-xl shadow-red-100/50 group active:scale-95 transition-all">
-                      <ShoppingBag className="w-5 h-5 text-white" />
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">Back to Site</span>
+        <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-6 bg-white">
+          {isAdminRoute ? (
+            <>
+              {(isSuperAdmin || isOwner) && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-3 ml-1 italic">Approval Center</p>
+                  <div className="flex flex-col gap-2">
+                    <Link href="/admin/approvals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100 group shadow-sm transition-all">
+                      <Shield className="w-4 h-4 text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Pending Approvals</span>
+                    </Link>
+                    <Link href="/admin/approvals/logs" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Clock className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Historical Logs</span>
                     </Link>
                   </div>
-                </>
-              ) : (
-                currentLinks.map((item) => {
-                  const isOffers = item.href === '/offers';
-                  return (
-                    !item.hide && (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center justify-between p-5 rounded-2xl transition-all border group shadow-sm ${
-                          item.isSpecial 
-                            ? 'bg-red-600 border-red-500 text-white shadow-red-100' 
-                            : isOffers
-                            ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-amber-50/50'
-                            : 'bg-gray-50 hover:bg-gray-100 border-gray-100'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`${item.isSpecial ? 'text-white' : isOffers ? 'text-amber-600' : 'text-gray-400 group-hover:text-red-600'} transition-colors`}>
-                            {item.icon}
-                          </div>
-                          <span className={`text-[11px] font-black uppercase tracking-widest ${item.isSpecial ? 'text-white' : isOffers ? 'text-amber-800' : 'text-gray-900'}`}>
-                            {item.label}
-                          </span>
-                        </div>
-                        {isOffers && (
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
-                          </span>
-                        )}
-                      </Link>
-                    )
-                  );
-                })
+                </div>
               )}
 
-              <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
-                {isLoggedIn ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="p-5 bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden relative group">
-                      <div className="relative z-10">
-                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic opacity-60">Connected Account</p>
-                        <p className="text-xs font-black text-white truncate font-sans mb-0.5">{user?.name}</p>
-                        {user?.mobile && (
-                          <p className="text-[10px] font-medium text-gray-400 font-sans mb-4">{user.mobile}</p>
-                        )}
-
-                        <div className="grid grid-cols-1 gap-2">
-                          {isModerator && (
-                            <Link href="/admin/profile" onClick={() => setIsMobileMenuOpen(false)}>
-                              <Button className="w-full h-11 bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border border-white/10">
-                                My Profile & Security
-                              </Button>
-                            </Link>
-                          )}
-                          {isModerator && !isAdminRoute && (
-                            <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                              <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
-                                Admin Panel
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-[60px] pointer-events-none" />
-                    </div>
-                    <Button onClick={handleLogout} variant="ghost" className="w-full text-red-600 font-black uppercase text-[10px] h-14 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white transition-all tracking-widest">Logout</Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Sign Up</Button>
+              <div className="space-y-2">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1 italic">Daily Operations</p>
+                <div className="flex flex-col gap-2">
+                  <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                    <LayoutDashboard className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Dashboard</span>
+                  </Link>
+                  {isModerator && (
+                    <Link href="/admin/orders" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Package className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Order Management</span>
                     </Link>
-                    <Link href={`/auth/login?callbackUrl=${pathname}`} onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login</Button>
+                  )}
+                  {isAdmin && (
+                    <Link href="/admin/contacts" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Mail className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Contact Inquiries</span>
                     </Link>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          </motion.div>
+
+              {isAdmin && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] mb-3 ml-1 italic">Catalogue</p>
+                  <div className="flex flex-col gap-2">
+                    <Link href="/admin/inventory" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <ShoppingCart className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Inventory Management</span>
+                    </Link>
+                    <Link href="/admin/products" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Products List</span>
+                    </Link>
+                    <Link href="/admin/categories" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <ListFilter className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Categories</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] mb-3 ml-1 italic">System Control</p>
+                  <div className="flex flex-col gap-2">
+                    <Link href="/admin/users" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Users className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Manage Users</span>
+                    </Link>
+                    <Link href="/admin/promo-codes" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Tag className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">Promo Codes</span>
+                    </Link>
+                    <Link href="/admin/activities" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group shadow-sm transition-all">
+                      <Shield className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900">System Logs</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4">
+                <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-5 bg-red-600 text-white rounded-2xl shadow-xl shadow-red-100/50 group active:scale-95 transition-all">
+                  <ShoppingBag className="w-5 h-5 text-white" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em]">Back to Site</span>
+                </Link>
+              </div>
+            </>
+          ) : (
+            currentLinks.map((item) => {
+              const isOffers = item.href === '/offers';
+              return (
+                !item.hide && (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center justify-between p-5 rounded-2xl transition-all border group shadow-sm ${
+                      item.isSpecial 
+                        ? 'bg-red-600 border-red-500 text-white shadow-red-100' 
+                        : isOffers
+                        ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-amber-50/50'
+                        : 'bg-gray-50 hover:bg-gray-100 border-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`${item.isSpecial ? 'text-white' : isOffers ? 'text-amber-600' : 'text-gray-400 group-hover:text-red-600'} transition-colors`}>
+                        {item.icon}
+                      </div>
+                      <span className={`text-[11px] font-black uppercase tracking-widest ${item.isSpecial ? 'text-white' : isOffers ? 'text-amber-800' : 'text-gray-900'}`}>
+                        {item.label}
+                      </span>
+                    </div>
+                    {isOffers && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+                      </span>
+                    )}
+                  </Link>
+                )
+              );
+            })
+          )}
+
+          <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
+            {isLoggedIn ? (
+              <div className="flex flex-col gap-3">
+                <div className="p-5 bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl overflow-hidden relative group">
+                  <div className="relative z-10">
+                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic opacity-60">Connected Account</p>
+                    <p className="text-xs font-black text-white truncate font-sans mb-0.5">{user?.name}</p>
+                    {user?.mobile && (
+                      <p className="text-[10px] font-medium text-gray-400 font-sans mb-4">{user.mobile}</p>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-2">
+                      {isModerator && (
+                        <Link href="/admin/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                          <Button className="w-full h-11 bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border border-white/10">
+                            My Profile & Security
+                          </Button>
+                        </Link>
+                      )}
+                      {isModerator && !isAdminRoute && (
+                        <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                          <Button className="w-full h-11 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl border-none shadow-xl shadow-red-900/20">
+                            Admin Panel
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-[60px] pointer-events-none" />
+                </div>
+                <Button onClick={handleLogout} variant="ghost" className="w-full text-red-600 font-black uppercase text-[10px] h-14 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white transition-all tracking-widest">Logout</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="w-full bg-red-600 hover:bg-black text-white font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-xl shadow-red-100">Sign Up</Button>
+                </Link>
+                <Link href={`/auth/login?callbackUrl=${pathname}`} onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full bg-white text-gray-900 border-gray-200 font-black uppercase text-[11px] tracking-widest h-14 rounded-2xl shadow-sm">Login</Button>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </AnimatePresence>
+      </div>
+    </div>
     </>
   )
 }

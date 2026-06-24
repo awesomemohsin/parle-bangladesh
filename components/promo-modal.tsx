@@ -142,9 +142,10 @@ export default function PromoModal() {
                   {/* Close Button */}
                   <button
                   onClick={handleClose}
-                  className="absolute top-4 right-4 md:-top-12 md:right-0 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                  className="absolute top-4 right-4 md:-top-12 md:right-0 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                  aria-label="Close promotion"
                   >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                   </button>
 
                   {/* Side Controls */}
@@ -152,13 +153,15 @@ export default function PromoModal() {
                       <>
                           <button
                               onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                              className="absolute left-4 md:-left-16 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                              className="absolute left-4 md:-left-16 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                              aria-label="Previous promotion"
                           >
                               <ChevronLeft className="w-6 h-6" />
                           </button>
                           <button
                               onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                              className="absolute right-4 md:-right-16 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                              className="absolute right-4 md:-right-16 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all z-20 backdrop-blur-md border border-white/10"
+                              aria-label="Next promotion"
                           >
                               <ChevronRight className="w-6 h-6" />
                           </button>
@@ -205,7 +208,11 @@ export default function PromoModal() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                   >
-                      <Link href={posters[currentIndex].link} onClick={handleAction}>
+                      <Link 
+                        href={posters[currentIndex].link} 
+                        onClick={handleAction}
+                        aria-label={posters[currentIndex].buttonText && posters[currentIndex].buttonText.toUpperCase() !== 'READ MORE' ? posters[currentIndex].buttonText : `Explore promotion: ${posters[currentIndex].altText || 'Details'}`}
+                      >
                       <span className="bg-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2 sm:gap-3 group/btn">
                           {posters[currentIndex].buttonText || 'Shop Now'} <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover/btn:translate-x-1 transition-transform" />
                       </span>
@@ -214,15 +221,18 @@ export default function PromoModal() {
 
                   {/* Indicators */}
                   {posters.length > 1 && (
-                      <div className="flex justify-center gap-3">
+                      <div className="flex justify-center items-center gap-1.5">
                           {posters.map((_, idx) => (
                           <button
                               key={idx}
                               onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
-                              className={`h-1.5 rounded-full transition-all duration-300 ${
-                              currentIndex === idx ? 'w-12 bg-white' : 'w-2 bg-white/20 hover:bg-white/40'
-                              }`}
-                          />
+                              className="h-11 w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
+                              aria-label={`Go to promotion slide ${idx + 1}`}
+                          >
+                              <span className={`h-1.5 rounded-full transition-all duration-300 ${
+                              currentIndex === idx ? 'w-10 bg-white' : 'w-2.5 bg-white/20 hover:bg-white/40'
+                              }`} />
+                          </button>
                           ))}
                       </div>
                   )}

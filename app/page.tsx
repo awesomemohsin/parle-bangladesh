@@ -1,13 +1,21 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import ProductCard from '@/components/product-card'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Star, Truck, ShieldCheck, Banknote, Zap } from 'lucide-react'
 import { getProducts, getCategories } from '@/lib/data'
-import { HomeHero, MotionDiv } from '@/components/home-client'
-import HomeProductSection from '@/components/home/product-section'
+import HomeHero from '@/components/home-hero'
+import dynamic from 'next/dynamic'
 import connectDB from '@/lib/db'
 import { PromoPoster } from '@/lib/models'
+
+const HomeProductSection = dynamic(() => import('@/components/home/product-section'), {
+  loading: () => (
+    <div className="h-[400px] flex items-center justify-center text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">
+      Loading products...
+    </div>
+  ),
+  ssr: true,
+})
 
 export const metadata = {
   title: 'Home | Parle Bangladesh',
@@ -34,7 +42,7 @@ export default async function HomePage() {
       {/* Promotional Offer Section */}
       <section className="bg-slate-50 border-b overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <MotionDiv>
+          <div className="animate-fade-in-up">
             <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden">
               <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-white rounded-xl flex items-center justify-center relative overflow-hidden group border border-slate-50 shadow-inner">
                 <Image
@@ -54,20 +62,20 @@ export default async function HomePage() {
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight leading-none uppercase mb-1.5">
                   Free Delivery Today
                 </h2>
-                <p className="text-xs text-gray-400 font-bold tracking-tight uppercase mb-0 max-w-lg">
+                <p className="text-xs text-gray-600 font-bold tracking-tight uppercase mb-0 max-w-lg">
                   Shop for <span className="text-gray-900 font-black">৳ 1000+</span> and get <span className="text-red-600 font-black italic">Free delivery</span> everywhere in Bangladesh.
                 </p>
               </div>
 
               <div className="md:w-[20%] p-4 w-full">
-                <Link href="/shop" className="w-full">
+                <Link href="/shop" className="w-full" aria-label="Shop our products now">
                   <Button className="w-full h-14 rounded-lg bg-white text-black hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 text-[10px]">
                     Shop Now
                   </Button>
                 </Link>
               </div>
             </div>
-          </MotionDiv>
+          </div>
         </div>
       </section>
 
@@ -87,7 +95,7 @@ export default async function HomePage() {
                 </div>
                 <div>
                   <h4 className="text-sm md:text-base font-black text-gray-900 uppercase tracking-tight">{badge.label}</h4>
-                  <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest">{badge.sub}</p>
+                  <p className="text-[10px] md:text-xs text-gray-700 font-bold uppercase tracking-widest">{badge.sub}</p>
                 </div>
               </div>
             ))}
@@ -108,14 +116,14 @@ export default async function HomePage() {
                 Choose by Category
               </h2>
             </div>
-            <Link href="/shop" className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-red-600 transition-all flex items-center gap-2">
+            <Link href="/shop" className="text-[10px] font-bold uppercase tracking-widest text-gray-700 hover:text-red-600 transition-all flex items-center gap-2" aria-label="View all product categories">
               See All <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full items-stretch animate-fade-in-up">
             {categories.map((cat: any, i: number) => (
-              <MotionDiv key={cat._id || i} i={i} className="h-full">
+              <div key={cat._id || i} className="h-full">
                 <Link
                   href={`/shop?category=${cat.slug}`}
                   className="group flex flex-col h-full bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl shadow-slate-200/50 transition-all hover:shadow-2xl hover:shadow-red-200/40 hover:border-red-100 hover:-translate-y-2 relative"
@@ -125,7 +133,6 @@ export default async function HomePage() {
                       src={cat.image || `/images/${cat.slug}/${cat.slug}.webp`}
                       alt={cat.name}
                       fill
-                      priority={i < 2}
                       sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-cover transition-opacity duration-700 group-hover:opacity-95"
                     />
@@ -140,18 +147,18 @@ export default async function HomePage() {
                           <ArrowRight className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
                        </div>
                     </div>
-                    <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest line-clamp-2 max-w-[85%] leading-relaxed mt-auto">
+                    <p className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-widest line-clamp-2 max-w-[85%] leading-relaxed mt-auto">
                       {cat.description || `Explore our complete selection of freshly baked ${cat.name}.`}
                     </p>
                   </div>
                 </Link>
-              </MotionDiv>
+              </div>
             ))}
           </div>
 
           {categoryBottomPoster && (
-            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-6 md:mt-12">
-              <Link href={categoryBottomPoster.link}>
+            <div className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-6 md:mt-12">
+              <Link href={categoryBottomPoster.link} aria-label={`Explore collection: ${categoryBottomPoster.altText || 'Special Offer'}`}>
                 <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
                   <Image
                     src={categoryBottomPoster.imageUrl}
@@ -163,7 +170,7 @@ export default async function HomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
                 </div>
               </Link>
-            </MotionDiv>
+            </div>
           )}
         </div>
       </section>
@@ -207,7 +214,7 @@ export default async function HomePage() {
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight uppercase italic leading-none mb-4 md:mb-6">
               Best Sellers
             </h2>
-            <p className="text-gray-400 text-sm max-w-xl mx-auto font-bold uppercase tracking-tight">
+            <p className="text-gray-700 text-sm max-w-xl mx-auto font-bold uppercase tracking-tight">
               Most loved snacks loved by customers across the country.
             </p>
           </div>
@@ -224,8 +231,8 @@ export default async function HomePage() {
           )}
 
           {bestSellersBottomPoster && (
-            <MotionDiv className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-8 md:mt-16">
-              <Link href={bestSellersBottomPoster.link}>
+            <div className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-8 md:mt-16">
+              <Link href={bestSellersBottomPoster.link} aria-label={`Explore best sellers: ${bestSellersBottomPoster.altText || 'Featured Promotion'}`}>
                 <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
                   <Image
                     src={bestSellersBottomPoster.imageUrl}
@@ -237,7 +244,7 @@ export default async function HomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
                 </div>
               </Link>
-            </MotionDiv>
+            </div>
           )}
 
           <div className="mt-8 text-center">
@@ -274,7 +281,7 @@ export default async function HomePage() {
               </div>
               <Link href="/shop">
                 <Button size="lg" variant="secondary" className="h-14 px-10 rounded-xl font-bold uppercase tracking-widest bg-white text-red-600 hover:bg-slate-50 transition-colors text-xs shadow-xl shadow-black/10">
-                  Read More
+                  Explore Products
                 </Button>
               </Link>
             </div>
