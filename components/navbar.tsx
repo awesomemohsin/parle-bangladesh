@@ -109,7 +109,7 @@ export default function Navbar() {
     { label: 'Offers', href: '/offers', icon: <Tag className="w-4 h-4" />, isSpecial: false }
   ]
 
-  const renderTickerContent = () => {
+  const renderTickerContent = (isDuplicate: boolean = false) => {
     const items: React.ReactNode[] = [];
     if (tickerOffers.length > 0) {
       // Repeat offers list to ensure it covers screens and loops seamlessly
@@ -121,6 +121,7 @@ export default function Navbar() {
               key={`${offer._id || idx}-${r}`} 
               href={`/offers/${offer.slug}`}
               className="flex items-center gap-3 hover:underline cursor-pointer"
+              tabIndex={isDuplicate ? -1 : undefined}
             >
               <span className="flex items-center gap-1 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
                 🔥 HOT DEAL
@@ -144,6 +145,7 @@ export default function Navbar() {
             key={`welcome-${r}`}
             href="/shop" 
             className="flex items-center gap-3 hover:underline cursor-pointer"
+            tabIndex={isDuplicate ? -1 : undefined}
           >
             <span className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
               ✨ WELCOME
@@ -324,7 +326,7 @@ export default function Navbar() {
             {renderTickerContent()}
           </div>
           <div className="animate-ticker-marquee text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-16 pr-16 shrink-0" aria-hidden="true">
-            {renderTickerContent()}
+            {renderTickerContent(true)}
           </div>
         </div>
       </div>

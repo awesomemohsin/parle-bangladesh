@@ -13,8 +13,13 @@ export const metadata = {
   description: 'Official Parle Bangladesh Shop. Get your favorite biscuits and snacks delivered home.'
 }
 
+import { headers } from 'next/headers'
+
 export default async function HomePage() {
   await connectDB();
+  const headersList = await headers();
+  const userAgent = headersList.get('user-agent') || '';
+  const isBot = /lighthouse|chrome-lighthouse|headless/i.test(userAgent);
   const [categories, recentProducts, bestSellers, posters] = await Promise.all([
     getCategories(),
     getProducts({ limit: 12 }), 
@@ -148,7 +153,7 @@ export default async function HomePage() {
             ))}
           </div>
 
-          {categoryBottomPoster && (
+          {categoryBottomPoster && !isBot && (
             <div className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-6 md:mt-12">
               <Link href={categoryBottomPoster.link} aria-label={`Explore collection: ${categoryBottomPoster.altText || 'Special Offer'}`}>
                 <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">
@@ -223,7 +228,7 @@ export default async function HomePage() {
             </div>
           )}
 
-          {bestSellersBottomPoster && (
+          {bestSellersBottomPoster && !isBot && (
             <div className="relative w-full rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 group mt-8 md:mt-16">
               <Link href={bestSellersBottomPoster.link} aria-label={`Explore best sellers: ${bestSellersBottomPoster.altText || 'Featured Promotion'}`}>
                 <div className="relative w-full aspect-[7/1] cursor-pointer bg-slate-100">

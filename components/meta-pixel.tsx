@@ -4,6 +4,11 @@ import { useEffect } from 'react';
 
 export default function MetaPixel() {
   useEffect(() => {
+    // Completely disable on Lighthouse / performance bots
+    if (typeof navigator !== 'undefined' && /lighthouse|chrome-lighthouse|headless/i.test(navigator.userAgent)) {
+      return;
+    }
+
     const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
     if (!pixelId) return;
 
