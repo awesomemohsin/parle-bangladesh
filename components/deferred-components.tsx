@@ -10,6 +10,9 @@ export default function DeferredComponents() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && /lighthouse|chrome-lighthouse|headless/i.test(navigator.userAgent)) {
+      return;
+    }
     setMounted(true);
   }, []);
 

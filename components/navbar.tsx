@@ -23,7 +23,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
 import { useAuth } from '@/hooks/useAuth'
-import NotificationCenter from '@/components/admin/notification-center'
+import dynamic from 'next/dynamic'
+const NotificationCenter = dynamic(() => import('@/components/admin/notification-center'), { ssr: false })
 import Image from 'next/image'
 
 export default function Navbar() {

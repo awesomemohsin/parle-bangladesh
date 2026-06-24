@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, Star, Truck, ShieldCheck, Banknote, Zap } from 'lucide-react'
 import { getProducts, getCategories } from '@/lib/data'
 import HomeHero from '@/components/home-hero'
-import HomeProductSection from '@/components/home/product-section'
+import dynamic from 'next/dynamic'
+const HomeProductSection = dynamic(() => import('@/components/home/product-section'))
 import connectDB from '@/lib/db'
 import { PromoPoster } from '@/lib/models'
 
