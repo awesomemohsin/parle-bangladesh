@@ -305,6 +305,7 @@ export default function PromoModal() {
             whileHover={{ scale: 1.1, rotate: 0 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(true)}
+            aria-label="Special Offers"
             className="fixed bottom-6 right-6 z-[250] bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white rounded-full p-4 shadow-[0_0_25px_rgba(220,38,38,0.7)] flex items-center gap-3 border-2 border-white/30 group backdrop-blur-md transition-all hover:shadow-[0_0_35px_rgba(220,38,38,0.95)]"
           >
             <div className="relative flex items-center justify-center">
