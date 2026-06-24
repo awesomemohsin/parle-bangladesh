@@ -15,6 +15,10 @@ import { motion, AnimatePresence } from "framer-motion";
 const formatCurrency = (val: number) => `৳${val.toFixed(2)}`;
 const formatDate = (dateString: string) => new Date(dateString).toLocaleString()
 
+const isInvoiceEnabled = (order: Order) => {
+  return order.status !== 'pending';
+};
+
 const OrderTimer = ({ createdAt, onTimeout }: { createdAt: string; onTimeout: () => void }) => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
@@ -91,6 +95,7 @@ interface Order {
   customerType?: string;
   amountPaid?: number;
   amountDue?: number;
+  orderLogs?: any[];
 }
 
 export default function MyOrdersPage() {
@@ -420,7 +425,8 @@ export default function MyOrdersPage() {
                           order.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
                             order.status === 'damaged' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                               order.status === 'lost' ? 'bg-gray-50 text-gray-700 border-gray-100' :
-                                'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                  'bg-blue-50 text-blue-700 border-blue-100'}`}>
                       {order.status}
                     </span>
                   </div>
@@ -458,7 +464,8 @@ export default function MyOrdersPage() {
                 {(order.statusReason || order.cancelReason) && (
                   <div className={`px-4 py-1.5 border-b text-[10px] font-bold ${order.status === 'cancelled' ? 'bg-red-50/30 text-red-700 border-red-50' :
                     order.status === 'damaged' ? 'bg-amber-50/30 text-amber-700 border-amber-50' :
-                      'bg-gray-50/30 text-gray-700 border-gray-50'
+                      order.status === 'returned' ? 'bg-purple-50/30 text-purple-700 border-purple-50' :
+                        'bg-gray-50/30 text-gray-700 border-gray-50'
                     }`}>
                     <span className="uppercase tracking-widest text-[8px] opacity-60 mr-2">{order.status} REASON:</span>
                     {order.statusReason || order.cancelReason}
@@ -551,7 +558,7 @@ export default function MyOrdersPage() {
                     {/* Summary Segment - Compact */}
                     <div className="flex justify-between items-end border-t border-gray-50 pt-2 mt-auto">
                       <div className="flex flex-wrap gap-2">
-                        {order.status === 'delivered' && (
+                        {isInvoiceEnabled(order) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -678,7 +685,7 @@ export default function MyOrdersPage() {
                     <span className="px-3 py-1 sm:px-4 sm:py-1.5 bg-red-600 text-white text-[8px] sm:text-[10px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-red-600/20">
                       {previewOrder?.status}
                     </span>
-                    {previewOrder?.status === 'delivered' && (
+                    {previewOrder && isInvoiceEnabled(previewOrder) && (
                       <button
                         onClick={() => window.open(`/orders/${previewOrder.id}/invoice`, '_blank')}
                         className="flex items-center gap-1 text-[8px] font-black text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest"

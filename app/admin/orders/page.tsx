@@ -56,6 +56,10 @@ interface Order {
   srDiscountAmount?: number
 }
 
+const isInvoiceEnabled = (order: Order, currentStatus: string) => {
+  return currentStatus !== 'pending';
+}
+
 export default function AdminOrdersPage() {
   const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
@@ -251,7 +255,7 @@ export default function AdminOrdersPage() {
     if (!newStatus) return
 
     let statusReason = '';
-    const reasonRequiredStatuses = ['cancelled', 'damaged', 'lost'];
+    const reasonRequiredStatuses = ['cancelled', 'damaged', 'lost', 'returned'];
 
     if (reasonRequiredStatuses.includes(newStatus)) {
       const reason = window.prompt(`Please enter the ${newStatus} reason:`);
@@ -423,6 +427,7 @@ export default function AdminOrdersPage() {
               <option value="delivered">Delivered</option>
               <option value="damaged">Damaged</option>
               <option value="lost">Lost</option>
+              <option value="returned">Returned</option>
             </select>
           </div>
           <div className="flex-1 sm:w-44 relative">
@@ -581,17 +586,27 @@ export default function AdminOrdersPage() {
                         <select
                           value={currentStatus}
                           onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                          disabled={['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval || isSaving[order.id] || (order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid')}
+                          disabled={['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) || order.pendingApproval || isSaving[order.id] || (order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid' && order.status !== 'delivered')}
                           className={`flex-1 sm:flex-none px-3 py-2 border rounded-lg text-xs font-black uppercase tracking-widest focus:outline-none transition-all ${hasChange ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                            } ${(['cancelled', 'lost', 'damaged', 'delivered'].includes(order.status) || order.pendingApproval || (order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid')) ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+                            } ${(['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) || order.pendingApproval || (order.paymentMethod === 'sslcommerz' && order.paymentStatus !== 'paid' && order.status !== 'delivered')) ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
                         >
-                          {userRole !== 'moderator' && <option value="pending">Pending</option>}
-                          <option value="cancelled">Cancelled</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="damaged">Damaged</option>
-                          <option value="lost">Lost</option>
+                          {order.status === 'delivered' ? (
+                            <>
+                              <option value="delivered">Delivered</option>
+                              <option value="returned">Returned</option>
+                            </>
+                          ) : (
+                            <>
+                              {userRole !== 'moderator' && <option value="pending">Pending</option>}
+                              <option value="cancelled">Cancelled</option>
+                              <option value="processing">Processing</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                              <option value="damaged">Damaged</option>
+                              <option value="lost">Lost</option>
+                              <option value="returned">Returned</option>
+                            </>
+                          )}
                         </select>
                         {order.status === 'delivered' && (
                           <div className="mt-1.5 flex flex-col items-start sm:items-end">
@@ -605,7 +620,7 @@ export default function AdminOrdersPage() {
                             </span>
                           </div>
                         )}
-                        {!['pending', 'cancelled'].includes(currentStatus) && (
+                        {isInvoiceEnabled(order, currentStatus) && (
                           <Button
                             size="sm"
                             variant="outline"
