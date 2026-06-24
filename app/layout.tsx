@@ -33,6 +33,9 @@ import { Toaster } from 'sonner'
 import Footer from '@/components/footer'
 import DeferredComponents from '@/components/deferred-components'
 import ScrollToTop from '@/components/scroll-to-top'
+import CareerCTA from '@/components/career-cta'
+
+
 
 export default function RootLayout({
   children,
@@ -51,6 +54,7 @@ export default function RootLayout({
             <main className="flex-grow pt-[104px]">
               {children}
             </main>
+            <CareerCTA />
             <Footer />
           </CartProvider>
         </AuthProvider>
