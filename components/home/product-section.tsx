@@ -54,12 +54,14 @@ export default function HomeProductSection({ products, type }: ProductSectionPro
           <button
             onClick={() => setPage((prev) => (prev - 1 + 2) % 2)}
             className="absolute -left-2 lg:-left-12 top-1/2 -translate-y-1/2 z-30 w-12 h-12 bg-white rounded-full shadow-xl border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-600 hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100"
+            aria-label="Previous products"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={() => setPage((prev) => (prev + 1) % 2)}
             className="absolute -right-2 lg:-right-12 top-1/2 -translate-y-1/2 z-30 w-12 h-12 bg-white rounded-full shadow-xl border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-600 hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100"
+            aria-label="Next products"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
@@ -88,15 +90,18 @@ export default function HomeProductSection({ products, type }: ProductSectionPro
 
       {/* Pagination Indicators */}
       {displayProducts.length > 4 && (
-        <div className="flex justify-center gap-2 mt-12">
+        <div className="flex justify-center items-center gap-1 mt-12">
           {[0, 1].map((i) => (
             <button
               key={i}
               onClick={() => setPage(i)}
-              className={`h-1.5 transition-all duration-500 rounded-full ${
-                page === i ? 'w-10 bg-red-600' : 'w-2 bg-gray-200 hover:bg-gray-300'
-              }`}
-            />
+              className="h-11 w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
+              aria-label={`Go to slide ${i + 1}`}
+            >
+              <span className={`h-1.5 transition-all duration-500 rounded-full ${
+                page === i ? 'w-10 bg-red-600' : 'w-2 bg-gray-300 hover:bg-gray-450'
+              }`} />
+            </button>
           ))}
         </div>
       )}

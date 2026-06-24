@@ -211,7 +211,7 @@ export default function PromoModal() {
                       <Link 
                         href={posters[currentIndex].link} 
                         onClick={handleAction}
-                        aria-label={posters[currentIndex].buttonText && posters[currentIndex].buttonText.toUpperCase() !== 'READ MORE' ? posters[currentIndex].buttonText : `Explore promotion: ${posters[currentIndex].altText || 'Details'}`}
+                        aria-label={posters[currentIndex].buttonText && posters[currentIndex].buttonText.toUpperCase() !== 'READ MORE' ? posters[currentIndex].buttonText : `Explore promotion: ${posters[currentIndex].alt || 'Details'}`}
                       >
                       <span className="bg-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2 sm:gap-3 group/btn">
                           {posters[currentIndex].buttonText || 'Shop Now'} <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover/btn:translate-x-1 transition-transform" />

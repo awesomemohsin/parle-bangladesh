@@ -4,18 +4,9 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, Star, Truck, ShieldCheck, Banknote, Zap } from 'lucide-react'
 import { getProducts, getCategories } from '@/lib/data'
 import HomeHero from '@/components/home-hero'
-import dynamic from 'next/dynamic'
+import HomeProductSection from '@/components/home/product-section'
 import connectDB from '@/lib/db'
 import { PromoPoster } from '@/lib/models'
-
-const HomeProductSection = dynamic(() => import('@/components/home/product-section'), {
-  loading: () => (
-    <div className="h-[400px] flex items-center justify-center text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">
-      Loading products...
-    </div>
-  ),
-  ssr: true,
-})
 
 export const metadata = {
   title: 'Home | Parle Bangladesh',

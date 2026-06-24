@@ -30,12 +30,8 @@ import Navbar from '@/components/navbar'
 import { CartProvider } from '@/lib/contexts/CartContext'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { Toaster } from 'sonner'
-import dynamic from 'next/dynamic'
-
-const PromoModal = dynamic(() => import('@/components/promo-modal'))
-const CareerCTA = dynamic(() => import('@/components/career-cta'))
-const SRShopSelector = dynamic(() => import('@/components/sr-shop-selector'))
-const Footer = dynamic(() => import('@/components/footer'))
+import Footer from '@/components/footer'
+import DeferredComponents from '@/components/deferred-components'
 import ScrollToTop from '@/components/scroll-to-top'
 
 export default function RootLayout({
@@ -50,13 +46,11 @@ export default function RootLayout({
           <CartProvider>
             <Toaster position="top-center" richColors />
             <ScrollToTop />
-            <PromoModal />
+            <DeferredComponents />
             <Navbar />
             <main className="flex-grow pt-[104px]">
-              <SRShopSelector />
               {children}
             </main>
-            <CareerCTA />
             <Footer />
           </CartProvider>
         </AuthProvider>
