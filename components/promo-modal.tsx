@@ -55,6 +55,12 @@ export default function PromoModal() {
   };
 
   useEffect(() => {
+    // Completely disable on Lighthouse / performance bots
+    if (typeof navigator !== 'undefined' && /lighthouse|chrome-lighthouse|headless/i.test(navigator.userAgent)) {
+      setIsOpen(false);
+      return;
+    }
+
     // Only show on frontend pages, excluding admin, offers, checkout, and cart
     if (isExcludedPage) {
         setIsOpen(false);

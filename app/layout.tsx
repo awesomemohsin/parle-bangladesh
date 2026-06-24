@@ -2,7 +2,6 @@
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import Script from 'next/script'
 import './globals.css'
 
 const inter = Inter({
@@ -73,20 +72,18 @@ export default function RootLayout({
             />
           </noscript>
         )}
-        <Script id="disable-img-interaction" strategy="lazyOnload">
-          {`
-            document.addEventListener('contextmenu', function(e) {
-              if (e.target.tagName === 'IMG') {
-                e.preventDefault();
-              }
-            }, false);
-            document.addEventListener('dragstart', function(e) {
-              if (e.target.tagName === 'IMG') {
-                e.preventDefault();
-              }
-            }, false);
-          `}
-        </Script>
+        <script dangerouslySetInnerHTML={{ __html: `
+          document.addEventListener('contextmenu', function(e) {
+            if (e.target && e.target.tagName === 'IMG') {
+              e.preventDefault();
+            }
+          }, false);
+          document.addEventListener('dragstart', function(e) {
+            if (e.target && e.target.tagName === 'IMG') {
+              e.preventDefault();
+            }
+          }, false);
+        `}} />
       </body>
     </html>
   )
