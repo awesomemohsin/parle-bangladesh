@@ -58,7 +58,8 @@ export async function GET(request: NextRequest) {
       processing: 0,
       shipped: 0,
       delivered: 0,
-      cancelled: 0
+      cancelled: 0,
+      returned: 0
     };
     orderStatusStats.forEach((stat: any) => {
       if (stat._id) orderStatuses[stat._id] = stat.count;

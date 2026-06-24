@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const orderStats = await Order.aggregate([
       {
         $match: {
-          status: { $ne: ORDER_STATUS.CANCELLED }
+          status: { $nin: [ORDER_STATUS.CANCELLED, ORDER_STATUS.LOST, ORDER_STATUS.DAMAGED, ORDER_STATUS.RETURNED] }
         }
       },
       {

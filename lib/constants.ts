@@ -14,6 +14,7 @@ export const ORDER_STATUS = {
   DELIVERED: 'delivered',
   DAMAGED: 'damaged',
   LOST: 'lost',
+  RETURNED: 'returned',
 } as const
 
 export const PRODUCT_CATEGORIES = [

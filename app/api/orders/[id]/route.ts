@@ -114,8 +114,8 @@ export async function PUT(
     }
 
     const oldStatus = order.status;
-    const terminalStatuses = ["cancelled", "damaged", "lost", "delivered"];
-    if (terminalStatuses.includes(oldStatus)) {
+    const terminalStatuses = ["cancelled", "damaged", "lost", "delivered", "returned"];
+    if (terminalStatuses.includes(oldStatus) && !(oldStatus === "delivered" && status === "returned")) {
       return NextResponse.json({ error: `Cannot change status of an already ${oldStatus} order` }, { status: 400 });
     }
     
@@ -124,8 +124,8 @@ export async function PUT(
       return NextResponse.json({ error: "Moderators cannot move orders back to pending" }, { status: 403 });
     }
 
-    // Intercept 'lost' and 'damaged' status transitions for Level 3 Consensus approval
-    const consensusRequiredStatuses = ["lost", "damaged"];
+    // Intercept 'lost', 'damaged', and 'returned' status transitions for consensus approval
+    const consensusRequiredStatuses = ["lost", "damaged", "returned"];
     if (consensusRequiredStatuses.includes(status) && oldStatus !== status) {
       const { ApprovalRequest } = await import("@/lib/models");
       const { notifyNewApprovalRequest } = await import("@/lib/telegram");
@@ -169,8 +169,8 @@ export async function PUT(
       changedAt: new Date(),
     });
 
-    // If status changed to cancelled, damaged, or lost, restore stock
-    const restorableStatuses = ["cancelled", "damaged", "lost"];
+    // If status changed to cancelled, damaged, lost, or returned, restore stock
+    const restorableStatuses = ["cancelled", "damaged", "lost", "returned"];
     if (restorableStatuses.includes(status) && !restorableStatuses.includes(oldStatus)) {
       const { Product, StockLog } = await import("@/lib/models");
       for (const item of order.items) {
@@ -189,13 +189,17 @@ export async function PUT(
               const stockField = `variations.${varIndex}.stock`;
               const lostField = `variations.${varIndex}.lostCount`;
               const damagedField = `variations.${varIndex}.damagedCount`;
+              const deliveredField = `variations.${varIndex}.deliveredCount`;
 
               const update: any = { $inc: {} };
               
-              // Remove from hold anyway
-              update.$inc[holdField] = -item.quantity;
+              if (oldStatus === "delivered") {
+                update.$inc[deliveredField] = -item.quantity;
+              } else {
+                update.$inc[holdField] = -item.quantity;
+              }
 
-              if (status === "cancelled") {
+              if (status === "cancelled" || status === "returned") {
                 // Return to stock
                 update.$inc[stockField] = item.quantity;
 
@@ -208,7 +212,7 @@ export async function PUT(
                   oldStock: variation.stock || 0,
                   newStock: (variation.stock || 0) + item.quantity,
                   amount: item.quantity,
-                  reason: `Order Cancelled - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                  reason: `Order ${status.toUpperCase()} - Order #${order._id.toString().slice(-8).toUpperCase()}`,
                   adminEmail: user.email,
                 });
               } else if (status === "lost") {
@@ -282,7 +286,7 @@ export async function PUT(
         console.log(`Triggering Logistics notification for order ${id}`);
         const notified = await notifyOrderReady(order);
         console.log(`Logistics notification result: ${notified}`);
-      } else if (["cancelled", "damaged", "lost"].includes(status) && oldStatus !== status) {
+      } else if (["cancelled", "damaged", "lost", "returned"].includes(status) && oldStatus !== status) {
         console.log(`Triggering Management notification for critical status: ${status}`);
         await notifyCriticalEvent(`Order ${status}`, order, statusReason);
       }

@@ -184,14 +184,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const isSingleSuperadminOrderDiscount = approvalRequest.type === 'order' &&
           approvalRequest.field === 'srDiscount';
 
-        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo || isSingleSuperadminOrderDiscount)
+        // Order status change to returned requires only a single Superadmin signature and bypasses Owner.
+        const isSingleSuperadminOrderReturned = approvalRequest.type === 'order' &&
+          approvalRequest.field === 'status' &&
+          approvalRequest.newValue === 'returned';
+
+        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo || isSingleSuperadminOrderDiscount || isSingleSuperadminOrderReturned)
           ? (hasAnindo || hasSaiful)
           : (hasAnindo && hasSaiful);
         
         if (isConsensusReached) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          // Custom SR order discount is a 2-stage request (approved by single superadmin directly)
-          const isFinancialOrStock = (['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order') && !isSingleSuperadminOrderDiscount;
+          // Custom SR order discount and returns are 2-stage requests (approved by single superadmin directly)
+          const isFinancialOrStock = (['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order') && !isSingleSuperadminOrderDiscount && !isSingleSuperadminOrderReturned;
           
           if (!isFinancialOrStock) {
             // BASIC CONTENT: 2nd SuperAdmin is Final
@@ -200,7 +205,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
              let notificationTitle = "Update Approved (Live)";
              let notificationMessage = `Your catalog update for ${approvalRequest.targetName} has been approved by consensus and is now LIVE.`;
              let notificationLink = `/admin/products`;
-
+ 
              if (approvalRequest.type === "customer") {
                notificationTitle = "Customer Promotion Approved";
                notificationMessage = `Customer ${approvalRequest.targetName} has been successfully promoted to ${approvalRequest.newValue} by consensus.`;
@@ -208,6 +213,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
              } else if (approvalRequest.type === "order" && approvalRequest.field === "srDiscount") {
                notificationTitle = "Negotiated Order Discount Approved";
                notificationMessage = `Negotiated discount for ${approvalRequest.targetName} has been approved. The order is now being processed.`;
+               notificationLink = `/admin/orders`;
+             } else if (approvalRequest.type === "order" && approvalRequest.field === "status" && approvalRequest.newValue === "returned") {
+               notificationTitle = "Order Return Approved";
+               notificationMessage = `Order return for ${approvalRequest.targetName} has been approved. Stock levels have been restored.`;
                notificationLink = `/admin/orders`;
              }
 
@@ -387,8 +396,8 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
           await reconcileUserLedger(order.userId.toString());
         }
 
-        // Adjust stock and log it upon approval of lost/damaged statuses
-        const restorableStatuses = ["cancelled", "damaged", "lost"];
+        // Adjust stock and log it upon approval of lost/damaged/returned statuses
+        const restorableStatuses = ["cancelled", "damaged", "lost", "returned"];
         if (restorableStatuses.includes(newStatus) && !restorableStatuses.includes(oldStatus)) {
           for (const item of order.items) {
             if (item.productId) {
@@ -406,13 +415,17 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
                   const stockField = `variations.${varIndex}.stock`;
                   const lostField = `variations.${varIndex}.lostCount`;
                   const damagedField = `variations.${varIndex}.damagedCount`;
+                  const deliveredField = `variations.${varIndex}.deliveredCount`;
 
                   const update: any = { $inc: {} };
                   
-                  // Remove from hold anyway
-                  update.$inc[holdField] = -item.quantity;
+                  if (oldStatus === "delivered") {
+                    update.$inc[deliveredField] = -item.quantity;
+                  } else {
+                    update.$inc[holdField] = -item.quantity;
+                  }
 
-                  if (newStatus === "cancelled") {
+                  if (newStatus === "cancelled" || newStatus === "returned") {
                     // Return to stock
                     update.$inc[stockField] = item.quantity;
 
@@ -425,7 +438,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
                       oldStock: variation.stock || 0,
                       newStock: (variation.stock || 0) + item.quantity,
                       amount: item.quantity,
-                      reason: `Order Cancelled - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                      reason: `Order ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} - Order #${order._id.toString().slice(-8).toUpperCase()}`,
                       adminEmail: approvalRequest.requesterEmail,
                     });
                   } else if (newStatus === "lost") {
