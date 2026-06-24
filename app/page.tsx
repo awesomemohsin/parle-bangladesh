@@ -127,7 +127,7 @@ export default async function HomePage() {
                 >
                   <div className="relative w-full aspect-[16/10] bg-slate-50 overflow-hidden">
                     <Image
-                      src={cat.image ? cat.image : `/images/${cat.slug}/${cat.slug}.webp?v=2`}
+                      src={cat.image || `/images/${cat.slug}/${cat.slug}.webp`}
                       alt={cat.name}
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
@@ -288,7 +288,7 @@ export default async function HomePage() {
             <div className="lg:w-1/2 relative hidden lg:block overflow-visible">
               <div className="relative w-full h-full flex items-center justify-center">
                 <Image
-                  src="/images/parle-website.webp?v=2"
+                  src="/images/parle-website.webp"
                   alt="Parle History"
                   width={800}
                   height={800}

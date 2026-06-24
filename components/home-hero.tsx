@@ -59,7 +59,7 @@ export default function HomeHero() {
           <div className="w-full lg:w-1/2 flex items-center justify-center lg:justify-end py-10 lg:py-0 animate-fade-in-right">
             <div className="relative w-full aspect-[4/3] max-w-[800px] lg:translate-x-10">
               <Image 
-                src="/images/parle-home-cover.webp?v=2" 
+                src="/images/parle-home-cover.webp" 
                 alt="Parle Premium Biscuits Collection" 
                 fill
                 priority={true}
