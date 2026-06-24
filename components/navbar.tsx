@@ -117,13 +117,8 @@ export default function Navbar() {
       const repeatCount = Math.max(3, Math.ceil(12 / tickerOffers.length));
       for (let r = 0; r < repeatCount; r++) {
         tickerOffers.forEach((offer, idx) => {
-          items.push(
-            <Link 
-              key={`${offer._id || idx}-${r}`} 
-              href={`/offers/${offer.slug}`}
-              className="flex items-center gap-3 hover:underline cursor-pointer"
-              tabIndex={isDuplicate ? -1 : undefined}
-            >
+          const content = (
+            <>
               <span className="flex items-center gap-1 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
                 🔥 HOT DEAL
               </span>
@@ -134,20 +129,36 @@ export default function Navbar() {
               <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
                 {offer.description}
               </span>
-            </Link>
+            </>
           );
+
+          if (isDuplicate) {
+            items.push(
+              <div
+                key={`${offer._id || idx}-${r}`}
+                className="flex items-center gap-3 select-none pointer-events-none"
+              >
+                {content}
+              </div>
+            );
+          } else {
+            items.push(
+              <Link
+                key={`${offer._id || idx}-${r}`}
+                href={`/offers/${offer.slug}`}
+                className="flex items-center gap-3 hover:underline cursor-pointer"
+              >
+                {content}
+              </Link>
+            );
+          }
         });
       }
     } else {
       // Repeat welcome messages to fill the screen width
       for (let r = 0; r < 8; r++) {
-        items.push(
-          <Link 
-            key={`welcome-${r}`}
-            href="/shop" 
-            className="flex items-center gap-3 hover:underline cursor-pointer"
-            tabIndex={isDuplicate ? -1 : undefined}
-          >
+        const content = (
+          <>
             <span className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded text-[8px] font-black tracking-normal shrink-0">
               ✨ WELCOME
             </span>
@@ -158,8 +169,29 @@ export default function Navbar() {
             <span className="text-gray-700 normal-case tracking-normal font-semibold text-[10px] sm:text-[11px]">
               Bite into Pure Joy - Order online for home delivery!
             </span>
-          </Link>
+          </>
         );
+
+        if (isDuplicate) {
+          items.push(
+            <div
+              key={`welcome-${r}`}
+              className="flex items-center gap-3 select-none pointer-events-none"
+            >
+              {content}
+            </div>
+          );
+        } else {
+          items.push(
+            <Link
+              key={`welcome-${r}`}
+              href="/shop"
+              className="flex items-center gap-3 hover:underline cursor-pointer"
+            >
+              {content}
+            </Link>
+          );
+        }
       }
     }
     return items;
@@ -189,8 +221,8 @@ export default function Navbar() {
             </div>
 
             <div className="flex-1 flex justify-center">
-              <Link href="/">
-                <Image src="/logo.png" alt="Logo" width={160} height={40} priority style={{ width: 'auto' }} className="h-10 object-contain" />
+              <Link href="/" aria-label="Parle Bangladesh Home">
+                <Image src="/logo.png" alt="Parle Bangladesh Logo" width={160} height={40} priority style={{ width: 'auto' }} className="h-10 object-contain" />
               </Link>
             </div>
 
