@@ -97,6 +97,17 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
                   <p className="text-[9px] font-black text-gray-900 mt-0.5 uppercase tracking-[0.2em]">Order ID: #{order.id.slice(-8).toUpperCase()}</p>
+                  {['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) && (
+                    <div className="mt-1">
+                      <span className={`inline-block px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-sm border ${
+                        order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                        order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        ORDER {order.status}
+                      </span>
+                    </div>
+                  )}
                   {isMultiPage && (
                     <p className="text-[9px] font-black text-red-600 mt-1 uppercase tracking-wider">Page {pageNumber} of {totalPages}</p>
                   )}
@@ -121,6 +132,17 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   <p className="text-[8px] font-bold text-gray-500 mt-0.5 uppercase tracking-wider">
                     Order ID: #{order.id.slice(-8).toUpperCase()}
                   </p>
+                  {['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) && (
+                    <div className="mt-0.5">
+                      <span className={`inline-block px-1.5 py-0.2 text-[7px] font-black uppercase tracking-wider rounded-sm border ${
+                        order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                        order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-[8px] font-black text-red-600 mt-0.5 uppercase tracking-wider">
                     Page {pageNumber} of {totalPages}
                   </p>
@@ -271,19 +293,24 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                     <span className="font-black">৳{order.total.toFixed(0)}</span>
                   </div>
                   {(() => {
-                    const isPaid = order.paymentStatus === 'paid' || (!['cancelled', 'lost', 'damaged'].includes(order.status) && order.amountDue !== undefined && order.amountDue <= 0);
+                    const isPaid = order.paymentStatus === 'paid' || (!['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) && order.amountDue !== undefined && order.amountDue <= 0);
 
                     const paymentReceived = order.amountPaid !== undefined ? order.amountPaid : (isPaid ? order.total : 0);
 
                     const totalDue = order.amountDue !== undefined ? order.amountDue : (isPaid ? 0 : order.total);
 
                     const getPaymentStatusText = () => {
+                      if (['cancelled', 'lost', 'damaged', 'returned'].includes(order.status)) {
+                        return `${order.status.toUpperCase()}`;
+                      }
                       if (isPaid) return 'PAID ✅';
                       if (order.paymentStatus === 'partial') return `PARTIAL (Due ৳${totalDue.toFixed(0)}) ⏳`;
                       return order.status === 'delivered' ? 'Payment Pending ✅' : 'UNPAID ⏳';
                     };
 
-                    const statusColor = isPaid ? 'text-green-600' : 'text-amber-600';
+                    const statusColor = ['cancelled', 'lost', 'damaged', 'returned'].includes(order.status)
+                      ? (order.status === 'returned' ? 'text-purple-600' : 'text-red-600')
+                      : (isPaid ? 'text-green-600' : 'text-amber-600');
 
                     return (
                       <>
@@ -352,9 +379,30 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   </div>
                 )}
 
-                <p className="mt-4 text-[10px] font-black text-red-600 uppercase italic tracking-tighter">
-                  Thank you for your Purchase!
-                </p>
+                {(order.statusReason || order.cancelReason) && (
+                  <div className="mt-2 text-[8px]" style={{ breakInside: 'avoid' }}>
+                    <h4 className={`font-black uppercase tracking-widest mb-0.5 ${
+                      order.status === 'returned' ? 'text-purple-700' :
+                      order.status === 'cancelled' ? 'text-red-600' :
+                      'text-amber-700'
+                    }`}>
+                      {order.status} Reason:
+                    </h4>
+                    <p className={`max-w-md italic border-l-2 pl-3 leading-tight font-medium p-1.5 rounded-sm ${
+                      order.status === 'returned' ? 'text-purple-900 border-purple-300 bg-purple-50/50' :
+                      order.status === 'cancelled' ? 'text-red-900 border-red-300 bg-red-50/50' :
+                      'text-amber-900 border-amber-300 bg-amber-50/50'
+                    }`}>
+                      {order.statusReason || order.cancelReason}
+                    </p>
+                  </div>
+                )}
+
+                {!['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) && (
+                  <p className="mt-4 text-[10px] font-black text-red-600 uppercase italic tracking-tighter">
+                    Thank you for your Purchase!
+                  </p>
+                )}
 
                 <div className="mt-2 border-t border-red-600/30 pt-4 grid grid-cols-3 gap-4 text-[8px]" style={{ breakInside: 'avoid' }}>
                   <div>
@@ -373,7 +421,10 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                       Terms & Note:
                     </h4>
                     <p className="text-gray-500 leading-tight">
-                      Goods once sold are not returnable. This is a system-generated invoice for the verified distributor network.
+                      {['cancelled', 'lost', 'damaged', 'returned'].includes(order.status)
+                        ? `This order was marked as ${order.status.toUpperCase()}. This is a system-generated record for the verified distributor network.`
+                        : "Goods once sold are not returnable. This is a system-generated invoice for the verified distributor network."
+                      }
                     </p>
                   </div>
                 </div>
