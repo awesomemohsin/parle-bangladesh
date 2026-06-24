@@ -61,6 +61,30 @@ export default function PromoModal() {
         return;
     }
 
+    let timer: NodeJS.Timeout;
+    let isAttached = false;
+
+    const showPromo = () => {
+      const sessionClosed = getSessionSeen();
+      if (!sessionClosed) {
+        setIsOpen(true);
+      }
+    };
+
+    const handleInteraction = () => {
+      timer = setTimeout(showPromo, 1500);
+      cleanupListeners();
+    };
+
+    const cleanupListeners = () => {
+      if (isAttached) {
+        window.removeEventListener('scroll', handleInteraction);
+        window.removeEventListener('mousemove', handleInteraction);
+        window.removeEventListener('touchstart', handleInteraction);
+        isAttached = false;
+      }
+    };
+
     const fetchPosters = async () => {
       try {
         const res = await fetch('/api/display-banners');
@@ -74,10 +98,10 @@ export default function PromoModal() {
             setHasSeenPromo(sessionClosed);
  
             if (!sessionClosed) {
-              const timer = setTimeout(() => {
-                setIsOpen(true);
-              }, 3500);
-              return () => clearTimeout(timer);
+              window.addEventListener('scroll', handleInteraction, { once: true });
+              window.addEventListener('mousemove', handleInteraction, { once: true });
+              window.addEventListener('touchstart', handleInteraction, { once: true });
+              isAttached = true;
             }
           } else {
             setIsOpen(false);
@@ -89,6 +113,11 @@ export default function PromoModal() {
     };
  
     fetchPosters();
+
+    return () => {
+      cleanupListeners();
+      clearTimeout(timer);
+    };
   }, [pathname]);
 
   // Auto-play only if more than 1 poster

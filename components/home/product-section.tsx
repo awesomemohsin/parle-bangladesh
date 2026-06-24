@@ -81,7 +81,7 @@ export default function HomeProductSection({ products, type }: ProductSectionPro
             {currentProducts.map((product, i) => (
               <div key={product._id} className="relative">
                 <Badge type={type} />
-                <ProductCard id={product._id} {...product} priority={page === 0} />
+                <ProductCard id={product._id} {...product} priority={false} />
               </div>
             ))}
           </motion.div>

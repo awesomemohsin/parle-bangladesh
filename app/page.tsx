@@ -126,6 +126,7 @@ export default async function HomePage() {
                       fill
                       sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-cover transition-opacity duration-700 group-hover:opacity-95"
+                      quality={70}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
                   </div>
@@ -251,25 +252,25 @@ export default async function HomePage() {
       </section>
 
       {/* About Section */}
-      <section className="py-20 bg-red-600 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/4 h-full bg-red-700/40 skew-x-[-10deg] translate-x-10" />
+      <section className="py-20 bg-red-800 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/4 h-full bg-red-900/40 skew-x-[-10deg] translate-x-10" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center md:text-left">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="lg:w-1/2 text-white">
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight uppercase italic leading-none mb-6">
                 Joy in Every Bite
               </h2>
-              <p className="text-red-50 text-base mb-8 leading-relaxed font-bold uppercase tracking-tight">
+              <p className="text-white text-base mb-8 leading-relaxed font-bold uppercase tracking-tight">
                 Parle has been at the heart of snack time for generations. From iconic biscuits to premium cookies, we believe every bite should bring a moment of joy. We are proud to share these world-class flavors with every home in Bangladesh.
               </p>
               <div className="grid grid-cols-2 gap-6 mb-8 max-w-md mx-auto md:mx-0">
                 <div>
                   <span className="text-4xl font-black block mb-1 tracking-tighter italic">90+</span>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-50">Years of History</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-100">Years of History</span>
                 </div>
                 <div>
                   <span className="text-4xl font-black block mb-1 tracking-tighter italic">100M+</span>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-50">Happy Customers</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-100">Happy Customers</span>
                 </div>
               </div>
               <Link href="/shop">
@@ -286,7 +287,7 @@ export default async function HomePage() {
                   width={800}
                   height={800}
                   className="w-full h-auto max-h-[500px] object-contain drop-shadow-[-10px_20px_40px_rgba(0,0,0,0.3)] select-none transition-transform duration-700 transform scale-[1.25] hover:scale-[1.3] cursor-zoom-in"
-                  priority
+                  quality={70}
                 />
               </div>
             </div>
