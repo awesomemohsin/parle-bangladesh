@@ -247,7 +247,8 @@ export default function ProductCard({
                 fill
                 priority={priority}
                 className="object-contain p-1 sm:p-1.5 group-hover:scale-105 transition-transform duration-500"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                quality={75}
               />
             </div>
           </div>
@@ -337,9 +338,9 @@ export default function ProductCard({
               )}
             </div>
             {hasAnyRetailDiscount && (
-              <div className="flex items-center gap-1 opacity-45">
-                <span className="text-[9px] sm:text-[10px] font-bold text-gray-600">৳</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-600 line-through font-bold">{Math.round(activeVariation.price)}</span>
+              <div className="flex items-center gap-1 text-gray-700">
+                <span className="text-[9px] sm:text-[10px] font-bold">৳</span>
+                <span className="text-[9px] sm:text-[10px] line-through font-bold">{Math.round(activeVariation.price)}</span>
               </div>
             )}
           </div>

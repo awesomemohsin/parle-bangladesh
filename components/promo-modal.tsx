@@ -76,7 +76,7 @@ export default function PromoModal() {
             if (!sessionClosed) {
               const timer = setTimeout(() => {
                 setIsOpen(true);
-              }, 100);
+              }, 3500);
               return () => clearTimeout(timer);
             }
           } else {
@@ -188,8 +188,7 @@ export default function PromoModal() {
                                   fill
                                   sizes="(max-width: 768px) 100vw, 512px"
                                   className="object-cover"
-                                  priority
-                                  loading="eager"
+                                  quality={70}
                                   />
                               </Link>
                               </motion.div>

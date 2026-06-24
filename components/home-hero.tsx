@@ -23,7 +23,7 @@ export default function HomeHero() {
               </span>
             </h1>
 
-            <p className="text-sm md:text-lg text-white/95 font-medium mb-12 leading-relaxed max-w-lg uppercase tracking-tight mx-auto lg:mx-0">
+            <p className="text-sm md:text-lg text-white font-medium mb-12 leading-relaxed max-w-lg uppercase tracking-tight mx-auto lg:mx-0">
               Get your favorite freshly baked biscuits and premium cookies delivered directly to your home across Bangladesh.
             </p>
 
@@ -35,7 +35,7 @@ export default function HomeHero() {
                 </Button>
               </Link>
               <Link href="/shop/categories/biscuits" className="shrink-0">
-                <Button size="lg" variant="outline" className="h-12 sm:h-14 px-6 sm:px-10 rounded-xl border-white/40 bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-black hover:border-white text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all active:scale-95">
+                <Button size="lg" variant="outline" className="h-12 sm:h-14 px-6 sm:px-10 rounded-xl border-white/60 bg-black/25 backdrop-blur-md text-white hover:bg-white hover:text-black hover:border-white text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all active:scale-95">
                   Buy Biscuits
                 </Button>
               </Link>

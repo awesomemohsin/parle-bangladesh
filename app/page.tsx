@@ -85,7 +85,7 @@ export default async function HomePage() {
                   <badge.icon className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h4 className="text-sm md:text-base font-black text-gray-900 uppercase tracking-tight">{badge.label}</h4>
+                  <h3 className="text-sm md:text-base font-black text-gray-900 uppercase tracking-tight">{badge.label}</h3>
                   <p className="text-[10px] md:text-xs text-gray-700 font-bold uppercase tracking-widest">{badge.sub}</p>
                 </div>
               </div>
@@ -155,8 +155,9 @@ export default async function HomePage() {
                     src={categoryBottomPoster.imageUrl}
                     alt={categoryBottomPoster.altText}
                     fill
-                    sizes="100vw"
+                    sizes="(max-width: 768px) 100vw, 1200px"
                     className="object-cover group-hover:brightness-[1.02]"
+                    quality={70}
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
                 </div>
@@ -229,8 +230,9 @@ export default async function HomePage() {
                     src={bestSellersBottomPoster.imageUrl}
                     alt={bestSellersBottomPoster.altText}
                     fill
-                    sizes="100vw"
+                    sizes="(max-width: 768px) 100vw, 1200px"
                     className="object-cover group-hover:brightness-[1.02]"
+                    quality={70}
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
                 </div>
@@ -257,17 +259,17 @@ export default async function HomePage() {
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight uppercase italic leading-none mb-6">
                 Joy in Every Bite
               </h2>
-              <p className="text-red-100 text-base mb-8 leading-relaxed font-bold uppercase tracking-tight">
+              <p className="text-red-50 text-base mb-8 leading-relaxed font-bold uppercase tracking-tight">
                 Parle has been at the heart of snack time for generations. From iconic biscuits to premium cookies, we believe every bite should bring a moment of joy. We are proud to share these world-class flavors with every home in Bangladesh.
               </p>
               <div className="grid grid-cols-2 gap-6 mb-8 max-w-md mx-auto md:mx-0">
                 <div>
                   <span className="text-4xl font-black block mb-1 tracking-tighter italic">90+</span>
-                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-80">Years of History</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-50">Years of History</span>
                 </div>
                 <div>
                   <span className="text-4xl font-black block mb-1 tracking-tighter italic">100M+</span>
-                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-80">Happy Customers</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-50">Happy Customers</span>
                 </div>
               </div>
               <Link href="/shop">

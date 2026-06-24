@@ -187,7 +187,7 @@ export default function Navbar() {
 
             <div className="flex-1 flex justify-center">
               <Link href="/">
-                <Image src="/logo.png" alt="Logo" width={160} height={40} priority className="h-10 w-auto object-contain" />
+                <Image src="/logo.png" alt="Logo" width={160} height={40} priority style={{ width: 'auto' }} className="h-10 object-contain" />
               </Link>
             </div>
 
@@ -222,7 +222,7 @@ export default function Navbar() {
                 <span className="text-4xl font-black text-red-600 tracking-tighter uppercase italic leading-none">Parle</span>
                 <span className="text-xs font-bold text-gray-900 uppercase tracking-[0.25em] leading-none mt-1">Bangladesh</span>
               </div>
-              <Image src="/logo.png" alt="Logo" width={176} height={44} priority className="h-11 w-auto object-contain transition-transform group-hover:scale-105 duration-300" />
+              <Image src="/logo.png" alt="Logo" width={176} height={44} priority style={{ width: 'auto' }} className="h-11 object-contain transition-transform group-hover:scale-105 duration-300" />
             </Link>
 
             {/* Center: Essential Links (Absolutely Centered) - Hidden on Admin Routes */}
