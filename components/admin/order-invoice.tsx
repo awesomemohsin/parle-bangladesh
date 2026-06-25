@@ -57,7 +57,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
             page-break-after: always !important;
             break-after: page !important;
           }
-          .invoice-page:last-child {
+          .invoice-page-last {
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
@@ -72,7 +72,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
         return (
           <div
             key={pageIndex}
-            className="invoice-page mx-auto w-full bg-white p-[5mm] text-gray-800 border-t-[8px] border-b-[8px] border-red-600 min-h-[275mm] flex flex-col justify-start relative mb-8 print:mb-0"
+            className={`invoice-page ${isLastPage ? 'invoice-page-last' : ''} mx-auto w-full bg-white p-[5mm] text-gray-800 border-t-[8px] border-b-[8px] border-red-600 min-h-[275mm] flex flex-col justify-start relative mb-8 print:mb-0`}
           >
             {/* Header */}
             {pageNumber === 1 ? (
