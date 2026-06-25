@@ -50,9 +50,9 @@ export default function RootLayout({
           <CartProvider>
             <Toaster position="top-center" richColors />
             <ScrollToTop />
-            <DeferredComponents />
             <Navbar />
             <main className="flex-grow pt-[104px]">
+              <DeferredComponents />
               {children}
             </main>
             <DeferredBottomComponents />

@@ -62,6 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
     } else {
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem("sr_active_shop_id");
+      localStorage.removeItem("sr_active_shop_user");
+      sessionStorage.removeItem("cart_synced");
     }
 
     let effectiveUser = user ? { ...user } : null;
@@ -98,6 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     updateAuth(null, null);
     try {
+      localStorage.removeItem("sr_active_shop_id");
+      localStorage.removeItem("sr_active_shop_user");
+      sessionStorage.removeItem("cart_synced");
       await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     } catch (e) {}
 
