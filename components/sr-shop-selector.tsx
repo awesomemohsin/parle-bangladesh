@@ -198,7 +198,7 @@ export default function SRShopSelector() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 print:hidden">
       <div className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-5 mb-2 shadow-xl relative overflow-visible" ref={dropdownRef}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Left Info Section */}
