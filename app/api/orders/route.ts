@@ -559,6 +559,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const isImpersonatingStaff = srUser && ["super_admin", "admin", "moderator"].includes(srUser.role);
+    const isTargetB2B = ["retailer", "dealer"].includes(customerTypeStr);
+    
+    // Status is PENDING if:
+    // - There is no srUser (self checkout)
+    // - Or the placing party is a staff member impersonating a standard customer (non-B2B)
+    // - Or a negotiated discount is applied (srDiscountPercent > 0)
+    // Otherwise (impersonated B2B shop order with no discount), it goes straight to PROCESSING.
+    const orderStatus = ((isImpersonatingStaff && !isTargetB2B) || !srUser || srDiscountPercent > 0)
+      ? ORDER_STATUS.PENDING
+      : ORDER_STATUS.PROCESSING;
+
     const order = new Order({
       userId: user ? user.id : undefined,
       customerName,
@@ -585,7 +597,7 @@ export async function POST(request: NextRequest) {
       isRestricted: totals.isRestricted,
       promoCode: body.promoCode,
       total,
-      status: (srUser && srDiscountPercent > 0) ? ORDER_STATUS.PENDING : (srUser ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING),
+      status: orderStatus,
       customerType: customerTypeStr,
       amountPaid: 0,
       amountDue: total,
@@ -596,15 +608,18 @@ export async function POST(request: NextRequest) {
 
     await order.save();
 
-    if (srUser && srDiscountPercent > 0) {
+    if ((isImpersonatingStaff && !isTargetB2B) || (srUser && srDiscountPercent > 0)) {
+      const isImpersonatingCustomer = !!(isImpersonatingStaff && !isTargetB2B);
       const approvalRequest = new ApprovalRequest({
         requesterEmail: srUser.email,
         type: "order",
         targetId: order._id.toString(),
         targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
-        field: "srDiscount",
-        oldValue: "0%",
-        newValue: `${srDiscountPercent}% (৳${srDiscountAmountVal})`,
+        field: isImpersonatingCustomer ? "impersonationOrder" : "srDiscount",
+        oldValue: isImpersonatingCustomer ? "N/A" : "0%",
+        newValue: isImpersonatingCustomer
+          ? (srDiscountPercent > 0 ? `Created by ${srUser.role} with ${srDiscountPercent}% discount` : `Created by ${srUser.role} (${srUser.email})`)
+          : `${srDiscountPercent}% (৳${srDiscountAmountVal})`,
         targetDetails: order.toObject(),
         status: "pending",
         stage: "superadmin",
@@ -617,7 +632,7 @@ export async function POST(request: NextRequest) {
         const { notifyNewApprovalRequest } = await import("@/lib/telegram");
         await notifyNewApprovalRequest(approvalRequest.toObject ? approvalRequest.toObject() : approvalRequest);
       } catch (tgError) {
-        console.error("Telegram notification failed for SR discount approval request:", tgError);
+        console.error("Telegram notification failed for order approval request:", tgError);
       }
     }
 

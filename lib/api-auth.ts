@@ -110,7 +110,9 @@ export async function getEffectiveUserContext(
 
     if (!dbUser) return null;
 
-    if (dbUser.isSR) {
+    const isAllowedToImpersonate = dbUser.isSR || ["super_admin", "admin", "moderator", "owner"].includes(dbUser.role);
+
+    if (isAllowedToImpersonate) {
       const onBehalfOfHeader = request.headers.get("x-on-behalf-of");
       if (onBehalfOfHeader && onBehalfOfHeader !== "null" && onBehalfOfHeader !== "undefined") {
         const shopUser = await User.findById(onBehalfOfHeader).lean() as any;

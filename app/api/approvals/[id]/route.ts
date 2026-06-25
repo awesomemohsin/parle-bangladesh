@@ -70,13 +70,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         await PromoCode.findByIdAndUpdate(approvalRequest.targetId, { status: 'declined', isActive: false });
       }
 
-      // If it's an SR discount order, cancel the order and restore the stock
-      if (approvalRequest.type === 'order' && approvalRequest.field === 'srDiscount') {
+      // If it's an SR discount or staff impersonation order, cancel the order and restore the stock
+      if (approvalRequest.type === 'order' && (approvalRequest.field === 'srDiscount' || approvalRequest.field === 'impersonationOrder')) {
         const order = await Order.findById(approvalRequest.targetId);
         if (order) {
           const oldStatus = order.status;
           order.status = "cancelled";
-          order.statusReason = `Negotiated discount declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`;
+          order.statusReason = approvalRequest.field === 'impersonationOrder'
+            ? `Staff impersonation order declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`
+            : `Negotiated discount declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`;
           
           if (!order.orderLogs) order.orderLogs = [];
           order.orderLogs.push({
@@ -184,19 +186,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const isSingleSuperadminOrderDiscount = approvalRequest.type === 'order' &&
           approvalRequest.field === 'srDiscount';
 
+        // Impersonation orders by staff require only a single Superadmin signature and bypass the Owner.
+        const isSingleSuperadminOrderImpersonation = approvalRequest.type === 'order' &&
+          approvalRequest.field === 'impersonationOrder';
+
         // Order status change to returned requires only a single Superadmin signature and bypasses Owner.
         const isSingleSuperadminOrderReturned = approvalRequest.type === 'order' &&
           approvalRequest.field === 'status' &&
           approvalRequest.newValue === 'returned';
 
-        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo || isSingleSuperadminOrderDiscount || isSingleSuperadminOrderReturned)
+        const isConsensusReached = (isB2BPromotion || isSingleSuperadminPromo || isSingleSuperadminOrderDiscount || isSingleSuperadminOrderImpersonation || isSingleSuperadminOrderReturned)
           ? (hasAnindo || hasSaiful)
           : (hasAnindo && hasSaiful);
         
         if (isConsensusReached) {
           // CHECK IF THIS IS A 2-STAGE OR 3-STAGE REQUEST
-          // Custom SR order discount and returns are 2-stage requests (approved by single superadmin directly)
-          const isFinancialOrStock = (['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order') && !isSingleSuperadminOrderDiscount && !isSingleSuperadminOrderReturned;
+          // Custom SR order discount, staff impersonation, and returns are 2-stage requests (approved by single superadmin directly)
+          const isFinancialOrStock = (['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(approvalRequest.field) || approvalRequest.type === 'order') && !isSingleSuperadminOrderDiscount && !isSingleSuperadminOrderImpersonation && !isSingleSuperadminOrderReturned;
           
           if (!isFinancialOrStock) {
             // BASIC CONTENT: 2nd SuperAdmin is Final
@@ -213,6 +219,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
              } else if (approvalRequest.type === "order" && approvalRequest.field === "srDiscount") {
                notificationTitle = "Negotiated Order Discount Approved";
                notificationMessage = `Negotiated discount for ${approvalRequest.targetName} has been approved. The order is now being processed.`;
+               notificationLink = `/admin/orders`;
+             } else if (approvalRequest.type === "order" && approvalRequest.field === "impersonationOrder") {
+               notificationTitle = "Impersonation Order Approved";
+               notificationMessage = `Impersonation order for ${approvalRequest.targetName} has been approved and is now being processed.`;
                notificationLink = `/admin/orders`;
              } else if (approvalRequest.type === "order" && approvalRequest.field === "status" && approvalRequest.newValue === "returned") {
                notificationTitle = "Order Return Approved";
@@ -490,7 +500,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         } catch (notifyError) {
           console.error("Failed to send status update notification from approval:", notifyError);
         }
-      } else if (approvalRequest.field === 'srDiscount') {
+      } else if (approvalRequest.field === 'srDiscount' || approvalRequest.field === 'impersonationOrder') {
         const oldStatus = order.status;
         order.status = "processing";
 
@@ -499,7 +509,9 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
           fromStatus: oldStatus,
           toStatus: "processing",
           changedBy: `System (Approved: ${userName})`,
-          reason: `Superadmin approved negotiated discount: ${approvalRequest.newValue}`,
+          reason: approvalRequest.field === 'impersonationOrder'
+            ? `Superadmin approved staff impersonation order: ${approvalRequest.newValue}`
+            : `Superadmin approved negotiated discount: ${approvalRequest.newValue}`,
           changedAt: new Date(),
         });
         await order.save();
