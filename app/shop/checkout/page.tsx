@@ -82,8 +82,8 @@ function CheckoutContent() {
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // Cascading Location States
-  const [divisions, setDivisions] = useState<{id: number; name: string}[]>([]);
-  const [allDistricts, setAllDistricts] = useState<{id: number; name: string; divisionId: number}[]>([]);
+  const [divisions, setDivisions] = useState<{ id: number; name: string }[]>([]);
+  const [allDistricts, setAllDistricts] = useState<{ id: number; name: string; divisionId: number }[]>([]);
 
   // Selected Division/District IDs (defaults to Dhaka Division = 6, Dhaka Metro District = 65)
   const [billingDivisionId, setBillingDivisionId] = useState<string>('6');
@@ -150,16 +150,16 @@ function CheckoutContent() {
 
   useEffect(() => {
     document.title = 'Checkout | Parle Bangladesh';
-    
+
     // Check if there is an active shop impersonation in localStorage
     const activeShopStr = typeof window !== 'undefined' ? localStorage.getItem('sr_active_shop_user') : null;
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-    
+
     let targetProfile: any = null;
     if (activeShopStr) {
       try {
         targetProfile = JSON.parse(activeShopStr);
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!targetProfile && userStr) {
       try {
@@ -169,7 +169,7 @@ function CheckoutContent() {
           email: parsedUser.email,
           mobile: parsedUser.mobile
         };
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (targetProfile) {
@@ -229,7 +229,7 @@ function CheckoutContent() {
 
     const fetchAllDistricts = async () => {
       const divisionIds = [1, 2, 3, 4, 5, 6, 7, 8];
-      const districtsList: {id: number; name: string; divisionId: number}[] = [];
+      const districtsList: { id: number; name: string; divisionId: number }[] = [];
       try {
         await Promise.all(divisionIds.map(async (divId) => {
           const res = await fetch(`https://billing.circlenetworkbd.net/api/getDistrict/${divId}`);
@@ -249,7 +249,7 @@ function CheckoutContent() {
     fetchDivisions();
     fetchAllDistricts();
     fetchPreviousOrderAddress();
-    
+
     setMounted(true);
   }, []);
 
@@ -257,7 +257,7 @@ function CheckoutContent() {
     if (!mounted) return;
     const phone = formData.phone.trim();
     const mobileRegex = /^01[3-9]\d{8}$/;
-    
+
     if (mobileRegex.test(phone)) {
       const lookupEmail = async () => {
         try {
@@ -513,8 +513,12 @@ function CheckoutContent() {
   const baseShippingCharge = (destinationCity === 'Dhaka' || destinationCity === 'Dhaka Metro') ? 80 : 130;
   const currentShippingCost = deliveryMethod === 'pickup' ? 0 : (isFreeDelivery ? 0 : baseShippingCharge);
 
+  const isImpersonator = user?.isSR || ["super_admin", "admin", "moderator", "owner"].includes(user?.role || "");
+  const activeShopId = typeof window !== "undefined" ? localStorage.getItem("sr_active_shop_id") : null;
+  const showNegotiatedDiscount = isImpersonator && !!activeShopId;
+
   const productSubtotal = subtotal;
-  const srDiscountAmount = user?.isSR ? Math.round(productSubtotal * (srDiscountPercent / 100)) : 0;
+  const srDiscountAmount = showNegotiatedDiscount ? Math.round(productSubtotal * (srDiscountPercent / 100)) : 0;
 
   // The final total should be server-side net total + shippingCost - srDiscountAmount
   const grandTotal = Math.max(0, total + currentShippingCost - srDiscountAmount);
@@ -556,7 +560,7 @@ function CheckoutContent() {
   const handleBillingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const distId = e.target.value;
     setBillingDistrictId(distId);
-    
+
     const dist = allDistricts.find(d => String(d.id) === distId);
     setFormData(prev => ({ ...prev, city: dist ? dist.name : '', thana: '' }));
   };
@@ -571,7 +575,7 @@ function CheckoutContent() {
   const handleShippingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const distId = e.target.value;
     setShippingDistrictId(distId);
-    
+
     const dist = allDistricts.find(d => String(d.id) === distId);
     setFormData(prev => ({ ...prev, shippingCity: dist ? dist.name : '', shippingThana: '' }));
   };
@@ -696,7 +700,7 @@ function CheckoutContent() {
 
   // Checkout Form
   return (
-    <div className="min-h-screen bg-white font-sans p-8">
+    <div className="min-h-screen bg-white font-sans px-8 pt-2 pb-12">
       {/* Header */}
       <div className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -791,7 +795,7 @@ function CheckoutContent() {
                     placeholder="House #, Road #"
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Division *</label>
@@ -1015,13 +1019,12 @@ function CheckoutContent() {
                   {campaignNotices.map((notice, idx) => {
                     const isUnlocked = !!(notice as any).unlocked;
                     return (
-                      <div 
-                        key={idx} 
-                        className={`border rounded-md p-3 mb-3 flex items-start gap-2.5 shadow-sm transition-colors duration-300 ${
-                          isUnlocked 
-                            ? "bg-emerald-50 border-emerald-200" 
+                      <div
+                        key={idx}
+                        className={`border rounded-md p-3 mb-3 flex items-start gap-2.5 shadow-sm transition-colors duration-300 ${isUnlocked
+                            ? "bg-emerald-50 border-emerald-200"
                             : "bg-amber-50 border-amber-200"
-                        }`}
+                          }`}
                       >
                         {isUnlocked ? (
                           <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
@@ -1029,14 +1032,12 @@ function CheckoutContent() {
                           <Tag className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                         )}
                         <div>
-                          <p className={`text-[10px] font-black uppercase tracking-tight italic leading-tight transition-colors duration-300 ${
-                            isUnlocked ? "text-emerald-900" : "text-amber-900"
-                          }`}>
+                          <p className={`text-[10px] font-black uppercase tracking-tight italic leading-tight transition-colors duration-300 ${isUnlocked ? "text-emerald-900" : "text-amber-900"
+                            }`}>
                             {notice.offer}
                           </p>
-                          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300 ${
-                            isUnlocked ? "text-emerald-600" : "text-amber-600/80"
-                          }`}>
+                          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300 ${isUnlocked ? "text-emerald-600" : "text-amber-600/80"
+                            }`}>
                             {notice.action}
                           </p>
                         </div>
@@ -1119,9 +1120,9 @@ function CheckoutContent() {
                 )}
 
                 {/* SR Negotiated Discount Row */}
-                {user?.isSR && srDiscountPercent > 0 && (
+                {showNegotiatedDiscount && srDiscountPercent > 0 && (
                   <div className="flex justify-between text-teal-600 font-medium py-1">
-                    <span className="font-bold uppercase text-[9px] tracking-widest">SR Negotiated Discount</span>
+                    <span className="font-bold uppercase text-[9px] tracking-widest">Negotiated Discount</span>
                     <span className="font-semibold">- ৳ {Math.round(srDiscountAmount)}</span>
                   </div>
                 )}
@@ -1158,7 +1159,7 @@ function CheckoutContent() {
                 )}
 
                 {/* SR NEGOTIATED DISCOUNT INPUT */}
-                {user?.isSR && (
+                {showNegotiatedDiscount && (
                   <div className="py-3 border-b border-gray-100 my-2">
                     <label className="text-[9px] font-black text-teal-600 uppercase tracking-widest block mb-2">
                       Negotiated Discount
@@ -1174,15 +1175,15 @@ function CheckoutContent() {
                         onChange={(e) => {
                           const rawString = e.target.value;
                           setSrDiscountTaka(rawString);
-                          
+
                           const rawVal = Number(rawString) || 0;
                           const maxDiscountTaka = Math.round(subtotal * 0.15);
                           const val = Math.min(maxDiscountTaka, Math.max(0, rawVal));
-                          
+
                           if (rawVal > maxDiscountTaka) {
                             setSrDiscountTaka(maxDiscountTaka.toString());
                           }
-                          
+
                           if (subtotal > 0) {
                             const pct = Math.min(15, (val / subtotal) * 100);
                             setSrDiscountPercent(Number(pct.toFixed(4)));
