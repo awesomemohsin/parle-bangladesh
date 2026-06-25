@@ -21,8 +21,8 @@ async function connectDB() {
     const opts = {
       bufferCommands: true, // Re-enable buffering to prevent immediate failures
       maxPoolSize: 20, 
-      serverSelectionTimeoutMS: 15000, 
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 5000, // Reduced to prevent long build-time hangs if DB is unreachable
+      socketTimeoutMS: 30000, // Reduced to prevent hanging connection timeouts
       heartbeatFrequencyMS: 10000,
     };
 
