@@ -10,6 +10,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { THANA_POSTCODES } from '@/lib/postcodes';
 
+const lookupPostcodes = (district: string, thana: string): string[] => {
+  const key = `${district}_${thana}`;
+  return THANA_POSTCODES[key] || THANA_POSTCODES[thana] || ["1000"];
+};
+
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
   orderId?: string;
@@ -326,7 +331,7 @@ function CheckoutContent() {
   // Handle billing thana change: reset/auto-select postcode
   useEffect(() => {
     if (formData.thana) {
-      const codes = THANA_POSTCODES[formData.thana] || ["1000"];
+      const codes = lookupPostcodes(formData.city, formData.thana);
       if (codes.length === 1) {
         setFormData(prev => ({ ...prev, postalCode: codes[0] }));
       } else {
@@ -342,7 +347,7 @@ function CheckoutContent() {
   // Handle shipping thana change: reset/auto-select postcode
   useEffect(() => {
     if (formData.shippingThana) {
-      const codes = THANA_POSTCODES[formData.shippingThana] || ["1000"];
+      const codes = lookupPostcodes(formData.shippingCity, formData.shippingThana);
       if (codes.length === 1) {
         setFormData(prev => ({ ...prev, shippingPostalCode: codes[0] }));
       } else {
@@ -527,7 +532,7 @@ function CheckoutContent() {
 
   const getBillingPostalCodes = () => {
     if (!formData.thana) return [];
-    const codes = [...(THANA_POSTCODES[formData.thana] || ["1000"])];
+    const codes = [...lookupPostcodes(formData.city, formData.thana)];
     if (formData.postalCode && !codes.includes(formData.postalCode)) {
       codes.push(formData.postalCode);
     }
@@ -536,9 +541,10 @@ function CheckoutContent() {
 
   const getShippingPostalCodes = () => {
     const thana = sameAsBilling ? formData.thana : formData.shippingThana;
+    const district = sameAsBilling ? formData.city : formData.shippingCity;
     const currentCode = sameAsBilling ? formData.postalCode : formData.shippingPostalCode;
     if (!thana) return [];
-    const codes = [...(THANA_POSTCODES[thana] || ["1000"])];
+    const codes = [...lookupPostcodes(district, thana)];
     if (currentCode && !codes.includes(currentCode)) {
       codes.push(currentCode);
     }
