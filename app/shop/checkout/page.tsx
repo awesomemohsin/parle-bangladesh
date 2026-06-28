@@ -1046,11 +1046,11 @@ function CheckoutContent() {
                 {items.map(item => {
                   const itemKey = getItemKey(item);
                   return (
-                    <div key={itemKey} className="flex justify-between text-sm gap-2">
+                    <div key={itemKey} className="flex justify-between text-xs sm:text-sm gap-2">
                       <div className="flex flex-col">
                         <span className="text-gray-900 font-medium">{item.productName} x {item.quantity}</span>
                         {(item.weight || item.flavor) && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-[10px] sm:text-xs text-gray-500">
                             {[item.weight, item.flavor].filter(Boolean).join(" | ")}
                           </span>
                         )}

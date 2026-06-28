@@ -71,14 +71,14 @@ export function SearchableSelect({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded text-xs text-left transition-all focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 ${
+        className={`flex items-center justify-between w-full px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gray-50 border border-gray-200 rounded text-[10px] sm:text-xs text-left transition-all focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100/50'
         }`}
       >
-        <span className={selectedOption ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+        <span className={`flex-1 block truncate pr-2 ${selectedOption ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Hidden input for HTML5 validation if required */}
