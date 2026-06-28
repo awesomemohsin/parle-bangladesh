@@ -820,7 +820,7 @@ function CheckoutContent() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Division *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Division *</label>
                     <SearchableSelect
                       value={billingDivisionId}
                       onChange={handleBillingDivisionChange}
@@ -831,7 +831,7 @@ function CheckoutContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City / District *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
                     <SearchableSelect
                       value={billingDistrictId}
                       onChange={handleBillingDistrictChange}
@@ -846,7 +846,7 @@ function CheckoutContent() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thana*</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Thana *</label>
                     <SearchableSelect
                       value={formData.thana}
                       onChange={(val) => handleInputChange({ target: { name: 'thana', value: val } } as any)}
@@ -858,7 +858,7 @@ function CheckoutContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code *</label>
                     <SearchableSelect
                       value={formData.postalCode}
                       onChange={(val) => handleInputChange({ target: { name: 'postalCode', value: val } } as any)}
@@ -939,7 +939,7 @@ function CheckoutContent() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Division *</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Division *</label>
                       <SearchableSelect
                         value={sameAsBilling ? billingDivisionId : shippingDivisionId}
                         onChange={handleShippingDivisionChange}
@@ -951,7 +951,7 @@ function CheckoutContent() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City / District *</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
                       <SearchableSelect
                         value={sameAsBilling ? billingDistrictId : shippingDistrictId}
                         onChange={handleShippingDistrictChange}
@@ -966,7 +966,7 @@ function CheckoutContent() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Thana *</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Thana *</label>
                       <SearchableSelect
                         value={sameAsBilling ? formData.thana : formData.shippingThana}
                         onChange={(val) => handleInputChange({ target: { name: 'shippingThana', value: val } } as any)}
@@ -978,7 +978,7 @@ function CheckoutContent() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code *</label>
                       <SearchableSelect
                         value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
                         onChange={(val) => handleInputChange({ target: { name: 'shippingPostalCode', value: val } } as any)}
