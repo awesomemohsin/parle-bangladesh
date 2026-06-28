@@ -846,7 +846,7 @@ function CheckoutContent() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thana / Police Station *</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thana*</label>
                     <SearchableSelect
                       value={formData.thana}
                       onChange={(val) => handleInputChange({ target: { name: 'thana', value: val } } as any)}
@@ -876,7 +876,7 @@ function CheckoutContent() {
             {/* Delivery Method Selection */}
             <div className="border-t pt-4">
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Delivery Method</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${deliveryMethod === 'shipping' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                   <input type="radio" className="hidden" checked={deliveryMethod === 'shipping'} onChange={() => setDeliveryMethod('shipping')} />
                   <div className="flex flex-col">
@@ -966,7 +966,7 @@ function CheckoutContent() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Thana / Police Station *</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Thana *</label>
                       <SearchableSelect
                         value={sameAsBilling ? formData.thana : formData.shippingThana}
                         onChange={(val) => handleInputChange({ target: { name: 'shippingThana', value: val } } as any)}
@@ -1017,8 +1017,8 @@ function CheckoutContent() {
                       <div
                         key={idx}
                         className={`border rounded-md p-3 mb-3 flex items-start gap-2.5 shadow-sm transition-colors duration-300 ${isUnlocked
-                            ? "bg-emerald-50 border-emerald-200"
-                            : "bg-amber-50 border-amber-200"
+                          ? "bg-emerald-50 border-emerald-200"
+                          : "bg-amber-50 border-amber-200"
                           }`}
                       >
                         {isUnlocked ? (
