@@ -9,6 +9,7 @@ import { useCart, getItemKey } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { THANA_POSTCODES } from '@/lib/postcodes';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 const lookupPostcodes = (district: string, thana: string): string[] => {
   const normalizedDistrict = district.replace(" Metro", "");
@@ -571,30 +572,30 @@ function CheckoutContent() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleBillingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const divId = e.target.value;
+  const handleBillingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
+    const divId = typeof e === 'string' ? e : e.target.value;
     setBillingDivisionId(divId);
     setBillingDistrictId('');
     setFormData(prev => ({ ...prev, city: '', thana: '' }));
   };
 
-  const handleBillingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const distId = e.target.value;
+  const handleBillingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
+    const distId = typeof e === 'string' ? e : e.target.value;
     setBillingDistrictId(distId);
 
     const dist = allDistricts.find(d => String(d.id) === distId);
     setFormData(prev => ({ ...prev, city: dist ? dist.name : '', thana: '' }));
   };
 
-  const handleShippingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const divId = e.target.value;
+  const handleShippingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
+    const divId = typeof e === 'string' ? e : e.target.value;
     setShippingDivisionId(divId);
     setShippingDistrictId('');
     setFormData(prev => ({ ...prev, shippingCity: '', shippingThana: '' }));
   };
 
-  const handleShippingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const distId = e.target.value;
+  const handleShippingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
+    const distId = typeof e === 'string' ? e : e.target.value;
     setShippingDistrictId(distId);
 
     const dist = allDistricts.find(d => String(d.id) === distId);
@@ -820,65 +821,53 @@ function CheckoutContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Division *</label>
-                    <select
+                    <SearchableSelect
                       value={billingDivisionId}
                       onChange={handleBillingDivisionChange}
+                      options={divisions.map(div => ({ value: String(div.id), label: div.name }))}
+                      placeholder="-- Select Division --"
+                      searchPlaceholder="Search division..."
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
-                    >
-                      <option value="">-- Select Division --</option>
-                      {divisions.map(div => (
-                        <option key={div.id} value={div.id}>{div.name}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">City / District *</label>
-                    <select
-                      name="city"
+                    <SearchableSelect
                       value={billingDistrictId}
                       onChange={handleBillingDistrictChange}
+                      options={allDistricts.filter(d => String(d.divisionId) === billingDivisionId).map(d => ({ value: String(d.id), label: d.name }))}
+                      placeholder="-- Select District --"
+                      searchPlaceholder="Search district..."
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
-                    >
-                      <option value="">-- Select District --</option>
-                      {allDistricts.filter(d => String(d.divisionId) === billingDivisionId).map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                      disabled={!billingDivisionId}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thana / Police Station *</label>
-                    <select
-                      name="thana"
+                    <SearchableSelect
                       value={formData.thana}
-                      onChange={handleInputChange}
+                      onChange={(val) => handleInputChange({ target: { name: 'thana', value: val } } as any)}
+                      options={billingThanas.map(t => ({ value: t, label: t }))}
+                      placeholder="-- Select Thana --"
+                      searchPlaceholder="Search thana..."
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
-                    >
-                      <option value="">-- Select Thana --</option>
-                      {billingThanas.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
+                      disabled={!billingDistrictId}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Postal Code *</label>
-                    <select
-                      name="postalCode"
+                    <SearchableSelect
                       value={formData.postalCode}
-                      onChange={handleInputChange}
+                      onChange={(val) => handleInputChange({ target: { name: 'postalCode', value: val } } as any)}
+                      options={getBillingPostalCodes().map(pc => ({ value: pc, label: pc }))}
+                      placeholder="-- Select Postal Code --"
+                      searchPlaceholder="Search postal code..."
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs"
-                    >
-                      <option value="">-- Select Postal Code --</option>
-                      {getBillingPostalCodes().map(pc => (
-                        <option key={pc} value={pc}>{pc}</option>
-                      ))}
-                    </select>
+                      disabled={!formData.thana}
+                    />
                   </div>
                 </div>
               </div>
@@ -951,69 +940,54 @@ function CheckoutContent() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Division *</label>
-                      <select
+                      <SearchableSelect
                         value={sameAsBilling ? billingDivisionId : shippingDivisionId}
                         onChange={handleShippingDivisionChange}
+                        options={divisions.map(div => ({ value: String(div.id), label: div.name }))}
+                        placeholder="-- Select Division --"
+                        searchPlaceholder="Search division..."
                         required
                         disabled={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      >
-                        <option value="">-- Select Division --</option>
-                        {divisions.map(div => (
-                          <option key={div.id} value={div.id}>{div.name}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping City / District *</label>
-                      <select
-                        name="shippingCity"
+                      <SearchableSelect
                         value={sameAsBilling ? billingDistrictId : shippingDistrictId}
                         onChange={handleShippingDistrictChange}
+                        options={allDistricts.filter(d => String(d.divisionId) === (sameAsBilling ? billingDivisionId : shippingDivisionId)).map(d => ({ value: String(d.id), label: d.name }))}
+                        placeholder="-- Select District --"
+                        searchPlaceholder="Search district..."
                         required
-                        disabled={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      >
-                        <option value="">-- Select District --</option>
-                        {allDistricts.filter(d => String(d.divisionId) === (sameAsBilling ? billingDivisionId : shippingDivisionId)).map(d => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
+                        disabled={sameAsBilling || !(sameAsBilling ? billingDivisionId : shippingDivisionId)}
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Thana / Police Station *</label>
-                      <select
-                        name="shippingThana"
+                      <SearchableSelect
                         value={sameAsBilling ? formData.thana : formData.shippingThana}
-                        onChange={handleInputChange}
+                        onChange={(val) => handleInputChange({ target: { name: 'shippingThana', value: val } } as any)}
+                        options={(sameAsBilling ? billingThanas : shippingThanas).map(t => ({ value: t, label: t }))}
+                        placeholder="-- Select Thana --"
+                        searchPlaceholder="Search thana..."
                         required
-                        disabled={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      >
-                        <option value="">-- Select Thana --</option>
-                        {(sameAsBilling ? billingThanas : shippingThanas).map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
+                        disabled={sameAsBilling || !(sameAsBilling ? billingDistrictId : shippingDistrictId)}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Postal Code *</label>
-                      <select
-                        name="shippingPostalCode"
+                      <SearchableSelect
                         value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
-                        onChange={handleInputChange}
+                        onChange={(val) => handleInputChange({ target: { name: 'shippingPostalCode', value: val } } as any)}
+                        options={getShippingPostalCodes().map(pc => ({ value: pc, label: pc }))}
+                        placeholder="-- Select Postal Code --"
+                        searchPlaceholder="Search postal code..."
                         required
-                        disabled={sameAsBilling}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all appearance-none text-xs ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
-                      >
-                        <option value="">-- Select Postal Code --</option>
-                        {getShippingPostalCodes().map(pc => (
-                          <option key={pc} value={pc}>{pc}</option>
-                        ))}
-                      </select>
+                        disabled={sameAsBilling || !(sameAsBilling ? formData.thana : formData.shippingThana)}
+                      />
                     </div>
                   </div>
                 </div>
