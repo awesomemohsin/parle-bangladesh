@@ -11,9 +11,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { THANA_POSTCODES } from '@/lib/postcodes';
 
 const lookupPostcodes = (district: string, thana: string): string[] => {
-  const key = `${district}_${thana}`;
-  return THANA_POSTCODES[key] || THANA_POSTCODES[thana] || ["1000"];
+  const normalizedDistrict = district.replace(" Metro", "");
+  const key = `${normalizedDistrict}_${thana}`;
+  return THANA_POSTCODES[key] || THANA_POSTCODES[district + "_" + thana] || THANA_POSTCODES[thana] || ["1000"];
 };
+
+const getEffectiveDistrictId = (districtId: string): string => {
+  const mapping: Record<string, string> = {
+    "68": "27", // Khulna Metro -> Khulna
+    "69": "33", // Barishal Metro -> Barisal
+    "67": "15", // Rajshahi Metro -> Rajshahi
+    "71": "59", // Rangpur Metro -> Rangpur
+    "70": "36", // Sylhet Metro -> Sylhet
+  };
+  return mapping[districtId] || districtId;
+};
+
 
 interface OrderState {
   status: 'form' | 'confirming' | 'success' | 'error';
@@ -294,7 +307,8 @@ function CheckoutContent() {
     }
     const fetchBillingThanas = async () => {
       try {
-        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${billingDistrictId}`);
+        const effectiveId = getEffectiveDistrictId(billingDistrictId);
+        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${effectiveId}`);
         if (res.ok) {
           const data = await res.json();
           const thanas = Object.values(data).map((u: any) => u.name).sort();
@@ -315,7 +329,8 @@ function CheckoutContent() {
     }
     const fetchShippingThanas = async () => {
       try {
-        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${shippingDistrictId}`);
+        const effectiveId = getEffectiveDistrictId(shippingDistrictId);
+        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${effectiveId}`);
         if (res.ok) {
           const data = await res.json();
           const thanas = Object.values(data).map((u: any) => u.name).sort();
