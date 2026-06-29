@@ -121,9 +121,19 @@ export async function GET(request: NextRequest) {
     if (productId) activeRangeQuery["items.productId"] = productId;
 
     const pendingQuery: any = { status: { $in: ['pending', 'processing', 'shipped'] } };
+    if (startDate || endDate) {
+      pendingQuery.createdAt = {};
+      if (startDate) pendingQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) pendingQuery.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+    }
     if (productId) pendingQuery["items.productId"] = productId;
 
     const lossQuery: any = { status: { $in: ['lost', 'damaged'] } };
+    if (startDate || endDate) {
+      lossQuery.createdAt = {};
+      if (startDate) lossQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) lossQuery.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+    }
     if (productId) lossQuery["items.productId"] = productId;
 
     const srId = searchParams.get("srId");

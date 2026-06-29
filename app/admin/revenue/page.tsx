@@ -14,7 +14,8 @@ import {
   RotateCcw,
   User,
   ShoppingCart,
-  X
+  X,
+  Printer
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,339 @@ export default function RevenuePage() {
     title: string;
     orders: any[];
   } | null>(null);
+
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportData, setReportData] = useState<any>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  const handleOpenReport = async () => {
+    setReportModalOpen(true);
+    setLoadingReport(true);
+    try {
+      const query = new URLSearchParams();
+      if (filters.startDate) query.append("startDate", filters.startDate);
+      if (filters.endDate) query.append("endDate", filters.endDate);
+
+      const res = await fetch(`/api/admin/analytics/report?${query.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setReportData(json);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const getReportSummary = () => {
+    if (!reportData?.statusStats) return {
+      totalOrders: { count: 0, amount: 0, products: 0 },
+      delivered: { count: 0, amount: 0, products: 0 },
+      pending: { count: 0, amount: 0, products: 0 },
+      loss: { count: 0, amount: 0, products: 0 },
+      cancelled: { count: 0, amount: 0, products: 0 }
+    };
+
+    let totalCount = 0;
+    let totalAmt = 0;
+    let totalProd = 0;
+    let delCount = 0;
+    let delAmt = 0;
+    let delProd = 0;
+    let pendCount = 0;
+    let pendAmt = 0;
+    let pendProd = 0;
+    let lossCount = 0;
+    let lossAmt = 0;
+    let lossProd = 0;
+    let cancCount = 0;
+    let cancAmt = 0;
+    let cancProd = 0;
+
+    reportData.statusStats.forEach((s: any) => {
+      totalCount += s.count;
+      totalAmt += s.totalAmount;
+      totalProd += (s.totalProducts || 0);
+
+      if (s._id === 'delivered') {
+        delCount = s.count;
+        delAmt = s.totalAmount;
+        delProd = (s.totalProducts || 0);
+      } else if (['pending', 'processing', 'shipped'].includes(s._id)) {
+        pendCount += s.count;
+        pendAmt += s.totalAmount;
+        pendProd += (s.totalProducts || 0);
+      } else if (['lost', 'damaged'].includes(s._id)) {
+        lossCount += s.count;
+        lossAmt += s.totalAmount;
+        lossProd += (s.totalProducts || 0);
+      } else if (s._id === 'cancelled') {
+        cancCount = s.count;
+        cancAmt = s.totalAmount;
+        cancProd = (s.totalProducts || 0);
+      }
+    });
+
+    return {
+      totalOrders: { count: totalCount, amount: totalAmt, products: totalProd },
+      delivered: { count: delCount, amount: delAmt, products: delProd },
+      pending: { count: pendCount, amount: pendAmt, products: pendProd },
+      loss: { count: lossCount, amount: lossAmt, products: lossProd },
+      cancelled: { count: cancCount, amount: cancAmt, products: cancProd }
+    };
+  };
+
+  const getKeyObservations = () => {
+    if (!reportData) return [];
+    const observations = [];
+
+    const summary = getReportSummary();
+    const totalDelivered = summary.delivered.amount;
+    const totalCount = summary.delivered.count;
+    observations.push(`Overall sales performance remains strong, with a total of ${totalCount.toLocaleString()} delivered orders bringing in ৳${totalDelivered.toLocaleString()} in net revenue.`);
+
+    if (reportData.customerTypeStats && reportData.customerTypeStats.length > 0) {
+      const sorted = [...reportData.customerTypeStats].sort((a: any, b: any) => b.totalAmount - a.totalAmount);
+      const topSegment = sorted[0];
+      observations.push(`The ${getCustomerTypeLabel(topSegment._id).toLowerCase()} segment is currently our most valuable customer channel, generating the highest total order value.`);
+    }
+
+    if (reportData.dealerStats && reportData.dealerStats.length > 0) {
+      const dealerRev = reportData.dealerStats.reduce((sum: number, d: any) => sum + d.totalAmount, 0);
+      const dealerDue = reportData.dealerStats.reduce((sum: number, d: any) => sum + d.amountDue, 0);
+      observations.push(`B2B distributors and dealers contributed ৳${dealerRev.toLocaleString()} in total sales, although there is a remaining outstanding balance of ৳${dealerDue.toLocaleString()} that requires collection follow-up.`);
+    }
+
+    if (reportData.srStats && reportData.srStats.length > 0) {
+      const topSR = reportData.srStats[0];
+      observations.push(`Field sales activities are highly productive, led by representative ${topSR.srName || "N/A"} who generated ৳${topSR.totalAmount.toLocaleString()} in total sales volume.`);
+    }
+
+    let totalBilled = 0;
+    let totalCollected = 0;
+    let totalDue = 0;
+    reportData.paymentStats.forEach((p: any) => {
+      totalBilled += p.totalAmount;
+      totalCollected += p.paidAmount;
+      totalDue += p.dueAmount;
+    });
+    if (totalBilled > 0) {
+      const efficiency = (totalCollected / totalBilled) * 100;
+      observations.push(`Cash collections are running at a ${efficiency.toFixed(1)}% efficiency rate, leaving an overall outstanding receivable of ৳${totalDue.toLocaleString()} across all payment methods.`);
+    }
+
+    if (reportData.productStats && reportData.productStats.length > 0) {
+      const topProd = reportData.productStats[0];
+      observations.push(`Product demand is led by "${topProd.productName}", which stands as the highest-selling product by moving ${topProd.unitsSold.toLocaleString()} units.`);
+    }
+
+    return observations;
+  };
+
+  const getCustomerTypeLabel = (type: string) => {
+    switch (type) {
+      case 'customer': return 'Registered Customers';
+      case 'guest': return 'Guests';
+      case 'retailer': return 'B2B Retailers';
+      case 'dealer': return 'B2B Dealers';
+      case 'owner': return 'Owner Orders';
+      case 'admin': return 'Admin Orders';
+      case 'super_admin': return 'Super Admin Orders';
+      case 'moderator': return 'Moderator Orders';
+      default: return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+  };
+
+  const handleExportReportCSV = () => {
+    if (!reportData) return;
+
+    const sections = [];
+    const dateRangeStr = `${filters.startDate || "LIFETIME"}_to_${filters.endDate}`;
+
+    // Document header
+    sections.push([`PARLE BANGLADESH - EXECUTIVE MANAGEMENT REPORT`]);
+    sections.push([`Period: ${filters.startDate || "LIFETIME"} to ${filters.endDate}`]);
+    sections.push([`Generated At: ${new Date().toLocaleString()}`]);
+    sections.push([]);
+
+    // Executive Summary
+    sections.push([`--- EXECUTIVE SUMMARY ---`]);
+    sections.push([`Metric`, `Count`, `Total Value`]);
+    const summary = getReportSummary();
+    sections.push([`Total Orders`, `${summary.totalOrders.count} Orders`, summary.totalOrders.amount]);
+    sections.push([`Delivered Sales`, `${summary.delivered.count} Orders`, summary.delivered.amount]);
+    sections.push([`Pending Pipeline`, `${summary.pending.count} Orders`, summary.pending.amount]);
+    sections.push([`Products Sold`, `${reportData.overallStats?.totalUniqueSKUs || 0} SKUs`, `${reportData.overallStats?.totalProductsSold || 0} Units`]);
+    sections.push([`New Customers Registered`, reportData.newCustomersCount, `-`]);
+    sections.push([]);
+
+    // Customer Type Breakdown
+    sections.push([`--- SALES BREAKDOWN BY CUSTOMER TYPE ---`]);
+    sections.push([`Customer Segment`, `Orders Placed`, `Products Sold`, `Total Order Value`]);
+    reportData.customerTypeStats.forEach((stat: any) => {
+      const label = getCustomerTypeLabel(stat._id);
+      sections.push([label, stat.count, stat.totalProducts || 0, stat.totalAmount]);
+    });
+    sections.push([]);
+
+    // Dealer Summary
+    sections.push([`--- DEALER PERFORMANCE SUMMARY ---`]);
+    sections.push([`Dealer Name`, `Phone`, `Orders Count`, `Products Sold`, `Dues Outstanding`, `Total Sales Value`]);
+    (reportData.dealerStats || []).forEach((stat: any) => {
+      sections.push([stat.customerName || "N/A", stat.customerPhone || "N/A", stat.count, stat.totalProducts || 0, stat.amountDue, stat.totalAmount]);
+    });
+    sections.push([]);
+
+    // SR Breakdown
+    sections.push([`--- SALES REPRESENTATIVES PERFORMANCE ---`]);
+    sections.push([`SR Name`, `Mobile`, `Orders Placed`, `Products Sold`, `Total Sales`]);
+    reportData.srStats.forEach((stat: any) => {
+      const name = stat.srName || "Unknown SR";
+      const mobile = stat.srMobile || "N/A";
+      sections.push([name, mobile, stat.count, stat.totalProducts || 0, stat.totalAmount]);
+    });
+    sections.push([]);
+
+    // Payment Breakdown
+    sections.push([`--- PAYMENT METHODS & CASHFLOW COLLECTION ---`]);
+    sections.push([`Payment Method`, `Orders Placed`, `Total Value`, `Amount Paid`, `Amount Due`]);
+    reportData.paymentStats.forEach((stat: any) => {
+      sections.push([stat._id, stat.count, stat.totalAmount, stat.paidAmount, stat.dueAmount]);
+    });
+    sections.push([]);
+
+    // Order Status Summary
+    sections.push([`--- ORDER STATUS SUMMARY ---`]);
+    sections.push([`Order Status`, `Orders Count`, `Products Sold`, `Total Status Value`]);
+    const statusOrder = ['delivered', 'shipped', 'processing'];
+    const sortedStatusStats = [...reportData.statusStats].sort((a: any, b: any) => {
+      const aIndex = statusOrder.indexOf(a._id.toLowerCase());
+      const bIndex = statusOrder.indexOf(b._id.toLowerCase());
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      return a._id.localeCompare(b._id);
+    });
+    sortedStatusStats.forEach((stat: any) => {
+      sections.push([stat._id.toUpperCase(), stat.count, stat.totalProducts || 0, stat.totalAmount]);
+    });
+    sections.push([]);
+
+    // Top Products
+    sections.push([`--- TOP PERFORMING PRODUCTS ---`]);
+    sections.push([`Product Name`, `Units Sold`, `Total Revenue`]);
+    reportData.productStats.slice(0, 10).forEach((stat: any) => {
+      sections.push([stat.productName, stat.unitsSold, stat.totalRevenue]);
+    });
+    sections.push([]);
+
+    // Overall Stats
+    sections.push([`--- OVERALL STATISTICS ---`]);
+    sections.push([`Total Products Sold`, `${reportData.overallStats?.totalProductsSold || 0} Units`]);
+    sections.push([`Total Unique SKUs`, `${reportData.overallStats?.totalUniqueSKUs || 0} SKUs`]);
+    sections.push([`Average Products Per Order`, `${(reportData.overallStats?.averageProductsPerOrder || 0).toFixed(2)} Items/Order`]);
+    sections.push([`Highest Order Value`, `৳${(reportData.overallStats?.highestOrderValue || 0).toLocaleString()}`]);
+    sections.push([`Lowest Order Value`, `৳${(reportData.overallStats?.lowestOrderValue || 0).toLocaleString()}`]);
+    sections.push([]);
+
+    // Key Observations
+    sections.push([`--- KEY OBSERVATIONS ---`]);
+    getKeyObservations().forEach((obs) => {
+      sections.push([obs]);
+    });
+
+    const csvContent = sections.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `executive_management_report_${dateRangeStr}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    const printableElement = document.getElementById("report-printable-area");
+    if (!printableElement) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to print the report");
+      return;
+    }
+
+    let styles = "";
+    document.querySelectorAll("link[rel='stylesheet'], style").forEach((styleNode) => {
+      styles += styleNode.outerHTML;
+    });
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Executive Management Report</title>
+          ${styles}
+          <style>
+            body {
+              background: white !important;
+              color: black !important;
+              padding: 15mm 15mm 15mm 15mm !important;
+              font-family: ui-sans-serif, system-ui, sans-serif !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            
+            /* Print Layout Constraints for Portrait View */
+            @page {
+              size: portrait;
+              margin: 0 !important;
+            }
+            
+            /* Force the KPI grid to remain in exactly 1 row of 6 columns */
+            #kpi-cards-grid {
+              display: grid !important;
+              grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+              gap: 8px !important;
+              width: 100% !important;
+            }
+            
+            /* Document Header Alignment */
+            #report-doc-header {
+              display: flex !important;
+              flex-direction: row !important;
+              justify-content: space-between !important;
+              align-items: flex-end !important;
+              text-align: left !important;
+              width: 100% !important;
+            }
+            #report-period-box {
+              text-align: right !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div>
+            ${printableElement.innerHTML}
+          </div>
+          <script>
+            setTimeout(function() {
+              window.focus();
+              window.print();
+              window.close();
+            }, 600);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -150,7 +484,6 @@ export default function RevenuePage() {
   const chartData = useMemo(() => {
     if (!data?.logs) return [];
 
-    // Group logs by date for chart
     const groups: { [key: string]: number } = {};
     data.logs.forEach((log: any) => {
       const date = new Date(log.date).toLocaleDateString("en-GB");
@@ -167,7 +500,7 @@ export default function RevenuePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Compiling Financial Ledger...</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Compiling Financial Ledger...</p>
       </div>
     );
   }
@@ -268,6 +601,16 @@ export default function RevenuePage() {
               </select>
             </div>
           </div>
+
+          <button
+            id="btn-generate-report"
+            onClick={handleOpenReport}
+            title="Generate Business Report"
+            className="px-4 py-3 md:py-4 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[10px] md:text-xs tracking-widest rounded-xl md:rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+          >
+            <FileText className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            <span>Report</span>
+          </button>
 
           <button
             onClick={fetchData}
@@ -409,7 +752,7 @@ export default function RevenuePage() {
             </div>
             <div className="flex gap-2">
               <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
-                <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></div>
                 <span className="text-[9px] font-black text-gray-900 uppercase tracking-widest">Live Data</span>
               </div>
             </div>
@@ -664,7 +1007,7 @@ export default function RevenuePage() {
                           <th className="py-3 px-4">Order ID</th>
                           <th className="py-3 px-4">Date</th>
                           <th className="py-3 px-4">Customer</th>
-                          <th className="py-3 px-4">Items / Products</th>
+                          <th className="py-3 px-4 text-center">Items / Products</th>
                           <th className="py-3 px-4 text-center">Status</th>
                           <th className="py-3 px-4 text-right">Total Amount</th>
                         </tr>
@@ -710,6 +1053,486 @@ export default function RevenuePage() {
                       </tbody>
                     </table>
                   </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Detailed Business Report Modal */}
+      <AnimatePresence>
+        {reportModalOpen && (
+          <div
+            id="modal-report-overlay"
+            onClick={() => setReportModalOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm cursor-pointer"
+          >
+            <motion.div
+              id="modal-report-container"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col cursor-default print:border-none print:shadow-none"
+            >
+              {/* Modal Header */}
+              <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 no-print">
+                <div>
+                  <h3 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
+                    Sales & Operations Report
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    id="btn-print-report"
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Report</span>
+                  </button>
+                  <button
+                    id="btn-export-report-csv"
+                    onClick={handleExportReportCSV}
+                    className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
+                  </button>
+                  <button
+                    id="btn-close-report"
+                    onClick={() => setReportModalOpen(false)}
+                    className="p-2.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div
+                id="report-printable-area"
+                className="p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-8 printable-area print:p-0"
+              >
+                {loadingReport || !reportData ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Compiling Analytics Ledger...</p>
+                  </div>
+                ) : (
+                  <>
+
+                    {/* Report Document Header */}
+                    <div id="report-doc-header" className="text-center md:text-left border-b-2 border-slate-900 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                      <div>
+                        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mt-2">PARLE BANGLADESH</h1>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Executive Management Report</p>
+                      </div>
+                      <div id="report-period-box" className="text-center md:text-right text-[10px] font-black text-slate-800 uppercase tracking-wider space-y-1 bg-slate-50 p-4 rounded-2xl border border-slate-100 md:min-w-[250px] print:bg-transparent print:border-none print:p-0">
+                        <div>Report Period</div>
+                        <div className="text-xs font-black text-red-600">
+                          {filters.startDate ? new Date(filters.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "LIFETIME"}
+                          <span className="text-slate-400 mx-2">to</span>
+                          {filters.endDate ? new Date(filters.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TODAY"}
+                        </div>
+                        <div className="text-[8px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Generated: {new Date().toLocaleString('en-GB')}</div>
+                      </div>
+                    </div>
+
+                    {/* Executive KPI Summary */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 font-mono">I. Executive Summary</h4>
+                      <div id="kpi-cards-grid" className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                        {(() => {
+                          const guestStats = reportData.customerTypeStats.find((s: any) => s._id === 'guest') || { count: 0, totalAmount: 0 };
+                          const kpisList = [
+                            {
+                              label: "Total Orders",
+                              count: `${getReportSummary().totalOrders.count} Orders`,
+                              value: `৳${getReportSummary().totalOrders.amount.toLocaleString()}`,
+                              color: "border-slate-200 bg-slate-50/50"
+                            },
+                            {
+                              label: "Delivered Sales",
+                              count: `${getReportSummary().delivered.count} Orders`,
+                              value: `৳${getReportSummary().delivered.amount.toLocaleString()}`,
+                              color: "border-emerald-200 bg-emerald-50/30"
+                            },
+                            {
+                              label: "Pending Pipeline",
+                              count: `${getReportSummary().pending.count} Orders`,
+                              value: `৳${getReportSummary().pending.amount.toLocaleString()}`,
+                              color: "border-amber-200 bg-amber-50/30"
+                            },
+                            {
+                              label: "Products Sold",
+                              count: `${reportData.overallStats?.totalUniqueSKUs || 0} SKUs`,
+                              value: `${(reportData.overallStats?.totalProductsSold || 0).toLocaleString()} Units`,
+                              color: "border-purple-200 bg-purple-50/30"
+                            },
+                            {
+                              label: "New Customers",
+                              count: "Registered Customers",
+                              value: `${reportData.newCustomersCount}`,
+                              color: "border-blue-200 bg-blue-50/30"
+                            },
+                            {
+                              label: "Guest Customers",
+                              count: `${guestStats.count} Checkout Orders`,
+                              value: `৳${guestStats.totalAmount.toLocaleString()}`,
+                              color: "border-indigo-200 bg-indigo-50/30"
+                            }
+                          ];
+                          return kpisList.map((kpi, idx) => (
+                            <div key={idx} className={`p-4 border rounded-2xl flex flex-col justify-between ${kpi.color}`}>
+                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
+                              <div className="mt-2">
+                                <span className="text-base font-black text-slate-900 leading-none">{kpi.value}</span>
+                                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{kpi.count}</span>
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Sales Breakdown by Customer Type */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">II. Sales Breakdown by Customer Type</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5">Customer Segment</th>
+                              <th className="py-3 px-5 text-center">Orders Placed</th>
+                              <th className="py-3 px-5 text-center">Products Sold</th>
+                              <th className="py-3 px-5 text-right">Total Order Value</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {reportData.customerTypeStats.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="py-6 text-center text-slate-400 uppercase font-bold tracking-widest text-[10px]">No records match date range</td>
+                              </tr>
+                            ) : (
+                              reportData.customerTypeStats.map((stat: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-slate-50/30 font-medium">
+                                  <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">
+                                    {getCustomerTypeLabel(stat._id)}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.count}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.totalProducts || 0}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-slate-955 tabular-nums">
+                                    ৳{stat.totalAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Dealer Performance Summary */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">III. Dealer Performance Summary</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5">Dealer Name</th>
+                              <th className="py-3 px-5">Phone Number</th>
+                              <th className="py-3 px-5 text-center">Orders Count</th>
+                              <th className="py-3 px-5 text-center">Products Sold</th>
+                              <th className="py-3 px-5 text-right">Dues Outstanding</th>
+                              <th className="py-3 px-5 text-right">Total Sales Value</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {!reportData.dealerStats || reportData.dealerStats.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="py-6 text-center text-slate-400 uppercase font-bold tracking-widest text-[10px]">No dealer records in range</td>
+                              </tr>
+                            ) : (
+                              reportData.dealerStats.map((stat: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-slate-50/30 font-medium">
+                                  <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">
+                                    {stat.customerName || "Unknown Dealer"}
+                                  </td>
+                                  <td className="py-3.5 px-5 font-mono text-slate-550">
+                                    {stat.customerPhone || "N/A"}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.count}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.totalProducts || 0}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-amber-600 tabular-nums">
+                                    ৳{stat.amountDue.toLocaleString()}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-slate-950 tabular-nums">
+                                    ৳{stat.totalAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Sales Representatives (SR) Performance */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">IV. Sales Representatives (SR) Performance</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5">SR Name</th>
+                              <th className="py-3 px-5">Mobile</th>
+                              <th className="py-3 px-5 text-center">Orders Placed</th>
+                              <th className="py-3 px-5 text-center">Products Sold</th>
+                              <th className="py-3 px-5 text-right">Total Sales</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {reportData.srStats.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="py-6 text-center text-slate-400 uppercase font-bold tracking-widest text-[10px]">No SR orders recorded in this range</td>
+                              </tr>
+                            ) : (
+                              reportData.srStats.map((stat: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-slate-50/30 font-medium">
+                                  <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">
+                                    {stat.srName || "Unknown Representative"}
+                                  </td>
+                                  <td className="py-3.5 px-5 font-mono text-slate-550">
+                                    {stat.srMobile || "N/A"}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.count}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.totalProducts || 0}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-slate-950 tabular-nums">
+                                    ৳{stat.totalAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Payment & Outstanding Balances */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">V. Payment Methods & Cashflow Collection</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5">Payment Method</th>
+                              <th className="py-3 px-5 text-center">Orders</th>
+                              <th className="py-3 px-5 text-right">Total Order Value</th>
+                              <th className="py-3 px-5 text-right">Amount Collected</th>
+                              <th className="py-3 px-5 text-right">Outstanding Balance</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {reportData.paymentStats.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="py-6 text-center text-slate-400 uppercase font-bold tracking-widest text-[10px]">No transaction history in range</td>
+                              </tr>
+                            ) : (
+                              reportData.paymentStats.map((stat: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-slate-50/30 font-medium">
+                                  <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">
+                                    {stat._id.toUpperCase()}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.count}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-slate-950 tabular-nums">
+                                    ৳{stat.totalAmount.toLocaleString()}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-emerald-600 tabular-nums">
+                                    ৳{stat.paidAmount.toLocaleString()}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-amber-600 tabular-nums">
+                                    ৳{stat.dueAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Order Status Summary */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">VI. Order Status Summary</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5">Order Status</th>
+                              <th className="py-3 px-5 text-center">Orders Count</th>
+                              <th className="py-3 px-5 text-center">Products Sold</th>
+                              <th className="py-3 px-5 text-right">Total Status Value</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {reportData.statusStats.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="py-6 text-center text-slate-400 uppercase font-bold tracking-widest text-[10px]">No records found</td>
+                              </tr>
+                            ) : (
+                              [...reportData.statusStats].sort((a: any, b: any) => {
+                                const statusOrder = ['delivered', 'shipped', 'processing'];
+                                const aIndex = statusOrder.indexOf(a._id.toLowerCase());
+                                const bIndex = statusOrder.indexOf(b._id.toLowerCase());
+                                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                                if (aIndex !== -1) return -1;
+                                if (bIndex !== -1) return 1;
+                                return a._id.localeCompare(b._id);
+                              }).map((stat: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-slate-50/30 font-medium">
+                                  <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">
+                                    {stat._id.toUpperCase()}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.count}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.totalProducts || 0}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-bold text-slate-955 tabular-nums">
+                                    ৳{stat.totalAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Top Products */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">VII. Top Performing Products (Top 10)</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5 text-center">Rank</th>
+                              <th className="py-3 px-5">Product Name</th>
+                              <th className="py-3 px-5 text-center">Volume Sold</th>
+                              <th className="py-3 px-5 text-right">Revenue Generated</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {reportData.productStats.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="py-6 text-center text-slate-400 uppercase font-bold tracking-widest text-[10px]">No sales recorded</td>
+                              </tr>
+                            ) : (
+                              reportData.productStats.slice(0, 10).map((stat: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-slate-50/30 font-medium">
+                                  <td className="py-3.5 px-5 text-center font-black text-slate-400 tabular-nums">
+                                    #{idx + 1}
+                                  </td>
+                                  <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">
+                                    {stat.productName}
+                                  </td>
+                                  <td className="py-3.5 px-5 text-center font-bold tabular-nums">
+                                    {stat.unitsSold} Units
+                                  </td>
+                                  <td className="py-3.5 px-5 text-right font-black text-red-600 tabular-nums">
+                                    ৳{stat.totalRevenue.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Overall Statistics */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">VIII. Overall Statistics</h4>
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest print:bg-transparent print:border-b-2 print:border-slate-900">
+                              <th className="py-3 px-5">Metric Name</th>
+                              <th className="py-3 px-5 text-right">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            <tr className="hover:bg-slate-50/30 font-medium">
+                              <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">Total Products Sold</td>
+                              <td className="py-3.5 px-5 text-right font-bold tabular-nums">{(reportData.overallStats?.totalProductsSold || 0).toLocaleString()} Units</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/30 font-medium">
+                              <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">Total Unique SKUs</td>
+                              <td className="py-3.5 px-5 text-right font-bold tabular-nums">{reportData.overallStats?.totalUniqueSKUs || 0} Products</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/30 font-medium">
+                              <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">Average Products Per Order</td>
+                              <td className="py-3.5 px-5 text-right font-bold tabular-nums">{(reportData.overallStats?.averageProductsPerOrder || 0).toFixed(2)} Items/Order</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/30 font-medium">
+                              <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">Highest Order Value</td>
+                              <td className="py-3.5 px-5 text-right font-bold text-emerald-600 tabular-nums">৳{(reportData.overallStats?.highestOrderValue || 0).toLocaleString()}</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/30 font-medium">
+                              <td className="py-3.5 px-5 font-black text-slate-800 uppercase tracking-tight">Lowest Order Value</td>
+                              <td className="py-3.5 px-5 text-right font-bold text-red-600 tabular-nums">৳{(reportData.overallStats?.lowestOrderValue || 0).toLocaleString()}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Key Observations Section */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">IX. Key Observations</h4>
+                      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-2.5 print:bg-transparent print:border-none print:p-0">
+                        {getKeyObservations().map((obs, idx) => (
+                          <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0" />
+                            <p className="font-semibold leading-relaxed tracking-tight">{obs}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Signature Fields */}
+                    <div className="pt-12 border-t border-slate-200 mt-12 grid grid-cols-3 gap-8 text-center text-[10px] font-black uppercase tracking-wider print:pt-8 print:mt-8">
+                      <div className="flex flex-col items-center">
+                        <div className="w-32 border-b border-slate-300 h-8"></div>
+                        <span className="mt-2 text-slate-400">Prepared By</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-32 border-b border-slate-300 h-8"></div>
+                        <span className="mt-2 text-slate-400">Reviewed By</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-32 border-b border-slate-300 h-8"></div>
+                        <span className="mt-2 text-slate-400">Approved By</span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </motion.div>
