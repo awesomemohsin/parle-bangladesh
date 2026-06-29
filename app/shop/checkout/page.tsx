@@ -80,7 +80,7 @@ function CheckoutContent() {
 
 
   const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, updateAuth } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [confirmingStep, setConfirmingStep] = useState(0);
 
@@ -157,6 +157,7 @@ function CheckoutContent() {
     shippingPostalCode: '',
     instruction: '',
     paymentMethod: 'cash_on_delivery',
+    password: '',
   });
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const [sameAsBilling, setSameAsBilling] = useState(true);
@@ -165,19 +166,26 @@ function CheckoutContent() {
   const [srDiscountPercent, setSrDiscountPercent] = useState<number>(0);
   const [srDiscountTaka, setSrDiscountTaka] = useState<string>('');
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPhoneRegistered, setIsPhoneRegistered] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     document.title = 'Checkout | Parle Bangladesh';
 
-    // Check if there is an active shop impersonation in localStorage
-    const activeShopStr = typeof window !== 'undefined' ? localStorage.getItem('sr_active_shop_user') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    const activeShopStr = typeof window !== 'undefined' ? localStorage.getItem('sr_active_shop_id') : null;
+    setIsLoggedIn(!!token && (!!userStr || !!activeShopStr));
+
+    // Check if there is an active shop impersonation in localStorage
+    const activeShopStrUser = typeof window !== 'undefined' ? localStorage.getItem('sr_active_shop_user') : null;
 
     let targetProfile: any = null;
-    if (activeShopStr) {
+    if (activeShopStrUser) {
       try {
-        targetProfile = JSON.parse(activeShopStr);
+        targetProfile = JSON.parse(activeShopStrUser);
       } catch (e) { }
     }
     if (!targetProfile && userStr) {
@@ -277,6 +285,23 @@ function CheckoutContent() {
     const phone = formData.phone.trim();
     const mobileRegex = /^01[3-9]\d{8}$/;
 
+    // 1. Validation check for phone format and 11 digits
+    if (phone.length > 0) {
+      if (phone.length < 11) {
+        setPhoneError("Please enter a correct 11-digit mobile number.");
+        setIsPhoneRegistered(false);
+      } else if (!mobileRegex.test(phone)) {
+        setPhoneError("Please enter a valid BD phone number (e.g. 01XXXXXXXXX).");
+        setIsPhoneRegistered(false);
+      } else {
+        setPhoneError(""); // valid format!
+      }
+    } else {
+      setPhoneError("");
+      setIsPhoneRegistered(false);
+    }
+
+    // 2. Lookup check if it is valid 11 digits
     if (mobileRegex.test(phone)) {
       const lookupEmail = async () => {
         try {
@@ -289,6 +314,8 @@ function CheckoutContent() {
             } else {
               setEmailReadOnly(false);
             }
+            // Set if the phone is already registered as a User
+            setIsPhoneRegistered(!!data.isRegistered);
           }
         } catch (err) {
           console.error("Error looking up email by phone:", err);
@@ -297,6 +324,7 @@ function CheckoutContent() {
       lookupEmail();
     } else {
       setEmailReadOnly(false);
+      setIsPhoneRegistered(false);
     }
   }, [formData.phone, mounted]);
 
@@ -664,6 +692,7 @@ function CheckoutContent() {
           discountAmount: (discountAmount || 0) + srDiscountAmount,
           srDiscountPercent,
           srDiscountAmount,
+          password: formData.password,
         }),
       });
 
@@ -676,12 +705,16 @@ function CheckoutContent() {
       const order = await response.json();
       clearCart();
 
+      if (order.token && order.user) {
+        updateAuth(order.user, order.token);
+      }
+
       // Keep active shop session details so the SR doesn't have to re-select the shop after placing an order
 
       if (order.paymentMethod === "sslcommerz" && order.gatewayUrl) {
         window.location.href = order.gatewayUrl;
       } else {
-        router.push(`/shop/order-received/${order.id}`);
+        router.push(`/shop/order-received/${order.id}${order.autoSignUp ? '?new_signup=true' : ''}`);
       }
     } catch (error: any) {
       const message = error instanceof Error ? error.message : 'An error occurred';
@@ -786,17 +819,50 @@ function CheckoutContent() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
-                    placeholder="01XXXXXXXXX"
-                  />
+                <div className={!isLoggedIn ? "grid grid-cols-1 md:grid-cols-2 gap-3" : ""}>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${phoneError
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-200 focus:border-red-600 focus:ring-red-600'
+                        }`}
+                      placeholder="01XXXXXXXXX"
+                    />
+                    {phoneError && (
+                      <p className="text-[10px] text-red-650 font-bold uppercase tracking-wide leading-tight mt-1 animate-in fade-in duration-200">
+                        ⚠️ {phoneError}
+                      </p>
+                    )}
+                  </div>
+
+                  {!isLoggedIn && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between">
+                        <span>New Password (Optional)</span>
+                        {isPhoneRegistered ? (
+                          <span className="text-[9px] text-green-600 lowercase tracking-normal font-medium normal-case font-bold">(Account Detected)</span>
+                        ) : (
+                          <span className="text-[9px] text-amber-600 lowercase tracking-normal font-medium normal-case font-bold">(Keep Blank = Phone Number)</span>
+                        )}
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={formData.password || ''}
+                        onChange={handleInputChange}
+                        disabled={isPhoneRegistered}
+                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${isPhoneRegistered ? 'opacity-60 cursor-not-allowed bg-gray-150/50' : ''
+                          }`}
+                        placeholder={isPhoneRegistered ? "Checked out as guest" : "Choose password (min 6 chars)"}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

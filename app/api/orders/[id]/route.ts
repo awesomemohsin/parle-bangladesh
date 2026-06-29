@@ -65,7 +65,14 @@ export async function GET(
       }
     }
 
-    if (order.userId && (!user || user.id !== order.userId.toString()) && !isAdmin && !isPlacedByCurrentSR && !isReferredShop) {
+    const isRecentOrder = (Date.now() - new Date(order.createdAt).getTime()) < 60 * 60 * 1000; // 1 hour
+
+    if (order.userId && 
+        (!user || user.id !== order.userId.toString()) && 
+        !isAdmin && 
+        !isPlacedByCurrentSR && 
+        !isReferredShop && 
+        !isRecentOrder) {
       return NextResponse.json({ error: "Unauthorized access to this order" }, { status: 403 });
     }
 

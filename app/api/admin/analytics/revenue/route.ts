@@ -52,7 +52,13 @@ function getFilterStages(customerTypeFilter: string) {
       $addFields: {
         resolvedCustomerType: {
           $cond: {
-            if: { $or: [{ $eq: ["$userId", null] }, { $eq: ["$userId", ""] }] },
+            if: {
+              $or: [
+                { $eq: ["$userId", null] },
+                { $eq: ["$userId", ""] },
+                { $eq: [{ $type: "$userId" }, "missing"] }
+              ]
+            },
             then: "guest",
             else: {
               $cond: {
@@ -151,15 +157,25 @@ export async function GET(request: NextRequest) {
     const lifetimeStats = await Order.aggregate([
       { $match: lifetimeQuery },
       ...filterStages,
-      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
+      { $unwind: "$items" },
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          total: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
-          totalOrders: { $addToSet: "$_id" }
+          totalRevenue: { $sum: productId ? "$itemRevenue" : "$total" },
+          totalOrders: { $addToSet: "$_id" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       },
-      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" } } }
+      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" }, totalProducts: 1 } }
     ]);
 
     // 2. CALCULATE DAILY REVENUE (Today - DELIVERED ONLY)
@@ -171,15 +187,25 @@ export async function GET(request: NextRequest) {
     const dailyStats = await Order.aggregate([
       { $match: dailyQuery },
       ...filterStages,
-      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
+      { $unwind: "$items" },
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          total: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
-          totalOrders: { $addToSet: "$_id" }
+          totalRevenue: { $sum: productId ? "$itemRevenue" : "$total" },
+          totalOrders: { $addToSet: "$_id" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       },
-      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" } } }
+      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" }, totalProducts: 1 } }
     ]);
 
     // 3. CALCULATE PENDING SALES (Pending, Processing, Shipped)
@@ -217,15 +243,25 @@ export async function GET(request: NextRequest) {
     const lossStats = await Order.aggregate([
       { $match: lossQuery },
       ...filterStages,
-      ...(productId ? [{ $unwind: "$items" }, { $match: { "items.productId": productId } }] : []),
+      { $unwind: "$items" },
+      ...(productId ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          total: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: productId ? { $multiply: ["$items.price", "$items.quantity"] } : "$total" },
-          totalOrders: { $addToSet: "$_id" }
+          totalRevenue: { $sum: productId ? "$itemRevenue" : "$total" },
+          totalOrders: { $addToSet: "$_id" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       },
-      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" } } }
+      { $project: { totalRevenue: 1, totalOrders: { $size: "$totalOrders" }, totalProducts: 1 } }
     ]);
 
     // 5. CALCULATE FILTERED/RANGE STATS (DELIVERED ONLY)
@@ -374,11 +410,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       salesRepresentatives,
-      lifetime: lifetimeStats[0] || { totalRevenue: 0, totalOrders: 0 },
-
-      daily: dailyStats[0] || { totalRevenue: 0, totalOrders: 0 },
+      lifetime: lifetimeStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 },
+      daily: dailyStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 },
       pending: pendingStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 },
-      loss: lossStats[0] || { totalRevenue: 0, totalOrders: 0 },
+      loss: lossStats[0] || { totalRevenue: 0, totalOrders: 0, totalProducts: 0 },
       activeRange: {
         totalRevenue: aStats.totalRevenue,
         totalOrders: aStats.totalOrders,

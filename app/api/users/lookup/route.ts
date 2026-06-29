@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }).lean();
 
     if (user && user.email && !user.email.endsWith("@phone.parle.com")) {
-      return NextResponse.json({ email: user.email, isRegistered: true });
+      return NextResponse.json({ email: null, isRegistered: true });
     }
 
     // 2. Check if there is a Guest Customer record in the DB with this mobile
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     }).lean();
 
     if (customer && customer.email) {
-      return NextResponse.json({ email: customer.email, isRegistered: false });
+      return NextResponse.json({ email: null, isRegistered: false });
     }
 
     // 3. Fallback: Check if there is an Order in the DB with this phone number having a real email
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     .lean();
 
     if (order && order.customerEmail) {
-      return NextResponse.json({ email: order.customerEmail, isRegistered: false });
+      return NextResponse.json({ email: null, isRegistered: false });
     }
 
     return NextResponse.json({ email: null });

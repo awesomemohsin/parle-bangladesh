@@ -68,8 +68,7 @@ export const THANA_POSTCODES: Record<string, string[]> = {
     "2380"
   ],
   "Azampur Thana": [
-    "3451",
-    "4325"
+    "1230"
   ],
   "Babuganj": [
     "8210",
@@ -1162,8 +1161,7 @@ export const THANA_POSTCODES: Record<string, string[]> = {
     "1207"
   ],
   "Dhaka Metro_Azampur Thana": [
-    "3451",
-    "4325"
+    "1230"
   ],
   "Dhaka Metro_Badda Thana": [
     "1212"

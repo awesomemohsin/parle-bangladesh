@@ -211,11 +211,12 @@ export default function RevenuePage() {
     sections.push([`--- EXECUTIVE SUMMARY ---`]);
     sections.push([`Metric`, `Count`, `Total Value`]);
     const summary = getReportSummary();
-    sections.push([`Total Orders`, `${summary.totalOrders.count} Orders`, summary.totalOrders.amount]);
-    sections.push([`Delivered Sales`, `${summary.delivered.count} Orders`, summary.delivered.amount]);
-    sections.push([`Pending Pipeline`, `${summary.pending.count} Orders`, summary.pending.amount]);
+    sections.push([`Total Orders`, `${summary.totalOrders.count} Orders / ${summary.totalOrders.products} Products`, summary.totalOrders.amount]);
+    sections.push([`Delivered Sales`, `${summary.delivered.count} Orders / ${summary.delivered.products} Products`, summary.delivered.amount]);
+    sections.push([`Pending Pipeline`, `${summary.pending.count} Orders / ${summary.pending.products} Products`, summary.pending.amount]);
     sections.push([`Products Sold`, `${reportData.overallStats?.totalUniqueSKUs || 0} SKUs`, `${reportData.overallStats?.totalProductsSold || 0} Units`]);
     sections.push([`New Customers Registered`, reportData.newCustomersCount, `-`]);
+    sections.push([`Guest Customers Checked Out`, reportData.uniqueGuestsCount || 0, `-`]);
     sections.push([]);
 
     // Customer Type Breakdown
@@ -1202,38 +1203,47 @@ export default function RevenuePage() {
                           const kpisList = [
                             {
                               label: "Total Orders",
-                              count: `${getReportSummary().totalOrders.count} Orders`,
+                              count: [
+                                `${getReportSummary().totalOrders.count} Orders`,
+                                `${getReportSummary().totalOrders.products} Products`
+                              ],
                               value: `৳${getReportSummary().totalOrders.amount.toLocaleString()}`,
                               color: "border-slate-200 bg-slate-50/50"
                             },
                             {
                               label: "Delivered Sales",
-                              count: `${getReportSummary().delivered.count} Orders`,
+                              count: [
+                                `${getReportSummary().delivered.count} Orders`,
+                                `${getReportSummary().delivered.products} Products`
+                              ],
                               value: `৳${getReportSummary().delivered.amount.toLocaleString()}`,
                               color: "border-emerald-200 bg-emerald-50/30"
                             },
                             {
                               label: "Pending Pipeline",
-                              count: `${getReportSummary().pending.count} Orders`,
+                              count: [
+                                `${getReportSummary().pending.count} Orders`,
+                                `${getReportSummary().pending.products} Products`
+                              ],
                               value: `৳${getReportSummary().pending.amount.toLocaleString()}`,
                               color: "border-amber-200 bg-amber-50/30"
                             },
                             {
                               label: "Products Sold",
-                              count: `${reportData.overallStats?.totalUniqueSKUs || 0} SKUs`,
+                              count: [`${reportData.overallStats?.totalUniqueSKUs || 0} SKUs`],
                               value: `${(reportData.overallStats?.totalProductsSold || 0).toLocaleString()} Units`,
                               color: "border-purple-200 bg-purple-50/30"
                             },
                             {
                               label: "New Customers",
-                              count: "Registered Customers",
+                              count: ["Signed Up"],
                               value: `${reportData.newCustomersCount}`,
                               color: "border-blue-200 bg-blue-50/30"
                             },
                             {
                               label: "Guest Customers",
-                              count: `${guestStats.count} Checkout Orders`,
-                              value: `৳${guestStats.totalAmount.toLocaleString()}`,
+                              count: ["Non Signed Up"],
+                              value: `${reportData.uniqueGuestsCount || 0}`,
                               color: "border-indigo-200 bg-indigo-50/30"
                             }
                           ];
@@ -1242,7 +1252,13 @@ export default function RevenuePage() {
                               <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</span>
                               <div className="mt-2">
                                 <span className="text-base font-black text-slate-900 leading-none">{kpi.value}</span>
-                                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{kpi.count}</span>
+                                <div className="mt-1.5 space-y-0.5">
+                                  {kpi.count.map((line, i) => (
+                                    <span key={i} className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-tighter leading-none">
+                                      {line}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           ));

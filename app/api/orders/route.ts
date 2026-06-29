@@ -168,7 +168,13 @@ export async function GET(request: NextRequest) {
         $addFields: {
           resolvedCustomerType: {
             $cond: {
-              if: { $or: [{ $eq: ["$userId", null] }, { $eq: ["$userId", ""] }] },
+               if: {
+                $or: [
+                  { $eq: ["$userId", null] },
+                  { $eq: ["$userId", ""] },
+                  { $eq: [{ $type: "$userId" }, "missing"] }
+                ]
+              },
               then: "guest",
               else: {
                 $cond: {
@@ -541,21 +547,78 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If guest, upsert into Customer collection
+    // If guest, attempt auto-registration
+    let autoLoggedInUser: any = null;
+    let autoLoginToken: any = null;
+    let matchedExistingUser: any = null;
+
     if (!user) {
       try {
-        await Customer.findOneAndUpdate(
-          { email: customerEmail },
-          {
-            name: customerName,
-            mobile: customerPhone,
+        const normalizedPhone = customerPhone.replace(/\D/g, "");
+        const existingUser = await User.findOne({
+          $or: [
+            { email: customerEmail },
+            { mobile: customerPhone },
+            { mobile: normalizedPhone }
+          ]
+        });
+
+        const existingAdmin = await Admin.findOne({
+          $or: [
+            { email: customerEmail },
+            { mobile: customerPhone },
+            { mobile: normalizedPhone }
+          ]
+        });
+
+        if (existingUser) {
+          matchedExistingUser = existingUser;
+        } else if (existingAdmin) {
+          matchedExistingUser = existingAdmin;
+        }
+
+        if (!existingUser && !existingAdmin) {
+          const crypto = require("crypto");
+          const passwordSource = body.password || customerPhone;
+          const passwordHash = crypto.createHash("sha256").update(passwordSource).digest("hex");
+          
+          const newUser = new User({
             email: customerEmail,
-            role: "customer"
-          },
-          { upsert: true, returnDocument: 'after' }
-        );
+            mobile: customerPhone,
+            password: passwordHash,
+            name: customerName,
+            role: "customer",
+            customerType: "customer",
+            status: "active",
+          });
+
+          await newUser.save();
+          autoLoggedInUser = newUser;
+
+          const { generateToken } = require("@/lib/auth");
+          autoLoginToken = generateToken({
+            id: newUser._id.toString(),
+            email: newUser.email,
+            name: newUser.name,
+            role: newUser.role,
+            customerType: newUser.customerType || 'customer',
+            tokenVersion: newUser.tokenVersion || 0,
+          });
+        } else {
+          // If already registered, still record guest contact for legacy compatibility
+          await Customer.findOneAndUpdate(
+            { email: customerEmail },
+            {
+              name: customerName,
+              mobile: customerPhone,
+              email: customerEmail,
+              role: "customer"
+            },
+            { upsert: true, returnDocument: 'after' }
+          );
+        }
       } catch (upsertErr) {
-        console.error("Guest customer upsert error:", upsertErr);
+        console.error("Auto registration or guest customer upsert error:", upsertErr);
       }
     }
 
@@ -572,7 +635,7 @@ export async function POST(request: NextRequest) {
       : ORDER_STATUS.PROCESSING;
 
     const order = new Order({
-      userId: user ? user.id : undefined,
+      userId: user ? user.id : (autoLoggedInUser ? autoLoggedInUser._id.toString() : (matchedExistingUser ? matchedExistingUser._id.toString() : undefined)),
       customerName,
       customerEmail,
       customerPhone,
@@ -598,7 +661,7 @@ export async function POST(request: NextRequest) {
       promoCode: body.promoCode,
       total,
       status: orderStatus,
-      customerType: customerTypeStr,
+      customerType: autoLoggedInUser ? "customer" : (matchedExistingUser ? (matchedExistingUser.customerType || "customer") : customerTypeStr),
       amountPaid: 0,
       amountDue: total,
       placedBySR: srUser ? srUser.id : undefined,
@@ -637,24 +700,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Reconcile ledger for all registered users (B2B, customers, admins)
-    if (user) {
+    const targetRegisteredUser = user || autoLoggedInUser || matchedExistingUser;
+    if (targetRegisteredUser) {
+      const targetUserId = user ? user.id : targetRegisteredUser._id.toString();
+      const targetEmail = user ? user.email : targetRegisteredUser.email;
       const advancePaid = Number(body.advancePaid || body.amountPaid || 0);
       if (advancePaid > 0) {
         const { TransactionLedger } = await import("@/lib/models");
         const ledger = new TransactionLedger({
-          userId: user.id,
+          userId: targetUserId,
           orderId: order._id,
           amount: advancePaid,
           type: "collection",
           paymentMethod: body.paymentMethod || "cash",
-          recordedBy: srUser ? srUser.email : user.email,
+          recordedBy: srUser ? srUser.email : targetEmail,
           notes: body.notes || "",
         });
         await ledger.save();
       }
 
       const { reconcileUserLedger } = await import("@/lib/ledger");
-      await reconcileUserLedger(user.id);
+      await reconcileUserLedger(targetUserId);
 
       // Reload order to return updated amountPaid, amountDue, and paymentStatus fields
       const updatedOrder = await Order.findById(order._id);
@@ -812,18 +878,36 @@ export async function POST(request: NextRequest) {
         // SSLCommerz API responses are returned as JSON
         const sslData = await sslRes.json();
 
+        let response;
         if (sslData.status === "SUCCESS" && sslData.GatewayPageURL) {
-          return NextResponse.json({
+          response = NextResponse.json({
             id: order._id.toString(),
             paymentMethod: "sslcommerz",
             gatewayUrl: sslData.GatewayPageURL,
+            autoSignUp: !!autoLoginToken,
+            token: autoLoginToken || null,
+            user: autoLoggedInUser ? {
+              id: autoLoggedInUser._id.toString(),
+              email: autoLoggedInUser.email,
+              name: autoLoggedInUser.name,
+              role: autoLoggedInUser.role,
+              customerType: autoLoggedInUser.customerType || 'customer',
+              tokenVersion: autoLoggedInUser.tokenVersion || 0,
+              mobile: autoLoggedInUser.mobile,
+            } : null
           }, { status: 201 });
         } else {
           console.error("SSLCommerz initiation response failed:", sslData);
-          return NextResponse.json({
+          response = NextResponse.json({
             error: "Payment gateway initiation failed: " + (sslData.failedreason || "Unknown response from SSLCommerz")
           }, { status: 400 });
         }
+
+        if (autoLoginToken && response) {
+          const { setAuthCookie } = require("@/lib/auth");
+          response.headers.set("Set-Cookie", setAuthCookie(autoLoginToken, 'token', 86400 * 7));
+        }
+        return response;
       } catch (err: any) {
         console.error("SSLCommerz fetch initiation error:", err);
         return NextResponse.json({
@@ -836,8 +920,26 @@ export async function POST(request: NextRequest) {
     mappedOrder.id = mappedOrder._id.toString();
     delete mappedOrder._id;
     delete mappedOrder.__v;
+    mappedOrder.autoSignUp = !!autoLoginToken;
+    if (autoLoginToken) {
+      mappedOrder.token = autoLoginToken;
+      mappedOrder.user = {
+        id: autoLoggedInUser._id.toString(),
+        email: autoLoggedInUser.email,
+        name: autoLoggedInUser.name,
+        role: autoLoggedInUser.role,
+        customerType: autoLoggedInUser.customerType || 'customer',
+        tokenVersion: autoLoggedInUser.tokenVersion || 0,
+        mobile: autoLoggedInUser.mobile,
+      };
+    }
 
-    return NextResponse.json(mappedOrder, { status: 201 });
+    const response = NextResponse.json(mappedOrder, { status: 201 });
+    if (autoLoginToken) {
+      const { setAuthCookie } = require("@/lib/auth");
+      response.headers.set("Set-Cookie", setAuthCookie(autoLoginToken, 'token', 86400 * 7));
+    }
+    return response;
   } catch (error: any) {
     console.error("Orders POST error:", error);
     return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });

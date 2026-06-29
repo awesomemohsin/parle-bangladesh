@@ -39,7 +39,13 @@ function getCustomerTypeResolutionStages() {
       $addFields: {
         resolvedCustomerType: {
           $cond: {
-            if: { $or: [{ $eq: ["$userId", null] }, { $eq: ["$userId", ""] }] },
+            if: {
+              $or: [
+                { $eq: ["$userId", null] },
+                { $eq: ["$userId", ""] },
+                { $eq: [{ $type: "$userId" }, "missing"] }
+              ]
+            },
             then: "guest",
             else: {
               $cond: {
@@ -187,7 +193,58 @@ export async function GET(request: NextRequest) {
       if (startDate) userQuery.createdAt.$gte = new Date(startDate);
       if (endDate) userQuery.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
     }
-    const newCustomersCount = await User.countDocuments(userQuery);
+    const newUsers = await User.find(userQuery).select("_id").lean();
+    const newUserIds = newUsers.map(u => u._id.toString());
+    const newCustomersCount = newUsers.length;
+
+    let newCustomersOrdersCount = 0;
+    let newCustomersProductsCount = 0;
+
+    if (newUserIds.length > 0) {
+      const newCustomerOrdersStats = await Order.aggregate([
+        { 
+          $match: {
+            ...query,
+            userId: { $in: newUserIds }
+          }
+        },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$_id",
+            itemQuantity: { $sum: "$items.quantity" }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalOrders: { $sum: 1 },
+            totalProducts: { $sum: "$itemQuantity" }
+          }
+        }
+      ]);
+      newCustomersOrdersCount = newCustomerOrdersStats[0]?.totalOrders || 0;
+      newCustomersProductsCount = newCustomerOrdersStats[0]?.totalProducts || 0;
+    }
+
+    // 7.1 UNIQUE GUESTS COUNT IN PERIOD
+    const uniqueGuestsStats = await Order.aggregate([
+      { $match: query },
+      ...getCustomerTypeResolutionStages(),
+      { $match: { resolvedCustomerType: "guest" } },
+      {
+        $group: {
+          _id: "$customerEmail"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    const uniqueGuestsCount = uniqueGuestsStats[0]?.count || 0;
 
     // 8. PRODUCT PERFORMANCE BREAKDOWN
     const productStats = await Order.aggregate([
@@ -244,6 +301,9 @@ export async function GET(request: NextRequest) {
       srStats,
       paymentStats,
       newCustomersCount,
+      newCustomersOrdersCount,
+      newCustomersProductsCount,
+      uniqueGuestsCount,
       productStats,
       overallStats: {
         totalProductsSold,

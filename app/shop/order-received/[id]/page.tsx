@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   Check, 
@@ -44,10 +44,55 @@ interface Order {
 
 export default function OrderReceivedPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const isNewSignup = searchParams?.get("new_signup") === "true";
+
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  const [showPrompt, setShowPrompt] = useState(isNewSignup);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+
+  const handleKeepPhone = () => {
+    setShowPrompt(false);
+  };
+
+  const handleSetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters long.");
+      return;
+    }
+    setPasswordError("");
+    setIsSubmittingPassword(true);
+    try {
+      const res = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordError(data.error || "Failed to update password.");
+      } else {
+        setPasswordSuccess("Account secured successfully!");
+        setTimeout(() => {
+          setIsPasswordModalOpen(false);
+          setShowPrompt(false);
+        }, 1500);
+      }
+    } catch (err) {
+      setPasswordError("Network error occurred.");
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  };
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -56,6 +101,23 @@ export default function OrderReceivedPage() {
         if (!res.ok) throw new Error("Failed to fetch order details");
         const data = await res.json();
         setOrder(data);
+
+        // Fetch auth details to verify if the account is new (e.g. created in last 15 minutes)
+        try {
+          const authRes = await fetch("/api/auth/me");
+          if (authRes.ok) {
+            const authData = await authRes.json();
+            if (authData.user && authData.user.createdAt) {
+              const userCreatedAt = new Date(authData.user.createdAt).getTime();
+              const now = Date.now();
+              if (now - userCreatedAt < 15 * 60 * 1000) {
+                setShowPrompt(true);
+              }
+            }
+          }
+        } catch (authErr) {
+          console.error("Failed to fetch user creation time for auto-prompt:", authErr);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -139,6 +201,31 @@ export default function OrderReceivedPage() {
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Received!</h1>
               <p className="text-gray-500 mb-8">Your order has been placed successfully.</p>
+
+              {showPrompt && (
+                <div className="w-full bg-amber-50/70 border border-amber-200 rounded-3xl p-5 mb-8 text-left animate-in fade-in slide-in-from-top-3 duration-300">
+                  <h3 className="text-xs font-black text-amber-900 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                    🎉 Welcome to Parle!
+                  </h3>
+                  <p className="text-xs text-amber-800 leading-relaxed mb-4">
+                    We've created an account for you. Your username is your phone number: <span className="font-bold font-mono">{order.customerPhone}</span>
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={() => setIsPasswordModalOpen(true)}
+                      className="px-4 py-3 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm text-center"
+                    >
+                      🔒 Secure with Custom Password
+                    </button>
+                    <button
+                      onClick={handleKeepPhone}
+                      className="px-4 py-3 bg-white hover:bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 text-center font-bold"
+                    >
+                      Keep Phone Number as Password
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-gray-50 px-4 py-2 rounded-lg mb-10 w-full flex justify-between items-center">
                 <span className="text-sm text-gray-500">Order ID:</span>
@@ -309,6 +396,66 @@ export default function OrderReceivedPage() {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 w-full max-w-md shadow-2xl relative animate-in fade-in scale-in-95 duration-200">
+            <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">
+              Secure Your Account
+            </h3>
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              Create a custom password for your account to ensure your order details and personal information remain secure.
+            </p>
+
+            <form onSubmit={handleSetPasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="MINIMUM 6 CHARACTERS"
+                  required
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-gray-700 bg-white"
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-[10px] text-red-650 font-bold uppercase tracking-wide leading-tight mt-1">
+                  ⚠️ {passwordError}
+                </p>
+              )}
+
+              {passwordSuccess && (
+                <p className="text-[10px] text-green-600 font-bold uppercase tracking-wide leading-tight mt-1">
+                  ✅ {passwordSuccess}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmittingPassword || !!passwordSuccess}
+                  className="flex-1 px-4 py-3.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md disabled:opacity-50"
+                >
+                  {isSubmittingPassword ? "Saving..." : "Save & Secure"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  disabled={isSubmittingPassword || !!passwordSuccess}
+                  className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
