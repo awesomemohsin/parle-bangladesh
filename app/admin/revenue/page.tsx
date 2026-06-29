@@ -326,10 +326,14 @@ export default function RevenuePage() {
           <title>Executive Management Report</title>
           ${styles}
           <style>
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             body {
               background: white !important;
               color: black !important;
-              padding: 0 0 0 15mm !important;
+              padding: 0 20mm 0 15mm !important;
               font-family: ui-sans-serif, system-ui, sans-serif !important;
             }
             .no-print {
@@ -385,6 +389,15 @@ export default function RevenuePage() {
             }
             #report-period-box {
               text-align: right !important;
+            }
+            
+            /* Typography & Table Styling Enhancements for Premium Look */
+            th {
+              font-weight: 800 !important;
+              color: #0f172a !important;
+            }
+            td {
+              color: #334155 !important;
             }
           </style>
         </head>
