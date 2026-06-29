@@ -329,7 +329,7 @@ export default function RevenuePage() {
             body {
               background: white !important;
               color: black !important;
-              padding: 0 15mm 0 15mm !important;
+              padding: 0 0 0 15mm !important;
               font-family: ui-sans-serif, system-ui, sans-serif !important;
             }
             .no-print {
@@ -342,11 +342,8 @@ export default function RevenuePage() {
               break-inside: avoid !important;
             }
             
-            /* Repeating page header/footer spacers */
+            /* Repeating page header spacer */
             .print-page-header-spacer {
-              height: 15mm !important;
-            }
-            .print-page-footer-spacer {
               height: 15mm !important;
             }
             table.print-layout-table {
@@ -409,13 +406,6 @@ export default function RevenuePage() {
                 </td>
               </tr>
             </tbody>
-            <tfoot>
-              <tr>
-                <td>
-                  <div class="print-page-footer-spacer"></div>
-                </td>
-              </tr>
-            </tfoot>
           </table>
           <script>
             setTimeout(function() {
@@ -750,8 +740,8 @@ export default function RevenuePage() {
               key={i}
               onClick={stat.onClick}
               className={`p-4 md:p-8 bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-gray-100 flex relative overflow-hidden group transition-all ${isTotalOrders
-                  ? "col-span-full flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
-                  : "flex-col gap-4 md:gap-6"
+                ? "col-span-full flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+                : "flex-col gap-4 md:gap-6"
                 } ${stat.onClick
                   ? "cursor-pointer hover:shadow-2xl hover:shadow-gray-300/60 hover:-translate-y-1 hover:border-slate-300"
                   : ""
@@ -765,10 +755,10 @@ export default function RevenuePage() {
                   <div className="hidden sm:flex flex-col items-end">
                     <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-none mb-2">Security</span>
                     <span className={`text-[9px] font-black uppercase tracking-tighter px-3 py-1 rounded-full border ${stat.tag === 'Delivered Only' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        stat.tag === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                          stat.tag === 'System Loss' ? 'bg-red-50 text-red-600 border-red-100' :
-                            stat.tag === 'Active Range' ? 'bg-violet-50 text-violet-600 border-violet-100' :
-                              'bg-gray-50 text-gray-500 border-gray-200'
+                      stat.tag === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        stat.tag === 'System Loss' ? 'bg-red-50 text-red-600 border-red-100' :
+                          stat.tag === 'Active Range' ? 'bg-violet-50 text-violet-600 border-violet-100' :
+                            'bg-gray-50 text-gray-500 border-gray-200'
                       }`}>
                       {stat.tag}
                     </span>
@@ -1087,9 +1077,9 @@ export default function RevenuePage() {
                             </td>
                             <td className="py-4 px-4 text-center">
                               <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${order.status === 'delivered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                                  order.status === 'lost' || order.status === 'damaged' ? 'bg-red-50 text-red-700 border border-red-100' :
-                                    order.status === 'cancelled' ? 'bg-gray-100 text-gray-500 border border-gray-200' :
-                                      'bg-amber-50 text-amber-700 border border-amber-100'
+                                order.status === 'lost' || order.status === 'damaged' ? 'bg-red-50 text-red-700 border border-red-100' :
+                                  order.status === 'cancelled' ? 'bg-gray-100 text-gray-500 border border-gray-200' :
+                                    'bg-amber-50 text-amber-700 border border-amber-100'
                                 }`}>
                                 {order.status}
                               </span>
