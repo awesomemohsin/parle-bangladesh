@@ -229,6 +229,33 @@ export async function notifyNewApprovalRequest(request: any) {
   
   const level = isSensitive ? 'LEVEL 2 (FINANCIAL)' : 'LEVEL 1 (BASIC)';
 
+  // Retailer / Dealer promotions and retailer probation approvals only require a single Superadmin approval.
+  const isB2BPromotion = request.type === 'customer' && (
+    request.field === 'isRetailerApproved' ||
+    (request.field === 'customerType' && 
+     request.newValue && 
+     ['retailer', 'dealer'].includes(request.newValue.toLowerCase()))
+  );
+
+  // Standard promo codes only require a single Superadmin approval. Flat discounts require both.
+  const isSingleSuperadminPromo = request.type === 'promo-code' && 
+    request.targetDetails?.type === 'promo';
+
+  // Custom SR checkout discounts require only a single Superadmin signature and bypass the Owner.
+  const isSingleSuperadminOrderDiscount = request.type === 'order' &&
+    request.field === 'srDiscount';
+
+  // Impersonation orders by staff require only a single Superadmin signature and bypass the Owner.
+  const isSingleSuperadminOrderImpersonation = request.type === 'order' &&
+    request.field === 'impersonationOrder';
+
+  // Order status change to returned requires only a single Superadmin signature and bypasses Owner.
+  const isSingleSuperadminOrderReturned = request.type === 'order' &&
+    request.field === 'status' &&
+    request.newValue === 'returned';
+
+  const requiresOneSuperadmin = isB2BPromotion || isSingleSuperadminPromo || isSingleSuperadminOrderDiscount || isSingleSuperadminOrderImpersonation || isSingleSuperadminOrderReturned;
+
   // Format values for better readability (handling JSON stringified snapshots)
   const formatValue = (val: string) => {
     if (!val || val === 'none') return '<i>None</i>';
@@ -308,7 +335,7 @@ ${details.discountType === 'percentage' && details.maxDiscountAmount ? `▫️ <
 ${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
 🔄 <b>VALUE:</b> ${formattedOld} ➡️ ${formattedNew}
 ${detailMessage}
-📢 <b>ACTION:</b> 2 Superadmins must approve to proceed.
+📢 <b>ACTION:</b> ${requiresOneSuperadmin ? "1 Superadmin" : "2 Superadmins"} must approve to proceed.
 ━━━━━━━━━━━━━━━━━━
 🔗 <a href="${BASE_URL}/admin/approvals">⚡ OPEN APPROVAL DASHBOARD</a>
 `;

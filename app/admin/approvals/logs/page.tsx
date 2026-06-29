@@ -32,6 +32,87 @@ interface ApprovalRequest {
   updatedAt: string
 }
 
+const getChangedFields = (oldValStr: string, newValObj: any) => {
+  if (!oldValStr || !oldValStr.startsWith('{') || !oldValStr.endsWith('}')) return null;
+  try {
+    const oldObj = JSON.parse(oldValStr);
+    const newObj = typeof newValObj === 'string' ? JSON.parse(newValObj) : newValObj;
+    
+    if (!oldObj || !newObj) return null;
+    
+    const changes: { key: string; oldVal: any; newVal: any }[] = [];
+    
+    const allKeys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]))
+      .filter(key => !['_id', '__v', 'createdAt', 'updatedAt', 'status', 'currentUsage', 'createdBy'].includes(key));
+      
+    for (const key of allKeys) {
+      const oldVal = oldObj[key];
+      const newVal = newObj[key];
+      
+      let isDifferent = false;
+      if (Array.isArray(oldVal) || Array.isArray(newVal)) {
+        isDifferent = JSON.stringify(oldVal) !== JSON.stringify(newVal);
+      } else if (oldVal instanceof Date || newVal instanceof Date) {
+        isDifferent = new Date(oldVal).getTime() !== new Date(newVal).getTime();
+      } else {
+        isDifferent = oldVal !== newVal;
+      }
+      
+      if (isDifferent) {
+        changes.push({ key, oldVal, newVal });
+      }
+    }
+    
+    return changes.length > 0 ? changes : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const formatDisplayValue = (key: string, value: any) => {
+  if (value === undefined || value === null) return 'None';
+  if (key === 'expiresAt') {
+    return new Date(value).toLocaleDateString();
+  }
+  if (key === 'applicableProducts' && Array.isArray(value)) {
+    return value.length > 0 ? `${value.length} Products` : 'All';
+  }
+  if (key === 'applicableVariations' && Array.isArray(value)) {
+    return value.length > 0 ? `${value.length} Variants` : 'All';
+  }
+  if (key === 'freeShipping') {
+    return value ? 'Yes' : 'No';
+  }
+  if (key === 'isActive') {
+    return value ? 'Yes' : 'No';
+  }
+  return String(value);
+};
+
+const getBadgeText = (request: any) => {
+  if (request.type === 'order') {
+    return 'Order Update';
+  }
+  if (request.type === 'promo-code') {
+    return request.field === 'creation' ? 'Promo Creation' : 'Promo Update';
+  }
+  if (request.type === 'customer') {
+    return 'Customer Update';
+  }
+  if (request.type === 'product') {
+    return `${request.field} Update`;
+  }
+  return `${request.field || request.type || 'System'} Update`;
+};
+
+const getBadgeColorClass = (request: any) => {
+  if (request.type === 'order') return 'bg-indigo-600 shadow-lg shadow-indigo-200';
+  if (request.type === 'promo-code') return 'bg-amber-500 shadow-lg shadow-amber-200';
+  if (request.type === 'customer') return 'bg-teal-600 shadow-lg shadow-teal-200';
+  if (request.field === 'price' || request.field === 'dealerPrice' || request.field === 'retailerPrice') return 'bg-blue-600 shadow-lg shadow-blue-200';
+  return 'bg-amber-500 shadow-lg shadow-amber-200';
+};
+
 export default function ApprovalLogsPage() {
   const [requests, setRequests] = useState<ApprovalRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -156,8 +237,8 @@ export default function ApprovalLogsPage() {
                           'bg-rose-600 shadow-lg shadow-rose-200'}`}>
                       {request.status}
                     </span>
-                    <span className={`text-[9px] font-black text-white px-3 py-1 rounded-full uppercase tracking-widest ${request.type === 'order' ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : (request.field === 'price' ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-amber-500 shadow-lg shadow-amber-200')}`}>
-                      {request.type === 'order' ? 'Order' : `${request.field}`} Update
+                    <span className={`text-[9px] font-black text-white px-3 py-1 rounded-full uppercase tracking-widest ${getBadgeColorClass(request)}`}>
+                      {getBadgeText(request)}
                     </span>
                     <div className="h-4 w-px bg-gray-100 mx-1"></div>
                     <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter italic">
@@ -223,16 +304,18 @@ export default function ApprovalLogsPage() {
                            </a>
                         </div>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-lg">
-                            {request.weight || "Standard Weight"}
-                          </span>
-                          {request.flavor && (
-                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-lg">
-                              {request.flavor} Flavor
+                        request.type === 'product' && (
+                          <div className="flex flex-wrap gap-2">
+                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-lg">
+                              {request.weight || "Standard Weight"}
                             </span>
-                          )}
-                        </div>
+                            {request.flavor && (
+                              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-lg">
+                                {request.flavor} Flavor
+                              </span>
+                            )}
+                          </div>
+                        )
                       )}
                       <p className="text-[8px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-3">
                         Requested by <span className="text-gray-900 italic lowercase">{request.requesterEmail}</span>
@@ -266,32 +349,71 @@ export default function ApprovalLogsPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-6">
-                        <div className="flex-1 flex items-center gap-4">
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">Old / previous value</span>
-                            <span className="text-sm font-black text-gray-400 line-through tracking-tighter">
-                              {request.field === 'price' && "৳"}{request.oldValue}
-                            </span>
+                      (() => {
+                        const changes = getChangedFields(request.oldValue, request.targetDetails);
+                        if (changes) {
+                          return (
+                            <div className="p-5 space-y-4 bg-slate-50/50 rounded-[1.5rem] border border-slate-100 m-2">
+                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
+                                Specific Modifications ({changes.length} fields changed)
+                              </div>
+                              <div className="space-y-3">
+                                {changes.map(({ key, oldVal, newVal }) => {
+                                  const label = key
+                                    .replace(/([A-Z])/g, ' $1')
+                                    .replace(/^./, str => str.toUpperCase());
+                                  return (
+                                    <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 border-b border-dashed border-slate-100 last:border-0">
+                                      <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-sm font-black text-gray-400 line-through">
+                                          {formatDisplayValue(key, oldVal)}
+                                        </span>
+                                        <span className="text-gray-300 font-black">→</span>
+                                        <span className={`text-base font-black italic ${
+                                          request.status === 'approved' ? 'text-emerald-600' :
+                                          request.status === 'pending' ? 'text-amber-600' : 'text-rose-600'
+                                        }`}>
+                                          {formatDisplayValue(key, newVal)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-6">
+                            <div className="flex-1 flex items-center gap-4">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">Old / previous value</span>
+                                <span className="text-lg font-black text-gray-400 line-through tracking-tighter">
+                                  {request.field === 'price' && "৳"}{request.oldValue}
+                                </span>
+                              </div>
+                              <div className="text-gray-200 font-transparent shrink-0">→</div>
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">New Value</span>
+                                <span className={`text-xl font-black tracking-tighter italic ${request.status === 'approved' ? 'text-emerald-600' :
+                                    request.status === 'pending' ? 'text-amber-600' :
+                                      'text-rose-600'}`}>
+                                  {request.field === 'price' && "৳"}{request.newValue}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-gray-200 font-transparent shrink-0">→</div>
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 opacity-60 italic text-center sm:text-left">New Value</span>
-                            <span className={`text-base font-black tracking-tighter italic ${request.status === 'approved' ? 'text-emerald-600' :
-                                request.status === 'pending' ? 'text-amber-600' :
-                                  'text-rose-600'}`}>
-                              {request.field === 'price' && "৳"}{request.newValue}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                        );
+                      })()
                     )}
 
                     {/* Common Consensus Footer */}
                     <div className="p-4 border-t border-white/40 bg-white/20 flex flex-wrap gap-2 items-center">
                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mr-2">Authorization Trace:</span>
-                      <SignatureBadge name="Anindo" status={request.status === 'approved' || request.superadminApprovals?.some(a => a.toLowerCase().includes('anindo'))} />
-                      <SignatureBadge name="Saiful" status={request.status === 'approved' || request.superadminApprovals?.some(a => a.toLowerCase().includes('saiful'))} />
+                      <SignatureBadge name="Anindo" status={request.superadminApprovals?.some(a => a.toLowerCase().includes('anindo'))} />
+                      <SignatureBadge name="Saiful" status={request.superadminApprovals?.some(a => a.toLowerCase().includes('saiful'))} />
                       {(request.type === 'order' || ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(request.field)) && (
                         <>
                           <div className="w-px h-4 bg-gray-200 mx-1"></div>
