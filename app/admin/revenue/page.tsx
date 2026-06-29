@@ -333,7 +333,7 @@ export default function RevenuePage() {
             body {
               background: white !important;
               color: black !important;
-              padding: 0 20mm 0 15mm !important;
+              padding: 0 10mm 0 10mm !important;
               font-family: ui-sans-serif, system-ui, sans-serif !important;
             }
             .no-print {
