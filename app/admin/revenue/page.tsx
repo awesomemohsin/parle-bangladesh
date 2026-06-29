@@ -340,10 +340,11 @@ export default function RevenuePage() {
               display: none !important;
             }
             
-            /* Avoid page-breaks inside sections */
+            /* Avoid page-breaks inside sections and add spacing between them */
             .report-section {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
+              margin-bottom: 35px !important;
             }
             
             /* Repeating page header spacer */
