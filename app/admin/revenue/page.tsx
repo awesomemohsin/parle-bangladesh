@@ -329,7 +329,7 @@ export default function RevenuePage() {
             body {
               background: white !important;
               color: black !important;
-              padding: 15mm 15mm 15mm 15mm !important;
+              padding: 0 15mm 0 15mm !important;
               font-family: ui-sans-serif, system-ui, sans-serif !important;
             }
             .no-print {
@@ -340,6 +340,27 @@ export default function RevenuePage() {
             .report-section {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
+            }
+            
+            /* Repeating page header/footer spacers */
+            .print-page-header-spacer {
+              height: 15mm !important;
+            }
+            .print-page-footer-spacer {
+              height: 15mm !important;
+            }
+            table.print-layout-table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              border: none !important;
+            }
+            table.print-layout-table > tbody > tr > td {
+              border: none !important;
+              padding: 0 !important;
+            }
+            .print-content {
+              display: block !important;
+              width: 100% !important;
             }
             
             /* Print Layout Constraints for Portrait View */
@@ -371,9 +392,31 @@ export default function RevenuePage() {
           </style>
         </head>
         <body>
-          <div>
-            ${printableElement.innerHTML}
-          </div>
+          <table class="print-layout-table">
+            <thead>
+              <tr>
+                <td>
+                  <div class="print-page-header-spacer"></div>
+                </td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="print-content">
+                    ${printableElement.innerHTML}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>
+                  <div class="print-page-footer-spacer"></div>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
           <script>
             setTimeout(function() {
               window.focus();
