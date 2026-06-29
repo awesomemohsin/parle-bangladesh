@@ -336,6 +336,12 @@ export default function RevenuePage() {
               display: none !important;
             }
             
+            /* Avoid page-breaks inside sections */
+            .report-section {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            
             /* Print Layout Constraints for Portrait View */
             @page {
               size: portrait;
@@ -1141,7 +1147,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Executive KPI Summary */}
-                    <div>
+                    <div className="report-section">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 font-mono">I. Executive Summary</h4>
                       <div id="kpi-cards-grid" className="grid grid-cols-2 lg:grid-cols-6 gap-4">
                         {(() => {
@@ -1198,7 +1204,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Sales Breakdown by Customer Type */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">II. Sales Breakdown by Customer Type</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1239,7 +1245,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Dealer Performance Summary */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">III. Dealer Performance Summary</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1288,7 +1294,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Sales Representatives (SR) Performance */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">IV. Sales Representatives (SR) Performance</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1333,7 +1339,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Payment & Outstanding Balances */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">V. Payment Methods & Cashflow Collection</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1378,7 +1384,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Order Status Summary */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">VI. Order Status Summary</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1427,7 +1433,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Top Products */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">VII. Top Performing Products (Top 10)</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1468,7 +1474,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Overall Statistics */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">VIII. Overall Statistics</h4>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden print:border-none">
                         <table className="w-full text-left border-collapse">
@@ -1505,7 +1511,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Key Observations Section */}
-                    <div>
+                    <div className="report-section space-y-3">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3 font-mono">IX. Key Observations</h4>
                       <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-2.5 print:bg-transparent print:border-none print:p-0">
                         {getKeyObservations().map((obs, idx) => (
@@ -1518,7 +1524,7 @@ export default function RevenuePage() {
                     </div>
 
                     {/* Signature Fields */}
-                    <div className="pt-12 border-t border-slate-200 mt-12 grid grid-cols-3 gap-8 text-center text-[10px] font-black uppercase tracking-wider print:pt-8 print:mt-8">
+                    <div className="report-section pt-12 border-t border-slate-200 mt-12 grid grid-cols-3 gap-8 text-center text-[10px] font-black uppercase tracking-wider print:pt-8 print:mt-8">
                       <div className="flex flex-col items-center">
                         <div className="w-32 border-b border-slate-300 h-8"></div>
                         <span className="mt-2 text-slate-400">Prepared By</span>
