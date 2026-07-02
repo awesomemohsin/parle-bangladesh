@@ -97,6 +97,9 @@ function CheckoutContent() {
 
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [shakingFields, setShakingFields] = useState<Record<string, boolean>>({});
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
@@ -556,7 +559,23 @@ function CheckoutContent() {
 
   // Use the synchronized values from the CartContext (server-side calculation)
   // Note: we might need to handle shipping cost locally as it depends on the form
-  const isB2BUser = user?.customerType === 'retailer' || user?.customerType === 'dealer';
+  const getEffectiveUser = () => {
+    if (typeof window !== "undefined") {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          return JSON.parse(activeShopStr);
+        } catch (e) {}
+      }
+    }
+    return user;
+  };
+  const effUser = getEffectiveUser();
+
+  const isB2BUser = !!(effUser && (
+    ['retailer', 'dealer', 'employee', 'admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(effUser.customerType || '') ||
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role)
+  ));
   const isFreeDelivery = total >= 1000 || !!freeShippingGranted || isB2BUser;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = (destinationCity === 'Dhaka' || destinationCity === 'Dhaka Metro') ? 80 : 130;
@@ -597,11 +616,14 @@ function CheckoutContent() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    setValidationError('');
+    setFormErrors(prev => ({ ...prev, [name]: '' }));
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleBillingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
     const divId = typeof e === 'string' ? e : e.target.value;
+    setValidationError('');
     setBillingDivisionId(divId);
     setBillingDistrictId('');
     setFormData(prev => ({ ...prev, city: '', thana: '' }));
@@ -609,6 +631,7 @@ function CheckoutContent() {
 
   const handleBillingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
     const distId = typeof e === 'string' ? e : e.target.value;
+    setValidationError('');
     setBillingDistrictId(distId);
 
     const dist = allDistricts.find(d => String(d.id) === distId);
@@ -617,6 +640,7 @@ function CheckoutContent() {
 
   const handleShippingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
     const divId = typeof e === 'string' ? e : e.target.value;
+    setValidationError('');
     setShippingDivisionId(divId);
     setShippingDistrictId('');
     setFormData(prev => ({ ...prev, shippingCity: '', shippingThana: '' }));
@@ -624,6 +648,7 @@ function CheckoutContent() {
 
   const handleShippingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
     const distId = typeof e === 'string' ? e : e.target.value;
+    setValidationError('');
     setShippingDistrictId(distId);
 
     const dist = allDistricts.find(d => String(d.id) === distId);
@@ -636,6 +661,85 @@ function CheckoutContent() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    const newErrors: Record<string, string> = {};
+    const shakeMap: Record<string, boolean> = {};
+
+    if (!formData.name) {
+      newErrors.name = "Please enter your name first";
+      shakeMap.name = true;
+    }
+    if (!formData.phone) {
+      newErrors.phone = "Please enter your phone number first";
+      shakeMap.phone = true;
+    }
+    if (!formData.address) {
+      newErrors.address = "Please enter your street address first";
+      shakeMap.address = true;
+    }
+    if (!formData.city) {
+      newErrors.city = "Please select your district first";
+      shakeMap.city = true;
+    }
+    if (!formData.thana) {
+      newErrors.thana = "Please select your thana first";
+      shakeMap.thana = true;
+    }
+    if (!formData.postalCode) {
+      newErrors.postalCode = "Please select your postcode first";
+      shakeMap.postalCode = true;
+    }
+
+    if (!sameAsBilling && deliveryMethod !== 'pickup') {
+      if (!formData.shippingAddress) {
+        newErrors.shippingAddress = "Please enter your shipping address first";
+        shakeMap.shippingAddress = true;
+      }
+      if (!formData.shippingCity) {
+        newErrors.shippingCity = "Please select your shipping district first";
+        shakeMap.shippingCity = true;
+      }
+      if (!formData.shippingThana) {
+        newErrors.shippingThana = "Please select your shipping thana first";
+        shakeMap.shippingThana = true;
+      }
+      if (!formData.shippingPostalCode) {
+        newErrors.shippingPostalCode = "Please select your shipping postcode first";
+        shakeMap.shippingPostalCode = true;
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      setShakingFields(shakeMap);
+      setValidationError("Please check the highlighted fields above and select/fill them first.");
+
+      // Reset shaking after animation finishes
+      setTimeout(() => {
+        setShakingFields({});
+      }, 500);
+
+      // Focus and scroll to first invalid field
+      const firstInvalidField = Object.keys(newErrors)[0];
+      if (firstInvalidField) {
+        const el = document.getElementById(`field-wrapper-${firstInvalidField}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const input = el.querySelector('input, select, button');
+          if (input) {
+            setTimeout(() => {
+              (input as HTMLElement).focus();
+            }, 300);
+          }
+        }
+      }
+      return;
+    }
+
+    setValidationError('');
+    setFormErrors({});
+    setShakingFields({});
     const currentSubtotal = subtotal; // Use original price for the database subtotal field
     setOrderState({ status: 'confirming' });
     if (typeof window !== 'undefined') {
@@ -786,7 +890,7 @@ function CheckoutContent() {
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <form onSubmit={handleSubmitOrder} noValidate className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Checkout Form - Left Column */}
           <div className="lg:col-span-2 space-y-4">
             {/* Contact Information */}
@@ -794,7 +898,7 @@ function CheckoutContent() {
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Contact Information</h2>
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
+                  <div id="field-wrapper-name" className={`flex-1 ${shakingFields.name ? 'animate-shake' : ''}`}>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
                     <input
                       type="text"
@@ -802,9 +906,12 @@ function CheckoutContent() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.name ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600'}`}
                       placeholder="John Doe"
                     />
+                    {formErrors.name && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.name}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address (Optional)</label>
@@ -820,7 +927,7 @@ function CheckoutContent() {
                   </div>
                 </div>
                 <div className={!isLoggedIn ? "grid grid-cols-1 md:grid-cols-2 gap-3" : ""}>
-                  <div>
+                  <div id="field-wrapper-phone" className={shakingFields.phone ? 'animate-shake' : ''}>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
                     <input
                       type="tel"
@@ -828,15 +935,15 @@ function CheckoutContent() {
                       value={formData.phone}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${phoneError
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.phone || phoneError
+                          ? 'error-border'
                           : 'border-gray-200 focus:border-red-600 focus:ring-red-600'
                         }`}
                       placeholder="01XXXXXXXXX"
                     />
-                    {phoneError && (
+                    {(phoneError || formErrors.phone) && (
                       <p className="text-[10px] text-red-650 font-bold uppercase tracking-wide leading-tight mt-1 animate-in fade-in duration-200">
-                        ⚠️ {phoneError}
+                        ⚠️ {phoneError || formErrors.phone}
                       </p>
                     )}
                   </div>
@@ -871,7 +978,7 @@ function CheckoutContent() {
             <div className="border-t pt-4">
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Billing Address</h2>
               <div className="space-y-3">
-                <div>
+                <div id="field-wrapper-address" className={shakingFields.address ? 'animate-shake' : ''}>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
                   <input
                     type="text"
@@ -879,9 +986,12 @@ function CheckoutContent() {
                     value={formData.address}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                    className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.address ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600'}`}
                     placeholder="House #, Road #"
                   />
+                  {formErrors.address && (
+                    <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.address}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -896,44 +1006,59 @@ function CheckoutContent() {
                       required
                     />
                   </div>
-                  <div>
+                  <div id="field-wrapper-city" className={shakingFields.city ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
-                    <SearchableSelect
-                      value={billingDistrictId}
-                      onChange={handleBillingDistrictChange}
-                      options={allDistricts.filter(d => String(d.divisionId) === billingDivisionId).map(d => ({ value: String(d.id), label: d.name }))}
-                      placeholder="-- Select District --"
-                      searchPlaceholder="Search district..."
-                      required
-                      disabled={!billingDivisionId}
-                    />
+                    <div className={formErrors.city ? 'error-border rounded' : ''}>
+                      <SearchableSelect
+                        value={billingDistrictId}
+                        onChange={handleBillingDistrictChange}
+                        options={allDistricts.filter(d => String(d.divisionId) === billingDivisionId).map(d => ({ value: String(d.id), label: d.name }))}
+                        placeholder="-- Select District --"
+                        searchPlaceholder="Search district..."
+                        required
+                        disabled={!billingDivisionId}
+                      />
+                    </div>
+                    {formErrors.city && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.city}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <div id="field-wrapper-thana" className={shakingFields.thana ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Thana *</label>
-                    <SearchableSelect
-                      value={formData.thana}
-                      onChange={(val) => handleInputChange({ target: { name: 'thana', value: val } } as any)}
-                      options={billingThanas.map(t => ({ value: t, label: t }))}
-                      placeholder="-- Select Thana --"
-                      searchPlaceholder="Search thana..."
-                      required
-                      disabled={!billingDistrictId}
-                    />
+                    <div className={formErrors.thana ? 'error-border rounded' : ''}>
+                      <SearchableSelect
+                        value={formData.thana}
+                        onChange={(val) => handleInputChange({ target: { name: 'thana', value: val } } as any)}
+                        options={billingThanas.map(t => ({ value: t, label: t }))}
+                        placeholder="-- Select Thana --"
+                        searchPlaceholder="Search thana..."
+                        required
+                        disabled={!billingDistrictId}
+                      />
+                    </div>
+                    {formErrors.thana && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.thana}</p>
+                    )}
                   </div>
-                  <div>
+                  <div id="field-wrapper-postalCode" className={shakingFields.postalCode ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code *</label>
-                    <SearchableSelect
-                      value={formData.postalCode}
-                      onChange={(val) => handleInputChange({ target: { name: 'postalCode', value: val } } as any)}
-                      options={getBillingPostalCodes().map(pc => ({ value: pc, label: pc }))}
-                      placeholder="-- Select Postal Code --"
-                      searchPlaceholder="Search postal code..."
-                      required
-                      disabled={!formData.thana}
-                    />
+                    <div className={formErrors.postalCode ? 'error-border rounded' : ''}>
+                      <SearchableSelect
+                        value={formData.postalCode}
+                        onChange={(val) => handleInputChange({ target: { name: 'postalCode', value: val } } as any)}
+                        options={getBillingPostalCodes().map(pc => ({ value: pc, label: pc }))}
+                        placeholder="-- Select Postal Code --"
+                        searchPlaceholder="Search postal code..."
+                        required
+                        disabled={!formData.thana}
+                      />
+                    </div>
+                    {formErrors.postalCode && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.postalCode}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -989,7 +1114,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-3">
-                  <div>
+                  <div id="field-wrapper-shippingAddress" className={shakingFields.shippingAddress ? 'animate-shake' : ''}>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
                     <input
                       type="text"
@@ -998,9 +1123,12 @@ function CheckoutContent() {
                       onChange={handleInputChange}
                       required
                       readOnly={sameAsBilling}
-                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500' : ''}`}
+                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500 border-gray-200' : (formErrors.shippingAddress ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600')}`}
                       placeholder="House #, Road #"
                     />
+                    {!sameAsBilling && formErrors.shippingAddress && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.shippingAddress}</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1016,44 +1144,59 @@ function CheckoutContent() {
                         disabled={sameAsBilling}
                       />
                     </div>
-                    <div>
+                    <div id="field-wrapper-shippingCity" className={shakingFields.shippingCity ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
-                      <SearchableSelect
-                        value={sameAsBilling ? billingDistrictId : shippingDistrictId}
-                        onChange={handleShippingDistrictChange}
-                        options={allDistricts.filter(d => String(d.divisionId) === (sameAsBilling ? billingDivisionId : shippingDivisionId)).map(d => ({ value: String(d.id), label: d.name }))}
-                        placeholder="-- Select District --"
-                        searchPlaceholder="Search district..."
-                        required
-                        disabled={sameAsBilling || !(sameAsBilling ? billingDivisionId : shippingDivisionId)}
-                      />
+                      <div className={!sameAsBilling && formErrors.shippingCity ? 'error-border rounded' : ''}>
+                        <SearchableSelect
+                          value={sameAsBilling ? billingDistrictId : shippingDistrictId}
+                          onChange={handleShippingDistrictChange}
+                          options={allDistricts.filter(d => String(d.divisionId) === (sameAsBilling ? billingDivisionId : shippingDivisionId)).map(d => ({ value: String(d.id), label: d.name }))}
+                          placeholder="-- Select District --"
+                          searchPlaceholder="Search district..."
+                          required
+                          disabled={sameAsBilling || !(sameAsBilling ? billingDivisionId : shippingDivisionId)}
+                        />
+                      </div>
+                      {!sameAsBilling && formErrors.shippingCity && (
+                        <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.shippingCity}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <div id="field-wrapper-shippingThana" className={shakingFields.shippingThana ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Thana *</label>
-                      <SearchableSelect
-                        value={sameAsBilling ? formData.thana : formData.shippingThana}
-                        onChange={(val) => handleInputChange({ target: { name: 'shippingThana', value: val } } as any)}
-                        options={(sameAsBilling ? billingThanas : shippingThanas).map(t => ({ value: t, label: t }))}
-                        placeholder="-- Select Thana --"
-                        searchPlaceholder="Search thana..."
-                        required
-                        disabled={sameAsBilling || !(sameAsBilling ? billingDistrictId : shippingDistrictId)}
-                      />
+                      <div className={!sameAsBilling && formErrors.shippingThana ? 'error-border rounded' : ''}>
+                        <SearchableSelect
+                          value={sameAsBilling ? formData.thana : formData.shippingThana}
+                          onChange={(val) => handleInputChange({ target: { name: 'shippingThana', value: val } } as any)}
+                          options={(sameAsBilling ? billingThanas : shippingThanas).map(t => ({ value: t, label: t }))}
+                          placeholder="-- Select Thana --"
+                          searchPlaceholder="Search thana..."
+                          required
+                          disabled={sameAsBilling || !(sameAsBilling ? billingDistrictId : shippingDistrictId)}
+                        />
+                      </div>
+                      {!sameAsBilling && formErrors.shippingThana && (
+                        <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.shippingThana}</p>
+                      )}
                     </div>
-                    <div>
+                    <div id="field-wrapper-shippingPostalCode" className={shakingFields.shippingPostalCode ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code *</label>
-                      <SearchableSelect
-                        value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
-                        onChange={(val) => handleInputChange({ target: { name: 'shippingPostalCode', value: val } } as any)}
-                        options={getShippingPostalCodes().map(pc => ({ value: pc, label: pc }))}
-                        placeholder="-- Select Postal Code --"
-                        searchPlaceholder="Search postal code..."
-                        required
-                        disabled={sameAsBilling || !(sameAsBilling ? formData.thana : formData.shippingThana)}
-                      />
+                      <div className={!sameAsBilling && formErrors.shippingPostalCode ? 'error-border rounded' : ''}>
+                        <SearchableSelect
+                          value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
+                          onChange={(val) => handleInputChange({ target: { name: 'shippingPostalCode', value: val } } as any)}
+                          options={getShippingPostalCodes().map(pc => ({ value: pc, label: pc }))}
+                          placeholder="-- Select Postal Code --"
+                          searchPlaceholder="Search postal code..."
+                          required
+                          disabled={sameAsBilling || !(sameAsBilling ? formData.thana : formData.shippingThana)}
+                        />
+                      </div>
+                      {!sameAsBilling && formErrors.shippingPostalCode && (
+                        <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.shippingPostalCode}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1328,6 +1471,13 @@ function CheckoutContent() {
                 )}
               </div>
 
+              <div id="validation-error-anchor" />
+              {validationError && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3.5 text-xs font-bold text-center leading-normal animate-pulse">
+                  ⚠️ {validationError}
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={(orderState.status as any) === 'confirming'}
@@ -1339,6 +1489,20 @@ function CheckoutContent() {
           </div>
         </form>
       </div>
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+        .error-border {
+          border-color: #ef4444 !important;
+          box-shadow: 0 0 0 1px #ef4444 !important;
+        }
+      `}</style>
     </div>
   );
 }

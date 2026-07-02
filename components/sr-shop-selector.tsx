@@ -47,6 +47,40 @@ export default function SRShopSelector() {
   }, [currentUser]);
 
   useEffect(() => {
+    let scrollPos = 0;
+    const handleScrollLock = () => {
+      if (isOpen && window.innerWidth < 768) {
+        scrollPos = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollPos}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflow = 'hidden';
+      } else {
+        const top = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        if (top) {
+          const parsedTop = parseInt(top, 10);
+          if (!isNaN(parsedTop)) {
+            window.scrollTo(0, parsedTop * -1);
+          }
+        }
+      }
+    };
+    handleScrollLock();
+    window.addEventListener('resize', handleScrollLock);
+    return () => {
+      window.removeEventListener('resize', handleScrollLock);
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     // Load active shop from localStorage
     const activeShopStr = localStorage.getItem("sr_active_shop_user");
     if (activeShopStr) {
@@ -87,10 +121,9 @@ export default function SRShopSelector() {
         setShops(b2bShops);
         setFilteredShops(b2bShops);
 
-        // Retail Customers (where role is customer and type is not B2B/Staff/Guest)
+        // Customers / Employees / Staff (any role except Retailers, Dealers, SRs, Guests)
         const regCustomers = allShops.filter((s: any) =>
-          !["retailer", "dealer", "Guest", "guest", "admin", "super_admin", "moderator", "owner"].includes(s.customerType || "") &&
-          !["admin", "super_admin", "moderator", "owner"].includes(s.role || "") &&
+          !["retailer", "dealer", "Guest", "guest"].includes(s.customerType || "") &&
           !s.isSR &&
           !s.id?.toString().startsWith("guest-")
         );
@@ -236,6 +269,13 @@ export default function SRShopSelector() {
                         </span>
                       );
                     }
+                    if (activeShop.customerType === 'employee') {
+                      return (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                          Employee
+                        </span>
+                      );
+                    }
                     if (activeShop.customerType === 'Guest') {
                       return (
                         <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-500/20 text-slate-400 border border-slate-500/30">
@@ -260,7 +300,7 @@ export default function SRShopSelector() {
                     </span>
                     {activeShop.customerType === 'retailer' && !activeShop.isRetailerApproved && (
                       <span className="text-[10px] text-rose-400 font-bold">
-                        (Limit: ৳10,000)
+                        (Limit: ৳50,000)
                       </span>
                     )}
                   </div>
@@ -417,19 +457,15 @@ export default function SRShopSelector() {
                                     onClick={() => handleSelectShop(shop)}
                                     className="p-3 rounded-2xl border bg-slate-800/40 hover:bg-slate-800/80 border-slate-800 hover:border-slate-700/50 text-gray-300 transition-all cursor-pointer flex flex-col gap-0.5"
                                   >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex items-center gap-1.5 min-w-0">
-                                        <span className="font-black text-xs uppercase tracking-tight truncate max-w-[130px]">{shop.name}</span>
-                                        <span className="text-[8px] px-1.5 py-0.5 bg-slate-800 text-slate-400 font-bold uppercase border border-slate-700/40 rounded shrink-0">
-                                          {shop.customerType}
-                                        </span>
-                                      </div>
-                                      <span className="text-[9px] font-bold text-gray-400 shrink-0">{shop.mobile}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-1">
-                                      <span className="text-[10px] text-gray-400">
-                                        Dues: <strong className="text-rose-400">৳{shop.dueBalance || 0}</strong>
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                      <span className="font-black text-xs uppercase tracking-tight text-gray-200">{shop.name}</span>
+                                      <span className="text-[8px] px-1.5 py-0.5 bg-slate-800 text-slate-400 font-bold uppercase border border-slate-700/40 rounded shrink-0">
+                                        {shop.customerType}
                                       </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-gray-400 mt-1.5">
+                                      <span>Phone: <span className="text-gray-300 font-black">{shop.mobile}</span></span>
+                                      <span>Dues: <strong className="text-rose-400">৳{shop.dueBalance || 0}</strong></span>
                                     </div>
                                   </div>
                                 ))
@@ -494,9 +530,15 @@ export default function SRShopSelector() {
                                     onClick={() => handleSelectShop(shop)}
                                     className="p-3 rounded-2xl border bg-slate-800/40 hover:bg-slate-800/80 border-slate-800 hover:border-slate-700/50 text-gray-300 transition-all cursor-pointer flex flex-col gap-0.5"
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-black text-xs uppercase tracking-tight truncate max-w-[150px]">{shop.name}</span>
-                                      <span className="text-[9px] font-bold text-gray-400">{shop.mobile}</span>
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                      <span className="font-black text-xs uppercase tracking-tight text-gray-200">{shop.name}</span>
+                                      <span className="text-[8px] px-1.5 py-0.5 bg-slate-800 text-slate-400 font-bold uppercase border border-slate-700/40 rounded shrink-0">
+                                        {shop.customerType}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-gray-400 mt-1.5">
+                                      <span>Phone: <span className="text-gray-300 font-black">{shop.mobile}</span></span>
+                                      <span>Dues: <strong className="text-rose-400">৳{shop.dueBalance || 0}</strong></span>
                                     </div>
                                   </div>
                                 ))

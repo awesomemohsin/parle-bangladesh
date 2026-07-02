@@ -115,7 +115,10 @@ export async function getEffectiveUserContext(
     if (isAllowedToImpersonate) {
       const onBehalfOfHeader = request.headers.get("x-on-behalf-of");
       if (onBehalfOfHeader && onBehalfOfHeader !== "null" && onBehalfOfHeader !== "undefined") {
-        const shopUser = await User.findById(onBehalfOfHeader).lean() as any;
+        let shopUser = await User.findById(onBehalfOfHeader).lean() as any;
+        if (!shopUser) {
+          shopUser = await Admin.findById(onBehalfOfHeader).lean() as any;
+        }
         if (shopUser) {
           return {
             user: {
@@ -123,10 +126,10 @@ export async function getEffectiveUserContext(
               email: shopUser.email,
               name: shopUser.name,
               role: shopUser.role,
-              customerType: shopUser.customerType || "customer",
+              customerType: shopUser.customerType || shopUser.role || "customer",
               flatDiscountPercent: shopUser.flatDiscountPercent,
               flatDiscountExpiresAt: shopUser.flatDiscountExpiresAt,
-              isSR: false,
+              isSR: !!shopUser.isSR,
               referredBySR: shopUser.referredBySR,
               isRetailerApproved: shopUser.isRetailerApproved,
               dueBalance: (shopUser.walletBalance || 0) < 0 ? Math.abs(shopUser.walletBalance) : 0,
@@ -151,7 +154,7 @@ export async function getEffectiveUserContext(
         email: dbUser.email,
         name: dbUser.name,
         role: dbUser.role,
-        customerType: dbUser.customerType || "customer",
+        customerType: dbUser.customerType || dbUser.role || "customer",
         flatDiscountPercent: dbUser.flatDiscountPercent,
         flatDiscountExpiresAt: dbUser.flatDiscountExpiresAt,
         isSR: dbUser.isSR,
