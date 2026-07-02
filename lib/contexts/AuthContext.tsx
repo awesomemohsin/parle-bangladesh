@@ -175,7 +175,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               serverUser.status !== localUser.status ||
               serverUser.email !== localUser.email ||
               serverUser.mobile !== localUser.mobile ||
-              serverUser.name !== localUser.name
+              serverUser.name !== localUser.name ||
+              serverUser.isRetailerApproved !== localUser.isRetailerApproved ||
+              serverUser.creditLimit !== localUser.creditLimit ||
+              serverUser.walletBalance !== localUser.walletBalance ||
+              serverUser.dueBalance !== localUser.dueBalance
             ) {
               updateAuth(serverUser, token);
             }

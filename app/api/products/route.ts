@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         showDealerPrice = true;
         showRetailerPrice = true;
       }
-      if (user.customerType === "dealer") {
+      if (user.customerType === "dealer" || user.customerType === "employee") {
         showDealerPrice = true;
       } else if (user.customerType === "retailer") {
         showRetailerPrice = true;

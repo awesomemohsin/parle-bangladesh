@@ -45,8 +45,24 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const { addItem } = useCart();
   const { user } = useAuth();
 
-  const isDealer = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
-  const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
+  const getEffectiveUser = () => {
+    if (typeof window !== "undefined") {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          return JSON.parse(activeShopStr);
+        } catch (e) {}
+      }
+    }
+    return user;
+  };
+  const effUser = getEffectiveUser();
+
+  const isDealer = !!(effUser && (
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role) ||
+    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(effUser.customerType || '')
+  ));
+  const isRetailer = effUser?.customerType === "retailer";
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
 
   const searchParams = useSearchParams();

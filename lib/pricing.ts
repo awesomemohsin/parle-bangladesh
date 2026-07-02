@@ -13,7 +13,7 @@ import { PromoCode } from './models';
 export async function calculateServerSideCart(items: any[], promoCode?: string, userDiscount?: { percent: number; expiresAt: Date }, customerType?: string) {
   await connectDB();
   
-  const isDealer = customerType === 'dealer';
+  const isDealer = customerType === 'dealer' || customerType === 'employee' || ['admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(customerType || '');
   const isRetailer = customerType === 'retailer';
   const isPrivilegedCustomer = isDealer || isRetailer;
 

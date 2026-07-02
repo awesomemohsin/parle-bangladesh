@@ -131,8 +131,11 @@ function calculateClientSideTotals(
   flatRules: any[] = [],
   user: any = null
 ) {
-  const isDealer = user && (user.role === 'owner' || (user.role === 'customer' && user.customerType === 'dealer'));
-  const isRetailer = user && user.role === 'customer' && user.customerType === 'retailer';
+  const isDealer = user && (
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
+    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
+  );
+  const isRetailer = user && user.customerType === 'retailer';
   const isPrivilegedCustomer = isDealer || isRetailer;
 
   // 1. Fetch user discount if applicable
@@ -490,6 +493,21 @@ function calculateClientSideTotals(
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const [effUser, setEffUser] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          setEffUser(JSON.parse(activeShopStr));
+          return;
+        } catch (e) {}
+      }
+    }
+    setEffUser(user);
+  }, [user]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -644,7 +662,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     syncDB();
-  }, [isInitialized, user?.customerType]);
+  }, [isInitialized, effUser?.customerType]);
 
   const lastRequestData = React.useRef<string>("");
 
@@ -796,7 +814,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const existingIdx = prev.items.findIndex(i => itemMatchesKey(i, itemKey));
       let newItems = [...prev.items];
       
-      const isDealerUser = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
+      const isDealerUser = !!(effUser && (
+        ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role) ||
+        ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(effUser.customerType || '')
+      ));
       const canInputManual = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealerUser);
       const maxAllowed = canInputManual ? 999999 : (normalized.stock || 999);
 
@@ -821,7 +842,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, user);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -836,12 +857,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         campaignNotices: calculated.campaignNotices
       };
     });
-  }, [user]);
+  }, [user, effUser]);
 
   const removeItem = useCallback((key: string) => {
     setCart(prev => {
       const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, user);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -856,11 +877,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         campaignNotices: calculated.campaignNotices
       };
     });
-  }, [user]);
+  }, [effUser]);
 
   const updateQuantity = useCallback((key: string, quantity: number) => {
     setCart(prev => {
-      const isDealerUser = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
+      const isDealerUser = !!(effUser && (
+        ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role) ||
+        ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(effUser.customerType || '')
+      ));
       const canInputManual = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealerUser);
 
       const newItems = quantity <= 0 
@@ -880,7 +904,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             return i;
           });
 
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, user);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -895,11 +919,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         campaignNotices: calculated.campaignNotices
       };
     });
-  }, [user]);
+  }, [user, effUser]);
 
   const applyPromo = useCallback((details: PromoDetails) => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, user);
+      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, effUser);
       return { 
         ...prev, 
         promoCode: details.code, 
@@ -915,11 +939,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         campaignNotices: calculated.campaignNotices
       };
     });
-  }, [user]);
+  }, [effUser]);
 
   const removePromo = useCallback(() => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, user);
+      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, effUser);
       return { 
         ...prev, 
         promoCode: undefined, 
@@ -935,7 +959,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         campaignNotices: calculated.campaignNotices
       };
     });
-  }, [user]);
+  }, [effUser]);
 
   const clearCart = useCallback(() => {
     setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false, flatRules: [] });

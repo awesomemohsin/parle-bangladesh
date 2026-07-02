@@ -53,7 +53,7 @@ const UserSchema = new Schema<IUser>(
     isSR: { type: Boolean, default: false },
     walletBalance: { type: Number, default: 0 },
     dueBalance: { type: Number, default: 0 },
-    creditLimit: { type: Number, default: 10000 },
+    creditLimit: { type: Number },
     referredBySR: { type: Schema.Types.ObjectId, ref: "User" },
     isRetailerApproved: { type: Boolean, default: false },
   },

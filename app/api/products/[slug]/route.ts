@@ -43,7 +43,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
         showDealerPrice = true;
         showRetailerPrice = true;
       }
-      if (user.customerType === "dealer") {
+      if (user.customerType === "dealer" || user.customerType === "employee") {
         showDealerPrice = true;
       } else if (user.customerType === "retailer") {
         showRetailerPrice = true;

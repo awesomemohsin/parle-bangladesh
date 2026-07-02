@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isDealer = (user.role === "customer" && user.customerType === "dealer") || user.role === "owner";
+    const isDealer = !!(
+      ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
+      ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
+    );
     const isRetailer = user.role === "customer" && user.customerType === "retailer";
 
     const cart = await Cart.findOne({ userId: user.id }).lean();
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
       ? { percent: user.flatDiscountPercent, expiresAt: new Date(user.flatDiscountExpiresAt) }
       : undefined;
 
-    const customerType = user.role === "owner" ? "dealer" : (user.role === "customer" ? (user.customerType || "customer") : "customer");
+    const customerType = user.customerType || user.role;
     const totals = await calculateServerSideCart(refreshedItems, cart.promoCode, userDiscount, customerType);
 
     return NextResponse.json({
@@ -94,16 +97,15 @@ export async function POST(request: NextRequest) {
     }
 
     const refreshedItems = [];
-    let isDealer = user && user.role === "owner";
-    let isRetailer = false;
+    let isDealer = !!(user && (
+      ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
+      ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
+    ));
+    let isRetailer = user && user.role === "customer" && user.customerType === "retailer";
     let userDiscount = undefined;
-    let customerType = user && user.role === "owner" ? "dealer" : "customer";
-
-    if (user && user.role === "customer") {
-      isDealer = user.customerType === "dealer";
-      isRetailer = user.customerType === "retailer";
-      customerType = user.customerType || "customer";
+    let customerType = user ? (user.customerType || user.role) : "customer";
       
+    if (user) {
       const now = new Date();
       if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now) {
         userDiscount = { percent: user.flatDiscountPercent, expiresAt: new Date(user.flatDiscountExpiresAt) };

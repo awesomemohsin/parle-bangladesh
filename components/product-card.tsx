@@ -58,8 +58,24 @@ export default function ProductCard({
   const [isHovered, setIsHovered] = useState(false);
   const [fadeState, setFadeState] = useState(true);
 
-  const isDealer = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
-  const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
+  const getEffectiveUser = () => {
+    if (typeof window !== "undefined") {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          return JSON.parse(activeShopStr);
+        } catch (e) {}
+      }
+    }
+    return user;
+  };
+  const effUser = getEffectiveUser();
+
+  const isDealer = !!(effUser && (
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role) ||
+    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(effUser.customerType || '')
+  ));
+  const isRetailer = effUser?.customerType === "retailer";
 
   // Intelligent Default Selection: Skip out-of-stock items for the main display
   const defaultIndex = useMemo(() => {
