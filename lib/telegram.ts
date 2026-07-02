@@ -62,7 +62,7 @@ export async function notifyNewOrder(order: any) {
     ? "Collection Point - Yassin Tower"
     : `${order.shippingAddress || order.address}${thanaSuffix}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
-  const title = order.customerType === 'dealer' ? '🌟 NEW DEALER ORDER' : '🌟 NEW PENDING ORDER';
+  const title = order.customerType === 'dealer' ? '🌟 NEW DEALER ORDER' : (order.customerType === 'employee' ? '🌟 NEW EMPLOYEE ORDER' : '🌟 NEW PENDING ORDER');
 
   const message = `
 <b>${title}</b>
@@ -107,7 +107,7 @@ export async function notifyOrderReady(order: any) {
     ? "Collection Point - Yassin Tower"
     : `${order.shippingAddress || order.address}${thanaSuffix}, ${order.shippingCity || order.city}${order.shippingPostalCode || order.postalCode ? ` - ${order.shippingPostalCode || order.postalCode}` : ''}`;
 
-  const title = order.customerType === 'dealer' ? '🚚 NEW DEALER ORDER (PROCESSING)' : '🚚 NEW PROCESSING ORDER';
+  const title = order.customerType === 'dealer' ? '🚚 NEW DEALER ORDER (PROCESSING)' : (order.customerType === 'employee' ? '🚚 NEW EMPLOYEE ORDER (PROCESSING)' : '🚚 NEW PROCESSING ORDER');
 
   const message = `
 <b>${title}</b>
@@ -234,7 +234,7 @@ export async function notifyNewApprovalRequest(request: any) {
     request.field === 'isRetailerApproved' ||
     (request.field === 'customerType' && 
      request.newValue && 
-     ['retailer', 'dealer'].includes(request.newValue.toLowerCase()))
+     ['retailer', 'dealer', 'employee'].includes(request.newValue.toLowerCase()))
   );
 
   // Standard promo codes only require a single Superadmin approval. Flat discounts require both.

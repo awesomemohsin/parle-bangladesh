@@ -365,8 +365,15 @@ export async function POST(request: NextRequest) {
     let customerTypeStr = "guest";
 
     if (user) {
-      if (user.role === "customer") {
-        isDealer = user.customerType === "dealer";
+      const isStaffUser = ["super_admin", "admin", "moderator", "owner"].includes(user.role);
+      const isStaffCustomerType = ["super_admin", "admin", "moderator", "owner"].includes(user.customerType);
+      const isStaff = isStaffUser || isStaffCustomerType;
+
+      if (isStaff) {
+        isDealer = true;
+        customerTypeStr = user.role;
+      } else if (user.role === "customer") {
+        isDealer = user.customerType === "dealer" || user.customerType === "employee";
         isRetailer = user.customerType === "retailer";
         customerTypeStr = user.customerType || "customer";
         const now = new Date();
@@ -377,9 +384,9 @@ export async function POST(request: NextRequest) {
           };
         }
       } else {
-        // Logged in as Admin/Superadmin/Owner/Moderator
-        isDealer = user.role === "owner";
-        customerTypeStr = user.role === "owner" ? "dealer" : user.role;
+        // Logged in as Admin/Superadmin/Owner/Moderator but somehow not caught above
+        isDealer = true;
+        customerTypeStr = user.role;
       }
     }
 
@@ -496,7 +503,7 @@ export async function POST(request: NextRequest) {
     const ruleDiscount = totals.ruleDiscount || 0;
     const promoDiscount = totals.promoDiscount || 0;
 
-    const isB2BUser = customerTypeStr === "retailer" || customerTypeStr === "dealer";
+    const isB2BUser = customerTypeStr === "retailer" || customerTypeStr === "dealer" || customerTypeStr === "employee";
     const baseShippingCharge = (reqShippingCity === "Dhaka" || reqShippingCity === "Dhaka Metro") ? 80 : 130;
     const shippingCost = (deliveryMethod === "pickup" || isB2BUser) ? 0 : (((subtotal - ruleDiscount) >= 1000 || totals.freeShippingGranted) ? 0 : baseShippingCharge);
     const tax = 0;
@@ -522,9 +529,9 @@ export async function POST(request: NextRequest) {
     if (user && isProbationRetailer) {
       const netBal = (user.walletBalance || 0) - (user.dueBalance || 0);
       const newBal = netBal - total;
-      if (newBal < -10000) {
+      if (newBal < -50000) {
         return NextResponse.json({
-          error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳10,000 probation limit. Please contact a Superadmin for approval.`
+          error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳50,000 probation limit. Please contact a Superadmin for approval.`
         }, { status: 400 });
       }
     }
@@ -623,14 +630,17 @@ export async function POST(request: NextRequest) {
     }
 
     const isImpersonatingStaff = srUser && ["super_admin", "admin", "moderator"].includes(srUser.role);
-    const isTargetB2B = ["retailer", "dealer"].includes(customerTypeStr);
+    const isTargetB2B = ["retailer", "dealer", "employee"].includes(customerTypeStr);
+    const isStaff = ["super_admin", "admin", "superadmin", "moderator", "owner"].includes(customerTypeStr);
+    const isEmployeeOrStaffOrder = customerTypeStr === "employee" || isStaff;
     
     // Status is PENDING if:
     // - There is no srUser (self checkout)
     // - Or the placing party is a staff member impersonating a standard customer (non-B2B)
     // - Or a negotiated discount is applied (srDiscountPercent > 0)
+    // - Or the order is for an employee or staff member (always goes to approval)
     // Otherwise (impersonated B2B shop order with no discount), it goes straight to PROCESSING.
-    const orderStatus = ((isImpersonatingStaff && !isTargetB2B) || !srUser || srDiscountPercent > 0)
+    const orderStatus = (isEmployeeOrStaffOrder || (isImpersonatingStaff && !isTargetB2B) || !srUser || srDiscountPercent > 0)
       ? ORDER_STATUS.PENDING
       : ORDER_STATUS.PROCESSING;
 
@@ -671,18 +681,44 @@ export async function POST(request: NextRequest) {
 
     await order.save();
 
-    if ((isImpersonatingStaff && !isTargetB2B) || (srUser && srDiscountPercent > 0)) {
+    if ((isImpersonatingStaff && !isTargetB2B) || (srUser && srDiscountPercent > 0) || isEmployeeOrStaffOrder) {
       const isImpersonatingCustomer = !!(isImpersonatingStaff && !isTargetB2B);
+      let fieldVal = "impersonationOrder";
+      let oldVal = "N/A";
+      let newVal = "";
+
+      if (isEmployeeOrStaffOrder) {
+        fieldVal = "employeeOrder";
+        oldVal = "N/A";
+        const isSelfOrder = !srUser || srUser.email === user.email;
+        const isEmployee = user.customerType === "employee";
+        if (isSelfOrder) {
+          newVal = isEmployee
+            ? "Employee Order created by self"
+            : "Staff Order created by self";
+        } else {
+          newVal = isEmployee
+            ? `Employee Order created by staff ${srUser.role} (${srUser.email})`
+            : `Staff Order created by staff ${srUser.role} (${srUser.email})`;
+        }
+      } else if (isImpersonatingCustomer) {
+        fieldVal = "impersonationOrder";
+        oldVal = "N/A";
+        newVal = srDiscountPercent > 0 ? `Created by ${srUser.role} with ${srDiscountPercent}% discount` : `Created by ${srUser.role} (${srUser.email})`;
+      } else {
+        fieldVal = "srDiscount";
+        oldVal = "0%";
+        newVal = `${srDiscountPercent}% (৳${srDiscountAmountVal})`;
+      }
+
       const approvalRequest = new ApprovalRequest({
-        requesterEmail: srUser.email,
+        requesterEmail: srUser ? srUser.email : (user ? user.email : "employee@system.com"),
         type: "order",
         targetId: order._id.toString(),
         targetName: `Order #${order._id.toString().slice(-8).toUpperCase()}`,
-        field: isImpersonatingCustomer ? "impersonationOrder" : "srDiscount",
-        oldValue: isImpersonatingCustomer ? "N/A" : "0%",
-        newValue: isImpersonatingCustomer
-          ? (srDiscountPercent > 0 ? `Created by ${srUser.role} with ${srDiscountPercent}% discount` : `Created by ${srUser.role} (${srUser.email})`)
-          : `${srDiscountPercent}% (৳${srDiscountAmountVal})`,
+        field: fieldVal,
+        oldValue: oldVal,
+        newValue: newVal,
         targetDetails: order.toObject(),
         status: "pending",
         stage: "superadmin",

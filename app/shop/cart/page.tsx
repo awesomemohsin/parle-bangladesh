@@ -103,7 +103,10 @@ export default function CartPage() {
     isSyncing
   } = useCart();
   const { user } = useAuth();
-  const isDealer = (user?.role === "customer" && user?.customerType === "dealer") || user?.role === "owner";
+  const isDealer = !!(user && (
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
+    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
+  ));
   const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
   const [isCheckingOut, setIsCheckingOut] = useState(false);

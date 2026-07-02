@@ -120,6 +120,9 @@ export default function OrderApprovalsPage() {
     const hasSaiful = request.superadminApprovals.some(a => a.toLowerCase().includes('saiful'))
     const hasRazu = request.ownerApproved
 
+    const isSingleSuperadmin = ['srDiscount', 'impersonationOrder', 'employeeOrder'].includes(request.field) ||
+      (request.field === 'status' && request.newValue === 'returned');
+
     return (
       <div className="flex flex-wrap items-center gap-2">
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasAnindo ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
@@ -128,9 +131,11 @@ export default function OrderApprovalsPage() {
         <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasSaiful ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
           Superadmin: Saiful {hasSaiful && '✓'}
         </div>
-        <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-          Finalized: Mahbub Alam Razu {hasRazu && '✓'}
-        </div>
+        {!isSingleSuperadmin && (
+          <div className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border ${hasRazu ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
+            Finalized: Mahbub Alam Razu {hasRazu && '✓'}
+          </div>
+        )}
       </div>
     )
   }
@@ -206,7 +211,7 @@ export default function OrderApprovalsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-[9px] font-black text-white bg-black px-2 py-1 rounded-full uppercase tracking-wider shadow-md shadow-gray-100">
-                        {request.field} change
+                        {request.field === 'employeeOrder' ? 'Employee Order' : `${request.field} change`}
                       </span>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
                         By: {request.requesterEmail}
@@ -229,6 +234,11 @@ export default function OrderApprovalsPage() {
                        {/* Customer Card */}
                        <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100 flex flex-col gap-1.5">
                           <p className="text-[8px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Customer Insight</p>
+                          {request.field === 'employeeOrder' && (
+                            <div className="mb-2 bg-purple-50 border border-purple-200 rounded-xl p-2.5 text-[10px] font-bold text-purple-700 uppercase tracking-tighter">
+                              📢 This is our internal employee / staff member and getting products at dealer price
+                            </div>
+                          )}
                           <p className="text-xs font-black text-gray-900 uppercase">{request.targetDetails.customerName}</p>
                           <div className="flex flex-col gap-0.5">
                              <div className="flex items-center gap-2">

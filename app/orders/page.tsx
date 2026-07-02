@@ -130,14 +130,17 @@ export default function MyOrdersPage() {
         const user = JSON.parse(userStr);
         setIsAdmin(user?.role === 'admin' || user?.role === 'moderator' || user?.role === 'super_admin' || user?.role === 'owner');
         setIsSR(!!user?.isSR);
-        setIsDealer(user?.customerType === 'dealer');
 
         const activeShopStr = localStorage.getItem("sr_active_shop_user");
+        let effUser = user;
         if (activeShopStr) {
           try {
-            setActiveShop(JSON.parse(activeShopStr));
+            const shop = JSON.parse(activeShopStr);
+            setActiveShop(shop);
+            effUser = shop;
           } catch (e) { }
         }
+        setIsDealer(effUser?.customerType === 'dealer' || effUser?.customerType === 'employee' || ['admin', 'moderator', 'super_admin', 'owner'].includes(effUser?.role || ''));
 
         const params = new URLSearchParams()
         if (search) params.append('q', search)
@@ -336,7 +339,9 @@ export default function MyOrdersPage() {
                       : order.customerType?.toLowerCase() === 'student'
                         ? "border-rose-200 hover:border-rose-500 bg-rose-50/5"
                         : order.customerType?.toLowerCase() === 'influencer'
-                          ? "border-violet-200 hover:border-violet-500 bg-violet-50/5"
+                        ? "border-orange-200 hover:border-orange-500 bg-orange-50/5"
+                        : order.customerType?.toLowerCase() === 'employee'
+                          ? "border-purple-200 hover:border-purple-500 bg-purple-50/5"
                           : order.customerType?.toLowerCase() === 'corporate'
                             ? "border-indigo-200 hover:border-indigo-500 bg-indigo-50/5"
                             : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
@@ -348,9 +353,10 @@ export default function MyOrdersPage() {
                 <div className={`${order.customerType?.toLowerCase() === 'dealer' ? "bg-amber-50" :
                     order.customerType?.toLowerCase() === 'retailer' ? "bg-blue-50" :
                       order.customerType?.toLowerCase() === 'student' ? "bg-rose-50/50" :
-                        order.customerType?.toLowerCase() === 'influencer' ? "bg-violet-50/50" :
-                          order.customerType?.toLowerCase() === 'corporate' ? "bg-indigo-50/50" :
-                            order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) ? "bg-teal-50/50" :
+                        order.customerType?.toLowerCase() === 'influencer' ? "bg-orange-50/50" :
+                          order.customerType?.toLowerCase() === 'employee' ? "bg-purple-50/50" :
+                            order.customerType?.toLowerCase() === 'corporate' ? "bg-indigo-50/50" :
+                              order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) ? "bg-teal-50/50" :
                               "bg-slate-50/80"
                   } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
                   <div className="flex items-center gap-3">
@@ -358,9 +364,10 @@ export default function MyOrdersPage() {
                       <div className={`flex items-center gap-1.5 px-2 py-0.5 text-white rounded-md ${order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
                           order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
                             order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
-                              order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
-                                order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
-                                  'bg-teal-600'
+                              order.customerType.toLowerCase() === 'influencer' ? 'bg-orange-600' :
+                                order.customerType.toLowerCase() === 'employee' ? 'bg-purple-600' :
+                                  order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
+                                    'bg-teal-600'
                         }`}>
                         <ShieldCheck className="w-2.5 h-2.5" />
                         <span className="text-[7px] font-black uppercase tracking-widest">

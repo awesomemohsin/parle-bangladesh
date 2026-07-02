@@ -162,6 +162,19 @@ export async function PUT(
       return NextResponse.json({ success: true, pendingApproval: true, order });
     }
 
+    // Clean up any pending approval requests for this order if moved to terminal/final statuses
+    if (["cancelled", "lost", "damaged", "returned", "delivered"].includes(status)) {
+      const { ApprovalRequest } = await import("@/lib/models");
+      await ApprovalRequest.updateMany(
+        { targetId: id, status: "pending" },
+        { 
+          status: "declined", 
+          declinedBy: user.name || user.email, 
+          comments: [{ user: "system", text: `Order status changed to ${status.toUpperCase()}`, date: new Date() }] 
+        }
+      );
+    }
+
     // Update order
     order.status = status;
     if (statusReason) order.statusReason = statusReason;

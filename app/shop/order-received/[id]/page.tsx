@@ -102,22 +102,6 @@ export default function OrderReceivedPage() {
         const data = await res.json();
         setOrder(data);
 
-        // Fetch auth details to verify if the account is new (e.g. created in last 15 minutes)
-        try {
-          const authRes = await fetch("/api/auth/me");
-          if (authRes.ok) {
-            const authData = await authRes.json();
-            if (authData.user && authData.user.createdAt) {
-              const userCreatedAt = new Date(authData.user.createdAt).getTime();
-              const now = Date.now();
-              if (now - userCreatedAt < 15 * 60 * 1000) {
-                setShowPrompt(true);
-              }
-            }
-          }
-        } catch (authErr) {
-          console.error("Failed to fetch user creation time for auto-prompt:", authErr);
-        }
       } catch (err: any) {
         setError(err.message);
       } finally {

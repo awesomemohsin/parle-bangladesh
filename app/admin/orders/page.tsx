@@ -475,7 +475,9 @@ export default function AdminOrdersPage() {
                     : order.customerType?.toLowerCase() === 'student'
                       ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
                       : order.customerType?.toLowerCase() === 'influencer'
-                        ? 'border-violet-300 bg-violet-50/20 shadow-violet-100/50 hover:border-violet-500'
+                        ? 'border-orange-300 bg-orange-50/20 shadow-orange-100/50 hover:border-orange-500'
+                      : order.customerType?.toLowerCase() === 'employee'
+                        ? 'border-purple-300 bg-purple-50/20 shadow-purple-100/50 hover:border-purple-500'
                         : order.customerType?.toLowerCase() === 'corporate'
                           ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
                           : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
@@ -493,9 +495,10 @@ export default function AdminOrdersPage() {
                         <div className={`flex items-center gap-1.5 px-2.5 py-1 text-white rounded-lg shadow-sm ${order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
                           order.customerType.toLowerCase() === 'retailer' ? 'bg-blue-600' :
                             order.customerType.toLowerCase() === 'student' ? 'bg-rose-600' :
-                              order.customerType.toLowerCase() === 'influencer' ? 'bg-violet-600' :
-                                order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
-                                  'bg-teal-600'
+                              order.customerType.toLowerCase() === 'influencer' ? 'bg-orange-600' :
+                                order.customerType.toLowerCase() === 'employee' ? 'bg-purple-600' :
+                                  order.customerType.toLowerCase() === 'corporate' ? 'bg-indigo-600' :
+                                    'bg-teal-600'
                           }`}>
                           <BellRing className="w-3 h-3 animate-pulse" />
                           <span className="text-[8px] font-black uppercase tracking-widest">
