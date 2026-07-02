@@ -12,11 +12,11 @@ function getFilterStages(customerTypeFilter: string) {
   if (customerTypeFilter === "customer") {
     matchCond = { resolvedCustomerType: { $in: ["customer", "guest"] } };
   } else if (customerTypeFilter === "b2b") {
-    matchCond = { resolvedCustomerType: { $in: ["retailer", "dealer"] } };
+    matchCond = { resolvedCustomerType: { $in: ["retailer", "dealer", "employee"] } };
   } else if (customerTypeFilter === "staff") {
     matchCond = { resolvedCustomerType: { $in: ["admin", "super_admin", "moderator", "owner"] } };
   } else if (customerTypeFilter === "other") {
-    matchCond = { resolvedCustomerType: { $nin: ["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"] } };
+    matchCond = { resolvedCustomerType: { $nin: ["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"] } };
   }
 
   return [

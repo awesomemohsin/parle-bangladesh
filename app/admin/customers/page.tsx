@@ -228,7 +228,7 @@ export default function AdminCustomersPage() {
       customerType: finalType
     };
 
-    if (promoType !== "dealer" && promoType !== "retailer") {
+    if (promoType !== "dealer" && promoType !== "retailer" && promoType !== "employee") {
       const percent = Number(discountPercent);
       if (isNaN(percent) || percent <= 0 || percent > 50) {
         toast.error("Custom customer discounts cannot exceed 50%. Please enter a percent between 1 and 50.");
@@ -293,9 +293,10 @@ export default function AdminCustomersPage() {
     { value: "guest", label: "Guest", count: counts.guest, activeStyle: "bg-gray-500 text-white shadow-lg shadow-gray-500/10 border-gray-500", inactiveStyle: "bg-white text-gray-400 hover:text-gray-600 border-gray-105" },
     { value: "retailer", label: "Retailer", count: counts.retailer, activeStyle: "bg-blue-600 text-white shadow-lg shadow-blue-600/10 border-blue-600", inactiveStyle: "bg-blue-50/50 text-blue-700 border-blue-100 hover:bg-blue-50" },
     { value: "dealer", label: "Dealer", count: counts.dealer, activeStyle: "bg-amber-600 text-white shadow-lg shadow-amber-600/10 border-amber-600", inactiveStyle: "bg-amber-50/50 text-amber-700 border-amber-100 hover:bg-amber-50" },
+    { value: "employee", label: "Employee", count: counts.employee || 0, activeStyle: "bg-purple-600 text-white shadow-lg shadow-purple-600/10 border-purple-600", inactiveStyle: "bg-purple-50/50 text-purple-700 border-purple-100 hover:bg-purple-50" },
     { value: "staff", label: "Staffs", count: counts.staff, activeStyle: "bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 border-emerald-600", inactiveStyle: "bg-emerald-50/50 text-emerald-700 border-emerald-100 hover:bg-emerald-50" },
     { value: "student", label: "Student", count: counts.student, activeStyle: "bg-rose-600 text-white shadow-lg shadow-rose-600/10 border-rose-600", inactiveStyle: "bg-rose-50/50 text-rose-700 border-rose-100 hover:bg-rose-50" },
-    { value: "influencer", label: "Influencer", count: counts.influencer, activeStyle: "bg-violet-600 text-white shadow-lg shadow-violet-600/10 border-violet-600", inactiveStyle: "bg-violet-50/50 text-violet-700 border-violet-100 hover:bg-violet-50" },
+    { value: "influencer", label: "Influencer", count: counts.influencer, activeStyle: "bg-orange-600 text-white shadow-lg shadow-orange-600/10 border-orange-600", inactiveStyle: "bg-orange-50/50 text-orange-700 border-orange-100 hover:bg-orange-50" },
     { value: "corporate", label: "Corporate", count: counts.corporate, activeStyle: "bg-sky-600 text-white shadow-lg shadow-sky-600/10 border-sky-600", inactiveStyle: "bg-sky-50/50 text-sky-700 border-sky-100 hover:bg-sky-50" },
     { value: "other", label: "Other", count: counts.other, activeStyle: "bg-indigo-600 text-white shadow-lg shadow-indigo-600/10 border-indigo-600", inactiveStyle: "bg-indigo-50/50 text-indigo-700 border-indigo-100 hover:bg-indigo-50" },
   ];
@@ -487,12 +488,14 @@ export default function AdminCustomersPage() {
                         <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${
                           customer.customerType === 'dealer' 
                             ? 'bg-amber-100 text-amber-700' 
+                          : customer.customerType === 'employee' 
+                            ? 'bg-purple-100 text-purple-700 border border-purple-200' 
                           : customer.customerType === 'retailer'
                             ? 'bg-blue-50 text-blue-700 border border-blue-100'
                           : customer.customerType === 'student'
                             ? 'bg-rose-50 text-rose-700 border border-rose-100'
                           : customer.customerType === 'influencer'
-                            ? 'bg-violet-50 text-violet-700 border border-violet-100'
+                            ? 'bg-orange-50 text-orange-700 border border-orange-100'
                           : customer.customerType === 'corporate'
                             ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                           : customer.customerType === 'guest'
@@ -672,7 +675,7 @@ export default function AdminCustomersPage() {
                    Select Type
                  </label>
                  <div className="grid grid-cols-2 gap-2">
-                   {["dealer", "retailer", "student", "influencer", "corporate", "other"].map((t) => (
+                   {["dealer", "retailer", "employee", "student", "influencer", "corporate", "other"].map((t) => (
                      <button
                        key={t}
                        type="button"
@@ -705,7 +708,7 @@ export default function AdminCustomersPage() {
                  </div>
                )}
 
-               {promoType !== "dealer" && promoType !== "retailer" && (
+               {promoType !== "dealer" && promoType !== "retailer" && promoType !== "employee" && (
                  <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                    <div>
                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
@@ -787,6 +790,8 @@ export default function AdminCustomersPage() {
                     <span className={`px-2 py-0.5 rounded font-black border uppercase text-[9px] ${
                       selectedCustomerDetails.user.customerType?.toLowerCase() === "dealer" 
                         ? "bg-amber-50 text-amber-700 border-amber-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "employee" 
+                        ? "bg-purple-50 text-purple-700 border-purple-200" 
                         : selectedCustomerDetails.user.customerType?.toLowerCase() === "retailer" 
                         ? "bg-blue-50 text-blue-700 border-blue-200" 
                         : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest" 

@@ -44,11 +44,20 @@ export async function POST(request: NextRequest) {
     if (srToken) {
       const creator = await getVerifiedAuthUser(request);
       if (creator) {
-        const dbCreator = await User.findById(creator.id).lean() as any;
-        if (dbCreator && dbCreator.isSR) {
-          referredBySR = dbCreator._id;
-          creatorEmail = dbCreator.email;
-          customerType = "retailer";
+        let dbCreator = await User.findById(creator.id).lean() as any;
+        if (!dbCreator) {
+          dbCreator = await Admin.findById(creator.id).lean() as any;
+        }
+        if (dbCreator) {
+          const isSRCreator = !!dbCreator.isSR;
+          const isAdminCreator = ["super_admin", "admin", "moderator", "owner"].includes(dbCreator.role);
+          if (isSRCreator || isAdminCreator) {
+            if (isSRCreator) {
+              referredBySR = dbCreator._id;
+            }
+            creatorEmail = dbCreator.email;
+            customerType = "retailer";
+          }
         }
       }
     }
@@ -62,7 +71,7 @@ export async function POST(request: NextRequest) {
       role: "customer",
       referredBySR,
       customerType,
-      creditLimit: customerType === "retailer" ? 10000 : undefined,
+      creditLimit: customerType === "retailer" ? 50000 : undefined,
       isRetailerApproved: false, // Default to probation retailer
     });
 

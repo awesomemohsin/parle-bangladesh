@@ -32,7 +32,8 @@ const renderTypeBadge = (customerType: string | undefined) => {
   if (type === "dealer") classes = "bg-amber-50 text-amber-700 border-amber-200";
   else if (type === "retailer") classes = "bg-blue-50 text-blue-700 border-blue-200";
   else if (type === "student") classes = "bg-rose-50 text-rose-700 border-rose-200";
-  else if (type === "influencer") classes = "bg-violet-50 text-violet-700 border-violet-200";
+  else if (type === "influencer") classes = "bg-orange-50 text-orange-700 border-orange-200";
+  else if (type === "employee") classes = "bg-purple-50 text-purple-700 border-purple-200";
   else if (type === "corporate") classes = "bg-indigo-50 text-indigo-700 border-indigo-200";
   else if (type === "guest") classes = "bg-gray-100 text-gray-400 border-gray-200";
   else if (type !== "customer") classes = "bg-teal-50 text-teal-700 border-teal-200";
@@ -802,13 +803,13 @@ export default function CollectionsPage() {
 
     // Filter by customer/shop type
     if (invoiceFilter === "b2b") {
-      if (o.customerType !== "retailer" && o.customerType !== "dealer") return false;
+      if (o.customerType !== "retailer" && o.customerType !== "dealer" && o.customerType !== "employee") return false;
     } else if (invoiceFilter === "customer") {
       if (o.customerType !== "customer" && o.customerType !== "guest") return false;
     } else if (invoiceFilter === "staff") {
       if (o.customerType !== "admin" && o.customerType !== "super_admin" && o.customerType !== "moderator" && o.customerType !== "owner") return false;
     } else if (invoiceFilter === "other") {
-      if (["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
+      if (["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
     }
 
     // Filter by order status
@@ -844,13 +845,13 @@ export default function CollectionsPage() {
 
     // Filter by customer/shop type
     if (invoiceFilter === "b2b") {
-      if (o.customerType !== "retailer" && o.customerType !== "dealer") return false;
+      if (o.customerType !== "retailer" && o.customerType !== "dealer" && o.customerType !== "employee") return false;
     } else if (invoiceFilter === "customer") {
       if (o.customerType !== "customer" && o.customerType !== "guest") return false;
     } else if (invoiceFilter === "staff") {
       if (o.customerType !== "admin" && o.customerType !== "super_admin" && o.customerType !== "moderator" && o.customerType !== "owner") return false;
     } else if (invoiceFilter === "other") {
-      if (["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
+      if (["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
     }
 
     // Filter by order status
@@ -895,13 +896,13 @@ export default function CollectionsPage() {
 
     const type = s.customerType?.toLowerCase();
     if (shopFilter === "b2b") {
-      if (type !== "retailer" && type !== "dealer") return false;
+      if (type !== "retailer" && type !== "dealer" && type !== "employee") return false;
     } else if (shopFilter === "customer") {
       if (type !== "customer" && type !== "guest") return false;
     } else if (shopFilter === "staff") {
       if (type !== "admin" && type !== "super_admin" && type !== "moderator" && type !== "owner") return false;
     } else if (shopFilter === "other") {
-      if (["customer", "guest", "retailer", "dealer", "admin", "super_admin", "moderator", "owner"].includes(type || "")) return false;
+      if (["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"].includes(type || "")) return false;
     }
     return true; // "all" shows all customer types
   });

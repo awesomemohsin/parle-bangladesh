@@ -402,7 +402,7 @@ export async function GET(request: NextRequest) {
         B2BShopsQuery.referredBySR = { $in: [srId, srIdObj].filter(Boolean) };
       }
       const B2BShops = await User.find(B2BShopsQuery)
-        .select("name email mobile walletBalance creditLimit customerType isSR isRetailerApproved createdAt updatedAt")
+        .select("name email mobile role walletBalance creditLimit customerType isSR isRetailerApproved createdAt updatedAt")
         .sort({ updatedAt: -1 })
         .lean();
 

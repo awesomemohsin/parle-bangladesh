@@ -156,11 +156,12 @@ export async function GET(request: NextRequest) {
       guest: filtered.filter(c => c.customerType === "guest").length,
       retailer: filtered.filter(c => c.customerType === "retailer").length,
       dealer: filtered.filter(c => c.customerType === "dealer").length,
+      employee: filtered.filter(c => c.customerType === "employee").length,
       staff: filtered.filter(c => ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType)).length,
       student: filtered.filter(c => c.customerType === "student").length,
       influencer: filtered.filter(c => c.customerType === "influencer").length,
       corporate: filtered.filter(c => c.customerType === "corporate").length,
-      other: filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate", "admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType)).length,
+      other: filtered.filter(c => !["guest", "customer", "retailer", "dealer", "employee", "student", "influencer", "corporate", "admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType)).length,
     };
 
     // 7. Apply Role/Type Filtering
@@ -168,7 +169,7 @@ export async function GET(request: NextRequest) {
       if (customerType === "staff") {
         filtered = filtered.filter(c => ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType));
       } else if (customerType === "other") {
-        filtered = filtered.filter(c => !["guest", "customer", "retailer", "dealer", "student", "influencer", "corporate", "admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType));
+        filtered = filtered.filter(c => !["guest", "customer", "retailer", "dealer", "employee", "student", "influencer", "corporate", "admin", "super_admin", "superadmin", "moderator", "owner"].includes(c.customerType));
       } else {
         filtered = filtered.filter(c => c.customerType === customerType);
       }
@@ -246,7 +247,7 @@ export async function PATCH(request: NextRequest) {
       } else {
         // PROMOTION: Requires Level 2 consensus approval (Anindo + Saiful)
         const discountVal = Number(body.flatDiscountPercent) || 0;
-        if (!["customer", "retailer", "dealer"].includes(customerType) && discountVal > 50) {
+        if (!["customer", "retailer", "dealer", "employee"].includes(customerType) && discountVal > 50) {
           return NextResponse.json({ error: "High-level discount limit exceeded: Custom customer flat discounts cannot exceed 50%." }, { status: 400 });
         }
 
@@ -266,8 +267,8 @@ export async function PATCH(request: NextRequest) {
         // Store the targetDetails snapshot for consensus application
         const targetDetails = {
           customerType,
-          flatDiscountPercent: !["customer", "retailer", "dealer"].includes(customerType) ? discountVal : undefined,
-          flatDiscountExpiresAt: !["customer", "retailer", "dealer"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
+          flatDiscountPercent: !["customer", "retailer", "dealer", "employee"].includes(customerType) ? discountVal : undefined,
+          flatDiscountExpiresAt: !["customer", "retailer", "dealer", "employee"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
         };
 
         const approval = await ApprovalRequest.create({
