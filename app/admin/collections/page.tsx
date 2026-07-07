@@ -2037,8 +2037,15 @@ export default function CollectionsPage() {
                     ) : (
                       sortedShops.map((shop) => (
                         <tr key={shop.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-4 px-3 font-mono font-black text-gray-900">
-                            #{shop.id.slice(-8).toUpperCase()}
+                          <td className="py-4 px-3">
+                            <button
+                              type="button"
+                              onClick={() => fetchCustomerDetails(shop.id, shop.customerType?.toLowerCase() === "guest" || shop.customerType === "Guest" ? shop.mobile : undefined)}
+                              className="font-mono text-xs font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none"
+                              title="View Customer Profile"
+                            >
+                              #{shop.id.slice(-8).toUpperCase()}
+                            </button>
                           </td>
                           <td className="py-4 px-3">
                             <span className="font-bold text-gray-900 uppercase tracking-tight">{shop.name}</span>

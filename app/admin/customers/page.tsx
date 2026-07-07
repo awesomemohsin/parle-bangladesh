@@ -50,6 +50,7 @@ export default function AdminCustomersPage() {
     customer: 0,
     retailer: 0,
     dealer: 0,
+    employee: 0,
     staff: 0,
     student: 0,
     influencer: 0,
@@ -75,7 +76,7 @@ export default function AdminCustomersPage() {
     customer: null,
   });
 
-  const [promoType, setPromoType] = useState<"dealer" | "retailer" | "student" | "influencer" | "corporate" | "other">("dealer");
+  const [promoType, setPromoType] = useState<"dealer" | "retailer" | "employee" | "student" | "influencer" | "corporate" | "other">("dealer");
   const [customTypeName, setCustomTypeName] = useState("");
   const [discountPercent, setDiscountPercent] = useState("10");
   const [expirationDate, setExpirationDate] = useState("");
@@ -381,6 +382,7 @@ export default function AdminCustomersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Account ID</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer Info</th>
                 
                 <th 
@@ -426,14 +428,14 @@ export default function AdminCustomersPage() {
             <tbody className="divide-y divide-gray-50">
               {loading && customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20 text-center">
+                  <td colSpan={8} className="px-6 py-20 text-center">
                     <Loader2 className="w-6 h-6 text-red-600 animate-spin mx-auto mb-2" />
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Customers...</p>
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20 text-center">
+                  <td colSpan={8} className="px-6 py-20 text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">No customers found</p>
                   </td>
                 </tr>
@@ -442,6 +444,16 @@ export default function AdminCustomersPage() {
                   const isStaff = ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(customer.customerType?.toLowerCase());
                   return (
                     <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={() => fetchCustomerDetails(customer.id, customer.customerType?.toLowerCase() === "guest" ? customer.mobile : undefined)}
+                        className="font-mono text-xs font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none"
+                        title="View Customer Profile"
+                      >
+                        #{customer.id.slice(-8).toUpperCase()}
+                      </button>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2 mb-1">
