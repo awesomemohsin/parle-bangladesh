@@ -490,7 +490,7 @@ function CheckoutContent() {
     const steps = [
       "Validating cart items...",
       "Allocating warehouse stock...",
-      "Securing connection with SSLCommerz...",
+      "Securing connection...",
       "Finalizing invoice details..."
     ];
 
@@ -565,7 +565,7 @@ function CheckoutContent() {
       if (activeShopStr) {
         try {
           return JSON.parse(activeShopStr);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     return user;
@@ -936,8 +936,8 @@ function CheckoutContent() {
                       onChange={handleInputChange}
                       required
                       className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.phone || phoneError
-                          ? 'error-border'
-                          : 'border-gray-200 focus:border-red-600 focus:ring-red-600'
+                        ? 'error-border'
+                        : 'border-gray-200 focus:border-red-600 focus:ring-red-600'
                         }`}
                       placeholder="01XXXXXXXXX"
                     />

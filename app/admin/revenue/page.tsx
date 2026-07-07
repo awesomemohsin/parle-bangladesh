@@ -59,6 +59,9 @@ export default function RevenuePage() {
       const query = new URLSearchParams();
       if (filters.startDate) query.append("startDate", filters.startDate);
       if (filters.endDate) query.append("endDate", filters.endDate);
+      if (filters.productId !== "all") query.append("productId", filters.productId);
+      if (filters.customerType !== "all") query.append("customerType", filters.customerType);
+      if (filters.srId && filters.srId !== "all") query.append("srId", filters.srId);
 
       const res = await fetch(`/api/admin/analytics/report?${query.toString()}`, {
         headers: {

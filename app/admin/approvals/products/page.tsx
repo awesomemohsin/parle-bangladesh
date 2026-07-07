@@ -51,7 +51,7 @@ export default function ProductApprovalsPage() {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]))
         setUser(payload)
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [])
 
@@ -93,16 +93,16 @@ export default function ProductApprovalsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          status, 
-          comment: reviewComment[id] || "" 
+        body: JSON.stringify({
+          status,
+          comment: reviewComment[id] || ""
         })
       })
 
       if (response.ok) {
         const data = await response.json()
         const updatedReq = data.request
-        
+
         if (updatedReq.status !== 'pending') {
           // If finalized or declined, remove from list
           setRequests(requests.filter(r => r._id !== id))
@@ -148,18 +148,18 @@ export default function ProductApprovalsPage() {
   const canApprove = (request: ApprovalRequest) => {
     if (!user) return false
     const name = (user.name || '').toLowerCase()
-    
+
     if (request.stage === 'superadmin') {
       if (!name.includes('anindo') && !name.includes('saiful')) return false
       // Cannot approve twice
       if (request.superadminApprovals.some(a => a.toLowerCase().includes(name))) return false
       return true
     }
-    
+
     if (request.stage === 'owner') {
       return name.includes('razu')
     }
-    
+
     return false
   }
 
@@ -167,34 +167,34 @@ export default function ProductApprovalsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-           <div>
-              <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-1">Consensus Approvals</h1>
-              <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Triple-Verification Protocol Active</p>
-           </div>
-           
-           <div className="flex items-center gap-4 w-full md:w-auto">
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm ml-auto">
-                <Filter className="w-3.5 h-3.5 text-gray-300" />
-                <select 
-                  value={sortBy}
-                  onChange={(e: any) => setSortBy(e.target.value)}
-                  className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="name-asc">Product (A-Z)</option>
-                  <option value="name-desc">Product (Z-A)</option>
-                </select>
-              </div>
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-1">Consensus Approvals</h1>
+            <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Triple-Verification Protocol Active</p>
+          </div>
 
-              {user && (
-                 <div className="hidden sm:block text-right border-l border-gray-100 pl-4">
-                   <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Active Identity</p>
-                   <p className="text-sm font-black text-red-600 uppercase tracking-tight">{user.name || user.email}</p>
-                 </div>
-              )}
-           </div>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm ml-auto">
+              <Filter className="w-3.5 h-3.5 text-gray-300" />
+              <select
+                value={sortBy}
+                onChange={(e: any) => setSortBy(e.target.value)}
+                className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-500 focus:outline-none cursor-pointer"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="name-asc">Product (A-Z)</option>
+                <option value="name-desc">Product (Z-A)</option>
+              </select>
+            </div>
+
+            {user && (
+              <div className="hidden sm:block text-right border-l border-gray-100 pl-4">
+                <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Active Identity</p>
+                <p className="text-sm font-black text-red-600 uppercase tracking-tight">{user.name || user.email}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -205,13 +205,13 @@ export default function ProductApprovalsPage() {
         </div>
       ) : requests.length === 0 ? (
         <Card className="p-12 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
-           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No pending product changes require authorization</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No pending product changes require authorization</p>
         </Card>
       ) : (
         <div className="grid gap-6">
           {sortedRequests.map(request => (
             <Card key={request._id} className="p-6 border-2 border-gray-50 shadow-sm relative overflow-hidden group rounded-[2rem]">
-               {request.stage === 'owner' && <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>}
+              {request.stage === 'owner' && <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>}
               <div className="flex flex-col md:flex-row justify-between gap-6">
                 <div className="flex-1 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -229,9 +229,9 @@ export default function ProductApprovalsPage() {
                   <div className="flex flex-col gap-1">
                     <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none">
                       {request.targetSlug ? (
-                         <Link href={`/shop/products/${request.targetSlug}`} target="_blank" className="hover:text-red-600 transition-colors underline decoration-gray-200 decoration-2 underline-offset-4">
-                           {request.targetName}
-                         </Link>
+                        <Link href={`/shop/products/${request.targetSlug}`} target="_blank" className="hover:text-red-600 transition-colors underline decoration-gray-200 decoration-2 underline-offset-4">
+                          {request.targetName}
+                        </Link>
                       ) : request.targetName}
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -251,59 +251,59 @@ export default function ProductApprovalsPage() {
                     </div>
                   </div>
 
-                    <div className={`col-span-1 lg:col-span-2 flex flex-col gap-4 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
-                      <div className="flex items-center gap-6">
-                        <div className="flex-1 flex flex-col items-center">
-                           <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">
-                             {request.field === 'stock' ? 'Current Stock' : 'Old / previous value'}
-                           </span>
-                           <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
-                             {request.field === 'price' && "৳"}{request.oldValue}
-                           </span>
-                        </div>
-                        <div className="flex flex-col items-center gap-1">
-                           <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center text-gray-200 shadow-sm animate-pulse">→</div>
-                        </div>
-                        <div className="flex-1 flex flex-col items-center">
-                           <span className={`text-[7px] font-black border px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white ${request.field === 'price' ? 'text-green-600 border-green-100' : 'text-amber-600 border-amber-100'}`}>
-                             {request.field === 'stock' ? 'Stock Amount Requested' : 'New Value'}
-                           </span>
-                           <span className={`text-2xl font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
-                             {request.field === 'stock' 
-                               ? `+${Number(request.newValue) - Number(request.oldValue)}`
-                               : (request.field === 'price' ? `৳${request.newValue}` : request.newValue)
-                             }
-                           </span>
-                        </div>
+                  <div className={`col-span-1 lg:col-span-2 flex flex-col gap-4 py-4 px-5 rounded-[1.5rem] border-2 shadow-inner transition-all ${request.field === 'price' ? 'border-green-100/50 bg-green-50/20' : 'border-amber-100/50 bg-amber-50/20'}`}>
+                    <div className="flex items-center gap-6">
+                      <div className="flex-1 flex flex-col items-center">
+                        <span className="text-[7px] font-black text-gray-400 border border-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white">
+                          {request.field === 'stock' ? 'Current Stock' : 'Old / previous value'}
+                        </span>
+                        <span className="text-xl font-black text-gray-300 line-through tracking-tighter">
+                          {request.field === 'price' && "৳"}{request.oldValue}
+                        </span>
                       </div>
-                      
-                      {request.field === 'stock' && (
-                        <div className="flex justify-center border-t border-amber-100/30 pt-3">
-                           <div className="flex items-center gap-2">
-                              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">New Stock will be:</span>
-                              <span className="text-sm font-black text-amber-600 uppercase tracking-tight">{request.newValue} Total Units</span>
-                           </div>
-                        </div>
-                      )}
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center text-gray-200 shadow-sm animate-pulse">→</div>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center">
+                        <span className={`text-[7px] font-black border px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 bg-white ${request.field === 'price' ? 'text-green-600 border-green-100' : 'text-amber-600 border-amber-100'}`}>
+                          {request.field === 'stock' ? 'Stock Amount Requested' : 'New Value'}
+                        </span>
+                        <span className={`text-2xl font-black tracking-tighter italic ${request.field === 'price' ? 'text-green-600' : 'text-amber-600'}`}>
+                          {request.field === 'stock'
+                            ? `+${Number(request.newValue) - Number(request.oldValue)}`
+                            : (request.field === 'price' ? `৳${request.newValue}` : request.newValue)
+                          }
+                        </span>
+                      </div>
                     </div>
 
-                  {request.comments && request.comments.length > 0 && (
-                     <div className="space-y-2 py-2 border-t border-gray-50">
-                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Historical Context</p>
-                        <div className="space-y-2">
-                           {request.comments.map((c, i) => (
-                             <div key={i} className="bg-gray-50 p-2 rounded-xl border border-gray-100 flex justify-between items-center">
-                                <p className="text-[10px] font-medium text-gray-600"><span className="font-black uppercase text-red-600 text-[9px]">{c.user}:</span> {c.text}</p>
-                                <span className="text-[8px] text-gray-300 font-bold">{new Date(c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                             </div>
-                           ))}
+                    {request.field === 'stock' && (
+                      <div className="flex justify-center border-t border-amber-100/30 pt-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">New Stock will be:</span>
+                          <span className="text-sm font-black text-amber-600 uppercase tracking-tight">{request.newValue} Total Units</span>
                         </div>
-                     </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {request.comments && request.comments.length > 0 && (
+                    <div className="space-y-2 py-2 border-t border-gray-50">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Historical Context</p>
+                      <div className="space-y-2">
+                        {request.comments.map((c, i) => (
+                          <div key={i} className="bg-gray-50 p-2 rounded-xl border border-gray-100 flex justify-between items-center">
+                            <p className="text-[10px] font-medium text-gray-600"><span className="font-black uppercase text-red-600 text-[9px]">{c.user}:</span> {c.text}</p>
+                            <span className="text-[8px] text-gray-300 font-bold">{new Date(c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
 
                   <div className="space-y-1">
                     <label className="text-[8px] font-black uppercase text-gray-400 tracking-widest ml-1">Consensus Note (Optional)</label>
-                    <Input 
+                    <Input
                       placeholder={canApprove(request) ? "Add your signature or comment..." : "Waiting for other authorizers..."}
                       value={reviewComment[request._id] || ""}
                       onChange={(e) => setReviewComment(prev => ({ ...prev, [request._id]: e.target.value }))}
@@ -314,43 +314,43 @@ export default function ProductApprovalsPage() {
                 </div>
 
                 <div className="md:w-56 flex flex-col gap-3 justify-center border-l md:pl-6 border-gray-100">
-                   {!canApprove(request) ? (
-                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
-                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 italic">Status</p>
-                         <p className="text-[10px] font-bold text-gray-500 uppercase leading-tight">
-                            {request.stage === 'superadmin' ? 'Waiting for Triple-Admin Consensus' : 'Waiting for Final Verification'}
-                         </p>
-                      </div>
-                   ) : (
-                      <>
-                         <Button 
-                           disabled={isProcessing[request._id]}
-                           onClick={() => setConfirmAction({
-                             title: request.stage === 'superadmin' ? "Verify Consensus" : "Authorize Final Update",
-                             message: `Are you sure you want to approve this product change request for ${request.targetName}?`,
-                             onConfirm: () => handleProcess(request._id, 'approved')
-                           })}
-                           className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl shadow-gray-100"
-                         >
-                           {isProcessing[request._id] ? "Processing..." : request.stage === 'superadmin' ? "Sign & Verify" : "Authorize Final Update"}
-                         </Button>
-                         <Button 
-                           disabled={isProcessing[request._id]}
-                           onClick={() => setConfirmAction({
-                             title: "Decline Request",
-                             message: `Are you sure you want to decline this product change request for ${request.targetName}?`,
-                             onConfirm: () => handleProcess(request._id, 'declined')
-                           })}
-                           variant="ghost"
-                           className="text-gray-400 hover:text-red-600 font-black uppercase tracking-widest text-[9px] h-10 transition-all underline underline-offset-4"
-                         >
-                           Decline Request
-                         </Button>
-                      </>
-                   )}
-                   <p className="text-[8px] text-gray-300 font-bold uppercase tracking-tighter text-center mt-2">
-                     Protocol Initiated: {new Date(request.createdAt).toLocaleString()}
-                   </p>
+                  {!canApprove(request) ? (
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 italic">Status</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase leading-tight">
+                        {request.stage === 'superadmin' ? 'Waiting for Consensus' : 'Waiting for Final Verification'}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        disabled={isProcessing[request._id]}
+                        onClick={() => setConfirmAction({
+                          title: request.stage === 'superadmin' ? "Verify Consensus" : "Authorize Final Update",
+                          message: `Are you sure you want to approve this product change request for ${request.targetName}?`,
+                          onConfirm: () => handleProcess(request._id, 'approved')
+                        })}
+                        className="bg-black hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg transition-all rounded-xl shadow-gray-100"
+                      >
+                        {isProcessing[request._id] ? "Processing..." : request.stage === 'superadmin' ? "Sign & Verify" : "Authorize Final Update"}
+                      </Button>
+                      <Button
+                        disabled={isProcessing[request._id]}
+                        onClick={() => setConfirmAction({
+                          title: "Decline Request",
+                          message: `Are you sure you want to decline this product change request for ${request.targetName}?`,
+                          onConfirm: () => handleProcess(request._id, 'declined')
+                        })}
+                        variant="ghost"
+                        className="text-gray-400 hover:text-red-600 font-black uppercase tracking-widest text-[9px] h-10 transition-all underline underline-offset-4"
+                      >
+                        Decline Request
+                      </Button>
+                    </>
+                  )}
+                  <p className="text-[8px] text-gray-300 font-bold uppercase tracking-tighter text-center mt-2">
+                    Protocol Initiated: {new Date(request.createdAt).toLocaleString()}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -359,11 +359,11 @@ export default function ProductApprovalsPage() {
       )}
       {/* CONFIRMATION POPUP MODAL */}
       {confirmAction && (
-        <div 
+        <div
           onClick={() => setConfirmAction(null)}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
           >
@@ -405,10 +405,10 @@ export default function ProductApprovalsPage() {
 function VerificationItem({ label, status }: { label: string; status: boolean }) {
   return (
     <div className="flex justify-between items-center bg-white px-3 py-1.5 rounded-xl border border-gray-100/50">
-       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">{label}</span>
-       <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${status ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-          <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
-       </div>
+      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">{label}</span>
+      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${status ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+        <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+      </div>
     </div>
   )
 }

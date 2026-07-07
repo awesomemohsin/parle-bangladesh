@@ -84,70 +84,152 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const productId = searchParams.get("productId");
+    const customerType = searchParams.get("customerType") || "all";
+    const srId = searchParams.get("srId");
 
-    // 1. DATE RANGE FILTER
+    // 1. BASE DATABASE QUERY
     const query: any = {};
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);
       if (endDate) query.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
     }
+    if (productId && productId !== "all") {
+      query["items.productId"] = productId;
+    }
+    if (srId && srId !== "all") {
+      const srIdObj = mongoose.Types.ObjectId.isValid(srId) ? new mongoose.Types.ObjectId(srId) : null;
+      const srFilter = { $in: [srId, srIdObj].filter(Boolean) };
+      query.placedBySR = srFilter;
+    }
 
-    // 2. ORDER STATUS GROUPING
+    // 2. BASE CUSTOMER TYPE FILTER STAGES
+    const resolutionStages = getCustomerTypeResolutionStages();
+    let customerTypeMatchStage: any[] = [];
+    if (customerType && customerType !== "all") {
+      let matchCond: any = {};
+      if (customerType === "customer") {
+        matchCond = { resolvedCustomerType: { $in: ["customer", "guest"] } };
+      } else if (customerType === "b2b") {
+        matchCond = { resolvedCustomerType: { $in: ["retailer", "dealer", "employee"] } };
+      } else if (customerType === "staff") {
+        matchCond = { resolvedCustomerType: { $in: ["admin", "super_admin", "moderator", "owner"] } };
+      } else if (customerType === "other") {
+        matchCond = { resolvedCustomerType: { $nin: ["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"] } };
+      }
+      customerTypeMatchStage = [{ $match: matchCond }];
+    }
+    const baseFilterStages = [
+      ...resolutionStages,
+      ...customerTypeMatchStage
+    ];
+
+    // 3. ORDER STATUS GROUPING
     const statusStats = await Order.aggregate([
       { $match: query },
+      ...baseFilterStages,
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          status: { $first: "$status" },
+          orderTotal: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: "$status",
           count: { $sum: 1 },
-          totalAmount: { $sum: "$total" },
-          totalProducts: { $sum: { $reduce: { input: "$items", initialValue: 0, in: { $add: ["$$value", "$$this.quantity"] } } } }
+          totalAmount: { $sum: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       }
     ]);
 
-    // 3. CUSTOMER TYPE BREAKDOWN
+    // 4. CUSTOMER TYPE BREAKDOWN
     const customerTypeStats = await Order.aggregate([
       { $match: query },
-      ...getCustomerTypeResolutionStages(),
+      ...baseFilterStages,
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          resolvedCustomerType: { $first: "$resolvedCustomerType" },
+          orderTotal: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: "$resolvedCustomerType",
           count: { $sum: 1 },
-          totalAmount: { $sum: "$total" },
-          totalProducts: { $sum: { $reduce: { input: "$items", initialValue: 0, in: { $add: ["$$value", "$$this.quantity"] } } } }
+          totalAmount: { $sum: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       },
       { $sort: { totalAmount: -1 } }
     ]);
 
-    // 4. DEALER BREAKDOWN
+    // 5. DEALER BREAKDOWN
     const dealerStats = await Order.aggregate([
       { $match: { ...query, customerType: "dealer" } },
+      ...baseFilterStages,
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          userId: { $first: "$userId" },
+          customerName: { $first: "$customerName" },
+          customerPhone: { $first: "$customerPhone" },
+          orderTotal: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" },
+          amountDue: { $first: { $ifNull: ["$amountDue", 0] } }
+        }
+      },
       {
         $group: {
           _id: "$userId",
           customerName: { $first: "$customerName" },
           customerPhone: { $first: "$customerPhone" },
           count: { $sum: 1 },
-          totalAmount: { $sum: "$total" },
-          totalProducts: { $sum: { $reduce: { input: "$items", initialValue: 0, in: { $add: ["$$value", "$$this.quantity"] } } } },
-          amountDue: { $sum: { $ifNull: ["$amountDue", 0] } }
+          totalAmount: { $sum: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
+          totalProducts: { $sum: "$itemQuantity" },
+          amountDue: { $sum: "$amountDue" }
         }
       },
       { $sort: { totalAmount: -1 } },
       { $limit: 10 }
     ]);
 
-    // 5. SALES REPRESENTATIVES (SR) PERFORMANCE
+    // 6. SALES REPRESENTATIVES (SR) PERFORMANCE
     const srStats = await Order.aggregate([
       { $match: { ...query, placedBySR: { $ne: null } } },
+      ...baseFilterStages,
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          placedBySR: { $first: "$placedBySR" },
+          orderTotal: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          itemQuantity: { $sum: "$items.quantity" }
+        }
+      },
       {
         $group: {
           _id: "$placedBySR",
           count: { $sum: 1 },
-          totalAmount: { $sum: "$total" },
-          totalProducts: { $sum: { $reduce: { input: "$items", initialValue: 0, in: { $add: ["$$value", "$$this.quantity"] } } } }
+          totalAmount: { $sum: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
+          totalProducts: { $sum: "$itemQuantity" }
         }
       },
       {
@@ -171,14 +253,27 @@ export async function GET(request: NextRequest) {
       { $sort: { totalAmount: -1 } }
     ]);
 
-    // 6. PAYMENT METHOD BREAKDOWN
+    // 7. PAYMENT METHOD BREAKDOWN
     const paymentStats = await Order.aggregate([
       { $match: query },
+      ...baseFilterStages,
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          paymentMethod: { $first: "$paymentMethod" },
+          orderTotal: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          amountPaid: { $first: { $ifNull: ["$amountPaid", 0] } },
+          amountDue: { $first: { $ifNull: ["$amountDue", 0] } }
+        }
+      },
       {
         $group: {
           _id: "$paymentMethod",
           count: { $sum: 1 },
-          totalAmount: { $sum: "$total" },
+          totalAmount: { $sum: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
           paidAmount: { $sum: "$amountPaid" },
           dueAmount: { $sum: "$amountDue" }
         }
@@ -186,12 +281,27 @@ export async function GET(request: NextRequest) {
       { $sort: { totalAmount: -1 } }
     ]);
 
-    // 7. NEW CUSTOMERS REGISTERED
+    // 8. NEW CUSTOMERS REGISTERED
     const userQuery: any = { role: "customer" };
     if (startDate || endDate) {
       userQuery.createdAt = {};
       if (startDate) userQuery.createdAt.$gte = new Date(startDate);
       if (endDate) userQuery.createdAt.$lte = new Date(endDate + "T23:59:59.999Z");
+    }
+    if (customerType && customerType !== "all") {
+      if (customerType === "customer") {
+        userQuery.customerType = { $in: ["customer", "guest"] };
+      } else if (customerType === "b2b") {
+        userQuery.customerType = { $in: ["retailer", "dealer", "employee"] };
+      } else if (customerType === "staff") {
+        userQuery.role = { $in: ["admin", "super_admin", "moderator", "owner"] };
+      } else if (customerType === "other") {
+        userQuery.customerType = { $nin: ["customer", "guest", "retailer", "dealer", "employee"] };
+        userQuery.role = "customer";
+      }
+    }
+    if (srId && srId !== "all") {
+      userQuery.referredBySR = srId;
     }
     const newUsers = await User.find(userQuery).select("_id").lean();
     const newUserIds = newUsers.map(u => u._id.toString());
@@ -208,7 +318,9 @@ export async function GET(request: NextRequest) {
             userId: { $in: newUserIds }
           }
         },
+        ...baseFilterStages,
         { $unwind: "$items" },
+        ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
         {
           $group: {
             _id: "$_id",
@@ -227,11 +339,19 @@ export async function GET(request: NextRequest) {
       newCustomersProductsCount = newCustomerOrdersStats[0]?.totalProducts || 0;
     }
 
-    // 7.1 UNIQUE GUESTS COUNT IN PERIOD
+    // 9. UNIQUE GUESTS COUNT IN PERIOD
     const uniqueGuestsStats = await Order.aggregate([
       { $match: query },
-      ...getCustomerTypeResolutionStages(),
+      ...baseFilterStages,
       { $match: { resolvedCustomerType: "guest" } },
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          customerEmail: { $first: "$customerEmail" }
+        }
+      },
       {
         $group: {
           _id: "$customerEmail"
@@ -246,10 +366,12 @@ export async function GET(request: NextRequest) {
     ]);
     const uniqueGuestsCount = uniqueGuestsStats[0]?.count || 0;
 
-    // 8. PRODUCT PERFORMANCE BREAKDOWN
+    // 10. PRODUCT PERFORMANCE BREAKDOWN
     const productStats = await Order.aggregate([
       { $match: query },
+      ...baseFilterStages,
       { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
       {
         $group: {
           _id: "$items.productId",
@@ -262,10 +384,12 @@ export async function GET(request: NextRequest) {
       { $limit: 15 }
     ]);
 
-    // 9. OVERALL STATISTICS (Total units sold, unique SKUs, order extremes)
+    // 11. OVERALL STATISTICS (Total units sold, unique SKUs, order extremes)
     const itemStats = await Order.aggregate([
       { $match: query },
+      ...baseFilterStages,
       { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
       {
         $group: {
           _id: "$items.productId",
@@ -276,11 +400,21 @@ export async function GET(request: NextRequest) {
 
     const orderMinMax = await Order.aggregate([
       { $match: query },
+      ...baseFilterStages,
+      { $unwind: "$items" },
+      ...(productId && productId !== "all" ? [{ $match: { "items.productId": productId } }] : []),
+      {
+        $group: {
+          _id: "$_id",
+          orderTotal: { $first: "$total" },
+          itemRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+        }
+      },
       {
         $group: {
           _id: null,
-          highestOrderValue: { $max: "$total" },
-          lowestOrderValue: { $min: "$total" },
+          highestOrderValue: { $max: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
+          lowestOrderValue: { $min: productId && productId !== "all" ? "$itemRevenue" : "$orderTotal" },
           totalOrders: { $sum: 1 }
         }
       }

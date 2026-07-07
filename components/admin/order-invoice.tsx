@@ -99,11 +99,10 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   <p className="text-[9px] font-black text-gray-900 mt-0.5 uppercase tracking-[0.2em]">Order ID: #{order.id.slice(-8).toUpperCase()}</p>
                   {['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) && (
                     <div className="mt-1">
-                      <span className={`inline-block px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-sm border ${
-                        order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                      <span className={`inline-block px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-sm border ${order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                         order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-200' :
-                        'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
+                          'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
                         ORDER {order.status}
                       </span>
                     </div>
@@ -134,11 +133,10 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   </p>
                   {['cancelled', 'lost', 'damaged', 'returned'].includes(order.status) && (
                     <div className="mt-0.5">
-                      <span className={`inline-block px-1.5 py-0.2 text-[7px] font-black uppercase tracking-wider rounded-sm border ${
-                        order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                      <span className={`inline-block px-1.5 py-0.2 text-[7px] font-black uppercase tracking-wider rounded-sm border ${order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                         order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-200' :
-                        'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
+                          'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
                         {order.status}
                       </span>
                     </div>
@@ -273,7 +271,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                         </div>
                       )}
                       <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-teal-600">
-                        <span className="font-bold uppercase tracking-widest italic leading-none">SR Discount :</span>
+                        <span className="font-bold uppercase tracking-widest italic leading-none">Special Discount :</span>
                         <span className="font-bold text-teal-600">-৳{order.srDiscountAmount.toFixed(0)}</span>
                       </div>
                     </>
@@ -381,18 +379,16 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
 
                 {(order.statusReason || order.cancelReason) && (
                   <div className="mt-2 text-[8px]" style={{ breakInside: 'avoid' }}>
-                    <h4 className={`font-black uppercase tracking-widest mb-0.5 ${
-                      order.status === 'returned' ? 'text-purple-700' :
+                    <h4 className={`font-black uppercase tracking-widest mb-0.5 ${order.status === 'returned' ? 'text-purple-700' :
                       order.status === 'cancelled' ? 'text-red-600' :
-                      'text-amber-700'
-                    }`}>
+                        'text-amber-700'
+                      }`}>
                       {order.status} Reason:
                     </h4>
-                    <p className={`max-w-md italic border-l-2 pl-3 leading-tight font-medium p-1.5 rounded-sm ${
-                      order.status === 'returned' ? 'text-purple-900 border-purple-300 bg-purple-50/50' :
+                    <p className={`max-w-md italic border-l-2 pl-3 leading-tight font-medium p-1.5 rounded-sm ${order.status === 'returned' ? 'text-purple-900 border-purple-300 bg-purple-50/50' :
                       order.status === 'cancelled' ? 'text-red-900 border-red-300 bg-red-50/50' :
-                      'text-amber-900 border-amber-300 bg-amber-50/50'
-                    }`}>
+                        'text-amber-900 border-amber-300 bg-amber-50/50'
+                      }`}>
                       {order.statusReason || order.cancelReason}
                     </p>
                   </div>
