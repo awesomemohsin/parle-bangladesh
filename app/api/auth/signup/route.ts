@@ -9,11 +9,21 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, email, mobile, password } = body;
+    const { name, email, mobile: rawMobile, password } = body;
 
-    if (!name || !mobile || !password) {
+    if (!name || !rawMobile || !password) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
+
+    // Normalize Bangladeshi phone numbers to standard 11-digit format (e.g. 017xxxxxxxx)
+    let digits = rawMobile.trim().replace(/\D/g, "");
+    if (digits.startsWith("880") && digits.length === 13) {
+      digits = digits.slice(2);
+    }
+    if (digits.length === 10 && digits.startsWith("1")) {
+      digits = "0" + digits;
+    }
+    const mobile = digits;
 
     const mobileRegex = /^01[3-9]\d{8}$/;
     if (!mobileRegex.test(mobile)) {

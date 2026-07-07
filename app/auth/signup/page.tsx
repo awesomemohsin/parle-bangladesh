@@ -95,8 +95,8 @@ export default function SignupPage() {
               onChange={(e) => setMobile(e.target.value)}
               placeholder="01XXXXXXXXX"
               required
-              pattern="^01[3-9]\d{8}$"
-              title="Must be a valid 11-digit Bangladeshi mobile number starting with 01"
+              pattern="^(\+?88)?01[3-9][0-9]{8}$"
+              title="Must be a valid Bangladeshi mobile number (e.g. 01XXXXXXXXX or +8801XXXXXXXXX)"
             />
           </div>
 
