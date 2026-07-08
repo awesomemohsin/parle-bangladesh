@@ -605,10 +605,6 @@ function CheckoutContent() {
       newErrors.thana = "Please select your thana first";
       shakeMap.thana = true;
     }
-    if (!formData.postalCode) {
-      newErrors.postalCode = "Please select your postcode first";
-      shakeMap.postalCode = true;
-    }
 
     if (!sameAsBilling && deliveryMethod !== 'pickup') {
       if (!formData.shippingAddress) {
@@ -622,10 +618,6 @@ function CheckoutContent() {
       if (!formData.shippingThana) {
         newErrors.shippingThana = "Please select your shipping thana first";
         shakeMap.shippingThana = true;
-      }
-      if (!formData.shippingPostalCode) {
-        newErrors.shippingPostalCode = "Please select your shipping postcode first";
-        shakeMap.shippingPostalCode = true;
       }
     }
 
@@ -688,6 +680,11 @@ function CheckoutContent() {
         headers['x-on-behalf-of'] = activeShopId;
       }
 
+      const resolvedBillingPostalCode = formData.postalCode || lookupPostcodes(billingDistrict, formData.thana)[0] || '1000';
+      const resolvedShippingPostalCode = sameAsBilling 
+        ? resolvedBillingPostalCode 
+        : (formData.shippingPostalCode || lookupPostcodes(sameAsBilling ? billingDistrict : shippingDistrict, formData.shippingThana)[0] || '1000');
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers,
@@ -700,13 +697,13 @@ function CheckoutContent() {
             address: formData.address,
             city: formData.city,
             thana: formData.thana,
-            postalCode: formData.postalCode,
+            postalCode: resolvedBillingPostalCode,
           },
           shippingAddress: {
             address: sameAsBilling ? formData.address : formData.shippingAddress,
             city: sameAsBilling ? formData.city : formData.shippingCity,
             thana: sameAsBilling ? formData.thana : formData.shippingThana,
-            postalCode: sameAsBilling ? formData.postalCode : formData.shippingPostalCode,
+            postalCode: resolvedShippingPostalCode,
           },
           instruction: formData.instruction,
           paymentMethod: formData.paymentMethod,
@@ -963,7 +960,7 @@ function CheckoutContent() {
                     )}
                   </div>
                   <div id="field-wrapper-postalCode" className={shakingFields.postalCode ? 'animate-shake' : ''}>
-                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code (Optional)</label>
                     <div className={formErrors.postalCode ? 'error-border rounded' : ''}>
                       <SearchableSelect
                         value={formData.postalCode}
@@ -971,7 +968,6 @@ function CheckoutContent() {
                         options={getBillingPostalCodes().map(pc => ({ value: pc, label: pc }))}
                         placeholder="-- Select Postal Code --"
                         searchPlaceholder="Search postal code..."
-                        required
                         disabled={!formData.thana}
                       />
                     </div>
@@ -1101,7 +1097,7 @@ function CheckoutContent() {
                       )}
                     </div>
                     <div id="field-wrapper-shippingPostalCode" className={shakingFields.shippingPostalCode ? 'animate-shake' : ''}>
-                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code *</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code (Optional)</label>
                       <div className={!sameAsBilling && formErrors.shippingPostalCode ? 'error-border rounded' : ''}>
                         <SearchableSelect
                           value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
@@ -1109,7 +1105,6 @@ function CheckoutContent() {
                           options={getShippingPostalCodes().map(pc => ({ value: pc, label: pc }))}
                           placeholder="-- Select Postal Code --"
                           searchPlaceholder="Search postal code..."
-                          required
                           disabled={sameAsBilling || !(sameAsBilling ? formData.thana : formData.shippingThana)}
                         />
                       </div>
