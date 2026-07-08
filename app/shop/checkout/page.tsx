@@ -92,11 +92,11 @@ function CheckoutContent() {
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
-  // Selected Division/District names (defaults to Dhaka Division & Dhaka District)
+  // Selected Division/District names (defaults to Dhaka Division & Dhaka Metro District)
   const [billingDivision, setBillingDivision] = useState<string>('Dhaka');
-  const [billingDistrict, setBillingDistrict] = useState<string>('Dhaka');
+  const [billingDistrict, setBillingDistrict] = useState<string>('Dhaka Metro');
   const [shippingDivision, setShippingDivision] = useState<string>('Dhaka');
-  const [shippingDistrict, setShippingDistrict] = useState<string>('Dhaka');
+  const [shippingDistrict, setShippingDistrict] = useState<string>('Dhaka Metro');
 
   // Previous order state for async resolution
   const [previousOrder, setPreviousOrder] = useState<any>(null);
@@ -132,11 +132,11 @@ function CheckoutContent() {
     email: '',
     phone: '',
     address: '',
-    city: 'Dhaka',
+    city: 'Dhaka Metro',
     thana: '',
     postalCode: '',
     shippingAddress: '',
-    shippingCity: 'Dhaka',
+    shippingCity: 'Dhaka Metro',
     shippingThana: '',
     shippingPostalCode: '',
     instruction: '',
