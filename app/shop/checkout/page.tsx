@@ -811,7 +811,7 @@ function CheckoutContent() {
           <div className="lg:col-span-2 space-y-4">
             {/* Contact Information */}
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Contact Information</h2>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2 pb-2 border-b">Contact Information</h2>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div id="field-wrapper-name" className={`flex-1 ${shakingFields.name ? 'animate-shake' : ''}`}>
@@ -897,7 +897,7 @@ function CheckoutContent() {
 
             {/* Billing Address */}
             <div className="border-t pt-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Billing Address</h2>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-2 pb-2 border-b">Billing Address</h2>
               <div className="space-y-3">
                 <div id="field-wrapper-address" className={shakingFields.address ? 'animate-shake' : ''}>
                   <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
@@ -1019,16 +1019,16 @@ function CheckoutContent() {
             {/* Shipping Information */}
             {deliveryMethod === 'shipping' && (
               <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-2 pb-2 border-b">
-                  <h2 className="text-xl font-bold text-gray-900">Shipping Information</h2>
-                  <label className="flex items-center space-x-2 cursor-pointer">
+                <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b">
+                  <h2 className="text-sm sm:text-base font-bold text-gray-900 truncate">Shipping Information</h2>
+                  <label className="flex items-center space-x-1.5 cursor-pointer shrink-0">
                     <input
                       type="checkbox"
                       checked={sameAsBilling}
                       onChange={handleSameAsBillingChange}
-                      className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-600"
+                      className="w-3.5 h-3.5 text-red-600 rounded border-gray-300 focus:ring-red-600"
                     />
-                    <span className="text-sm text-gray-600">Same as billing address</span>
+                    <span className="text-[10px] sm:text-xs text-gray-600 whitespace-nowrap">Same as billing</span>
                   </label>
                 </div>
 
