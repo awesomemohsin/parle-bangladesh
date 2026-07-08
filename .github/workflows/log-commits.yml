@@ -1,0 +1,56 @@
+name: Log Commits to Google Sheets
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  log-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Commits to Google Sheets
+        run: |
+          node -e '
+            const event = JSON.parse(process.env.EVENT_DATA);
+            
+            // Map the commits to our format
+            const commits = event.commits.map(c => ({
+              message: c.message,
+              date: c.timestamp
+            }));
+            
+            const payload = {
+              project: process.env.PROJECT_NAME,
+              commits: commits
+            };
+            
+            const url = process.env.SHEET_WEBHOOK_URL;
+            if (!url) {
+              console.error("Error: SHEET_WEBHOOK_URL secret is not set.");
+              process.exit(1);
+            }
+            
+            // Post payload to Google Apps Script
+            fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+              console.log("Success response from Sheet:", data);
+              if (!data.success) {
+                console.error("Sheet error:", data.error);
+                process.exit(1);
+              }
+            })
+            .catch(err => {
+              console.error("Network Error:", err);
+              process.exit(1);
+            });
+          '
+        env:
+          EVENT_DATA: ${{ toJson(github.event) }}
+          SHEET_WEBHOOK_URL: ${{ secrets.COMMIT_LOG_WEBHOOK_URL }}
+          PROJECT_NAME: "Parle Bangladesh Website"
