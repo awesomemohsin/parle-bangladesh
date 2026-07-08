@@ -20,3 +20,8 @@ tmp/
 scratch/
 PERFORMANCE_GUARDRAILS.md
 .agents/
+
+# Local-only Steadfast courier testing routes
+app/api/admin/orders/*/send-steadfast/route.ts
+app/api/admin/orders/*/track-steadfast/route.ts
+app/api/admin/orders/sync-steadfast-locations/route.ts

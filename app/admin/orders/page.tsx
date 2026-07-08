@@ -916,7 +916,7 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
 
-                      {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && (
+                      {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && (
                         <div className="mt-4 pt-4 border-t border-gray-200 space-y-3 bg-white/50 p-3 rounded-xl border">
                           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Delivery & Courier Status</p>
                           {order.courierConsignmentId ? (
