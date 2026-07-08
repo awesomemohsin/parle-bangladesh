@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Check, Tag, X } from 'lucide-react';
@@ -8,24 +8,13 @@ import { Button } from '@/components/ui/button';
 import { useCart, getItemKey } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
-import { THANA_POSTCODES } from '@/lib/postcodes';
+import locationsHierarchy from '@/public/files/locations-hierarchy.json';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 
 const lookupPostcodes = (district: string, thana: string): string[] => {
-  const normalizedDistrict = district.replace(" Metro", "");
-  const key = `${normalizedDistrict}_${thana}`;
-  return THANA_POSTCODES[key] || THANA_POSTCODES[district + "_" + thana] || THANA_POSTCODES[thana] || ["1000"];
-};
-
-const getEffectiveDistrictId = (districtId: string): string => {
-  const mapping: Record<string, string> = {
-    "68": "27", // Khulna Metro -> Khulna
-    "69": "33", // Barishal Metro -> Barisal
-    "67": "15", // Rajshahi Metro -> Rajshahi
-    "71": "59", // Rangpur Metro -> Rangpur
-    "70": "36", // Sylhet Metro -> Sylhet
-  };
-  return mapping[districtId] || districtId;
+  if (!district || !thana) return [];
+  const key = `${district}_${thana}`;
+  return (locationsHierarchy as any).postcodes[key] || [];
 };
 
 
@@ -103,19 +92,11 @@ function CheckoutContent() {
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
-  // Cascading Location States
-  const [divisions, setDivisions] = useState<{ id: number; name: string }[]>([]);
-  const [allDistricts, setAllDistricts] = useState<{ id: number; name: string; divisionId: number }[]>([]);
-
-  // Selected Division/District IDs (defaults to Dhaka Division = 6, Dhaka Metro District = 65)
-  const [billingDivisionId, setBillingDivisionId] = useState<string>('6');
-  const [billingDistrictId, setBillingDistrictId] = useState<string>('65');
-  const [shippingDivisionId, setShippingDivisionId] = useState<string>('6');
-  const [shippingDistrictId, setShippingDistrictId] = useState<string>('65');
-
-  // Available Thanas lists loaded dynamically from API
-  const [billingThanas, setBillingThanas] = useState<string[]>([]);
-  const [shippingThanas, setShippingThanas] = useState<string[]>([]);
+  // Selected Division/District names (defaults to Dhaka Division & Dhaka District)
+  const [billingDivision, setBillingDivision] = useState<string>('Dhaka');
+  const [billingDistrict, setBillingDistrict] = useState<string>('Dhaka');
+  const [shippingDivision, setShippingDivision] = useState<string>('Dhaka');
+  const [shippingDistrict, setShippingDistrict] = useState<string>('Dhaka');
 
   // Previous order state for async resolution
   const [previousOrder, setPreviousOrder] = useState<any>(null);
@@ -151,11 +132,11 @@ function CheckoutContent() {
     email: '',
     phone: '',
     address: '',
-    city: 'Dhaka Metro',
+    city: 'Dhaka',
     thana: '',
     postalCode: '',
     shippingAddress: '',
-    shippingCity: 'Dhaka Metro',
+    shippingCity: 'Dhaka',
     shippingThana: '',
     shippingPostalCode: '',
     instruction: '',
@@ -164,6 +145,16 @@ function CheckoutContent() {
   });
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const [sameAsBilling, setSameAsBilling] = useState(true);
+
+  // Available Thanas lists derived from local JSON
+  const billingThanas = useMemo<string[]>(() => {
+    return ((locationsHierarchy as any).thanas[billingDistrict] || []) as string[];
+  }, [billingDistrict]);
+
+  const shippingThanas = useMemo<string[]>(() => {
+    const dist = sameAsBilling ? billingDistrict : shippingDistrict;
+    return ((locationsHierarchy as any).thanas[dist] || []) as string[];
+  }, [sameAsBilling, billingDistrict, shippingDistrict]);
   const [prefilled, setPrefilled] = useState({ name: false, email: false, phone: false });
   const [emailReadOnly, setEmailReadOnly] = useState(false);
   const [srDiscountPercent, setSrDiscountPercent] = useState<number>(0);
@@ -245,39 +236,6 @@ function CheckoutContent() {
       }
     };
 
-    const fetchDivisions = async () => {
-      try {
-        const res = await fetch('https://billing.circlenetworkbd.net/api/getDivision');
-        if (res.ok) {
-          const data = await res.json();
-          setDivisions(data);
-        }
-      } catch (e) {
-        console.error("Failed to fetch divisions:", e);
-      }
-    };
-
-    const fetchAllDistricts = async () => {
-      const divisionIds = [1, 2, 3, 4, 5, 6, 7, 8];
-      const districtsList: { id: number; name: string; divisionId: number }[] = [];
-      try {
-        await Promise.all(divisionIds.map(async (divId) => {
-          const res = await fetch(`https://billing.circlenetworkbd.net/api/getDistrict/${divId}`);
-          if (res.ok) {
-            const data = await res.json();
-            Object.values(data).forEach((d: any) => {
-              districtsList.push({ id: d.id, name: d.name, divisionId: divId });
-            });
-          }
-        }));
-        setAllDistricts(districtsList);
-      } catch (e) {
-        console.error("Failed to fetch all districts:", e);
-      }
-    };
-
-    fetchDivisions();
-    fetchAllDistricts();
     fetchPreviousOrderAddress();
 
     setMounted(true);
@@ -331,54 +289,10 @@ function CheckoutContent() {
     }
   }, [formData.phone, mounted]);
 
-  // Load upazilas for billing district ID
-  useEffect(() => {
-    if (!billingDistrictId) {
-      setBillingThanas([]);
-      return;
-    }
-    const fetchBillingThanas = async () => {
-      try {
-        const effectiveId = getEffectiveDistrictId(billingDistrictId);
-        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${effectiveId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const thanas = Object.values(data).map((u: any) => u.name).sort();
-          setBillingThanas(thanas);
-        }
-      } catch (e) {
-        console.error("Failed to fetch billing thanas:", e);
-      }
-    };
-    fetchBillingThanas();
-  }, [billingDistrictId]);
-
-  // Load upazilas for shipping district ID
-  useEffect(() => {
-    if (!shippingDistrictId) {
-      setShippingThanas([]);
-      return;
-    }
-    const fetchShippingThanas = async () => {
-      try {
-        const effectiveId = getEffectiveDistrictId(shippingDistrictId);
-        const res = await fetch(`https://billing.circlenetworkbd.net/api/getUpazila/${effectiveId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const thanas = Object.values(data).map((u: any) => u.name).sort();
-          setShippingThanas(thanas);
-        }
-      } catch (e) {
-        console.error("Failed to fetch shipping thanas:", e);
-      }
-    };
-    fetchShippingThanas();
-  }, [shippingDistrictId]);
-
   // Handle billing thana change: reset/auto-select postcode
   useEffect(() => {
     if (formData.thana) {
-      const codes = lookupPostcodes(formData.city, formData.thana);
+      const codes = lookupPostcodes(billingDistrict, formData.thana);
       if (codes.length === 1) {
         setFormData(prev => ({ ...prev, postalCode: codes[0] }));
       } else {
@@ -389,12 +303,13 @@ function CheckoutContent() {
     } else {
       setFormData(prev => ({ ...prev, postalCode: "" }));
     }
-  }, [formData.thana]);
+  }, [formData.thana, billingDistrict]);
 
   // Handle shipping thana change: reset/auto-select postcode
   useEffect(() => {
     if (formData.shippingThana) {
-      const codes = lookupPostcodes(formData.shippingCity, formData.shippingThana);
+      const dist = sameAsBilling ? billingDistrict : shippingDistrict;
+      const codes = lookupPostcodes(dist, formData.shippingThana);
       if (codes.length === 1) {
         setFormData(prev => ({ ...prev, shippingPostalCode: codes[0] }));
       } else {
@@ -405,35 +320,47 @@ function CheckoutContent() {
     } else {
       setFormData(prev => ({ ...prev, shippingPostalCode: "" }));
     }
-  }, [formData.shippingThana]);
+  }, [formData.shippingThana, sameAsBilling, billingDistrict, shippingDistrict]);
 
   // Asynchronous historic address resolver
   useEffect(() => {
-    if (allDistricts.length === 0 || !previousOrder) return;
+    if (!previousOrder) return;
 
     const lastOrder = previousOrder;
     const isLastEmailVirtual = lastOrder.customerEmail?.endsWith('@phone.parle.com');
     const displayLastEmail = isLastEmailVirtual ? '' : (lastOrder.customerEmail || '');
 
-    // Resolve billing district ID and division ID
-    const billDist = allDistricts.find(d => d.name === lastOrder.city);
-    if (billDist) {
-      setBillingDivisionId(String(billDist.divisionId));
-      setBillingDistrictId(String(billDist.id));
-    }
+    // Resolve billing division and district names from the historic city name
+    let billDiv = 'Dhaka';
+    let billDist = 'Dhaka';
 
-    // Resolve shipping district ID and division ID
-    let shipDist = null;
+    if (lastOrder.city) {
+      for (const [div, dists] of Object.entries((locationsHierarchy as any).districts)) {
+        if ((dists as string[]).includes(lastOrder.city)) {
+          billDiv = div;
+          billDist = lastOrder.city;
+          break;
+        }
+      }
+    }
+    setBillingDivision(billDiv);
+    setBillingDistrict(billDist);
+
+    // Resolve shipping division and district names
+    let shipDiv = billDiv;
+    let shipDist = billDist;
+
     if (lastOrder.shippingCity && lastOrder.shippingCity !== 'N/A') {
-      shipDist = allDistricts.find(d => d.name === lastOrder.shippingCity);
+      for (const [div, dists] of Object.entries((locationsHierarchy as any).districts)) {
+        if ((dists as string[]).includes(lastOrder.shippingCity)) {
+          shipDiv = div;
+          shipDist = lastOrder.shippingCity;
+          break;
+        }
+      }
     }
-    if (shipDist) {
-      setShippingDivisionId(String(shipDist.divisionId));
-      setShippingDistrictId(String(shipDist.id));
-    } else if (billDist) {
-      setShippingDivisionId(String(billDist.divisionId));
-      setShippingDistrictId(String(billDist.id));
-    }
+    setShippingDivision(shipDiv);
+    setShippingDistrict(shipDist);
 
     setFormData(prev => ({
       ...prev,
@@ -449,7 +376,7 @@ function CheckoutContent() {
       shippingThana: lastOrder.shippingThana || prev.shippingThana || '',
       shippingPostalCode: lastOrder.shippingPostalCode || prev.shippingPostalCode,
     }));
-  }, [allDistricts, previousOrder]);
+  }, [previousOrder]);
 
   useEffect(() => {
     return () => {
@@ -595,7 +522,7 @@ function CheckoutContent() {
 
   const getBillingPostalCodes = () => {
     if (!formData.thana) return [];
-    const codes = [...lookupPostcodes(formData.city, formData.thana)];
+    const codes = [...lookupPostcodes(billingDistrict, formData.thana)];
     if (formData.postalCode && !codes.includes(formData.postalCode)) {
       codes.push(formData.postalCode);
     }
@@ -604,7 +531,7 @@ function CheckoutContent() {
 
   const getShippingPostalCodes = () => {
     const thana = sameAsBilling ? formData.thana : formData.shippingThana;
-    const district = sameAsBilling ? formData.city : formData.shippingCity;
+    const district = sameAsBilling ? billingDistrict : shippingDistrict;
     const currentCode = sameAsBilling ? formData.postalCode : formData.shippingPostalCode;
     if (!thana) return [];
     const codes = [...lookupPostcodes(district, thana)];
@@ -621,38 +548,30 @@ function CheckoutContent() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleBillingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
-    const divId = typeof e === 'string' ? e : e.target.value;
+  const handleBillingDivisionChange = (val: string) => {
     setValidationError('');
-    setBillingDivisionId(divId);
-    setBillingDistrictId('');
-    setFormData(prev => ({ ...prev, city: '', thana: '' }));
+    setBillingDivision(val);
+    setBillingDistrict('');
+    setFormData(prev => ({ ...prev, city: '', thana: '', postalCode: '' }));
   };
 
-  const handleBillingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
-    const distId = typeof e === 'string' ? e : e.target.value;
+  const handleBillingDistrictChange = (val: string) => {
     setValidationError('');
-    setBillingDistrictId(distId);
-
-    const dist = allDistricts.find(d => String(d.id) === distId);
-    setFormData(prev => ({ ...prev, city: dist ? dist.name : '', thana: '' }));
+    setBillingDistrict(val);
+    setFormData(prev => ({ ...prev, city: val, thana: '', postalCode: '' }));
   };
 
-  const handleShippingDivisionChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
-    const divId = typeof e === 'string' ? e : e.target.value;
+  const handleShippingDivisionChange = (val: string) => {
     setValidationError('');
-    setShippingDivisionId(divId);
-    setShippingDistrictId('');
-    setFormData(prev => ({ ...prev, shippingCity: '', shippingThana: '' }));
+    setShippingDivision(val);
+    setShippingDistrict('');
+    setFormData(prev => ({ ...prev, shippingCity: '', shippingThana: '', shippingPostalCode: '' }));
   };
 
-  const handleShippingDistrictChange = (e: React.ChangeEvent<HTMLSelectElement> | string) => {
-    const distId = typeof e === 'string' ? e : e.target.value;
+  const handleShippingDistrictChange = (val: string) => {
     setValidationError('');
-    setShippingDistrictId(distId);
-
-    const dist = allDistricts.find(d => String(d.id) === distId);
-    setFormData(prev => ({ ...prev, shippingCity: dist ? dist.name : '', shippingThana: '' }));
+    setShippingDistrict(val);
+    setFormData(prev => ({ ...prev, shippingCity: val, shippingThana: '', shippingPostalCode: '' }));
   };
 
   const handleSameAsBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -998,9 +917,9 @@ function CheckoutContent() {
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Division *</label>
                     <SearchableSelect
-                      value={billingDivisionId}
+                      value={billingDivision}
                       onChange={handleBillingDivisionChange}
-                      options={divisions.map(div => ({ value: String(div.id), label: div.name }))}
+                      options={(locationsHierarchy as any).divisions.map((div: string) => ({ value: div, label: div }))}
                       placeholder="-- Select Division --"
                       searchPlaceholder="Search division..."
                       required
@@ -1010,13 +929,13 @@ function CheckoutContent() {
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
                     <div className={formErrors.city ? 'error-border rounded' : ''}>
                       <SearchableSelect
-                        value={billingDistrictId}
+                        value={billingDistrict}
                         onChange={handleBillingDistrictChange}
-                        options={allDistricts.filter(d => String(d.divisionId) === billingDivisionId).map(d => ({ value: String(d.id), label: d.name }))}
+                        options={((locationsHierarchy as any).districts[billingDivision] || []).map((d: string) => ({ value: d, label: d }))}
                         placeholder="-- Select District --"
                         searchPlaceholder="Search district..."
                         required
-                        disabled={!billingDivisionId}
+                        disabled={!billingDivision}
                       />
                     </div>
                     {formErrors.city && (
@@ -1036,7 +955,7 @@ function CheckoutContent() {
                         placeholder="-- Select Thana --"
                         searchPlaceholder="Search thana..."
                         required
-                        disabled={!billingDistrictId}
+                        disabled={!billingDistrict}
                       />
                     </div>
                     {formErrors.thana && (
@@ -1135,9 +1054,9 @@ function CheckoutContent() {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Division *</label>
                       <SearchableSelect
-                        value={sameAsBilling ? billingDivisionId : shippingDivisionId}
+                        value={sameAsBilling ? billingDivision : shippingDivision}
                         onChange={handleShippingDivisionChange}
-                        options={divisions.map(div => ({ value: String(div.id), label: div.name }))}
+                        options={(locationsHierarchy as any).divisions.map((div: string) => ({ value: div, label: div }))}
                         placeholder="-- Select Division --"
                         searchPlaceholder="Search division..."
                         required
@@ -1148,13 +1067,13 @@ function CheckoutContent() {
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
                       <div className={!sameAsBilling && formErrors.shippingCity ? 'error-border rounded' : ''}>
                         <SearchableSelect
-                          value={sameAsBilling ? billingDistrictId : shippingDistrictId}
+                          value={sameAsBilling ? billingDistrict : shippingDistrict}
                           onChange={handleShippingDistrictChange}
-                          options={allDistricts.filter(d => String(d.divisionId) === (sameAsBilling ? billingDivisionId : shippingDivisionId)).map(d => ({ value: String(d.id), label: d.name }))}
+                          options={((locationsHierarchy as any).districts[sameAsBilling ? billingDivision : shippingDivision] || []).map((d: string) => ({ value: d, label: d }))}
                           placeholder="-- Select District --"
                           searchPlaceholder="Search district..."
                           required
-                          disabled={sameAsBilling || !(sameAsBilling ? billingDivisionId : shippingDivisionId)}
+                          disabled={sameAsBilling || !(sameAsBilling ? billingDivision : shippingDivision)}
                         />
                       </div>
                       {!sameAsBilling && formErrors.shippingCity && (
@@ -1174,7 +1093,7 @@ function CheckoutContent() {
                           placeholder="-- Select Thana --"
                           searchPlaceholder="Search thana..."
                           required
-                          disabled={sameAsBilling || !(sameAsBilling ? billingDistrictId : shippingDistrictId)}
+                          disabled={sameAsBilling || !(sameAsBilling ? billingDistrict : shippingDistrict)}
                         />
                       </div>
                       {!sameAsBilling && formErrors.shippingThana && (

@@ -105,7 +105,7 @@ export default function CartPage() {
   const { user } = useAuth();
   const isDealer = !!(user && (
     ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
-    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
+    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType || '')
   ));
   const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
@@ -243,10 +243,10 @@ export default function CartPage() {
             <div className="lg:col-span-8 space-y-4">
               {/* Unlocked Campaign Alerts */}
               {campaignNotices?.filter(notice => (notice as any).unlocked).map((notice, idx) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  key={`unlocked-${idx}`} 
+                  key={`unlocked-${idx}`}
                   className="border rounded-[24px] p-4 flex items-center gap-4 shadow-sm bg-emerald-50 border-emerald-200"
                 >
                   <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -286,9 +286,9 @@ export default function CartPage() {
                         className="group bg-white rounded-3xl p-3.5 sm:p-5 flex items-start sm:items-center gap-3.5 sm:gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all border border-transparent hover:border-gray-100"
                       >
                         {/* Product Image */}
-                        <a 
-                          href={productLink} 
-                          onClick={(e) => handleLinkClick(e, productLink)} 
+                        <a
+                          href={productLink}
+                          onClick={(e) => handleLinkClick(e, productLink)}
                           className="relative w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100 group-hover:scale-105 transition-transform cursor-pointer"
                         >
                           <Image
@@ -304,9 +304,9 @@ export default function CartPage() {
                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                           <div className="flex justify-between items-start mb-1 sm:mb-2">
                             <div className="min-w-0 flex-1">
-                              <a 
-                                href={productLink} 
-                                onClick={(e) => handleLinkClick(e, productLink)} 
+                              <a
+                                href={productLink}
+                                onClick={(e) => handleLinkClick(e, productLink)}
                                 className="hover:text-red-600 transition-colors"
                               >
                                 <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-tight italic line-clamp-2 sm:line-clamp-1 cursor-pointer pr-2">
@@ -418,7 +418,7 @@ export default function CartPage() {
             {/* Order Summary Column */}
             <div className="lg:col-span-4 sticky top-24 space-y-6">
               {/* Free Delivery Progress */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-[32px] p-6 shadow-xl shadow-slate-200/50 border border-gray-50 overflow-hidden relative"
@@ -451,15 +451,14 @@ export default function CartPage() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${progressPercent}%` }}
                           transition={{ duration: 1, ease: "easeOut" }}
-                          className={`absolute top-0 left-0 h-full rounded-full ${
-                            isFreeDelivery ? 'bg-green-500' : 'bg-red-600'
-                          }`}
+                          className={`absolute top-0 left-0 h-full rounded-full ${isFreeDelivery ? 'bg-green-500' : 'bg-red-600'
+                            }`}
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
                         </motion.div>
@@ -506,7 +505,7 @@ export default function CartPage() {
                       </span>
                     </div>
                   </div>
- 
+
                   <Button
                     onClick={handleCheckout}
                     disabled={isCheckingOut}
