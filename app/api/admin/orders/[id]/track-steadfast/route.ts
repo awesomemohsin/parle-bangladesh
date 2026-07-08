@@ -60,7 +60,6 @@ export async function GET(
       let localStatusUpdate = "";
       if (newStatus === "delivered" && order.status !== "delivered") {
         localStatusUpdate = "delivered";
-        order.paymentStatus = "paid";
       } else if (newStatus === "cancelled" && order.status !== "cancelled") {
         localStatusUpdate = "cancelled";
       }
