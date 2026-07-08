@@ -54,6 +54,10 @@ interface Order {
   amountDue?: number
   srDiscountPercent?: number
   srDiscountAmount?: number
+  courierName?: string
+  courierConsignmentId?: string
+  courierTrackingCode?: string
+  courierStatus?: string
 }
 
 const isInvoiceEnabled = (order: Order, currentStatus: string) => {
@@ -159,6 +163,91 @@ export default function AdminOrdersPage() {
 
   const handlePrint = (id: string) => {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
+  };
+
+  const handleSendToSteadfast = async (orderId: string) => {
+    const toastId = toast.loading('Booking parcel with Steadfast...');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/admin/orders/${orderId}/send-steadfast`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Parcel booked successfully with Steadfast!', { id: toastId });
+        setOrders(prev => prev.map(o => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              courierName: 'Steadfast',
+              courierConsignmentId: String(data.consignment.consignment_id),
+              courierTrackingCode: String(data.consignment.tracking_code),
+              courierStatus: String(data.consignment.status),
+              orderLogs: [
+                ...(o.orderLogs || []),
+                {
+                  fromStatus: o.status,
+                  toStatus: o.status,
+                  changedBy: 'Admin',
+                  reason: `Dispatched to Steadfast Courier. Consignment ID: ${data.consignment.consignment_id}, Tracking Code: ${data.consignment.tracking_code}`,
+                  changedAt: new Date().toISOString()
+                }
+              ]
+            };
+          }
+          return o;
+        }));
+      } else {
+        toast.error(data.error || 'Failed to book parcel', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('An error occurred while booking parcel', { id: toastId });
+    }
+  };
+
+  const handleTrackSteadfast = async (orderId: string) => {
+    const toastId = toast.loading('Syncing status with Steadfast...');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/admin/orders/${orderId}/track-steadfast`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Synced! Status: ${data.courierStatus}`, { id: toastId });
+        setOrders(prev => prev.map(o => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              courierStatus: data.courierStatus,
+              status: data.orderStatus,
+              orderLogs: [
+                ...(o.orderLogs || []),
+                {
+                  fromStatus: o.status,
+                  toStatus: data.orderStatus,
+                  changedBy: 'Steadfast Sync',
+                  reason: `Automatic status sync. Courier status: ${data.courierStatus}`,
+                  changedAt: new Date().toISOString()
+                }
+              ]
+            };
+          }
+          return o;
+        }));
+      } else {
+        toast.error(data.error || 'Failed to track parcel', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('An error occurred while syncing tracking status', { id: toastId });
+    }
   };
 
   const fetchOrders = async (isBackground = false, isAppend = false) => {
@@ -826,6 +915,54 @@ export default function AdminOrdersPage() {
                           <span className="font-black text-sm text-red-600">৳{order.total.toFixed(0)}</span>
                         </div>
                       </div>
+
+                      {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3 bg-white/50 p-3 rounded-xl border">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Delivery & Courier Status</p>
+                          {order.courierConsignmentId ? (
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between items-center">
+                                <span className="font-semibold text-gray-600">Courier Partner:</span>
+                                <span className="font-bold text-gray-900">{order.courierName || 'Steadfast'}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="font-semibold text-gray-600">Consignment ID:</span>
+                                <span className="font-mono text-gray-900 font-bold">{order.courierConsignmentId}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="font-semibold text-gray-600">Tracking Code:</span>
+                                <span className="font-mono text-red-600 font-extrabold">{order.courierTrackingCode}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="font-semibold text-gray-600">Courier Status:</span>
+                                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[9px] uppercase tracking-wider">
+                                  {order.courierStatus || 'in_review'}
+                                </span>
+                              </div>
+                              <div className="pt-2">
+                                <Button 
+                                  onClick={() => handleTrackSteadfast(order.id)} 
+                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-8 text-[11px] rounded-lg"
+                                >
+                                  Sync Delivery Status
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 text-xs">
+                              <p className="text-gray-500 text-[10px]">No active dispatch found for this order.</p>
+                              {order.status !== 'cancelled' && order.status !== 'delivered' && (
+                                <Button 
+                                  onClick={() => handleSendToSteadfast(order.id)} 
+                                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-9 text-xs rounded-lg"
+                                >
+                                  Book Courier Parcel (Steadfast)
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {order.orderLogs && order.orderLogs.length > 0 && (
                         <div className="mt-6 pt-6 border-t border-white">

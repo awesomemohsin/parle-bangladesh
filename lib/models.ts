@@ -382,6 +382,10 @@ export interface IOrder extends Document {
   placedBySR?: string | mongoose.Types.ObjectId;
   srDiscountPercent?: number;
   srDiscountAmount?: number;
+  courierName?: string;
+  courierConsignmentId?: string;
+  courierTrackingCode?: string;
+  courierStatus?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -446,6 +450,10 @@ const OrderSchema = new Schema<IOrder>(
     placedBySR: { type: Schema.Types.ObjectId, ref: "User" },
     srDiscountPercent: { type: Number },
     srDiscountAmount: { type: Number },
+    courierName: { type: String },
+    courierConsignmentId: { type: String },
+    courierTrackingCode: { type: String },
+    courierStatus: { type: String },
   },
   { timestamps: true }
 );
