@@ -813,9 +813,9 @@ function CheckoutContent() {
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Contact Information</h2>
               <div className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div id="field-wrapper-name" className={`flex-1 ${shakingFields.name ? 'animate-shake' : ''}`}>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate">Full Name *</label>
                     <input
                       type="text"
                       name="name"
@@ -830,7 +830,7 @@ function CheckoutContent() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address (Optional)</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate">Email (Optional)</label>
                     <input
                       type="email"
                       name="email"
@@ -842,9 +842,9 @@ function CheckoutContent() {
                     />
                   </div>
                 </div>
-                <div className={!isLoggedIn ? "grid grid-cols-1 md:grid-cols-2 gap-3" : ""}>
+                <div className={!isLoggedIn ? "grid grid-cols-2 gap-3" : ""}>
                   <div id="field-wrapper-phone" className={shakingFields.phone ? 'animate-shake' : ''}>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate">Phone Number *</label>
                     <input
                       type="tel"
                       name="phone"
@@ -853,12 +853,12 @@ function CheckoutContent() {
                       required
                       className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.phone || phoneError
                         ? 'error-border'
-                        : 'border-gray-200 focus:border-red-600 focus:ring-red-600'
+                        : 'border-gray-200 focus:border-red-600 focus:ring-red-650'
                         }`}
                       placeholder="01XXXXXXXXX"
                     />
                     {(phoneError || formErrors.phone) && (
-                      <p className="text-[10px] text-red-650 font-bold uppercase tracking-wide leading-tight mt-1 animate-in fade-in duration-200">
+                      <p className="text-[10px] text-red-655 font-bold uppercase tracking-wide leading-tight mt-1 animate-in fade-in duration-200">
                         ⚠️ {phoneError || formErrors.phone}
                       </p>
                     )}
@@ -866,12 +866,12 @@ function CheckoutContent() {
 
                   {!isLoggedIn && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between">
-                        <span>New Password (Optional)</span>
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between truncate">
+                        <span>Password (Optional)</span>
                         {isPhoneRegistered ? (
-                          <span className="text-[9px] text-green-600 lowercase tracking-normal font-medium normal-case font-bold">(Account Detected)</span>
+                          <span className="text-[8px] text-green-600 font-medium font-bold lowercase normal-case tracking-normal">(Saved)</span>
                         ) : (
-                          <span className="text-[9px] text-amber-600 lowercase tracking-normal font-medium normal-case font-bold">(Keep Blank = Phone Number)</span>
+                          <span className="text-[8px] text-amber-600 font-medium font-bold lowercase normal-case tracking-normal">(Blank = Phone)</span>
                         )}
                       </label>
                       <input
@@ -882,7 +882,7 @@ function CheckoutContent() {
                         disabled={isPhoneRegistered}
                         className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${isPhoneRegistered ? 'opacity-60 cursor-not-allowed bg-gray-150/50' : ''
                           }`}
-                        placeholder={isPhoneRegistered ? "Checked out as guest" : "Choose password (min 6 chars)"}
+                        placeholder={isPhoneRegistered ? "Checked out as guest" : "Choose password"}
                       />
                     </div>
                   )}
