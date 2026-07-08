@@ -900,14 +900,14 @@ function CheckoutContent() {
               <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Billing Address</h2>
               <div className="space-y-3">
                 <div id="field-wrapper-address" className={shakingFields.address ? 'animate-shake' : ''}>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
+                  <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">Street Address *</label>
                   <input
                     type="text"
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
                     required
-                    className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.address ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600'}`}
+                    className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.address ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600'}`}
                     placeholder="House #, Road #"
                   />
                   {formErrors.address && (
@@ -1035,7 +1035,7 @@ function CheckoutContent() {
 
                 <div className="space-y-3">
                   <div id="field-wrapper-shippingAddress" className={shakingFields.shippingAddress ? 'animate-shake' : ''}>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">Shipping Address *</label>
                     <input
                       type="text"
                       name="shippingAddress"
@@ -1043,7 +1043,7 @@ function CheckoutContent() {
                       onChange={handleInputChange}
                       required
                       readOnly={sameAsBilling}
-                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500 border-gray-200' : (formErrors.shippingAddress ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600')}`}
+                      className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${sameAsBilling ? 'opacity-70 cursor-not-allowed text-gray-500 border-gray-200' : (formErrors.shippingAddress ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600')}`}
                       placeholder="House #, Road #"
                     />
                     {!sameAsBilling && formErrors.shippingAddress && (
