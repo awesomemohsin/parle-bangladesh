@@ -822,7 +822,7 @@ function CheckoutContent() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.name ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600'}`}
+                      className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.name ? 'error-border' : 'border-gray-200 focus:border-red-600 focus:ring-red-600'}`}
                       placeholder="John Doe"
                     />
                     {formErrors.name && (
@@ -837,7 +837,7 @@ function CheckoutContent() {
                       value={formData.email}
                       onChange={handleInputChange}
                       readOnly={prefilled.email || emailReadOnly}
-                      className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${(prefilled.email || emailReadOnly) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${(prefilled.email || emailReadOnly) ? 'opacity-70 cursor-not-allowed' : ''}`}
                       placeholder="john@example.com"
                     />
                   </div>
@@ -851,7 +851,7 @@ function CheckoutContent() {
                       value={formData.phone}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-4 py-2 bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.phone || phoneError
+                      className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${formErrors.phone || phoneError
                         ? 'error-border'
                         : 'border-gray-200 focus:border-red-600 focus:ring-red-650'
                         }`}
@@ -866,13 +866,8 @@ function CheckoutContent() {
 
                   {!isLoggedIn && (
                     <div>
-                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between truncate">
-                        <span>Password (Optional)</span>
-                        {isPhoneRegistered ? (
-                          <span className="text-[8px] text-green-600 font-medium font-bold lowercase normal-case tracking-normal">(Saved)</span>
-                        ) : (
-                          <span className="text-[8px] text-amber-600 font-medium font-bold lowercase normal-case tracking-normal">(Blank = Phone)</span>
-                        )}
+                      <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">
+                        Password (Optional)
                       </label>
                       <input
                         type="password"
@@ -880,10 +875,20 @@ function CheckoutContent() {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         disabled={isPhoneRegistered}
-                        className={`w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${isPhoneRegistered ? 'opacity-60 cursor-not-allowed bg-gray-150/50' : ''
+                        className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${isPhoneRegistered ? 'opacity-60 cursor-not-allowed bg-gray-150/50' : ''
                           }`}
                         placeholder={isPhoneRegistered ? "Checked out as guest" : "Choose password"}
                       />
+                      {!isPhoneRegistered && (
+                        <p className="text-[9px] sm:text-[10px] text-amber-850 font-bold mt-1">
+                          💡 Blank = Phone number
+                        </p>
+                      )}
+                      {isPhoneRegistered && (
+                        <p className="text-[9px] sm:text-[10px] text-green-700 font-bold mt-1">
+                          ✓ Account Detected
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
