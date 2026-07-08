@@ -72,7 +72,7 @@ export function SearchableSelect({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-between w-full px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gray-50 border border-gray-200 rounded text-[10px] sm:text-xs text-left transition-all focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100/50'
+          disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer hover:bg-gray-100/50'
         }`}
       >
         <span className={`flex-1 block truncate pr-2 ${selectedOption ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>

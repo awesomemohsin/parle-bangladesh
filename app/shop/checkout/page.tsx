@@ -916,7 +916,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <div id="field-wrapper-division" className={shakingFields.division ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Division *</label>
                     <SearchableSelect
                       value={billingDivision}
@@ -926,10 +926,23 @@ function CheckoutContent() {
                       searchPlaceholder="Search division..."
                       required
                     />
+                    {formErrors.division && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.division}</p>
+                    )}
                   </div>
                   <div id="field-wrapper-city" className={shakingFields.city ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
-                    <div className={formErrors.city ? 'error-border rounded' : ''}>
+                    <div 
+                      className={formErrors.city ? 'error-border rounded' : ''}
+                      onClick={() => {
+                        if (!billingDivision) {
+                          setFormErrors(prev => ({ ...prev, division: "Please select your division first" }));
+                          setShakingFields(prev => ({ ...prev, division: true }));
+                          document.getElementById('field-wrapper-division')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          setTimeout(() => setShakingFields(prev => ({ ...prev, division: false })), 500);
+                        }
+                      }}
+                    >
                       <SearchableSelect
                         value={billingDistrict}
                         onChange={handleBillingDistrictChange}
@@ -949,7 +962,22 @@ function CheckoutContent() {
                 <div className="grid grid-cols-2 gap-3">
                   <div id="field-wrapper-thana" className={shakingFields.thana ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Thana *</label>
-                    <div className={formErrors.thana ? 'error-border rounded' : ''}>
+                    <div 
+                      className={formErrors.thana ? 'error-border rounded' : ''}
+                      onClick={() => {
+                        if (!billingDivision) {
+                          setFormErrors(prev => ({ ...prev, division: "Please select your division first" }));
+                          setShakingFields(prev => ({ ...prev, division: true }));
+                          document.getElementById('field-wrapper-division')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          setTimeout(() => setShakingFields(prev => ({ ...prev, division: false })), 500);
+                        } else if (!billingDistrict) {
+                          setFormErrors(prev => ({ ...prev, city: "Please select your district first" }));
+                          setShakingFields(prev => ({ ...prev, city: true }));
+                          document.getElementById('field-wrapper-city')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          setTimeout(() => setShakingFields(prev => ({ ...prev, city: false })), 500);
+                        }
+                      }}
+                    >
                       <SearchableSelect
                         value={formData.thana}
                         onChange={(val) => handleInputChange({ target: { name: 'thana', value: val } } as any)}
@@ -966,7 +994,27 @@ function CheckoutContent() {
                   </div>
                   <div id="field-wrapper-postalCode" className={shakingFields.postalCode ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code (Optional)</label>
-                    <div className={formErrors.postalCode ? 'error-border rounded' : ''}>
+                    <div 
+                      className={formErrors.postalCode ? 'error-border rounded' : ''}
+                      onClick={() => {
+                        if (!billingDivision) {
+                          setFormErrors(prev => ({ ...prev, division: "Please select your division first" }));
+                          setShakingFields(prev => ({ ...prev, division: true }));
+                          document.getElementById('field-wrapper-division')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          setTimeout(() => setShakingFields(prev => ({ ...prev, division: false })), 500);
+                        } else if (!billingDistrict) {
+                          setFormErrors(prev => ({ ...prev, city: "Please select your district first" }));
+                          setShakingFields(prev => ({ ...prev, city: true }));
+                          document.getElementById('field-wrapper-city')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          setTimeout(() => setShakingFields(prev => ({ ...prev, city: false })), 500);
+                        } else if (!formData.thana) {
+                          setFormErrors(prev => ({ ...prev, thana: "Please select your thana first" }));
+                          setShakingFields(prev => ({ ...prev, thana: true }));
+                          document.getElementById('field-wrapper-thana')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          setTimeout(() => setShakingFields(prev => ({ ...prev, thana: false })), 500);
+                        }
+                      }}
+                    >
                       <SearchableSelect
                         value={formData.postalCode}
                         onChange={(val) => handleInputChange({ target: { name: 'postalCode', value: val } } as any)}
@@ -1051,7 +1099,7 @@ function CheckoutContent() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <div id="field-wrapper-shippingDivision" className={shakingFields.shippingDivision ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Division *</label>
                       <SearchableSelect
                         value={sameAsBilling ? billingDivision : shippingDivision}
@@ -1062,10 +1110,25 @@ function CheckoutContent() {
                         required
                         disabled={sameAsBilling}
                       />
+                      {!sameAsBilling && formErrors.shippingDivision && (
+                        <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.shippingDivision}</p>
+                      )}
                     </div>
                     <div id="field-wrapper-shippingCity" className={shakingFields.shippingCity ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">City / District *</label>
-                      <div className={!sameAsBilling && formErrors.shippingCity ? 'error-border rounded' : ''}>
+                      <div 
+                        className={!sameAsBilling && formErrors.shippingCity ? 'error-border rounded' : ''}
+                        onClick={() => {
+                          if (sameAsBilling) return;
+                          const currentDiv = sameAsBilling ? billingDivision : shippingDivision;
+                          if (!currentDiv) {
+                            setFormErrors(prev => ({ ...prev, shippingDivision: "Please select your shipping division first" }));
+                            setShakingFields(prev => ({ ...prev, shippingDivision: true }));
+                            document.getElementById('field-wrapper-shippingDivision')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => setShakingFields(prev => ({ ...prev, shippingDivision: false })), 500);
+                          }
+                        }}
+                      >
                         <SearchableSelect
                           value={sameAsBilling ? billingDistrict : shippingDistrict}
                           onChange={handleShippingDistrictChange}
@@ -1085,7 +1148,25 @@ function CheckoutContent() {
                   <div className="grid grid-cols-2 gap-3">
                     <div id="field-wrapper-shippingThana" className={shakingFields.shippingThana ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Thana *</label>
-                      <div className={!sameAsBilling && formErrors.shippingThana ? 'error-border rounded' : ''}>
+                      <div 
+                        className={!sameAsBilling && formErrors.shippingThana ? 'error-border rounded' : ''}
+                        onClick={() => {
+                          if (sameAsBilling) return;
+                          const currentDiv = sameAsBilling ? billingDivision : shippingDivision;
+                          const currentDist = sameAsBilling ? billingDistrict : shippingDistrict;
+                          if (!currentDiv) {
+                            setFormErrors(prev => ({ ...prev, shippingDivision: "Please select your shipping division first" }));
+                            setShakingFields(prev => ({ ...prev, shippingDivision: true }));
+                            document.getElementById('field-wrapper-shippingDivision')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => setShakingFields(prev => ({ ...prev, shippingDivision: false })), 500);
+                          } else if (!currentDist) {
+                            setFormErrors(prev => ({ ...prev, shippingCity: "Please select your shipping district first" }));
+                            setShakingFields(prev => ({ ...prev, shippingCity: true }));
+                            document.getElementById('field-wrapper-shippingCity')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => setShakingFields(prev => ({ ...prev, shippingCity: false })), 500);
+                          }
+                        }}
+                      >
                         <SearchableSelect
                           value={sameAsBilling ? formData.thana : formData.shippingThana}
                           onChange={(val) => handleInputChange({ target: { name: 'shippingThana', value: val } } as any)}
@@ -1102,7 +1183,31 @@ function CheckoutContent() {
                     </div>
                     <div id="field-wrapper-shippingPostalCode" className={shakingFields.shippingPostalCode ? 'animate-shake' : ''}>
                       <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate whitespace-nowrap h-4">Postal Code (Optional)</label>
-                      <div className={!sameAsBilling && formErrors.shippingPostalCode ? 'error-border rounded' : ''}>
+                      <div 
+                        className={!sameAsBilling && formErrors.shippingPostalCode ? 'error-border rounded' : ''}
+                        onClick={() => {
+                          if (sameAsBilling) return;
+                          const currentDiv = sameAsBilling ? billingDivision : shippingDivision;
+                          const currentDist = sameAsBilling ? billingDistrict : shippingDistrict;
+                          const currentThana = sameAsBilling ? formData.thana : formData.shippingThana;
+                          if (!currentDiv) {
+                            setFormErrors(prev => ({ ...prev, shippingDivision: "Please select your shipping division first" }));
+                            setShakingFields(prev => ({ ...prev, shippingDivision: true }));
+                            document.getElementById('field-wrapper-shippingDivision')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => setShakingFields(prev => ({ ...prev, shippingDivision: false })), 500);
+                          } else if (!currentDist) {
+                            setFormErrors(prev => ({ ...prev, shippingCity: "Please select your shipping district first" }));
+                            setShakingFields(prev => ({ ...prev, shippingCity: true }));
+                            document.getElementById('field-wrapper-shippingCity')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => setShakingFields(prev => ({ ...prev, shippingCity: false })), 500);
+                          } else if (!currentThana) {
+                            setFormErrors(prev => ({ ...prev, shippingThana: "Please select your shipping thana first" }));
+                            setShakingFields(prev => ({ ...prev, shippingThana: true }));
+                            document.getElementById('field-wrapper-shippingThana')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => setShakingFields(prev => ({ ...prev, shippingThana: false })), 500);
+                          }
+                        }}
+                      >
                         <SearchableSelect
                           value={sameAsBilling ? formData.postalCode : formData.shippingPostalCode}
                           onChange={(val) => handleInputChange({ target: { name: 'shippingPostalCode', value: val } } as any)}
