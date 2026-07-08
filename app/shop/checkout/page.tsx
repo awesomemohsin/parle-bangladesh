@@ -985,32 +985,31 @@ function CheckoutContent() {
             </div>
 
             {/* Delivery Method Selection */}
-            <div className="border-t pt-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-2 pb-2 border-b">Delivery Method</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${deliveryMethod === 'shipping' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+            <div className="border-t pt-3">
+              <h2 className="text-xs font-extrabold text-gray-500 uppercase tracking-wide mb-2 pb-1 border-b">Delivery Method</h2>
+              <div className="grid grid-cols-2 gap-2.5">
+                <label className={`cursor-pointer px-3 py-2 rounded-lg border transition-all ${deliveryMethod === 'shipping' ? 'border-red-650 bg-red-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                   <input type="radio" className="hidden" checked={deliveryMethod === 'shipping'} onChange={() => setDeliveryMethod('shipping')} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-900">Home Delivery</span>
-                    <span className="text-[11px] text-gray-500 mt-1">Inside Dhaka: ৳ 80 | Outside Dhaka: ৳ 130</span>
+                    <span className="font-bold text-xs text-gray-900">Home Delivery</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">Inside Dhaka: ৳80 | Outside: ৳130</span>
                   </div>
                 </label>
-                <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${deliveryMethod === 'pickup' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                <label className={`cursor-pointer px-3 py-2 rounded-lg border transition-all ${deliveryMethod === 'pickup' ? 'border-red-650 bg-red-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                   <input type="radio" className="hidden" checked={deliveryMethod === 'pickup'} onChange={() => setDeliveryMethod('pickup')} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-900">Collection Point Pickup</span>
-                    <span className="text-sm text-gray-500">Free pickup from our location</span>
+                    <span className="font-bold text-xs text-gray-900">Point Pickup</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">Free collection from store</span>
                   </div>
                 </label>
               </div>
               {deliveryMethod === 'pickup' && (
-                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-sm font-bold text-amber-800 mb-2">Pickup Location:</p>
-                  <p className="text-sm text-amber-900 font-medium mb-1">
+                <div className="mt-2 p-2.5 bg-amber-50/60 rounded-lg border border-amber-200/80">
+                  <p className="text-[11px] font-bold text-amber-900 mb-0.5">Pickup Location:</p>
+                  <p className="text-[11px] text-amber-950 font-medium leading-tight mb-1">
                     Yassin Tower, Savar Palli Bidyut Bazar Road, Dendabor, Ashulia, Savar, Dhaka 1344.
                   </p>
-                  <p className="text-sm text-amber-700">Please collect your order from our official collection point.</p>
-                  <a href="https://maps.app.goo.gl/pp3pwo3hyPm87ST79" target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-red-600 hover:text-red-700 font-bold text-sm underline">
+                  <a href="https://maps.app.goo.gl/pp3pwo3hyPm87ST79" target="_blank" rel="noopener noreferrer" className="inline-block text-red-600 hover:text-red-700 font-bold text-[10px] underline">
                     View on Google Maps
                   </a>
                 </div>
