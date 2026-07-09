@@ -515,7 +515,7 @@ export async function POST(request: NextRequest) {
       const inputPercent = Number(body.srDiscountPercent) || 0;
       if (inputPercent > 0) {
         if (inputPercent > 15) {
-          return NextResponse.json({ error: "Negotiated discount cannot exceed 15%" }, { status: 400 });
+          return NextResponse.json({ error: "Special discount cannot exceed 15%" }, { status: 400 });
         }
         srDiscountPercent = inputPercent;
         srDiscountAmountVal = Math.round(subtotal * (srDiscountPercent / 100));
