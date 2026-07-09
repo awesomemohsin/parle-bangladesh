@@ -80,6 +80,26 @@ export default function AdminLayout({
     checkAuth();
   }, [isLoginRoute, router]);
 
+  useEffect(() => {
+    if (isLoading || !isAuthed) return;
+
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return;
+
+    try {
+      const user = JSON.parse(userStr);
+      const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'owner';
+
+      // Restrict Dues & Reconciliation and Customer Hub routes to superadmins only
+      if ((pathname === '/admin/collections' || pathname === '/admin/customers') && !isSuperAdmin) {
+        alert('ACCESS DENIED: SuperAdmin clearance required.');
+        router.push("/admin/dashboard");
+      }
+    } catch (e) {
+      console.error("Route clearance check failed:", e);
+    }
+  }, [pathname, isLoading, isAuthed, router]);
+
   if (isLoginRoute) {
     return <>{children}</>;
   }

@@ -546,20 +546,6 @@ export default function AdminCustomersPage() {
                     </td>
                     <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="sm"
-                          onClick={() => fetchCustomerDetails(customer.id, customer.customerType?.toLowerCase() === "guest" ? customer.mobile : undefined)}
-                          disabled={detailsLoadingId !== null || updatingId === customer.id}
-                          variant="outline"
-                          className="h-7.5 px-2 rounded-xl text-[7.5px] sm:text-[8px] font-black uppercase tracking-widest border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center gap-1 shrink-0"
-                        >
-                          {detailsLoadingId === customer.id ? (
-                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                          ) : (
-                            <UserIcon className="w-2.5 h-2.5" />
-                          )}
-                          Profile
-                        </Button>
                         {isStaff ? (
                           <div className="text-[7.5px] sm:text-[8px] font-black text-emerald-600 uppercase tracking-wider bg-emerald-50 px-2 py-1.5 rounded-xl border border-emerald-100 shrink-0">
                             Staff
@@ -610,6 +596,20 @@ export default function AdminCustomersPage() {
                             Guest
                           </div>
                         )}
+                        <Button
+                          size="sm"
+                          onClick={() => fetchCustomerDetails(customer.id, customer.customerType?.toLowerCase() === "guest" ? customer.mobile : undefined)}
+                          disabled={detailsLoadingId !== null || updatingId === customer.id}
+                          variant="outline"
+                          className="h-7.5 px-2 rounded-xl text-[7.5px] sm:text-[8px] font-black uppercase tracking-widest border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center gap-1 shrink-0"
+                        >
+                          {detailsLoadingId === customer.id ? (
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          ) : (
+                            <UserIcon className="w-2.5 h-2.5" />
+                          )}
+                          Profile
+                        </Button>
                       </div>
                     </td>
                   </tr>
