@@ -808,7 +808,7 @@ export default function AdminOrdersPage() {
                     )}
                     <div className="flex flex-col items-start sm:items-end gap-1.5 mt-2 w-full sm:w-auto">
                       <div className="flex flex-wrap sm:flex-nowrap gap-1.5 w-full sm:w-auto items-center">
-                        {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && !order.courierConsignmentId && order.status === 'processing' && (
+                        {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && !['dealer', 'retailer'].includes((order.customerType || '').toLowerCase()) && process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && !order.courierConsignmentId && order.status === 'processing' && (
                           <Button 
                             onClick={() => handleSendToSteadfast(order.id)} 
                             size="sm"
