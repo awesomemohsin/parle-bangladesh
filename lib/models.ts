@@ -386,6 +386,7 @@ export interface IOrder extends Document {
   courierConsignmentId?: string;
   courierTrackingCode?: string;
   courierStatus?: string;
+  courierTrackingLink?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -454,6 +455,7 @@ const OrderSchema = new Schema<IOrder>(
     courierConsignmentId: { type: String },
     courierTrackingCode: { type: String },
     courierStatus: { type: String },
+    courierTrackingLink: { type: String },
   },
   { timestamps: true }
 );
