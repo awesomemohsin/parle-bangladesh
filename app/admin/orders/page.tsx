@@ -497,7 +497,7 @@ export default function AdminOrdersPage() {
             <button
               onClick={handleSyncAllSteadfast}
               disabled={isSyncingAll}
-              className="text-[8px] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="text-[8px] bg-[#34A487] hover:bg-[#2b8870] text-white font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <RefreshCw className={`w-2 h-2 ${isSyncingAll ? 'animate-spin' : ''}`} />
               {isSyncingAll ? 'Syncing...' : 'Sync Steadfast'}
@@ -690,7 +690,7 @@ export default function AdminOrdersPage() {
                     {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && order.courierConsignmentId && (
                       <div className="mt-1 text-[9px] sm:text-[10px]">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 bg-gray-50 border border-gray-100 p-1.5 rounded-lg">
-                          <span className="font-black text-gray-500 uppercase tracking-widest text-[8px] bg-white border border-gray-100 px-1.5 py-0.5 rounded">Steadfast Courier</span>
+                          <span className="font-black text-white uppercase tracking-widest text-[8px] bg-[#34A487] px-1.5 py-0.5 rounded">Steadfast Courier</span>
                           <div className="flex items-center gap-1 font-medium text-gray-700">
                             <span className="text-[8px] text-gray-400 uppercase font-black">Partner:</span>
                             <span className="font-bold text-gray-900">{order.courierName || 'Steadfast'}</span>
@@ -711,7 +711,7 @@ export default function AdminOrdersPage() {
                           </div>
                           <button 
                             onClick={() => handleTrackSteadfast(order.id)}
-                            className="ml-1 text-blue-600 hover:text-blue-800 font-black uppercase text-[8px] tracking-wider flex items-center gap-0.5 hover:underline"
+                            className="ml-1 text-[#34A487] hover:text-[#2b8870] font-black uppercase text-[8px] tracking-wider flex items-center gap-0.5 hover:underline"
                           >
                             <RefreshCw className="w-2.5 h-2.5" /> Sync
                           </button>
@@ -812,7 +812,7 @@ export default function AdminOrdersPage() {
                           <Button 
                             onClick={() => handleSendToSteadfast(order.id)} 
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white font-bold h-8 text-[8px] sm:text-[10px] px-2 sm:px-3 rounded-lg flex items-center gap-1 shadow-sm shrink-0 uppercase tracking-wider whitespace-nowrap"
+                            className="bg-[#34A487] hover:bg-[#2b8870] text-white font-bold h-8 text-[8px] sm:text-[10px] px-2 sm:px-3 rounded-lg flex items-center gap-1 shadow-sm shrink-0 uppercase tracking-wider whitespace-nowrap"
                           >
                             Book Courier
                           </Button>
