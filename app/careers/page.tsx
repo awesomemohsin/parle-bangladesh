@@ -116,7 +116,7 @@ export default function CareersPage() {
         ...prev,
         fullname: user.name || "",
         phone: user.mobile || "",
-        email: user.email?.endsWith("@phone.parle.com") ? "" : (user.email || "")
+        email: user.email?.endsWith("@phone.parlebangladesh.com") ? "" : (user.email || "")
       }));
     }
   }, [user]);

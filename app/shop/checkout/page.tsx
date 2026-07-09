@@ -194,7 +194,7 @@ function CheckoutContent() {
     }
 
     if (targetProfile) {
-      const isVirtualEmail = targetProfile.email?.endsWith('@phone.parle.com');
+      const isVirtualEmail = targetProfile.email?.endsWith('@phone.parlebangladesh.com');
       const displayEmail = isVirtualEmail ? '' : (targetProfile.email || '');
 
       setFormData(prev => ({
@@ -327,7 +327,7 @@ function CheckoutContent() {
     if (!previousOrder) return;
 
     const lastOrder = previousOrder;
-    const isLastEmailVirtual = lastOrder.customerEmail?.endsWith('@phone.parle.com');
+    const isLastEmailVirtual = lastOrder.customerEmail?.endsWith('@phone.parlebangladesh.com');
     const displayLastEmail = isLastEmailVirtual ? '' : (lastOrder.customerEmail || '');
 
     // Resolve billing division and district names from the historic city name
