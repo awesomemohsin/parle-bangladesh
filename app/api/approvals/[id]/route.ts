@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             ? `Employee/Staff order declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`
             : (approvalRequest.field === 'impersonationOrder'
               ? `Staff impersonation order declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`
-              : `Negotiated discount declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`);
+              : `Special discount declined by Superadmin: ${userName}${comment ? `. Reason: ${comment}` : ""}`);
           
           if (!order.orderLogs) order.orderLogs = [];
           order.orderLogs.push({
@@ -144,7 +144,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
           // Trigger Telegram Notification
           try {
-            await notifyCriticalEvent(`Order cancelled`, order, order.statusReason);
+            await notifyCriticalEvent(`Order cancelled`, order, order.statusReason, user.email || user.name);
           } catch (notifyError) {
             console.error("Failed to send status update notification from approval decline:", notifyError);
           }
@@ -223,8 +223,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                notificationMessage = `Customer ${approvalRequest.targetName} has been successfully promoted to ${approvalRequest.newValue} by consensus.`;
                notificationLink = `/admin/customers`;
              } else if (approvalRequest.type === "order" && approvalRequest.field === "srDiscount") {
-               notificationTitle = "Negotiated Order Discount Approved";
-               notificationMessage = `Negotiated discount for ${approvalRequest.targetName} has been approved. The order is now being processed.`;
+               notificationTitle = "Special Order Discount Approved";
+               notificationMessage = `Special discount for ${approvalRequest.targetName} has been approved. The order is now being processed.`;
                notificationLink = `/admin/orders`;
              } else if (approvalRequest.type === "order" && approvalRequest.field === "impersonationOrder") {
                notificationTitle = "Impersonation Order Approved";
@@ -505,7 +505,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
           if (newStatus === ORDER_STATUS.PROCESSING && oldStatus === ORDER_STATUS.PENDING) {
             await notifyOrderReady(order);
           } else if (["cancelled", "damaged", "lost"].includes(newStatus) && oldStatus !== newStatus) {
-            await notifyCriticalEvent(`Order ${newStatus}`, order, "Approved change");
+            await notifyCriticalEvent(`Order ${newStatus}`, order, "Approved change", userName);
           }
         } catch (notifyError) {
           console.error("Failed to send status update notification from approval:", notifyError);
@@ -523,7 +523,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
             ? `Superadmin approved employee/staff order: ${approvalRequest.newValue}`
             : (approvalRequest.field === 'impersonationOrder'
               ? `Superadmin approved staff impersonation order: ${approvalRequest.newValue}`
-              : `Superadmin approved negotiated discount: ${approvalRequest.newValue}`),
+              : `Superadmin approved special discount: ${approvalRequest.newValue}`),
           changedAt: new Date(),
         });
         await order.save();
