@@ -235,7 +235,7 @@ export async function runBackgroundCleanups() {
         if (!req.comments) req.comments = [];
         req.comments.push({
           user: "system",
-          text: "Auto-expired: Negotiated discount approval request was not approved within 48 hours.",
+          text: "Auto-expired: Special discount approval request was not approved within 48 hours.",
           date: new Date()
         });
         await req.save({ session });
@@ -244,8 +244,8 @@ export async function runBackgroundCleanups() {
         if (order) {
           await cancelOrderAndRestoreStock(
             order,
-            "Negotiated discount declined by Superadmin",
-            "Auto-expired: Negotiated discount approval request was not approved within 48 hours.",
+            "Special discount declined by Superadmin",
+            "Auto-expired: Special discount approval request was not approved within 48 hours.",
             "system",
             session
           );
