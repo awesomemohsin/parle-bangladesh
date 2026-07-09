@@ -313,7 +313,7 @@ export default function AdminOrdersPage() {
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message || 'All Steadfast orders synced successfully!', { id: toastId });
-        fetchOrders(false, false);
+        fetchOrders(true, false);
       } else {
         toast.error(data.error || 'Failed to sync Steadfast orders', { id: toastId });
       }
