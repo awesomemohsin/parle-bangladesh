@@ -142,18 +142,23 @@ export async function notifyOrderReady(order: any) {
 /**
  * Send critical alert (Cancellations, Loss, etc)
  */
-export async function notifyCriticalEvent(event: string, order: any, reason?: string) {
+export async function notifyCriticalEvent(event: string, order: any, reason?: string, actor?: string) {
   const orderIdShort = order._id.toString().slice(-8).toUpperCase();
+  const isCancelled = event.toLowerCase().includes('cancel');
 
   const message = `
 🚫 <b>SYSTEM ALERT: ${event.toUpperCase()}</b>
 ━━━━━━━━━━━━━━━━━━
 🆔 <b>ORDER:</b> <code>#${orderIdShort}</code>
 👤 <b>CLIENT:</b> ${order.customerName}
+📞 <b>PHONE NUMBER:</b> <code>${order.customerPhone || 'N/A'}</code>
+👤 <b>${isCancelled ? 'CANCELLED' : 'ACTION'} BY:</b> ${actor || 'System'}
 ❗ <b>REASON:</b>
 <blockquote>${reason || 'Not provided'}</blockquote>
 
 📢 <b>ATTENTION:</b> @SuperAdmins
+
+🔗 <a href="${BASE_URL}/admin/orders?q=${orderIdShort}">✨ MANAGE ORDER IN DASHBOARD</a>
 `;
 
   return sendTelegramMessage({
@@ -228,6 +233,7 @@ export async function notifyNewApprovalRequest(request: any) {
   if (request.type === 'promo-code') typeIcon = '🎟️';
   
   const level = isSensitive ? 'LEVEL 2 (FINANCIAL)' : 'LEVEL 1 (BASIC)';
+  const displayField = request.field === 'srDiscount' ? 'Special Discount' : request.field;
 
   // Retailer / Dealer promotions and retailer probation approvals only require a single Superadmin approval.
   const isB2BPromotion = request.type === 'customer' && (
@@ -284,6 +290,37 @@ export async function notifyNewApprovalRequest(request: any) {
     targetName = 'Promo Code [Hidden]';
   }
 
+  let extraDetails = '';
+  if (request.type === 'order') {
+    let clientName = request.targetDetails?.customerName || '';
+    let totalPrice = request.targetDetails?.total ? `৳${Number(request.targetDetails.total).toFixed(0)}` : '';
+    try {
+      const { Order } = await import("@/lib/models");
+      const order = await Order.findById(request.targetId);
+      if (order) {
+        if (!clientName) clientName = order.customerName || '';
+        if (!totalPrice) totalPrice = `৳${order.total.toFixed(0)}`;
+      }
+    } catch (err) {
+      console.error("Error fetching order for telegram notification:", err);
+    }
+    extraDetails = `👤 <b>CLIENT NAME:</b> ${clientName || 'N/A'}\n💰 <b>TOTAL PRICE:</b> <b>${totalPrice || 'N/A'}</b>\n`;
+  } else if (request.type === 'customer') {
+    let phone = request.targetDetails?.mobile || '';
+    try {
+      const { User } = await import("@/lib/models");
+      const customer = await User.findById(request.targetId);
+      if (customer) {
+        phone = customer.mobile || '';
+      }
+    } catch (err) {
+      console.error("Error fetching customer for telegram notification:", err);
+    }
+    if (phone) {
+      extraDetails = `📞 <b>PHONE NUMBER:</b> <code>${phone}</code>\n`;
+    }
+  }
+
   let detailMessage = "";
   if (request.type === 'promo-code' && request.targetDetails) {
     const details = request.targetDetails;
@@ -332,7 +369,7 @@ ${details.discountType === 'percentage' && details.maxDiscountAmount ? `▫️ <
 ━━━━━━━━━━━━━━━━━━
 👤 <b>REQUESTER:</b> ${request.requesterEmail}
 🎯 <b>TARGET:</b> ${targetName}
-${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
+${extraDetails}${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${displayField}</code>
 🔄 <b>VALUE:</b> ${formattedOld} ➡️ ${formattedNew}
 ${detailMessage}
 📢 <b>ACTION:</b> ${requiresOneSuperadmin ? "1 Superadmin" : "2 Superadmins"} must approve to proceed.
@@ -348,12 +385,13 @@ ${detailMessage}
  * Notify Owner when a sensitive request passes Superadmin phase
  */
 export async function notifyOwnerApprovalRequired(request: any) {
+  const displayField = request.field === 'srDiscount' ? 'Special Discount' : request.field;
   const message = `
 <b>👑 FINAL AUTHORIZATION REQUIRED</b>
 ━━━━━━━━━━━━━━━━━━
 👤 <b>APPROVED BY:</b> ${request.superadminApprovals.join(' & ')}
 🎯 <b>TARGET:</b> ${request.targetName}
-${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${request.field}</code>
+${(request.weight || request.flavor) ? `⚖️ <b>VARIANT:</b> ${[request.weight, request.flavor].filter(Boolean).join(' - ')}\n` : ""}📝 <b>CHANGE:</b> <code>${displayField}</code>
 🔄 <b>VALUE:</b> ${request.oldValue} ➡️ <b>${request.newValue}</b>
 
 ❗ <b>SENSITIVE CHANGE:</b> This requires your final approval to go live.
@@ -387,13 +425,38 @@ export async function notifyApprovalFinalized(request: any) {
     targetName = 'Promo Code [Hidden]';
   }
 
+  const displayField = request.field === 'srDiscount' ? 'Special Discount' : request.field;
+
+  let extraOrderDetails = '';
+  if (request.type === 'order') {
+    let clientName = request.targetDetails?.customerName || '';
+    let totalPrice = request.targetDetails?.total ? `৳${Number(request.targetDetails.total).toFixed(0)}` : '';
+    let requestedBy = request.requesterEmail || '';
+
+    try {
+      const { Order } = await import("@/lib/models");
+      const order = await Order.findById(request.targetId);
+      if (order) {
+        if (!clientName) clientName = order.customerName || '';
+        if (!totalPrice) totalPrice = `৳${order.total.toFixed(0)}`;
+      }
+    } catch (err) {
+      console.error("Error fetching order for telegram notification:", err);
+    }
+
+    extraOrderDetails = `👤 <b>CLIENT NAME:</b> ${clientName || 'N/A'}
+💰 <b>TOTAL PRICE:</b> <b>${totalPrice || 'N/A'}</b>
+👤 <b>ORDER REQUESTED BY:</b> ${requestedBy || 'N/A'}
+`;
+  }
+
   const message = `
 <b>${icon} REQUEST ${request.status.toUpperCase()}</b>
-<b>━━━━━━━━━━━━━━━━━━</b>
+━━━━━━━━━━━━━━━━━━
 🎯 <b>TARGET:</b> ${targetName}
-📝 <b>FIELD:</b> <code>${request.field}</code>
+📝 <b>FIELD:</b> <code>${displayField}</code>
 👤 <b>FINALIZED BY:</b> ${isApproved ? 'Authorization Consensus' : request.declinedBy}
-
+${extraOrderDetails ? extraOrderDetails : ''}
 ${isApproved ? '✨ The changes are now LIVE in the system.' : '🚫 The request was rejected and no changes were applied.'}
 `;
 
