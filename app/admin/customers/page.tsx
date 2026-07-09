@@ -381,60 +381,60 @@ export default function AdminCustomersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">Account ID</th>
-                <th className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">Customer Info</th>
+                <th className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest">Account ID</th>
+                <th className="px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest">Customer Info</th>
                 
                 <th 
-                  className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest text-left cursor-pointer hover:text-gray-900 transition-colors group"
                   onClick={() => toggleSort("createdAt")}
                 >
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center gap-1">
                     Joined <SortIcon field="createdAt" />
                   </div>
                 </th>
 
                 <th 
-                  className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest text-left cursor-pointer hover:text-gray-900 transition-colors group"
                   onClick={() => toggleSort("ordersCount")}
                 >
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center gap-1">
                     Orders <SortIcon field="ordersCount" />
                   </div>
                 </th>
                 
                 <th 
-                  className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest text-left cursor-pointer hover:text-gray-900 transition-colors group"
                   onClick={() => toggleSort("totalProducts")}
                 >
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center gap-1">
                     Purchased Product <SortIcon field="totalProducts" />
                   </div>
                 </th>
                 
                 <th 
-                  className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest text-center cursor-pointer hover:text-gray-900 transition-colors group"
+                  className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest text-left cursor-pointer hover:text-gray-900 transition-colors group"
                   onClick={() => toggleSort("totalSpent")}
                 >
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center gap-1">
                     Spent <SortIcon field="totalSpent" />
                   </div>
                 </th>
 
-                <th className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">Type</th>
-                <th className="px-1 sm:px-2 py-3 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                <th className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest">Type</th>
+                <th className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-[8.5px] sm:text-[9.5px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading && customers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-1 sm:px-2 py-20 text-center">
+                  <td colSpan={8} className="px-2 sm:px-3.5 py-20 text-center">
                     <Loader2 className="w-6 h-6 text-red-600 animate-spin mx-auto mb-2" />
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Customers...</p>
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-1 sm:px-2 py-20 text-center">
+                  <td colSpan={8} className="px-2 sm:px-3.5 py-20 text-center">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">No customers found</p>
                   </td>
                 </tr>
@@ -443,60 +443,67 @@ export default function AdminCustomersPage() {
                   const isStaff = ["admin", "super_admin", "superadmin", "moderator", "owner"].includes(customer.customerType?.toLowerCase());
                   return (
                     <tr key={customer.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-1 sm:px-2 py-3">
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3">
                       <button
                         type="button"
                         onClick={() => fetchCustomerDetails(customer.id, customer.customerType?.toLowerCase() === "guest" ? customer.mobile : undefined)}
-                        className="font-mono text-[10px] sm:text-[11px] font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none"
+                        className="font-mono text-[10.5px] sm:text-xs font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none"
                         title="View Customer Profile"
                       >
                         #{customer.id.slice(-8).toUpperCase()}
                       </button>
                     </td>
-                    <td className="px-1 sm:px-2 py-3">
+                    <td className="px-2 sm:px-3.5 py-3">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[11px] sm:text-xs font-black text-gray-900 uppercase tracking-tight leading-none truncate max-w-[100px] sm:max-w-[150px]">{customer.name || 'Anonymous'}</span>
+                          <button
+                            type="button"
+                            onClick={() => fetchCustomerDetails(customer.id, customer.customerType?.toLowerCase() === "guest" ? customer.mobile : undefined)}
+                            className="text-[11.5px] sm:text-sm font-black text-gray-900 uppercase tracking-tight leading-none hover:text-blue-600 hover:underline cursor-pointer focus:outline-none text-left"
+                            title="View Customer Profile"
+                          >
+                            {customer.name || 'Anonymous'}
+                          </button>
                           {customer.isGuest && (
-                             <span className="text-[6px] sm:text-[7px] font-black bg-gray-100 text-gray-500 px-1 py-0.2 rounded uppercase tracking-widest border border-gray-200">Guest</span>
+                             <span className="text-[6.5px] sm:text-[7.5px] font-black bg-gray-100 text-gray-500 px-1 py-0.2 rounded uppercase tracking-widest border border-gray-200">Guest</span>
                           )}
                         </div>
-                        <div className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
-                          <span className="truncate max-w-[100px] sm:max-w-[140px]" title={customer.email}>{customer.email}</span>
+                        <div className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 text-[8px] sm:text-[9.5px] font-bold text-gray-400 uppercase tracking-tighter">
                           {customer.mobile && (
                             <>
+                              <a href={`tel:${customer.mobile}`} className="hover:text-blue-600 hover:underline transition-colors shrink-0">{customer.mobile}</a>
                               <span className="text-gray-200">|</span>
-                              <span>{customer.mobile}</span>
                             </>
                           )}
+                          <a href={`mailto:${customer.email}`} className="text-gray-600 hover:text-blue-600 hover:underline transition-colors truncate max-w-[200px] sm:max-w-none">{customer.email}</a>
                         </div>
                       </div>
                     </td>
-                    <td className="px-1 sm:px-2 py-3 text-center">
-                      <div className={`flex flex-col items-center ${sortBy === 'createdAt' ? 'text-red-600' : 'text-gray-500'}`}>
-                        <span className="text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-tighter">
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-left">
+                      <div className={`flex flex-col items-start ${sortBy === 'createdAt' ? 'text-red-600' : 'text-gray-500'}`}>
+                        <span className="text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-tighter">
                           {customer.createdAt ? format(new Date(customer.createdAt), "MMM dd, yyyy") : "N/A"}
                         </span>
-                        <span className="text-[7px] sm:text-[8px] font-bold opacity-50">
+                        <span className="text-[7.5px] sm:text-[8.5px] font-bold opacity-50">
                           {customer.createdAt ? format(new Date(customer.createdAt), "hh:mm a") : ""}
                         </span>
                       </div>
                     </td>
-                    <td className="px-1 sm:px-2 py-3 text-center">
-                      <span className={`text-[11px] sm:text-xs font-black tabular-nums italic ${sortBy === 'ordersCount' ? 'text-red-600' : 'text-gray-900'}`}>{customer.ordersCount || 0}</span>
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-left">
+                      <span className={`text-xs sm:text-[13px] font-black tabular-nums italic ${sortBy === 'ordersCount' ? 'text-red-600' : 'text-gray-900'}`}>{customer.ordersCount || 0}</span>
                     </td>
-                    <td className="px-1 sm:px-2 py-3 text-center">
-                      <span className={`text-[11px] sm:text-xs font-black tabular-nums italic ${sortBy === 'totalProducts' ? 'text-red-600' : 'text-gray-900'}`}>{customer.totalProducts || 0}</span>
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-left">
+                      <span className={`text-xs sm:text-[13px] font-black tabular-nums italic ${sortBy === 'totalProducts' ? 'text-red-600' : 'text-gray-900'}`}>{customer.totalProducts || 0}</span>
                     </td>
-                    <td className="px-1 sm:px-2 py-3 text-center">
-                      <div className={`flex items-center justify-center gap-0.5 text-[11px] sm:text-xs font-black tabular-nums italic ${sortBy === 'totalSpent' ? 'text-red-600' : 'text-red-600/70'}`}>
-                        <span className="text-[8px] sm:text-[9px] not-italic">৳</span>
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-left">
+                      <div className={`flex items-center gap-0.5 text-xs sm:text-[13px] font-black tabular-nums italic ${sortBy === 'totalSpent' ? 'text-red-600' : 'text-red-600/70'}`}>
+                        <span className="text-[8.5px] sm:text-[9.5px] not-italic">৳</span>
                         <span>{Math.round(customer.totalSpent || 0).toLocaleString()}</span>
                       </div>
                     </td>
-                    <td className="px-1 sm:px-2 py-3">
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3">
                       <div className="flex flex-col gap-0.5 items-start">
-                        <span className={`text-[7px] sm:text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest ${
+                        <span className={`text-[7.5px] sm:text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${
                           customer.customerType === 'dealer' 
                             ? 'bg-amber-100 text-amber-700' 
                           : customer.customerType === 'employee' 
@@ -520,15 +527,15 @@ export default function AdminCustomersPage() {
                           {customer.customerType?.replace("_", " ")}
                         </span>
                         {customer.pendingApproval && (
-                          <span className="text-[6px] sm:text-[7px] font-black bg-amber-50 text-amber-600 border border-amber-200 px-1 py-0.2 rounded uppercase tracking-widest animate-pulse mt-0.5">
+                          <span className="text-[6.5px] sm:text-[7.5px] font-black bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded uppercase tracking-widest animate-pulse mt-0.5">
                             Pending Verification
                           </span>
                         )}
                         {customer.flatDiscountPercent !== undefined && customer.flatDiscountPercent > 0 && (
-                          <div className="flex flex-col text-[7px] sm:text-[8px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">
+                          <div className="flex flex-col text-[7.5px] sm:text-[8.5px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">
                             <span className="text-red-600">{customer.flatDiscountPercent}% Flat Discount</span>
                             {customer.flatDiscountExpiresAt && (
-                              <span className="text-[6px] sm:text-[7px] font-medium opacity-80 flex items-center gap-0.5 mt-0.5">
+                              <span className="text-[6.5px] sm:text-[7.5px] font-medium opacity-80 flex items-center gap-0.5 mt-0.5">
                                 <Calendar className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-gray-400" />
                                 Till {format(new Date(customer.flatDiscountExpiresAt), "MMM dd")}
                               </span>
@@ -537,7 +544,7 @@ export default function AdminCustomersPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-1 sm:px-2 py-3 text-right">
+                    <td className="w-[1%] whitespace-nowrap px-2 sm:px-3.5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           size="sm"
