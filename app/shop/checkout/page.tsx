@@ -1349,7 +1349,7 @@ function CheckoutContent() {
                 {/* SR Negotiated Discount Row */}
                 {showNegotiatedDiscount && srDiscountPercent > 0 && (
                   <div className="flex justify-between text-teal-600 font-medium py-1">
-                    <span className="font-bold uppercase text-[9px] tracking-widest">Negotiated Discount</span>
+                    <span className="font-bold uppercase text-[9px] tracking-widest">Special Discount</span>
                     <span className="font-semibold">- ৳ {Math.round(srDiscountAmount)}</span>
                   </div>
                 )}
@@ -1389,7 +1389,7 @@ function CheckoutContent() {
                 {showNegotiatedDiscount && (
                   <div className="py-3 border-b border-gray-100 my-2">
                     <label className="text-[9px] font-black text-teal-600 uppercase tracking-widest block mb-2">
-                      Negotiated Discount
+                      Special Discount
                     </label>
                     <div className="flex items-center gap-2">
                       <input
