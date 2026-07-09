@@ -211,7 +211,11 @@ export default function OrderApprovalsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-[9px] font-black text-white bg-black px-2 py-1 rounded-full uppercase tracking-wider shadow-md shadow-gray-100">
-                        {request.field === 'employeeOrder' ? 'Employee Order' : `${request.field} change`}
+                        {request.field === 'employeeOrder'
+                          ? 'Employee Order'
+                          : request.field === 'srDiscount'
+                            ? 'Special Discount'
+                            : `${request.field} change`}
                       </span>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
                         By: {request.requesterEmail}
