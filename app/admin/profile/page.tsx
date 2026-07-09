@@ -190,7 +190,7 @@ export default function AdminProfilePage() {
                   <div className="flex flex-col overflow-hidden w-full">
                     <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Email Identity</span>
                     <span className="text-[11px] font-bold truncate">
-                      {profile?.email?.endsWith('@phone.parle.com') ? 'Not set' : profile?.email}
+                      {profile?.email?.endsWith('@phone.parlebangladesh.com') ? 'Not set' : profile?.email}
                     </span>
                   </div>
                 </div>

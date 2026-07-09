@@ -65,10 +65,10 @@ export async function POST(
       .filter(Boolean)
       .join(", ");
 
-    // Build note with instruction and real email (ignoring @phone.parle.com virtual emails)
+    // Build note with instruction and real email (ignoring @phone.parlebangladesh.com virtual emails)
     let note = order.instruction || "";
     const customerEmail = order.customerEmail || "";
-    const isRealEmail = customerEmail && !customerEmail.endsWith("@phone.parle.com");
+    const isRealEmail = customerEmail && !customerEmail.endsWith("@phone.parlebangladesh.com");
     if (isRealEmail) {
       if (note) {
         note = `${note} | Email: ${customerEmail}`;
