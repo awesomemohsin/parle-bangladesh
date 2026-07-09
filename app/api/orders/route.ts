@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           ...srQuery,
           ...(user.mobile ? [
             { customerPhone: user.mobile },
-            ...(cleanPhone ? [{ customerEmail: `${cleanPhone}@phone.parle.com` }] : [])
+            ...(cleanPhone ? [{ customerEmail: `${cleanPhone}@phone.parlebangladesh.com` }] : [])
           ] : [])
         ]
       };
@@ -470,7 +470,7 @@ export async function POST(request: NextRequest) {
     if (!customerEmail && customerPhone) {
       const cleanPhone = customerPhone.replace(/\D/g, "");
       if (cleanPhone) {
-        customerEmail = `${cleanPhone}@phone.parle.com`;
+        customerEmail = `${cleanPhone}@phone.parlebangladesh.com`;
       }
     }
 
@@ -537,7 +537,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If logged-in user currently has a virtual email and checks out with a real email, update user profile email
-    if (user && user.email?.endsWith("@phone.parle.com") && !customerEmail.endsWith("@phone.parle.com")) {
+    if (user && user.email?.endsWith("@phone.parlebangladesh.com") && !customerEmail.endsWith("@phone.parlebangladesh.com")) {
       try {
         const emailExists = await User.findOne({ email: customerEmail });
         if (!emailExists) {

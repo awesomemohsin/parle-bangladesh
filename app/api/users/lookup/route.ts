@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       mobile: { $in: phoneVariations }
     }).lean();
 
-    if (user && user.email && !user.email.endsWith("@phone.parle.com")) {
+    if (user && user.email && !user.email.endsWith("@phone.parlebangladesh.com")) {
       return NextResponse.json({ email: null, isRegistered: true });
     }
 
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       $and: [
         { mobile: { $in: phoneVariations } },
         { email: { $exists: true, $ne: "" } },
-        { email: { $not: /@phone\.parle\.com$/i } }
+        { email: { $not: /@phone\.parlebangladesh\.com$/i } }
       ]
     }).lean();
 
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       $and: [
         { customerPhone: { $in: phoneVariations } },
         { customerEmail: { $exists: true, $ne: "" } },
-        { customerEmail: { $not: /@phone\.parle\.com$/i } }
+        { customerEmail: { $not: /@phone\.parlebangladesh\.com$/i } }
       ]
     })
     .sort({ createdAt: -1 })

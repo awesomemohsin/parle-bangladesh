@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const emailLower = (email && email.trim() !== "")
       ? email.toLowerCase()
-      : `${mobile}@phone.parle.com`;
+      : `${mobile}@phone.parlebangladesh.com`;
 
     // Check both User and Admin collections to prevent duplicates across roles
     const existingUser = await User.findOne({
