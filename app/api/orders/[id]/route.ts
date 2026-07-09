@@ -308,7 +308,7 @@ export async function PUT(
         console.log(`Logistics notification result: ${notified}`);
       } else if (["cancelled", "damaged", "lost", "returned"].includes(status) && oldStatus !== status) {
         console.log(`Triggering Management notification for critical status: ${status}`);
-        await notifyCriticalEvent(`Order ${status}`, order, statusReason);
+        await notifyCriticalEvent(`Order ${status}`, order, statusReason, user.email || user.name);
       }
     } catch (notifyError) {
       console.error("Failed to send status update notification:", notifyError);
