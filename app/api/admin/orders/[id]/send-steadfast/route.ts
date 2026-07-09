@@ -58,14 +58,59 @@ export async function POST(
     // Build complete recipient address
     const mainAddress = order.shippingAddress || order.address;
     const thanaPart = order.shippingThana || order.thana ? `${order.shippingThana || order.thana}` : "";
-    const cityPart = order.shippingCity || order.city ? `${order.shippingCity || order.city}` : "";
+    let cityPart = order.shippingCity || order.city ? `${order.shippingCity || order.city}` : "";
     const postcodePart = order.shippingPostalCode || order.postalCode ? `${order.shippingPostalCode || order.postalCode}` : "";
-    
-    const recipientAddress = [mainAddress, thanaPart, cityPart, postcodePart]
-      .filter(Boolean)
-      .join(", ");
 
-    // Build note with instruction and real email (ignoring @phone.parlebangladesh.com virtual emails)
+    // Normalize city/district name to match Steadfast's parser expectations
+    if (cityPart) {
+      // Remove "Metro" suffix (e.g., "Chittagong Metro" -> "Chittagong")
+      cityPart = cityPart.replace(/\s+Metro$/i, "").trim();
+
+      // Map old spellings to modern official spellings used by Steadfast
+      const districtMappings: Record<string, string> = {
+        "Dhaka": "Dhaka City",
+        "Chittagong": "Chattogram",
+        "Comilla": "Cumilla",
+        "Barisal": "Barishal",
+        "Jessore": "Jashore",
+        "Bogra": "Bogura"
+      };
+      if (districtMappings[cityPart]) {
+        cityPart = districtMappings[cityPart];
+      }
+    }
+
+    // Build recipient address using clean format with deduplication
+    let cleanAddress = mainAddress.trim();
+    const cleanThana = thanaPart.trim();
+    const cleanCity = cityPart.trim();
+    const cleanPostcode = postcodePart.trim();
+
+    const parts = [cleanAddress];
+
+    // Only append thana if it's not already in the main address
+    if (cleanThana && !cleanAddress.toLowerCase().includes(cleanThana.toLowerCase())) {
+      parts.push(cleanThana);
+    }
+
+    // Append city/district and postcode in standard format (District-Postcode)
+    if (cleanCity) {
+      if (!cleanAddress.toLowerCase().includes(cleanCity.toLowerCase())) {
+        if (cleanPostcode) {
+          parts.push(`${cleanCity}-${cleanPostcode}`);
+        } else {
+          parts.push(cleanCity);
+        }
+      } else if (cleanPostcode) {
+        parts.push(cleanPostcode);
+      }
+    } else if (cleanPostcode) {
+      parts.push(cleanPostcode);
+    }
+
+    const recipientAddress = parts.join(", ");
+
+    // Build note and email mapping
     let note = order.instruction || "";
     const customerEmail = order.customerEmail || "";
     const isRealEmail = customerEmail && !customerEmail.endsWith("@phone.parlebangladesh.com");
@@ -77,14 +122,29 @@ export async function POST(
       }
     }
 
-    const payload = {
+    // Build item description and append customer note/instruction so it is visible in the portal
+    const itemSummary = order.items
+      .map((item: any) => `${item.name} x ${item.quantity}`)
+      .join(", ");
+
+    let itemDescription = itemSummary;
+    if (order.instruction) {
+      itemDescription = `${itemSummary} | Note: ${order.instruction}`;
+    }
+
+    const payload: Record<string, any> = {
       invoice: order._id.toString().slice(-8).toUpperCase(),
       recipient_name: order.customerName,
       recipient_phone: order.customerPhone,
       recipient_address: recipientAddress,
       cod_amount: codAmount,
       note: note,
+      item_description: itemDescription,
     };
+
+    if (isRealEmail) {
+      payload.recipient_email = customerEmail;
+    }
 
     const baseUrl = process.env.STEADFAST_API_URL || "https://portal.packzy.com/api/v1";
     const res = await fetch(`${baseUrl}/create_order`, {
@@ -105,7 +165,7 @@ export async function POST(
       order.courierTrackingCode = String(data.consignment.tracking_code);
       order.courierStatus = String(data.consignment.status);
       order.courierTrackingLink = String(data.consignment.tracking_link || "");
-      
+
       // Add order log
       if (!order.orderLogs) order.orderLogs = [];
       order.orderLogs.push({
