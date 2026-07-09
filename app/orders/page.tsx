@@ -96,6 +96,11 @@ interface Order {
   amountPaid?: number;
   amountDue?: number;
   orderLogs?: any[];
+  courierName?: string;
+  courierConsignmentId?: string;
+  courierTrackingCode?: string;
+  courierStatus?: string;
+  courierTrackingLink?: string;
 }
 
 export default function MyOrdersPage() {
@@ -465,6 +470,36 @@ export default function MyOrdersPage() {
                         </>
                       )}
                     </div>
+                    {order.courierConsignmentId && (
+                      <div className="flex items-center gap-2 flex-wrap border-t border-gray-50/50 pt-2 mt-1.5">
+                        <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Courier Partner:</span>
+                        <span className="font-black text-gray-950 uppercase text-[9px] tracking-tight">{order.courierName || 'Steadfast'}</span>
+                        <span className="text-gray-300">|</span>
+                        <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Consignment ID:</span>
+                        <span className="font-mono font-black text-gray-950 text-[9px]">{order.courierConsignmentId}</span>
+                        <span className="text-gray-300">|</span>
+                        <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Tracking Code:</span>
+                        <span className="font-mono font-black text-gray-950 text-[9px]">{order.courierTrackingCode}</span>
+                        <span className="text-gray-300">|</span>
+                        <span className="font-bold uppercase tracking-tight text-[9px] text-gray-400">Status:</span>
+                        <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 font-bold uppercase text-[8px] tracking-wider border border-blue-100/50">
+                          {order.courierStatus || 'in_review'}
+                        </span>
+                        {(order.courierTrackingLink || order.courierTrackingCode) && (
+                          <>
+                            <span className="text-gray-300">|</span>
+                            <a 
+                              href={order.courierTrackingLink || "https://steadfast.com.bd/tracking"} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-red-600 hover:text-red-800 font-black uppercase text-[9px] tracking-wider hover:underline"
+                            >
+                              Track Shipment ↗
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
