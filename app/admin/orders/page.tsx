@@ -757,7 +757,7 @@ export default function AdminOrdersPage() {
 
                   {/* Middle Column: Payment Details (shows on the left of total amount) */}
                   <div className="flex-1 text-left sm:text-right sm:pr-8 flex flex-col justify-center sm:items-end gap-1 sm:border-r border-gray-100 pt-1.5 sm:pt-0">
-                    <div className="flex items-center gap-2 justify-start sm:justify-end flex-wrap">
+                    <div className="flex items-center gap-2 justify-start sm:justify-end flex-nowrap whitespace-nowrap shrink-0">
                       <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Payment:</span>
                       <span className="text-[10px] font-black uppercase text-gray-900">
                         {order.paymentMethod === 'sslcommerz' ? '💳 Online' : '💵 COD'}
@@ -768,7 +768,7 @@ export default function AdminOrdersPage() {
                         if (isPaid) {
                           return (
                             <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-green-50 text-green-700 border-green-100">
-                              PAID ✅
+                              SETTLED ✅
                             </span>
                           );
                         } else if (isPartial) {
