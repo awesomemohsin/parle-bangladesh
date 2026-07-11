@@ -114,14 +114,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Run background cleanups (unpaid payments, pending SR negotiated discount approvals)
-    try {
-      const { runBackgroundCleanups } = await import("@/lib/ledger");
-      await runBackgroundCleanups();
-    } catch (cleanupErr) {
-      console.error("Failed to run passive background cleanups in GET /api/orders:", cleanupErr);
-    }
-
     // Lookup and resolve customerType stages
     const lookupStages = [
       {
@@ -342,8 +334,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  await connectDB();
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
   try {
-    await connectDB();
+    const orderId = new mongoose.Types.ObjectId();
     const body = await request.json();
     const rawItems = Array.isArray(body.items) ? body.items : [];
 
@@ -356,6 +352,8 @@ export async function POST(request: NextRequest) {
 
     // If token was provided but verification failed (e.g. role demoted), force re-login
     if (token && !user) {
+      await session.abortTransaction();
+      session.endSession();
       return NextResponse.json({ error: "Session expired or role updated. Please login again." }, { status: 401 });
     }
 
@@ -391,48 +389,72 @@ export async function POST(request: NextRequest) {
     }
 
     const items = [];
-    const flatDiscounts = await PromoCode.find({ type: 'flat', isActive: true }).lean();
-
-    const productIds = rawItems.map((item: any) => item.productId).filter(Boolean);
-    const productSlugs = rawItems.map((item: any) => item.productSlug).filter(Boolean);
-
-    const products = await Product.find({
-      $or: [
-        { _id: { $in: productIds } },
-        { slug: { $in: productSlugs } }
-      ]
-    }).lean();
-
-    const productMapById = new Map(products.map(p => [p._id.toString(), p]));
-    const productMapBySlug = new Map(products.map(p => [p.slug, p]));
 
     for (const item of rawItems) {
       const quantity = Number(item.quantity || 0);
       if (quantity <= 0) continue;
 
-      const product = item.productId
-        ? productMapById.get(item.productId)
-        : (item.productSlug ? productMapBySlug.get(item.productSlug) : null);
+      let product = null;
+      if (item.productId) {
+        product = await Product.findById(item.productId).session(session);
+      } else if (item.productSlug) {
+        product = await Product.findOne({ slug: item.productSlug }).session(session);
+      } else if (item.id) {
+        product = await Product.findById(item.id).session(session);
+      } else if (item._id) {
+        product = await Product.findById(item._id).session(session);
+      }
+
+      if (!product) continue;
 
       if (product) {
-        const productIdStr = (product as any)._id?.toString();
-        // Find if any flat discount applies to this product (regardless of minOrder for now)
-        const applicableFlat = flatDiscounts.find(d =>
-          d.allProducts || (d.applicableProducts && d.applicableProducts.some((id: any) => id.toString() === productIdStr))
-        );
-
-        const variation = (product as any).variations.find((v: any) => {
+        const varIndex = product.variations.findIndex((v: any) => {
           const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
           const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
           return weightMatch && flavorMatch;
         });
 
-        if (variation) {
-          if ((variation.stock || 0) < quantity) {
+        if (varIndex !== -1) {
+          const variation = product.variations[varIndex];
+          const holdField = `variations.${varIndex}.holdStock`;
+          const stockField = `variations.${varIndex}.stock`;
+
+          // Atomically check and deduct stock inside the transaction
+          const updatedProduct = await Product.findOneAndUpdate(
+            {
+              _id: product._id,
+              [stockField]: { $gte: quantity }
+            },
+            {
+              $inc: {
+                ordersCount: quantity,
+                [holdField]: quantity,
+                [stockField]: -quantity
+              }
+            },
+            { session, new: true }
+          );
+
+          if (!updatedProduct) {
+            await session.abortTransaction();
+            session.endSession();
             return NextResponse.json({
-              error: `Insufficient stock for product ${(product as any).name} (${item.weight || ""} ${item.flavor || ""}). Available stock: ${variation.stock || 0}`
+              error: `Insufficient stock for product ${product.name} (${item.weight || ""} ${item.flavor || ""}). Please try again.`
             }, { status: 400 });
           }
+
+          const updatedVariation = updatedProduct.variations[varIndex];
+          await StockLog.create([{
+            productId: product._id,
+            productName: product.name,
+            variationIndex: varIndex,
+            weight: item.weight,
+            flavor: item.flavor,
+            oldStock: updatedVariation.stock + quantity,
+            newStock: updatedVariation.stock,
+            amount: -quantity,
+            reason: `Order Placed (Hold Reserved) - Order #${orderId.toString().slice(-8).toUpperCase()}`,
+          }], { session });
 
           const basePrice = isDealer && variation.dealerPrice
             ? variation.dealerPrice
@@ -440,21 +462,23 @@ export async function POST(request: NextRequest) {
           let effectiveVarDiscountPrice = variation.discountPrice;
 
           items.push({
-            productId: (product as any)._id.toString(),
-            productSlug: (product as any).slug,
-            name: (product as any).name,
+            productId: product._id.toString(),
+            productSlug: product.slug,
+            name: product.name,
             quantity,
             price: basePrice,
             variationDiscountPrice: effectiveVarDiscountPrice,
             weight: item.weight,
             flavor: item.flavor,
-            image: item.image || variation.image || (product as any).image,
+            image: item.image || variation.image || product.image,
           });
         }
       }
     }
 
     if (items.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return NextResponse.json({ error: "Order requires at least one valid item" }, { status: 400 });
     }
 
@@ -494,6 +518,8 @@ export async function POST(request: NextRequest) {
     if (!postalCode) missing.push("Billing Postal Code");
 
     if (missing.length > 0) {
+      await session.abortTransaction();
+      session.endSession();
       return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
@@ -515,6 +541,8 @@ export async function POST(request: NextRequest) {
       const inputPercent = Number(body.srDiscountPercent) || 0;
       if (inputPercent > 0) {
         if (inputPercent > 15) {
+          await session.abortTransaction();
+          session.endSession();
           return NextResponse.json({ error: "Special discount cannot exceed 15%" }, { status: 400 });
         }
         srDiscountPercent = inputPercent;
@@ -524,30 +552,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Credit limit check ONLY for probation retailers
-    const isProbationRetailer = customerTypeStr === "retailer" && !user.isRetailerApproved;
-    if (user && isProbationRetailer) {
-      const netBal = (user.walletBalance || 0) - (user.dueBalance || 0);
-      const newBal = netBal - total;
-      if (newBal < -50000) {
-        return NextResponse.json({
-          error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳50,000 probation limit. Please contact a Superadmin for approval.`
-        }, { status: 400 });
+    // Credit limit check ONLY for B2B probation retailers (re-load from DB inside session to lock write access)
+    if (user) {
+      const dbUser = await User.findById(user.id).session(session);
+      if (dbUser) {
+        const isProbationRetailer = customerTypeStr === "retailer" && !dbUser.isRetailerApproved;
+        if (isProbationRetailer) {
+          const netBal = (dbUser.walletBalance || 0) - (dbUser.dueBalance || 0);
+          const newBal = netBal - total;
+          if (newBal < -50000) {
+            await session.abortTransaction();
+            session.endSession();
+            return NextResponse.json({
+              error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳50,000 probation limit. Please contact a Superadmin for approval.`
+            }, { status: 400 });
+          }
+        }
       }
     }
 
     // If logged-in user currently has a virtual email and checks out with a real email, update user profile email
     if (user && user.email?.endsWith("@phone.parlebangladesh.com") && !customerEmail.endsWith("@phone.parlebangladesh.com")) {
       try {
-        const emailExists = await User.findOne({ email: customerEmail });
+        const emailExists = await User.findOne({ email: customerEmail }).session(session);
         if (!emailExists) {
-          await User.findByIdAndUpdate(user.id, { email: customerEmail });
+          await User.findByIdAndUpdate(user.id, { email: customerEmail }).session(session);
           
           // Also update all past orders of this user to use their new real email!
           await Order.updateMany(
             { userId: user.id },
             { $set: { customerEmail: customerEmail } }
-          );
+          ).session(session);
         }
       } catch (userUpdateErr) {
         console.error("Failed to update user virtual email to real email during order placement:", userUpdateErr);
@@ -568,7 +603,7 @@ export async function POST(request: NextRequest) {
             { mobile: customerPhone },
             { mobile: normalizedPhone }
           ]
-        });
+        }).session(session);
 
         const existingAdmin = await Admin.findOne({
           $or: [
@@ -576,7 +611,7 @@ export async function POST(request: NextRequest) {
             { mobile: customerPhone },
             { mobile: normalizedPhone }
           ]
-        });
+        }).session(session);
 
         if (existingUser) {
           matchedExistingUser = existingUser;
@@ -599,7 +634,7 @@ export async function POST(request: NextRequest) {
             status: "active",
           });
 
-          await newUser.save();
+          await newUser.save({ session });
           autoLoggedInUser = newUser;
 
           const { generateToken } = require("@/lib/auth");
@@ -621,7 +656,7 @@ export async function POST(request: NextRequest) {
               email: customerEmail,
               role: "customer"
             },
-            { upsert: true, returnDocument: 'after' }
+            { upsert: true, returnDocument: 'after', session }
           );
         }
       } catch (upsertErr) {
@@ -645,6 +680,7 @@ export async function POST(request: NextRequest) {
       : ORDER_STATUS.PROCESSING;
 
     const order = new Order({
+      _id: orderId,
       userId: user ? user.id : (autoLoggedInUser ? autoLoggedInUser._id.toString() : (matchedExistingUser ? matchedExistingUser._id.toString() : undefined)),
       customerName,
       customerEmail,
@@ -679,7 +715,7 @@ export async function POST(request: NextRequest) {
       srDiscountAmount: srDiscountAmountVal,
     });
 
-    await order.save();
+    await order.save({ session });
 
     if ((isImpersonatingStaff && !isTargetB2B) || (srUser && srDiscountPercent > 0) || isEmployeeOrStaffOrder) {
       const isImpersonatingCustomer = !!(isImpersonatingStaff && !isTargetB2B);
@@ -724,12 +760,12 @@ export async function POST(request: NextRequest) {
         stage: "superadmin",
       });
 
-      await approvalRequest.save();
+      await approvalRequest.save({ session });
 
       // Trigger Telegram Notification for approval request
       try {
         const { notifyNewApprovalRequest } = await import("@/lib/telegram");
-        await notifyNewApprovalRequest(approvalRequest.toObject ? approvalRequest.toObject() : approvalRequest);
+        notifyNewApprovalRequest(approvalRequest.toObject ? approvalRequest.toObject() : approvalRequest);
       } catch (tgError) {
         console.error("Telegram notification failed for order approval request:", tgError);
       }
@@ -752,14 +788,14 @@ export async function POST(request: NextRequest) {
           recordedBy: srUser ? srUser.email : targetEmail,
           notes: body.notes || "",
         });
-        await ledger.save();
+        await ledger.save({ session });
       }
 
       const { reconcileUserLedger } = await import("@/lib/ledger");
-      await reconcileUserLedger(targetUserId);
+      await reconcileUserLedger(targetUserId, session);
 
       // Reload order to return updated amountPaid, amountDue, and paymentStatus fields
-      const updatedOrder = await Order.findById(order._id);
+      const updatedOrder = await Order.findById(order._id).session(session);
       if (updatedOrder) {
         order.amountPaid = updatedOrder.amountPaid;
         order.amountDue = updatedOrder.amountDue;
@@ -767,6 +803,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (body.promoCode) {
+      const updatedPromo = await PromoCode.findOneAndUpdate(
+        { code: body.promoCode.toUpperCase() },
+        { $inc: { currentUsage: 1 } },
+        { session, new: true }
+      );
+      if (updatedPromo && updatedPromo.currentUsage >= updatedPromo.maxUsage) {
+        await PromoCode.updateOne(
+          { _id: updatedPromo._id },
+          { isActive: false },
+          { session }
+        );
+      }
+    }
+
+    if (totals.appliedRuleIds && totals.appliedRuleIds.length > 0) {
+      for (const ruleId of totals.appliedRuleIds) {
+        const updatedRule = await PromoCode.findByIdAndUpdate(
+          ruleId,
+          { $inc: { currentUsage: 1 } },
+          { session, new: true }
+        );
+        if (updatedRule && updatedRule.currentUsage >= updatedRule.maxUsage) {
+          await PromoCode.updateOne(
+            { _id: updatedRule._id },
+            { isActive: false },
+            { session }
+          );
+        }
+      }
+    }
+
+    // Commit the database transaction successfully
+    await session.commitTransaction();
+    session.endSession();
+
+    // Trigger post-checkout notifications
     try {
       await notifyNewOrder(order);
     } catch (e) {
@@ -780,89 +853,7 @@ export async function POST(request: NextRequest) {
       message: `A new order #${order._id.toString().slice(-8).toUpperCase()} has been placed by ${customerName}.`,
       type: "order",
       targetLink: `/admin/orders`
-    });
-
-    // Increment ordersCount and holdStock for each product atomically
-    for (const item of items) {
-      if (item.productId) {
-        const product = await Product.findById(item.productId);
-        if (product && product.variations) {
-          const varIndex = product.variations.findIndex((v: any) => {
-            const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
-            const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
-            return weightMatch && flavorMatch;
-          });
-
-          if (varIndex !== -1) {
-            const holdField = `variations.${varIndex}.holdStock`;
-            const stockField = `variations.${varIndex}.stock`;
-
-            const variation = product.variations[varIndex];
-            const oldStockVal = variation.stock || 0;
-            const newStockVal = oldStockVal - item.quantity;
-
-            await StockLog.create({
-              productId: product._id,
-              productName: product.name,
-              variationIndex: varIndex,
-              weight: item.weight,
-              flavor: item.flavor,
-              oldStock: oldStockVal,
-              newStock: newStockVal,
-              amount: -item.quantity,
-              reason: `Order Placed (Hold Reserved) - Order #${order._id.toString().slice(-8).toUpperCase()}`,
-            });
-
-            await Product.updateOne(
-              { _id: product._id },
-              {
-                $inc: {
-                  ordersCount: item.quantity,
-                  [holdField]: item.quantity,
-                  [stockField]: -item.quantity
-                }
-              }
-            );
-          } else {
-            // No variation match, just update total count
-            await Product.updateOne(
-              { _id: product._id },
-              { $inc: { ordersCount: item.quantity } }
-            );
-          }
-        }
-      }
-    }
-
-    if (body.promoCode) {
-      const updatedPromo = await PromoCode.findOneAndUpdate(
-        { code: body.promoCode.toUpperCase() },
-        { $inc: { currentUsage: 1 } },
-        { new: true }
-      );
-      if (updatedPromo && updatedPromo.currentUsage >= updatedPromo.maxUsage) {
-        await PromoCode.updateOne(
-          { _id: updatedPromo._id },
-          { isActive: false }
-        );
-      }
-    }
-
-    if (totals.appliedRuleIds && totals.appliedRuleIds.length > 0) {
-      for (const ruleId of totals.appliedRuleIds) {
-        const updatedRule = await PromoCode.findByIdAndUpdate(
-          ruleId,
-          { $inc: { currentUsage: 1 } },
-          { new: true }
-        );
-        if (updatedRule && updatedRule.currentUsage >= updatedRule.maxUsage) {
-          await PromoCode.updateOne(
-            { _id: updatedRule._id },
-            { isActive: false }
-          );
-        }
-      }
-    }
+    }).catch(console.error);
 
     // SSLCommerz payment initiation logic
     if (body.paymentMethod === "sslcommerz") {
@@ -977,6 +968,10 @@ export async function POST(request: NextRequest) {
     }
     return response;
   } catch (error: any) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
     console.error("Orders POST error:", error);
     return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
   }
