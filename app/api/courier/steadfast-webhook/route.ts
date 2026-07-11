@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import { Order } from "@/lib/models";
+import { Order, Product, StockLog } from "@/lib/models";
 
 export const dynamic = "force-dynamic";
 
@@ -57,15 +57,24 @@ export async function POST(request: NextRequest) {
     order.courierConsignmentId = String(consignment_id || order.courierConsignmentId);
     order.courierName = "Steadfast";
 
+    // Parse tracking updates comment to check if the return is physically complete
+    const trackingMsg = (payload.tracking_message || payload.message || payload.comment || payload.tracking_log || "").toLowerCase();
+    const isPhysicalReturnComplete = 
+      trackingMsg.includes("returned to sender") || 
+      trackingMsg.includes("returned to merchant") || 
+      trackingMsg.includes("returned to sender/merchant successfully");
+
     let localStatusUpdate = "";
     if (newCourierStatus === "delivered" || newCourierStatus === "partial_delivered") {
       if (order.status !== "delivered") localStatusUpdate = "delivered";
-    } else if (newCourierStatus === "cancelled") {
-      if (order.status !== "cancelled") localStatusUpdate = "cancelled";
-    } else if (newCourierStatus === "in_transit") {
-      if (order.status !== "shipped") localStatusUpdate = "shipped";
-    } else if (newCourierStatus === "return") {
-      if (order.status !== "returned") localStatusUpdate = "returned";
+    } else if (newCourierStatus === "cancelled" || newCourierStatus === "return" || newCourierStatus === "returned_to_merchant") {
+      if (isPhysicalReturnComplete) {
+        // Only mark order as returned/cancelled in the dashboard once physically received back
+        if (order.status !== "returned") localStatusUpdate = "returned";
+      } else {
+        // Keep order in shipped/processing state, but record that it is returning
+        console.log(`[Steadfast Webhook] Order ${order._id} is returning but not yet received physically.`);
+      }
     } else if (newCourierStatus === "lost") {
       if (order.status !== "lost") localStatusUpdate = "lost";
     } else if (newCourierStatus === "damaged") {
@@ -80,17 +89,86 @@ export async function POST(request: NextRequest) {
         fromStatus: previousStatus,
         toStatus: localStatusUpdate,
         changedBy: "Steadfast Webhook",
-        reason: `Automatic status sync. Courier status: ${newCourierStatus}`,
+        reason: `Automatic status sync. Courier status: ${newCourierStatus}. Tracking: ${trackingMsg || 'None'}`,
         changedAt: new Date()
       } as any);
       console.log(`[Steadfast Webhook] Order ${order._id} status updated from '${previousStatus}' to '${localStatusUpdate}'`);
+
+      // Adjust stock if transitioning to restorable terminal statuses
+      const restorableStatuses = ["cancelled", "damaged", "lost", "returned"];
+      if (restorableStatuses.includes(localStatusUpdate) && !restorableStatuses.includes(previousStatus)) {
+        for (const item of order.items) {
+          if (item.productId) {
+            const product = await Product.findById(item.productId);
+            if (product && product.variations) {
+              const varIndex = product.variations.findIndex((v: any) => {
+                const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
+                const flavorMatch = (!item.flavor && !v.flavor) || (item.flavor === v.flavor);
+                return weightMatch && flavorMatch;
+              });
+              
+              if (varIndex !== -1) {
+                const variation = product.variations[varIndex];
+                const holdField = `variations.${varIndex}.holdStock`;
+                const stockField = `variations.${varIndex}.stock`;
+                const lostField = `variations.${varIndex}.lostCount`;
+                const damagedField = `variations.${varIndex}.damagedCount`;
+                const deliveredField = `variations.${varIndex}.deliveredCount`;
+
+                const update: any = { $inc: {} };
+                
+                if (previousStatus === "delivered") {
+                  update.$inc[deliveredField] = -item.quantity;
+                } else {
+                  update.$inc[holdField] = -item.quantity;
+                }
+
+                if (localStatusUpdate === "cancelled" || localStatusUpdate === "returned") {
+                  // Return to stock
+                  update.$inc[stockField] = item.quantity;
+                } else if (localStatusUpdate === "lost") {
+                  update.$inc[lostField] = item.quantity;
+                } else if (localStatusUpdate === "damaged") {
+                  update.$inc[damagedField] = item.quantity;
+                }
+
+                await Product.updateOne({ _id: product._id }, update);
+
+                // Log stock adjustment
+                await StockLog.create({
+                  productId: product._id,
+                  productName: product.name,
+                  variationIndex: varIndex,
+                  weight: item.weight,
+                  flavor: item.flavor,
+                  oldStock: variation.stock || 0,
+                  newStock: (variation.stock || 0) + (localStatusUpdate === "cancelled" || localStatusUpdate === "returned" ? item.quantity : 0),
+                  amount: item.quantity,
+                  reason: `Order ${localStatusUpdate.toUpperCase()} (Steadfast Webhook Sync) - Order #${order._id.toString().slice(-8).toUpperCase()}`,
+                  adminEmail: "system-webhook",
+                });
+              }
+            }
+          }
+        }
+
+        // Adjust payment/receivables balances
+        order.amountPaid = 0;
+        order.amountDue = 0;
+        order.paymentStatus = "pending";
+
+        if (order.userId) {
+          const { reconcileUserLedger } = await import("@/lib/ledger");
+          await reconcileUserLedger(order.userId.toString());
+        }
+      }
     } else if (oldCourierStatus !== newCourierStatus) {
       if (!order.orderLogs) order.orderLogs = [];
       order.orderLogs.push({
         fromStatus: order.status,
         toStatus: order.status,
         changedBy: "Steadfast Webhook",
-        reason: `Courier status changed from '${oldCourierStatus}' to '${newCourierStatus}'`,
+        reason: `Courier status changed from '${oldCourierStatus}' to '${newCourierStatus}'${trackingMsg ? `. Tracking: ${trackingMsg}` : ''}`,
         changedAt: new Date()
       } as any);
       console.log(`[Steadfast Webhook] Order ${order._id} courierStatus updated from '${oldCourierStatus}' to '${newCourierStatus}'`);

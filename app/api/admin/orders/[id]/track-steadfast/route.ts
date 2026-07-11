@@ -58,10 +58,8 @@ export async function GET(
       order.courierStatus = newStatus;
       
       let localStatusUpdate = "";
-      if (newStatus === "delivered" && order.status !== "delivered") {
+      if ((newStatus === "delivered" || newStatus === "partial_delivered") && order.status !== "delivered") {
         localStatusUpdate = "delivered";
-      } else if (newStatus === "cancelled" && order.status !== "cancelled") {
-        localStatusUpdate = "cancelled";
       }
 
       if (localStatusUpdate) {
