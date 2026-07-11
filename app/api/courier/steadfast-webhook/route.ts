@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Order, Product, StockLog } from "@/lib/models";
+import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     // 1. Verify Authorization Token
     const authHeader = request.headers.get("authorization");
@@ -13,6 +16,8 @@ export async function POST(request: NextRequest) {
     if (configuredToken) {
       if (authHeader !== `Bearer ${configuredToken}`) {
         console.warn(`[Webhook Unauthorized] Received token: ${authHeader}`);
+        await session.abortTransaction();
+        session.endSession();
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     } else {
@@ -25,14 +30,15 @@ export async function POST(request: NextRequest) {
     const { consignment_id, invoice, status } = payload;
 
     if (!invoice || !status) {
+      await session.abortTransaction();
+      session.endSession();
       return NextResponse.json({ error: "Invalid payload parameters" }, { status: 400 });
     }
 
-    // 3. Connect to DB and find the order
-    await connectDB();
+    // 3. Find the order
     let order;
     if (invoice.length === 24) {
-      order = await Order.findById(invoice);
+      order = await Order.findById(invoice).session(session);
     } else {
       order = await Order.findOne({
         $expr: {
@@ -41,11 +47,13 @@ export async function POST(request: NextRequest) {
             invoice.toLowerCase()
           ]
         }
-      });
+      }).session(session);
     }
 
     if (!order) {
       console.error(`[Steadfast Webhook] Order not found for invoice ID: ${invoice}`);
+      await session.abortTransaction();
+      session.endSession();
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
       if (restorableStatuses.includes(localStatusUpdate) && !restorableStatuses.includes(previousStatus)) {
         for (const item of order.items) {
           if (item.productId) {
-            const product = await Product.findById(item.productId);
+            const product = await Product.findById(item.productId).session(session);
             if (product && product.variations) {
               const varIndex = product.variations.findIndex((v: any) => {
                 const weightMatch = (!item.weight && !v.weight) || (item.weight === v.weight);
@@ -134,10 +142,10 @@ export async function POST(request: NextRequest) {
                   update.$inc[damagedField] = item.quantity;
                 }
 
-                await Product.updateOne({ _id: product._id }, update);
+                await Product.updateOne({ _id: product._id }, update, { session });
 
                 // Log stock adjustment
-                await StockLog.create({
+                await StockLog.create([{
                   productId: product._id,
                   productName: product.name,
                   variationIndex: varIndex,
@@ -148,7 +156,7 @@ export async function POST(request: NextRequest) {
                   amount: item.quantity,
                   reason: `Order ${localStatusUpdate.toUpperCase()} (Steadfast Webhook Sync) - Order #${order._id.toString().slice(-8).toUpperCase()}`,
                   adminEmail: "system-webhook",
-                });
+                }], { session });
               }
             }
           }
@@ -161,7 +169,7 @@ export async function POST(request: NextRequest) {
 
         if (order.userId) {
           const { reconcileUserLedger } = await import("@/lib/ledger");
-          await reconcileUserLedger(order.userId.toString());
+          await reconcileUserLedger(order.userId.toString(), session);
         }
       }
     } else if (oldCourierStatus !== newCourierStatus) {
@@ -179,10 +187,14 @@ export async function POST(request: NextRequest) {
       console.log(`[Steadfast Webhook] Order ${order._id} courierStatus updated from '${oldCourierStatus}' to '${newCourierStatus}'`);
     }
 
-    await order.save();
+    await order.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
     return NextResponse.json({ success: true, message: "Webhook processed successfully" });
   } catch (error: any) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Steadfast webhook error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
