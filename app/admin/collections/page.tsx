@@ -1403,9 +1403,22 @@ export default function CollectionsPage() {
                               {new Date(order.createdAt).toLocaleString()}
                             </td>
                             <td className="py-4 px-3">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-gray-900">{order.customerName}</span>
                                 {renderTypeBadge(order.customerType)}
+                                {order.userId && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      fetchCustomerDetails(order.userId!, order.customerType?.toLowerCase() === "guest" || order.customerType === "Guest" ? order.customerPhone : undefined);
+                                    }}
+                                    className="font-mono text-[9px] font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none select-none shrink-0"
+                                    title="View Customer Profile"
+                                  >
+                                    #{order.userId.slice(-8).toUpperCase()}
+                                  </button>
+                                )}
                               </div>
                               <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
                             </td>
@@ -1737,9 +1750,22 @@ export default function CollectionsPage() {
                               {new Date(order.updatedAt || order.createdAt).toLocaleString()}
                             </td>
                             <td className="py-4 px-3">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-gray-900">{order.customerName}</span>
                                 {renderTypeBadge(order.customerType)}
+                                {order.userId && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      fetchCustomerDetails(order.userId!, order.customerType?.toLowerCase() === "guest" || order.customerType === "Guest" ? order.customerPhone : undefined);
+                                    }}
+                                    className="font-mono text-[9px] font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer focus:outline-none select-none shrink-0"
+                                    title="View Customer Profile"
+                                  >
+                                    #{order.userId.slice(-8).toUpperCase()}
+                                  </button>
+                                )}
                               </div>
                               <div className="text-[10px] font-bold text-gray-400">{order.customerPhone}</div>
                             </td>
