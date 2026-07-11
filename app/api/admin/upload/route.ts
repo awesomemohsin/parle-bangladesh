@@ -18,6 +18,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const disallowedExtensions = ['html', 'htm', 'svg', 'js', 'ts', 'jsx', 'tsx', 'sh', 'bash', 'exe', 'bat'];
+    if (ext && disallowedExtensions.includes(ext)) {
+      return NextResponse.json({ error: 'Disallowed file type: upload of HTML, SVG, or executable scripts is prohibited.' }, { status: 400 });
+    }
+
     const token = process.env.BLOB_READ_WRITE_TOKEN;
     if (!token) {
       console.error('[BlobUpload] BLOB_READ_WRITE_TOKEN is missing');
