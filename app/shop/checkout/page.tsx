@@ -1046,8 +1046,8 @@ function CheckoutContent() {
                 <label className={`cursor-pointer px-3 py-2 rounded-lg border transition-all ${deliveryMethod === 'pickup' ? 'border-red-650 bg-red-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                   <input type="radio" className="hidden" checked={deliveryMethod === 'pickup'} onChange={() => setDeliveryMethod('pickup')} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-xs text-gray-900">Point Pickup</span>
-                    <span className="text-[10px] text-gray-500 mt-0.5">Free collection from store</span>
+                    <span className="font-bold text-xs text-gray-900">Pickup from Company's Warehouse</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">Free collection from Pallibidyut, Savar</span>
                   </div>
                 </label>
               </div>
