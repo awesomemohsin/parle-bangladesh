@@ -126,7 +126,7 @@ export default function ProductApprovalsPage() {
     const hasAnindo = request.superadminApprovals.some(a => a.toLowerCase().includes('anindo'))
     const hasSaiful = request.superadminApprovals.some(a => a.toLowerCase().includes('saiful'))
     const hasRazu = request.ownerApproved
-    const isLevel3 = ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(request.field)
+    const isLevel3 = ['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(request.field)
 
     return (
       <div className="flex flex-wrap items-center gap-2">

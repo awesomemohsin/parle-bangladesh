@@ -414,7 +414,7 @@ export default function ApprovalLogsPage() {
                       <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mr-2">Authorization Trace:</span>
                       <SignatureBadge name="Anindo" status={request.superadminApprovals?.some(a => a.toLowerCase().includes('anindo'))} />
                       <SignatureBadge name="Saiful" status={request.superadminApprovals?.some(a => a.toLowerCase().includes('saiful'))} />
-                      {(request.type === 'order' || ['price', 'dealerPrice', 'stock', 'discountPrice'].includes(request.field)) && (
+                      {(request.type === 'order' || ['price', 'dealerPrice', 'retailerPrice', 'stock', 'discountPrice'].includes(request.field)) && (
                         <>
                           <div className="w-px h-4 bg-gray-200 mx-1"></div>
                           <SignatureBadge name="Mahbub Alam Razu" status={request.ownerApproved} />
