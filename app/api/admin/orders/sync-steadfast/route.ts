@@ -61,10 +61,18 @@ export async function POST(request: NextRequest) {
             order.courierStatus = newCourierStatus;
             
             let localStatusUpdate = "";
-            if (newCourierStatus === "delivered" && order.status !== "delivered") {
-              localStatusUpdate = "delivered";
-            } else if (newCourierStatus === "cancelled" && order.status !== "cancelled") {
-              localStatusUpdate = "cancelled";
+            if (newCourierStatus === "delivered" || newCourierStatus === "partial_delivered") {
+              if (order.status !== "delivered") localStatusUpdate = "delivered";
+            } else if (newCourierStatus === "cancelled") {
+              if (order.status !== "cancelled") localStatusUpdate = "cancelled";
+            } else if (newCourierStatus === "in_transit") {
+              if (order.status !== "shipped") localStatusUpdate = "shipped";
+            } else if (newCourierStatus === "return") {
+              if (order.status !== "returned") localStatusUpdate = "returned";
+            } else if (newCourierStatus === "lost") {
+              if (order.status !== "lost") localStatusUpdate = "lost";
+            } else if (newCourierStatus === "damaged") {
+              if (order.status !== "damaged") localStatusUpdate = "damaged";
             }
 
             let wasUpdated = false;
