@@ -1428,9 +1428,10 @@ export default function CollectionsPage() {
                             <td className="py-4 px-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
                                 order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                  'bg-blue-50 text-blue-700 border-blue-200'
+                                  order.status === 'cancellation_pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                    'bg-blue-50 text-blue-700 border-blue-200'
                                 }`}>
-                                {order.status}
+                                {order.status === 'cancellation_pending' ? 'Cancellation Pending' : order.status}
                               </span>
                             </td>
                             <td className="py-4 px-3">
@@ -1775,9 +1776,10 @@ export default function CollectionsPage() {
                             <td className="py-4 px-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
                                 order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                  'bg-blue-50 text-blue-700 border-blue-200'
+                                  order.status === 'cancellation_pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                    'bg-blue-50 text-blue-700 border-blue-200'
                                 }`}>
-                                {order.status}
+                                {order.status === 'cancellation_pending' ? 'Cancellation Pending' : order.status}
                               </span>
                             </td>
                             <td className="py-4 px-3">

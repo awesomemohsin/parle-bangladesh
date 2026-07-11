@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             order.courierStatus = newCourierStatus;
             
             let localStatusUpdate = "";
-            if (newCourierStatus === "delivered" || newCourierStatus === "partial_delivered") {
+            if (newCourierStatus === "delivered") {
               if (order.status !== "delivered") localStatusUpdate = "delivered";
             }
 
@@ -81,11 +81,14 @@ export async function POST(request: NextRequest) {
               wasUpdated = true;
             } else if (oldCourierStatus !== newCourierStatus) {
               if (!order.orderLogs) order.orderLogs = [];
+              const isPartialDelivered = newCourierStatus === "partial_delivered";
               order.orderLogs.push({
                 fromStatus: order.status,
                 toStatus: order.status,
                 changedBy: "Steadfast Bulk Sync",
-                reason: `Courier status changed from '${oldCourierStatus}' to '${newCourierStatus}'`,
+                reason: isPartialDelivered
+                  ? "Courier status updated to PARTIALLY DELIVERED. Please reconcile returned items and update this order manually."
+                  : `Courier status changed from '${oldCourierStatus}' to '${newCourierStatus}'`,
                 changedAt: new Date()
               } as any);
               wasUpdated = true;

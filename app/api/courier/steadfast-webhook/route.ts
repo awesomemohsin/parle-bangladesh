@@ -65,15 +65,17 @@ export async function POST(request: NextRequest) {
       trackingMsg.includes("returned to sender/merchant successfully");
 
     let localStatusUpdate = "";
-    if (newCourierStatus === "delivered" || newCourierStatus === "partial_delivered") {
+    if (newCourierStatus === "delivered") {
       if (order.status !== "delivered") localStatusUpdate = "delivered";
     } else if (newCourierStatus === "cancelled" || newCourierStatus === "return" || newCourierStatus === "returned_to_merchant") {
       if (isPhysicalReturnComplete) {
-        // Only mark order as returned/cancelled in the dashboard once physically received back
-        if (order.status !== "returned") localStatusUpdate = "returned";
+        // Once physically received back, mark as cancelled and restore stock
+        if (order.status !== "cancelled") localStatusUpdate = "cancelled";
       } else {
-        // Keep order in shipped/processing state, but record that it is returning
-        console.log(`[Steadfast Webhook] Order ${order._id} is returning but not yet received physically.`);
+        // Otherwise, mark as cancellation_pending, keep stock on hold
+        if (order.status !== "cancellation_pending" && order.status !== "cancelled") {
+          localStatusUpdate = "cancellation_pending";
+        }
       }
     } else if (newCourierStatus === "lost") {
       if (order.status !== "lost") localStatusUpdate = "lost";
@@ -164,11 +166,14 @@ export async function POST(request: NextRequest) {
       }
     } else if (oldCourierStatus !== newCourierStatus) {
       if (!order.orderLogs) order.orderLogs = [];
+      const isPartialDelivered = newCourierStatus === "partial_delivered";
       order.orderLogs.push({
         fromStatus: order.status,
         toStatus: order.status,
         changedBy: "Steadfast Webhook",
-        reason: `Courier status changed from '${oldCourierStatus}' to '${newCourierStatus}'${trackingMsg ? `. Tracking: ${trackingMsg}` : ''}`,
+        reason: isPartialDelivered
+          ? "Courier status updated to PARTIALLY DELIVERED. Please reconcile returned items and update this order manually."
+          : `Courier status changed from '${oldCourierStatus}' to '${newCourierStatus}'${trackingMsg ? `. Tracking: ${trackingMsg}` : ''}`,
         changedAt: new Date()
       } as any);
       console.log(`[Steadfast Webhook] Order ${order._id} courierStatus updated from '${oldCourierStatus}' to '${newCourierStatus}'`);

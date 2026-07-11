@@ -15,6 +15,7 @@ export const ORDER_STATUS = {
   DAMAGED: 'damaged',
   LOST: 'lost',
   RETURNED: 'returned',
+  CANCELLATION_PENDING: 'cancellation_pending',
 } as const
 
 export const PRODUCT_CATEGORIES = [

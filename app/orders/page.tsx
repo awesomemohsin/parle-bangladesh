@@ -438,8 +438,9 @@ export default function MyOrdersPage() {
                             order.status === 'damaged' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                               order.status === 'lost' ? 'bg-gray-50 text-gray-700 border-gray-100' :
                                 order.status === 'returned' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                  'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                      {order.status}
+                                  order.status === 'cancellation_pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                    'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                      {order.status === 'cancellation_pending' ? 'Cancellation Pending' : order.status}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1 border-t border-gray-50 pt-2 mt-2 w-full text-[10px] text-gray-500 font-medium">
@@ -505,11 +506,12 @@ export default function MyOrdersPage() {
 
                 {(order.statusReason || order.cancelReason) && (
                   <div className={`px-4 py-1.5 border-b text-[10px] font-bold ${order.status === 'cancelled' ? 'bg-red-50/30 text-red-700 border-red-50' :
-                    order.status === 'damaged' ? 'bg-amber-50/30 text-amber-700 border-amber-50' :
-                      order.status === 'returned' ? 'bg-purple-50/30 text-purple-700 border-purple-50' :
-                        'bg-gray-50/30 text-gray-700 border-gray-50'
+                    order.status === 'cancellation_pending' ? 'bg-orange-50/30 text-orange-700 border-orange-50' :
+                      order.status === 'damaged' ? 'bg-amber-50/30 text-amber-700 border-amber-50' :
+                        order.status === 'returned' ? 'bg-purple-50/30 text-purple-700 border-purple-50' :
+                          'bg-gray-50/30 text-gray-700 border-gray-50'
                     }`}>
-                    <span className="uppercase tracking-widest text-[8px] opacity-60 mr-2">{order.status} REASON:</span>
+                    <span className="uppercase tracking-widest text-[8px] opacity-60 mr-2">{order.status === 'cancellation_pending' ? 'Cancellation Pending' : order.status} REASON:</span>
                     {order.statusReason || order.cancelReason}
                   </div>
                 )}
@@ -761,7 +763,7 @@ export default function MyOrdersPage() {
                         <div><span className="font-bold text-gray-400">Email Address:</span> <span className="font-black text-gray-900">{previewOrder.customerEmail}</span></div>
                       )}
                       <div><span className="font-bold text-gray-400">Delivery Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.deliveryMethod || 'Standard Delivery'}</span></div>
-                      <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.shippingAddress || previewOrder?.address}{previewOrder?.shippingThana || previewOrder?.thana ? `, PS: ${previewOrder?.shippingThana || previewOrder?.thana}` : ''}, Dist: {previewOrder?.shippingCity || previewOrder?.city} {previewOrder?.shippingPostalCode || previewOrder?.postalCode}</span></div>
+                      <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.shippingAddress || previewOrder?.address}{previewOrder?.shippingThana || previewOrder?.thana ? `, Thana: ${previewOrder?.shippingThana || previewOrder?.thana}` : ''}, District: {previewOrder?.shippingCity || previewOrder?.city} {previewOrder?.shippingPostalCode || previewOrder?.postalCode}</span></div>
                     </div>
                   </div>
                   <div>

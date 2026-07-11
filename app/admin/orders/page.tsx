@@ -860,6 +860,7 @@ export default function AdminOrdersPage() {
                               <option value="damaged">Damaged</option>
                               <option value="lost">Lost</option>
                               <option value="returned">Returned</option>
+                              <option value="cancellation_pending">Cancellation Pending</option>
                             </>
                           )}
                         </select>
@@ -941,7 +942,7 @@ export default function AdminOrdersPage() {
                   <div className="sm:col-span-2 lg:col-span-1">
                     <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">Billing Destination</p>
                     <p className="text-xs sm:text-sm font-bold text-gray-600 leading-tight">
-                      {order.address}{order.thana ? `, PS: ${order.thana}` : ''}, Dist: {order.city} - {order.postalCode}
+                      {order.address}{order.thana ? `, Thana: ${order.thana}` : ''}, District: {order.city} - {order.postalCode}
                     </p>
                   </div>
                   {order.paymentMethod === 'sslcommerz' && order.paymentDetails && (
@@ -970,7 +971,7 @@ export default function AdminOrdersPage() {
                     <p className="text-xs sm:text-sm font-bold text-gray-600 leading-tight">
                       {order.deliveryMethod === 'pickup'
                         ? 'Collection Point Pickup'
-                        : `${order.shippingAddress || order.address}${order.shippingThana || order.thana ? `, PS: ${order.shippingThana || order.thana}` : ''}, Dist: ${order.shippingCity || order.city} - ${order.shippingPostalCode || order.postalCode}`}
+                        : `${order.shippingAddress || order.address}${order.shippingThana || order.thana ? `, Thana: ${order.shippingThana || order.thana}` : ''}, District: ${order.shippingCity || order.city} - ${order.shippingPostalCode || order.postalCode}`}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
