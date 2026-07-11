@@ -69,7 +69,6 @@ export async function POST(
 
       // Map old spellings to modern official spellings used by Steadfast
       const districtMappings: Record<string, string> = {
-        "Dhaka": "Dhaka City",
         "Chittagong": "Chattogram",
         "Comilla": "Cumilla",
         "Barisal": "Barishal",
