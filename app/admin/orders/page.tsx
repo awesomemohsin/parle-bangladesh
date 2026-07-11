@@ -653,13 +653,13 @@ export default function AdminOrdersPage() {
                       ? 'border-rose-300 bg-rose-50/20 shadow-rose-100/50 hover:border-rose-500'
                       : order.customerType?.toLowerCase() === 'influencer'
                         ? 'border-orange-300 bg-orange-50/20 shadow-orange-100/50 hover:border-orange-500'
-                      : order.customerType?.toLowerCase() === 'employee'
-                        ? 'border-purple-300 bg-purple-50/20 shadow-purple-100/50 hover:border-purple-500'
-                        : order.customerType?.toLowerCase() === 'corporate'
-                          ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
-                          : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
-                            ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
-                            : 'border-gray-100/60 hover:shadow-md'
+                        : order.customerType?.toLowerCase() === 'employee'
+                          ? 'border-purple-300 bg-purple-50/20 shadow-purple-100/50 hover:border-purple-500'
+                          : order.customerType?.toLowerCase() === 'corporate'
+                            ? 'border-indigo-300 bg-indigo-50/20 shadow-indigo-100/50 hover:border-indigo-500'
+                            : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
+                              ? 'border-teal-300 bg-teal-50/20 shadow-teal-100/50 hover:border-teal-500'
+                              : 'border-gray-100/60 hover:shadow-md'
                   }`}
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-2.5 sm:gap-4 mb-1.5">
@@ -709,14 +709,14 @@ export default function AdminOrdersPage() {
                               {order.courierStatus || 'in_review'}
                             </span>
                           </div>
-                          <button 
+                          <button
                             onClick={() => handleTrackSteadfast(order.id)}
                             className="ml-1 text-[#34A487] hover:text-[#2b8870] font-black uppercase text-[8px] tracking-wider flex items-center gap-0.5 hover:underline"
                           >
                             <RefreshCw className="w-2.5 h-2.5" /> Sync
                           </button>
                           {order.courierStatus === 'unknown' && (
-                            <button 
+                            <button
                               onClick={() => handleResetSteadfast(order.id)}
                               className="ml-2.5 text-amber-600 hover:text-amber-800 font-black uppercase text-[8px] tracking-wider flex items-center gap-0.5 hover:underline"
                               title="Clear courier consignment and allow re-booking"
@@ -725,16 +725,16 @@ export default function AdminOrdersPage() {
                             </button>
                           )}
                           {order.courierTrackingLink && (
-                            <a 
-                              href={order.courierTrackingLink} 
-                              target="_blank" 
+                            <a
+                              href={order.courierTrackingLink}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="ml-2.5 text-red-600 hover:text-red-800 font-black uppercase text-[8px] tracking-wider hover:underline"
                             >
                               Track ↗
                             </a>
                           )}
-                          <a 
+                          <a
                             href={`https://steadfast.com.bd/user/consignment/invoice/${order.courierConsignmentId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -742,7 +742,7 @@ export default function AdminOrdersPage() {
                           >
                             Courier Invoice ↗
                           </a>
-                          <a 
+                          <a
                             href={`https://steadfast.com.bd/user/consignment/print-label/${order.courierConsignmentId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -781,7 +781,7 @@ export default function AdminOrdersPage() {
                           const isDelivered = order.status === 'delivered';
                           return (
                             <span className="px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-100">
-                              {isDelivered ? 'Payment Pending ✅' : 'UNPAID ⏳'}
+                              {isDelivered ? 'Payment Pending ✅' : 'UNSETTLED ⏳'}
                             </span>
                           );
                         }
@@ -825,8 +825,8 @@ export default function AdminOrdersPage() {
                     <div className="flex flex-col items-start sm:items-end gap-1.5 mt-2 w-full sm:w-auto">
                       <div className="flex flex-wrap sm:flex-nowrap gap-1.5 w-full sm:w-auto items-center">
                         {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && !['dealer', 'retailer'].includes((order.customerType || '').toLowerCase()) && process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && !order.courierConsignmentId && order.status === 'processing' && (
-                          <Button 
-                            onClick={() => handleSendToSteadfast(order.id)} 
+                          <Button
+                            onClick={() => handleSendToSteadfast(order.id)}
                             size="sm"
                             className="bg-[#34A487] hover:bg-[#2b8870] text-white font-bold h-8 text-[8px] sm:text-[10px] px-2 sm:px-3 rounded-lg flex items-center gap-1 shadow-sm shrink-0 uppercase tracking-wider whitespace-nowrap"
                           >
