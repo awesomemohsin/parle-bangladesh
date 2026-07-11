@@ -228,7 +228,7 @@ export default function TrackOrderPage() {
                       <MapPin className="w-5 h-5 text-red-600 shrink-0 mt-1" />
                       <div>
                         <p className="text-xs font-bold text-gray-500 leading-relaxed">
-                          {order.shippingAddress}{order.shippingThana || order.thana ? `, PS: ${order.shippingThana || order.thana}` : ''}, Dist: {order.shippingCity} {order.shippingPostalCode}
+                          {order.shippingAddress}{order.shippingThana || order.thana ? `, Thana: ${order.shippingThana || order.thana}` : ''}, District: {order.shippingCity} {order.shippingPostalCode}
                         </p>
                       </div>
                     </div>
