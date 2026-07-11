@@ -734,6 +734,22 @@ export default function AdminOrdersPage() {
                               Track ↗
                             </a>
                           )}
+                          <a 
+                            href={`https://steadfast.com.bd/user/consignment/invoice/${order.courierConsignmentId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2.5 text-blue-600 hover:text-blue-800 font-black uppercase text-[8px] tracking-wider hover:underline"
+                          >
+                            Courier Invoice ↗
+                          </a>
+                          <a 
+                            href={`https://steadfast.com.bd/user/consignment/print-label/${order.courierConsignmentId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2.5 text-purple-600 hover:text-purple-800 font-black uppercase text-[8px] tracking-wider hover:underline"
+                          >
+                            Courier Label ↗
+                          </a>
                         </div>
                       </div>
                     )}

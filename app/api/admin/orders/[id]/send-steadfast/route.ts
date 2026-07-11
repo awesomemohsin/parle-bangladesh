@@ -60,6 +60,7 @@ export async function POST(
     const thanaPart = order.shippingThana || order.thana ? `${order.shippingThana || order.thana}` : "";
     let cityPart = order.shippingCity || order.city ? `${order.shippingCity || order.city}` : "";
     const postcodePart = order.shippingPostalCode || order.postalCode ? `${order.shippingPostalCode || order.postalCode}` : "";
+    const originalCity = cityPart.trim();
 
     // Normalize city/district name to match Steadfast's parser expectations
     if (cityPart) {
@@ -80,8 +81,13 @@ export async function POST(
       }
     }
 
-    // Build recipient address using clean format with deduplication
-    let cleanAddress = mainAddress.trim();
+    // Convert multi-line address to a clean single line by splitting lines, trimming, stripping trailing commas, and joining
+    const addressLines = mainAddress
+      .split(/\r?\n/)
+      .map((line: string) => line.trim().replace(/,+$/, ""))
+      .filter(Boolean);
+    const cleanAddress = addressLines.join(", ");
+
     const cleanThana = thanaPart.trim();
     const cleanCity = cityPart.trim();
     const cleanPostcode = postcodePart.trim();
@@ -93,34 +99,34 @@ export async function POST(
       parts.push(cleanThana);
     }
 
+    // Check if the clean address already contains the normalized, original, or base city name
+    const hasCity = cleanCity && (
+      cleanAddress.toLowerCase().includes(cleanCity.toLowerCase()) ||
+      (originalCity && cleanAddress.toLowerCase().includes(originalCity.toLowerCase())) ||
+      (cleanCity.endsWith(" City") && cleanAddress.toLowerCase().includes(cleanCity.slice(0, -5).toLowerCase()))
+    );
+
     // Append city/district and postcode in standard format (District-Postcode)
     if (cleanCity) {
-      if (!cleanAddress.toLowerCase().includes(cleanCity.toLowerCase())) {
+      if (!hasCity) {
         if (cleanPostcode) {
           parts.push(`${cleanCity}-${cleanPostcode}`);
         } else {
           parts.push(cleanCity);
         }
-      } else if (cleanPostcode) {
+      } else if (cleanPostcode && !cleanAddress.toLowerCase().includes(cleanPostcode.toLowerCase())) {
         parts.push(cleanPostcode);
       }
-    } else if (cleanPostcode) {
+    } else if (cleanPostcode && !cleanAddress.toLowerCase().includes(cleanPostcode.toLowerCase())) {
       parts.push(cleanPostcode);
     }
 
     const recipientAddress = parts.join(", ");
 
-    // Build note and email mapping
-    let note = order.instruction || "";
+    // Build note exactly from customer instruction
+    const note = order.instruction || "";
     const customerEmail = order.customerEmail || "";
     const isRealEmail = customerEmail && !customerEmail.endsWith("@phone.parlebangladesh.com");
-    if (isRealEmail) {
-      if (note) {
-        note = `${note} | Email: ${customerEmail}`;
-      } else {
-        note = `Email: ${customerEmail}`;
-      }
-    }
 
     // Build item description and append customer note/instruction so it is visible in the portal
     const itemSummary = order.items
