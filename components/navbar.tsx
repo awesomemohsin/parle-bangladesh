@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 import {
+  Plus,
+  Minus,
+  Trash2,
   ShoppingCart,
   Menu,
   X,
@@ -21,21 +24,36 @@ import {
   Truck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCart } from '@/hooks/useCart'
+import { useCart, getItemKey } from '@/hooks/useCart'
 import { useAuth } from '@/hooks/useAuth'
 import dynamic from 'next/dynamic'
 const NotificationCenter = dynamic(() => import('@/components/admin/notification-center'), { ssr: false })
 import Image from 'next/image'
 
 export default function Navbar() {
-  const { itemCount } = useCart()
+  const { items, subtotal, total, discountAmount, itemCount, updateQuantity, removeItem } = useCart()
   const { user, isAuthenticated: isLoggedIn, logout: handleLogout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false)
+  const [isCartClosing, setIsCartClosing] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [tickerOffers, setTickerOffers] = useState<any[]>([])
+
+  const closeCartDrawer = () => {
+    setIsCartClosing(true)
+    setTimeout(() => {
+      setIsCartDrawerOpen(false)
+      setIsCartClosing(false)
+    }, 300)
+  }
+
+  useEffect(() => {
+    setIsCartDrawerOpen(false)
+    setIsCartClosing(false)
+  }, [pathname])
 
   const isAdminRoute = pathname.startsWith('/admin')
 
@@ -230,14 +248,18 @@ export default function Navbar() {
               {isAdminRoute ? (
                 <NotificationCenter />
               ) : (
-                <Link href="/shop/cart" className="relative p-3 text-gray-700 hover:text-red-600 transition-colors" aria-label="View Shopping Cart">
+                <button 
+                  onClick={() => setIsCartDrawerOpen(true)}
+                  className="relative p-3 text-gray-700 hover:text-red-600 transition-colors" 
+                  aria-label="View Shopping Cart"
+                >
                   <ShoppingCart className="w-6 h-6" />
                   {mounted && itemCount > 0 && (
                     <span className="absolute top-0 right-0 h-4 w-4 bg-red-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg">
                       {itemCount}
                     </span>
                   )}
-                </Link>
+                </button>
               )}
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -266,14 +288,17 @@ export default function Navbar() {
                 <Link href="/shop" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
                   <ShoppingBag className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Shop
                 </Link>
-                <Link href="/shop/cart" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] relative hover:text-red-600 transition-all font-sans">
+                <button 
+                  onClick={() => setIsCartDrawerOpen(true)}
+                  className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] relative hover:text-red-600 transition-all font-sans"
+                >
                   <ShoppingCart className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Cart
                   {mounted && itemCount > 0 && (
                     <span className="absolute -top-1 -right-5 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-10 shadow-lg shadow-red-200">
                       {itemCount}
                     </span>
                   )}
-                </Link>
+                </button>
                 {!isLoggedIn ? (
                   <Link href="/shop/track" className="group flex items-center gap-2 text-[13px] font-black text-gray-900 uppercase tracking-[0.15em] hover:text-red-600 transition-all font-sans">
                     <Truck className="w-4 h-4 text-gray-300 group-hover:text-red-600 transition-colors" /> Track
@@ -483,7 +508,15 @@ export default function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={(e) => {
+                      if (item.href === '/shop/cart') {
+                        e.preventDefault();
+                        setIsMobileMenuOpen(false);
+                        setIsCartDrawerOpen(true);
+                      } else {
+                        setIsMobileMenuOpen(false);
+                      }
+                    }}
                     className={`flex items-center justify-between p-5 rounded-2xl transition-all border group shadow-sm ${
                       item.isSpecial 
                         ? 'bg-red-600 border-red-500 text-white shadow-red-100' 
@@ -558,6 +591,168 @@ export default function Navbar() {
         </div>
       </div>
     </div>
+      
+    {/* Slide-out Cart Drawer Overlay */}
+      {isCartDrawerOpen && (
+        <div className="fixed inset-0 z-[10000] flex justify-end">
+          {/* Backdrop */}
+          <div 
+            onClick={closeCartDrawer}
+            className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+              isCartClosing ? 'opacity-0' : 'opacity-100 animate-in fade-in'
+            }`}
+          />
+
+          {/* Drawer Panel */}
+          <div className={`relative w-[85vw] sm:w-full sm:max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-gray-100 transition-transform duration-300 ease-out z-10 ${
+            isCartClosing ? 'translate-x-full' : 'translate-x-0 animate-in slide-in-from-right duration-300'
+          }`}>
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-red-600 animate-pulse" />
+                <span className="text-xs font-black text-gray-900 uppercase tracking-[0.3em]">
+                  Your Shopping Cart
+                </span>
+              </div>
+              <button 
+                onClick={closeCartDrawer}
+                className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors" 
+                aria-label="Close cart drawer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Cart Items List */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+                  <ShoppingCart className="w-16 h-16 text-slate-100 animate-bounce" />
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                    Your cart is empty!
+                  </p>
+                  <Button 
+                    onClick={() => { setIsCartDrawerOpen(false); router.push('/shop'); }}
+                    className="mt-2 bg-red-600 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest px-6 h-10 rounded-xl"
+                  >
+                    Start Shopping
+                  </Button>
+                </div>
+              ) : (
+                items.map((item, idx) => {
+                  const itemKey = getItemKey(item);
+                  return (
+                    <div key={idx} className="flex gap-4 p-3 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-2xl transition-all duration-200">
+                      {/* Product Thumbnail */}
+                      <div className="relative w-16 h-16 bg-white border border-slate-100 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
+                        {item.image ? (
+                          <Image 
+                            src={item.image} 
+                            alt={item.productName} 
+                            fill 
+                            sizes="64px"
+                            className="object-contain p-1"
+                          />
+                        ) : (
+                          <ShoppingBag className="w-6 h-6 text-gray-300" />
+                        )}
+                      </div>
+
+                      {/* Product Details & Actions */}
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <h4 className="text-xs font-black text-gray-900 leading-tight line-clamp-1">
+                              {item.productName}
+                            </h4>
+                            <button 
+                              onClick={() => removeItem(itemKey)}
+                              className="text-gray-400 hover:text-red-600 transition-colors"
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                            {item.weight || 'Std Unit'} • {item.flavor || 'Original'}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-2">
+                          {/* Quantity Selector */}
+                          <div className="flex items-center border border-slate-200/80 bg-white rounded-lg overflow-hidden h-7 shrink-0">
+                            <button
+                              onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                              className="px-2 text-gray-400 hover:text-red-600 hover:bg-slate-50 transition-colors h-full flex items-center justify-center"
+                              title="Decrease quantity"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="px-2.5 font-mono font-black text-[10px] text-gray-900 border-x border-slate-100 min-w-8 text-center select-none">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(itemKey, item.quantity + 1)}
+                              className="px-2 text-gray-400 hover:text-emerald-600 hover:bg-slate-50 transition-colors h-full flex items-center justify-center"
+                              title="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {/* Price */}
+                          <span className="font-mono font-black text-xs text-gray-900">
+                            ৳{(item.price * item.quantity).toFixed(0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Summary & Checkout Footer */}
+            {items.length > 0 && (
+              <div className="p-5 border-t border-gray-100 bg-slate-50/50 space-y-4">
+                <div className="space-y-1.5 text-xs text-gray-600 font-bold uppercase tracking-wide">
+                  <div className="flex justify-between items-center">
+                    <span>Subtotal</span>
+                    <span className="font-mono font-black text-gray-900">৳{subtotal.toFixed(0)}</span>
+                  </div>
+                  {discountAmount !== undefined && discountAmount > 0 && (
+                    <div className="flex justify-between items-center text-red-600">
+                      <span>Discount</span>
+                      <span className="font-mono font-black">- ৳{discountAmount.toFixed(0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center border-t border-slate-100 pt-2 mt-1">
+                    <span className="text-gray-900 font-black tracking-widest text-[10px] uppercase">Grand Total</span>
+                    <span className="font-mono font-black text-red-600 text-sm">৳{total.toFixed(0)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => { setIsCartDrawerOpen(false); router.push('/shop/cart'); }}
+                    className="w-full h-11 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 font-black text-[9px] uppercase tracking-widest transition-all"
+                  >
+                    View Cart
+                  </Button>
+                  <Button 
+                    onClick={() => { setIsCartDrawerOpen(false); router.push('/shop/checkout'); }}
+                    className="w-full h-11 rounded-xl bg-red-600 hover:bg-black text-white font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-red-100"
+                  >
+                    Checkout
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }
