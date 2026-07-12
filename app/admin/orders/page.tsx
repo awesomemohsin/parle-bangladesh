@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X, User, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X, User, RefreshCw, List, ClipboardCopy } from 'lucide-react'
 import { OrderInvoice } from '@/components/admin/order-invoice'
 import { toast } from 'sonner'
 import { useSearchParams } from 'next/navigation'
@@ -119,6 +119,110 @@ export default function AdminOrdersPage() {
     return ''
   })
   const [isSyncingAll, setIsSyncingAll] = useState(false)
+  const [showPickingModal, setShowPickingModal] = useState(false)
+  const [pickingOrders, setPickingOrders] = useState<Order[]>([])
+  const [isFetchingPicking, setIsFetchingPicking] = useState(false)
+  const [checkedPickingItems, setCheckedPickingItems] = useState<Set<string>>(new Set())
+
+  const fetchPickingOrders = async () => {
+    setIsFetchingPicking(true)
+    try {
+      const params = new URLSearchParams()
+      if (debouncedSearch) params.append('q', debouncedSearch)
+      // Enforce status filter to only processing orders for picking
+      params.append('status', 'processing')
+      if (customerTypeFilter !== 'all') {
+        params.append('customerTypeFilter', customerTypeFilter)
+      }
+      if (startDate) params.append('startDate', startDate)
+      if (endDate) params.append('endDate', endDate)
+      params.append('sort', sortBy)
+      params.append('page', '1')
+      params.append('limit', '2000') // Bypassing normal pagination to summarize up to 2000 matching items
+      params.append('adminContext', 'true')
+
+      const response = await fetch(`/api/orders?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPickingOrders(data.orders || [])
+      } else {
+        toast.error('Failed to compile picking list')
+      }
+    } catch (error) {
+      console.error('Failed to fetch picking orders:', error)
+      toast.error('Failed to compile picking list')
+    } finally {
+      setIsFetchingPicking(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showPickingModal) {
+      fetchPickingOrders()
+    }
+  }, [showPickingModal, debouncedSearch, statusFilter, customerTypeFilter, startDate, endDate, sortBy])
+
+  const getPickingListSummary = () => {
+    const summaryMap: {
+      [key: string]: {
+        name: string
+        weight: string
+        flavor: string
+        quantity: number
+      }
+    } = {}
+
+    pickingOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        const weight = item.weight || 'Std Unit'
+        const flavor = item.flavor || 'Original'
+        const key = `${item.name}-${weight}-${flavor}`
+
+        if (summaryMap[key]) {
+          summaryMap[key].quantity += item.quantity
+        } else {
+          summaryMap[key] = {
+            name: item.name,
+            weight,
+            flavor,
+            quantity: item.quantity,
+          }
+        }
+      })
+    })
+
+    return Object.values(summaryMap).sort((a, b) => b.quantity - a.quantity)
+  }
+
+  const toggleCheckedPickingItem = (key: string) => {
+    setCheckedPickingItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
+  const copyPickingListToClipboard = () => {
+    const summary = getPickingListSummary()
+    if (summary.length === 0) {
+      toast.error('No items to copy')
+      return
+    }
+    const text = summary
+      .map(item => `${item.name} (${item.weight} • ${item.flavor}): ${item.quantity} pcs`)
+      .join('\n')
+    navigator.clipboard.writeText(text)
+    toast.success('Picking list copied to clipboard!')
+  }
 
   // URL Parameter sync for back/forward navigation
   useEffect(() => {
@@ -489,7 +593,8 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 print:hidden">
       <div className="flex justify-between items-center bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 flex-wrap gap-2.5">
         <div className="flex items-center gap-2">
           <h1 className="text-sm sm:text-xl font-bold text-gray-900 italic uppercase tracking-tight">Orders List</h1>
@@ -505,6 +610,14 @@ export default function AdminOrdersPage() {
           )}
         </div>
         <div className="flex items-center gap-2.5 text-right flex-wrap">
+          <Button
+            onClick={() => setShowPickingModal(true)}
+            size="sm"
+            className="text-[8px] sm:text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest px-2.5 py-1.5 h-8 rounded-lg shadow-sm transition-all flex items-center gap-1.5 mr-1"
+          >
+            <List className="w-3.5 h-3.5" />
+            Picking List
+          </Button>
           <div className="text-[8px] sm:text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -1124,6 +1237,184 @@ export default function AdminOrdersPage() {
           End of orders list
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Picking List Modal overlay */}
+      {showPickingModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300 print:bg-white print:backdrop-blur-none print:p-8 print:fixed print:inset-0 print:z-[99999] print:block print:w-full print:h-auto print:overflow-visible">
+          <div id="picking-list-print-root" className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-gray-100 print:shadow-none print:border-none print:max-h-none print:w-full print:h-auto print:static print:overflow-visible">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <div className="flex items-center gap-2">
+                  <List className="w-5 h-5 text-indigo-600 print:hidden" />
+                  <h2 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-wider">
+                    Batch Picking List
+                  </h2>
+                </div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5 print:hidden">
+                  Summary of {pickingOrders.length} processing orders matching active filters • {getPickingListSummary().reduce((sum, i) => sum + i.quantity, 0)} total items
+                </p>
+                <p className="text-[10px] text-gray-600 font-black uppercase tracking-wider mt-0.5 hidden print:block">
+                  Batch Picking List • Generated on {new Date().toLocaleString()} ({pickingOrders.length} Processing Orders • {getPickingListSummary().reduce((sum, i) => sum + i.quantity, 0)} Items)
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowPickingModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors print:hidden"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 print:overflow-visible print:h-auto">
+              {isFetchingPicking ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+                  <p className="text-xs font-black text-gray-500 uppercase tracking-widest animate-pulse">
+                    Compiling picking list...
+                  </p>
+                </div>
+              ) : getPickingListSummary().length === 0 ? (
+                <div className="text-center py-16 space-y-2">
+                  <List className="w-12 h-12 text-gray-300 mx-auto" />
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                    No items found matching current filters.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  {(() => {
+                    const pickingSummary = getPickingListSummary()
+                    const totalPickingQty = pickingSummary.reduce((sum, i) => sum + i.quantity, 0)
+                    
+                    return (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200 text-gray-400 uppercase text-[9px] font-black tracking-widest">
+                            <th className="py-2.5 w-12 print:hidden">Check</th>
+                            <th className="py-2.5">Item Details</th>
+                            <th className="py-2.5">Variant Specs</th>
+                            <th className="py-2.5 text-right w-32">Qty to Pick ({totalPickingQty})</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {pickingSummary.map((item, idx) => {
+                            const itemKey = `${item.name}-${item.weight}-${item.flavor}`
+                            const isChecked = checkedPickingItems.has(itemKey)
+                            return (
+                              <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${isChecked ? 'bg-slate-50/30' : ''}`}>
+                                <td className="py-1.5 print:py-1 print:hidden">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isChecked}
+                                    onChange={() => toggleCheckedPickingItem(itemKey)}
+                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" 
+                                  />
+                                </td>
+                                <td className="py-1.5 print:py-1 pr-2">
+                                  <p className={`text-xs font-bold transition-all duration-200 ${isChecked ? 'line-through text-gray-400 opacity-60' : 'text-gray-900'}`}>
+                                    {item.name}
+                                  </p>
+                                </td>
+                                <td className="py-1.5 print:py-1 pr-2">
+                                  <div className="flex items-center gap-1 flex-nowrap whitespace-nowrap">
+                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${isChecked ? 'bg-gray-100 text-gray-400 opacity-60' : 'bg-blue-50 text-blue-700'}`}>
+                                      {item.weight}
+                                    </span>
+                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${isChecked ? 'bg-gray-100 text-gray-400 opacity-60' : 'bg-amber-50 text-amber-700'}`}>
+                                      {item.flavor}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-1.5 print:py-1 text-right font-mono font-black text-sm text-red-600 whitespace-nowrap">
+                                  <span className={`px-2 py-1 rounded-md font-mono font-black text-xs ${isChecked ? 'bg-gray-100 text-gray-400 opacity-60 line-through' : 'bg-red-50 text-red-700'}`}>
+                                    {item.quantity} pcs
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-100 bg-slate-50/30 flex flex-wrap justify-between items-center gap-3 print:hidden">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={copyPickingListToClipboard}
+                  disabled={isFetchingPicking || getPickingListSummary().length === 0}
+                  className="rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 font-black text-[9px] uppercase tracking-wider h-9 px-3.5 flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <ClipboardCopy className="w-3.5 h-3.5" />
+                  Copy Text
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.print()}
+                  disabled={isFetchingPicking || getPickingListSummary().length === 0}
+                  className="rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 font-black text-[9px] uppercase tracking-wider h-9 px-3.5 flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print List
+                </Button>
+              </div>
+              <Button
+                onClick={() => setShowPickingModal(false)}
+                className="rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-black text-[9px] uppercase tracking-wider h-9 px-5 transition-all shadow-sm"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Embedded stylesheet for standard isolated web-printing of picking lists */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: auto;
+            margin: 0mm !important; /* Hides browser details (header/footer) */
+          }
+          
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          /* Force hide ALL admin headers, sidebars and dashboard blocks */
+          header, sidebar, .print\\:hidden {
+            display: none !important;
+          }
+
+          /* Style the printed list container at the absolute top */
+          #picking-list-print-root {
+            display: flex !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            padding: 10mm !important; /* Safe inner print margin */
+            margin: 0 !important;
+          }
+        }
+      `}} />
+    </>
   )
 }
