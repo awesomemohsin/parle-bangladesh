@@ -189,6 +189,20 @@ export async function POST(
       });
     } else {
       console.error("Steadfast API error response:", data);
+      
+      // Save failure details in orderLogs
+      if (!order.orderLogs) order.orderLogs = [];
+      order.orderLogs.push({
+        fromStatus: order.status,
+        toStatus: order.status,
+        changedBy: user?.name || user?.email || "Admin",
+        reason: `Steadfast booking failed: ${data.message || 'Unknown response error'}`,
+        changedAt: new Date()
+      } as any);
+      
+      order.courierStatus = 'unknown';
+      await order.save();
+
       return NextResponse.json({
         error: data.message || "Failed to book parcel with Steadfast",
         details: data,
