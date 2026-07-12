@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/hooks/useCart";
-import { Search, ShoppingCart, Filter, ArrowUpDown } from "lucide-react";
+import { Search, ShoppingCart, Filter, ArrowUpDown, ShoppingBag } from "lucide-react";
+import { sanitizeProductImagePath } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,28 @@ export default function ShopClient({
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   const [search, setSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const suggestions = useMemo(() => {
+    if (!search.trim()) return [];
+    const query = search.toLowerCase();
+    return initialProducts.filter(p => 
+      p.name.toLowerCase().includes(query) || 
+      p.category.toLowerCase().includes(query)
+    ).slice(0, 6);
+  }, [search, initialProducts]);
+
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "best-match");
 
   // Extract relevant promos
@@ -207,14 +230,73 @@ export default function ShopClient({
           <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
             <Search className="w-3 h-3" /> Search
           </label>
-          <div className="relative group">
+          <div className="relative group" ref={suggestionRef}>
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
               placeholder="Search products..."
               className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all placeholder:text-gray-300 font-bold text-gray-900 group-hover:border-gray-100"
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <div 
+                className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-gray-100 rounded-xl shadow-2xl p-2 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+              >
+                <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest px-3.5 py-1.5 border-b border-slate-50 mb-1">
+                  Product Suggestions
+                </div>
+                {suggestions.map((product) => {
+                  const firstVariation = product.variations?.[0] || {};
+                  const imgUrl = sanitizeProductImagePath(firstVariation.image || "");
+                  
+                  return (
+                    <Link
+                      key={product.id || product.slug}
+                      href={`/shop/products/${product.slug}`}
+                      className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-all duration-200 cursor-pointer group"
+                      onClick={() => setShowSuggestions(false)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-10 h-10 bg-white border border-slate-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                          {imgUrl ? (
+                            <Image 
+                              src={imgUrl} 
+                              alt={product.name} 
+                              fill 
+                              sizes="40px"
+                              className="object-contain p-1"
+                            />
+                          ) : (
+                            <ShoppingBag className="w-5 h-5 text-gray-300" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900 group-hover:text-red-600 transition-colors">
+                            {product.name}
+                          </p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                            {product.category}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Weight Badges */}
+                      <div className="flex gap-1 shrink-0">
+                        {Array.from(new Set(product.variations?.map((v: any) => v.weight).filter(Boolean))).slice(0, 2).map((weight: any, idx) => (
+                          <span key={idx} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-blue-50 text-blue-700">
+                            {weight}
+                          </span>
+                        ))}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
