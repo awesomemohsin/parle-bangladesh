@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Trash2, Edit, AlertCircle, Calendar, Search } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertCircle, Calendar, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Discount {
@@ -431,15 +431,21 @@ export default function DiscountsAdmin() {
 
       {isModalOpen && (
         <div 
-          onClick={() => setIsModalOpen(false)}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         >
           <div 
-            onClick={(e) => e.stopPropagation()}
             className={`bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]`}
           >
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50">
                <h2 className="text-xl font-bold uppercase tracking-tight">{editingId ? 'Edit Discount' : 'New Discount'}</h2>
+               <button 
+                 type="button"
+                 onClick={() => setIsModalOpen(false)}
+                 className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                 aria-label="Close modal"
+               >
+                 <X className="w-5 h-5" />
+               </button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
