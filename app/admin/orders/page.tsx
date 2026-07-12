@@ -196,7 +196,15 @@ export default function AdminOrdersPage() {
       })
     })
 
-    return Object.values(summaryMap).sort((a, b) => b.quantity - a.quantity)
+    return Object.values(summaryMap).sort((a, b) => {
+      const nameCompare = a.name.localeCompare(b.name)
+      if (nameCompare !== 0) return nameCompare
+
+      const flavorCompare = a.flavor.localeCompare(b.flavor)
+      if (flavorCompare !== 0) return flavorCompare
+
+      return a.weight.localeCompare(b.weight)
+    })
   }
 
   const toggleCheckedPickingItem = (key: string) => {
