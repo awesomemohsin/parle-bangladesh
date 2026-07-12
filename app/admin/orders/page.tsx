@@ -271,6 +271,18 @@ export default function AdminOrdersPage() {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
   };
 
+  const getCourierFailureReason = (order: Order) => {
+    if (!order.orderLogs || order.orderLogs.length === 0) return 'No error details found';
+    const logs = [...order.orderLogs].reverse();
+    const failLog = logs.find(l => 
+      l.reason?.toLowerCase().includes('failed') || 
+      l.reason?.toLowerCase().includes('error') || 
+      l.reason?.toLowerCase().includes('unknown') ||
+      l.reason?.toLowerCase().includes('cleared')
+    );
+    return failLog ? failLog.reason : 'Consignment status unknown';
+  };
+
   const handleSendToSteadfast = async (orderId: string) => {
     const toastId = toast.loading('Booking parcel with Steadfast...');
     try {
@@ -309,6 +321,25 @@ export default function AdminOrdersPage() {
         }));
       } else {
         toast.error(data.error || 'Failed to book parcel', { id: toastId });
+        setOrders(prev => prev.map(o => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              courierStatus: 'unknown',
+              orderLogs: [
+                ...(o.orderLogs || []),
+                {
+                  fromStatus: o.status,
+                  toStatus: o.status,
+                  changedBy: 'Admin',
+                  reason: `Steadfast booking failed: ${data.error || 'Unknown response error'}`,
+                  changedAt: new Date().toISOString()
+                }
+              ]
+            };
+          }
+          return o;
+        }));
       }
     } catch (err) {
       toast.error('An error occurred while booking parcel', { id: toastId });
@@ -801,8 +832,15 @@ export default function AdminOrdersPage() {
                       {new Date(order.createdAt).toLocaleString()}
                     </p>
                     {(!order.deliveryMethod || order.deliveryMethod === 'shipping') && process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && order.courierConsignmentId && (
-                      <div className="mt-1 text-[9px] sm:text-[10px]">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 bg-gray-50 border border-gray-100 p-1.5 rounded-lg">
+                      <div className="mt-1 text-[9px] sm:text-[10px] flex flex-col gap-1">
+                        <div 
+                          title={order.courierStatus === 'unknown' ? getCourierFailureReason(order) : undefined}
+                          className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-1.5 rounded-lg border transition-all duration-300 ${
+                            order.courierStatus === 'unknown'
+                              ? 'bg-red-50/50 border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse'
+                              : 'bg-gray-50 border-gray-100'
+                          }`}
+                        >
                           <span className="font-black text-white uppercase tracking-widest text-[8px] bg-[#34A487] px-1.5 py-0.5 rounded">Steadfast Courier</span>
                           <div className="flex items-center gap-1 font-medium text-gray-700">
                             <span className="text-[8px] text-gray-400 uppercase font-black">Partner:</span>
@@ -848,14 +886,6 @@ export default function AdminOrdersPage() {
                             </a>
                           )}
                           <a
-                            href={`https://steadfast.com.bd/user/consignment/invoice/${order.courierConsignmentId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2.5 text-blue-600 hover:text-blue-800 font-black uppercase text-[8px] tracking-wider hover:underline"
-                          >
-                            Courier Invoice ↗
-                          </a>
-                          <a
                             href={`https://steadfast.com.bd/user/consignment/print-label/${order.courierConsignmentId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -864,6 +894,12 @@ export default function AdminOrdersPage() {
                             Courier Label ↗
                           </a>
                         </div>
+                        {order.courierStatus === 'unknown' && (
+                          <p className="text-[9px] font-black text-red-600 uppercase tracking-tight pl-1.5 flex items-center gap-1">
+                            <span>⚠️ failure reason:</span>
+                            <span className="font-bold text-gray-700 normal-case">{getCourierFailureReason(order)}</span>
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
