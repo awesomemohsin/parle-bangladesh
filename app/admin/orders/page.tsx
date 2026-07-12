@@ -615,13 +615,7 @@ export default function AdminOrdersPage() {
     }
   }
 
-  if (isLoading && page === 1) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-gray-600">Loading orders...</div>
-      </div>
-    )
-  }
+
 
   return (
     <>
@@ -781,8 +775,18 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {orders.length > 0 ? (
+      <div className={`space-y-3 transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+        {isLoading && orders.length === 0 ? (
+          <div className="flex flex-col gap-3 py-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-slate-50 border border-slate-100 p-6 rounded-2xl animate-pulse space-y-4">
+                <div className="h-4 bg-slate-200 rounded w-1/3" />
+                <div className="h-3 bg-slate-200 rounded w-1/2" />
+                <div className="h-3 bg-slate-200 rounded w-2/3" />
+              </div>
+            ))}
+          </div>
+        ) : orders.length > 0 ? (
           orders.map((order) => {
             const currentStatus = pendingChanges[order.id] || order.status;
             const hasChange = !!pendingChanges[order.id];
