@@ -716,13 +716,21 @@ function CheckoutContent() {
         }),
       });
 
+      let data: any = {};
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { error: text || `HTTP error ${response.status}: ${response.statusText}` };
+      }
+
       if (!response.ok) {
-        const data = await response.json();
         if (response.status === 401) logout();
         throw new Error(data.error || 'Failed to place order');
       }
 
-      const order = await response.json();
+      const order = data;
       clearCart();
 
       if (order.token && order.user) {
