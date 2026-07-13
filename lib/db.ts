@@ -13,6 +13,12 @@ if (!cached) {
 }
 
 async function connectDB() {
+  // If the connection is disconnected or disconnecting, clear the cached promise to force a new connection
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+    cached.conn = null;
+    cached.promise = null;
+  }
+
   if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
