@@ -6,9 +6,12 @@ import mongoose from "mongoose";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  await connectDB();
+  let session;
   try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    
     // 1. Verify Authorization Token
     const authHeader = request.headers.get("authorization");
     const configuredToken = process.env.STEADFAST_WEBHOOK_TOKEN;
@@ -16,8 +19,9 @@ export async function POST(request: NextRequest) {
     if (configuredToken) {
       if (authHeader !== `Bearer ${configuredToken}`) {
         console.warn(`[Webhook Unauthorized] Received token: ${authHeader}`);
-        await session.abortTransaction();
-        session.endSession();
+        if (session.inTransaction()) {
+          await session.abortTransaction();
+        }
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     } else {
@@ -30,8 +34,9 @@ export async function POST(request: NextRequest) {
     const { consignment_id, invoice, status } = payload;
 
     if (!invoice || !status) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       return NextResponse.json({ error: "Invalid payload parameters" }, { status: 400 });
     }
 
@@ -52,8 +57,9 @@ export async function POST(request: NextRequest) {
 
     if (!order) {
       console.error(`[Steadfast Webhook] Order not found for invoice ID: ${invoice}`);
-      await session.abortTransaction();
-      session.endSession();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
@@ -189,13 +195,17 @@ export async function POST(request: NextRequest) {
 
     await order.save({ session });
     await session.commitTransaction();
-    session.endSession();
 
     return NextResponse.json({ success: true, message: "Webhook processed successfully" });
   } catch (error: any) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
     console.error("Steadfast webhook error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 }
