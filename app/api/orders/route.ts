@@ -335,10 +335,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   await connectDB();
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  
+  let session;
   try {
+    session = await mongoose.startSession();
+    session.startTransaction();
     const orderId = new mongoose.Types.ObjectId();
     const body = await request.json();
     const rawItems = Array.isArray(body.items) ? body.items : [];
@@ -352,8 +352,9 @@ export async function POST(request: NextRequest) {
 
     // If token was provided but verification failed (e.g. role demoted), force re-login
     if (token && !user) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       return NextResponse.json({ error: "Session expired or role updated. Please login again." }, { status: 401 });
     }
 
@@ -436,8 +437,9 @@ export async function POST(request: NextRequest) {
           );
 
           if (!updatedProduct) {
-            await session.abortTransaction();
-            session.endSession();
+            if (session.inTransaction()) {
+              await session.abortTransaction();
+            }
             return NextResponse.json({
               error: `Insufficient stock for product ${product.name} (${item.weight || ""} ${item.flavor || ""}). Please try again.`
             }, { status: 400 });
@@ -477,8 +479,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (items.length === 0) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       return NextResponse.json({ error: "Order requires at least one valid item" }, { status: 400 });
     }
 
@@ -518,8 +521,9 @@ export async function POST(request: NextRequest) {
     if (!postalCode) missing.push("Billing Postal Code");
 
     if (missing.length > 0) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
@@ -541,8 +545,9 @@ export async function POST(request: NextRequest) {
       const inputPercent = Number(body.srDiscountPercent) || 0;
       if (inputPercent > 0) {
         if (inputPercent > 15) {
-          await session.abortTransaction();
-          session.endSession();
+          if (session.inTransaction()) {
+            await session.abortTransaction();
+          }
           return NextResponse.json({ error: "Special discount cannot exceed 15%" }, { status: 400 });
         }
         srDiscountPercent = inputPercent;
@@ -561,8 +566,9 @@ export async function POST(request: NextRequest) {
           const netBal = (dbUser.walletBalance || 0) - (dbUser.dueBalance || 0);
           const newBal = netBal - total;
           if (newBal < -50000) {
-            await session.abortTransaction();
-            session.endSession();
+            if (session.inTransaction()) {
+              await session.abortTransaction();
+            }
             return NextResponse.json({
               error: `Credit limit exceeded. Your current account balance (৳${netBal >= 0 ? '+' : ''}${netBal}) minus this order (৳${total}) would exceed the ৳50,000 probation limit. Please contact a Superadmin for approval.`
             }, { status: 400 });
@@ -837,7 +843,6 @@ export async function POST(request: NextRequest) {
 
     // Commit the database transaction successfully
     await session.commitTransaction();
-    session.endSession();
 
     // Trigger post-checkout notifications
     try {
@@ -968,11 +973,14 @@ export async function POST(request: NextRequest) {
     }
     return response;
   } catch (error: any) {
-    if (session.inTransaction()) {
+    if (session && session.inTransaction()) {
       await session.abortTransaction();
     }
-    session.endSession();
     console.error("Orders POST error:", error);
     return NextResponse.json({ error: "Internal server error: " + (error.message || "Unknown error") }, { status: 500 });
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 }
