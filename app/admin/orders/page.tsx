@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X, User, RefreshCw, List, ClipboardCopy } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Filter, PhoneCall, MessageCircle, Mail, Printer, BellRing, X, User, RefreshCw, List, ClipboardCopy, Eye } from 'lucide-react'
 import { OrderInvoice } from '@/components/admin/order-invoice'
 import { toast } from 'sonner'
 import { useSearchParams } from 'next/navigation'
@@ -123,6 +123,45 @@ export default function AdminOrdersPage() {
   const [pickingOrders, setPickingOrders] = useState<Order[]>([])
   const [isFetchingPicking, setIsFetchingPicking] = useState(false)
   const [checkedPickingItems, setCheckedPickingItems] = useState<Set<string>>(new Set())
+
+  // Customer Details Modal States
+  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<any>(null);
+  const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
+
+  const fetchCustomerDetails = async (customerId: string, customerMobile?: string) => {
+    setDetailsLoadingId(customerId);
+    try {
+      const url = `/api/admin/collections?type=customer-details&customerId=${customerId}${customerMobile ? `&customerMobile=${customerMobile}` : ""}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedCustomerDetails(data);
+      } else {
+        toast.error("Failed to load customer details");
+      }
+    } catch (error) {
+      console.error("Error loading customer details:", error);
+      toast.error("Failed to load customer details");
+    } finally {
+      setDetailsLoadingId(null);
+    }
+  };
+
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "CASH";
+    const m = method.toLowerCase();
+    if (m === "bank_ucb") return "BANK TRANSFER (UCB bank)";
+    if (m === "bank_brac") return "BANK TRANSFER (Brac bank)";
+    if (m === "bank_nrbc") return "BANK TRANSFER (NRBC bank)";
+    if (m === "bank") return "BANK TRANSFER";
+    return m.toUpperCase();
+  };
 
   const fetchPickingOrders = async () => {
     setIsFetchingPicking(true)
@@ -1066,7 +1105,16 @@ export default function AdminOrdersPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 sm:gap-y-4 gap-x-8 pt-2 sm:pt-2.5 border-t border-gray-100">
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Customer Details</p>
-                    <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
+                    <button
+                      onClick={() => fetchCustomerDetails(order.userId || `guest-${order.customerPhone}`, order.customerPhone)}
+                      disabled={detailsLoadingId === (order.userId || `guest-${order.customerPhone}`)}
+                      className="text-sm font-black text-blue-600 hover:text-blue-800 hover:underline text-left uppercase tracking-tight flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      {order.customerName}
+                      {detailsLoadingId === (order.userId || `guest-${order.customerPhone}`) && (
+                        <span className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </button>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-[11px] font-medium text-gray-500">{order.customerEmail}</p>
                       <a
@@ -1421,6 +1469,246 @@ export default function AdminOrdersPage() {
               >
                 Close
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Customer Details Modal */}
+      {selectedCustomerDetails && (
+        <div 
+          onClick={() => setSelectedCustomerDetails(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between border-b pb-3 mb-4">
+              <h3 className="text-lg font-black text-gray-900 uppercase tracking-tighter italic">Customer Profile & Details</h3>
+              <button 
+                onClick={() => setSelectedCustomerDetails(null)} 
+                className="text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Profile Summary Card */}
+              <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-100/50 space-y-4">
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                  <div>
+                    <h4 className="text-base font-black text-gray-900 uppercase tracking-tight">{selectedCustomerDetails.user.name}</h4>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Customer ID: #{selectedCustomerDetails.user.id.slice(-8).toUpperCase()}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded font-black border uppercase text-[9px] ${
+                      selectedCustomerDetails.user.customerType?.toLowerCase() === "dealer" 
+                        ? "bg-amber-50 text-amber-700 border-amber-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "employee" 
+                        ? "bg-purple-50 text-purple-700 border-purple-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "retailer" 
+                        ? "bg-blue-50 text-blue-700 border-blue-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() === "guest" 
+                        ? "bg-gray-100 text-gray-400 border-gray-200" 
+                        : selectedCustomerDetails.user.customerType?.toLowerCase() !== "customer"
+                        ? "bg-teal-50 text-teal-700 border-teal-200"
+                        : "bg-slate-100 text-slate-600 border-slate-200"
+                    }`}>
+                      {selectedCustomerDetails.user.customerType?.replace("_", " ")}
+                    </span>
+                    {selectedCustomerDetails.user.customerType === "retailer" && (
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
+                        selectedCustomerDetails.user.isRetailerApproved 
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                          : "bg-rose-50 text-rose-600 border-rose-200"
+                      }`}>
+                        {selectedCustomerDetails.user.isRetailerApproved ? "Approved" : "Probation"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold text-slate-500 border-t border-slate-200/50 pt-4">
+                  <div className="space-y-1">
+                    <div>Mobile: <span className="text-gray-900 font-mono">{selectedCustomerDetails.user.mobile}</span></div>
+                    <div>Email: <span className="text-gray-900">{selectedCustomerDetails.user.email || "—"}</span></div>
+                    <div>Customer Since: <span className="text-gray-900">{selectedCustomerDetails.user.createdAt ? new Date(selectedCustomerDetails.user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</span></div>
+                  </div>
+                  <div className="space-y-1 md:text-right">
+                    <div>
+                      {selectedCustomerDetails.user.walletBalance < 0 ? (
+                        <>Outstanding Due: <span className="text-rose-600">৳{Math.abs(selectedCustomerDetails.user.walletBalance).toLocaleString()}</span></>
+                      ) : (
+                        <>Wallet Balance: <span className="text-emerald-600">৳{selectedCustomerDetails.user.walletBalance.toLocaleString()}</span></>
+                      )}
+                    </div>
+                    {selectedCustomerDetails.user.customerType === "retailer" && !selectedCustomerDetails.user.isRetailerApproved && (
+                      <div>Credit Limit: <span className="text-gray-900">৳{selectedCustomerDetails.user.creditLimit.toLocaleString()}</span></div>
+                    )}
+                    <div>Account Created By: <span className="text-gray-900">
+                      {selectedCustomerDetails.user.customerType === "Guest" ? "Guest Checkout" : 
+                       selectedCustomerDetails.user.referredBySR 
+                        ? `SR (${selectedCustomerDetails.user.referredBySR.name})` 
+                        : "Self"}
+                    </span></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200/50 pt-3 text-xs font-bold text-slate-500">
+                  <span className="text-[10px] text-gray-400 uppercase tracking-widest block mb-1">Last Billing Address</span>
+                  <span className="text-gray-800 font-medium leading-relaxed">
+                    {selectedCustomerDetails.orders[0]?.address || "No billing address recorded."}
+                  </span>
+                </div>
+              </div>
+
+              {/* Orders History Section */}
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-1.5 flex justify-between items-center">
+                  <span>Order History ({selectedCustomerDetails.orders.length})</span>
+                </h4>
+                {selectedCustomerDetails.orders.length === 0 ? (
+                  <div className="text-center py-4 text-xs font-bold italic text-gray-400">No orders recorded for this customer.</div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(showAllOrders 
+                      ? selectedCustomerDetails.orders 
+                      : selectedCustomerDetails.orders.slice(0, 5)
+                    ).map((order: any) => (
+                      <div key={order.id} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between text-xs gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <a 
+                              href={`/admin/orders?q=${order.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono font-black text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              #{order.id.slice(-8).toUpperCase()}
+                            </a>
+                            <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          {(order.customerName || order.customerPhone) && (
+                            <div className="text-[10px] font-bold text-gray-700 flex items-center gap-1.5 flex-wrap">
+                              {order.customerName && <span>{order.customerName}</span>}
+                              {order.customerPhone && (
+                                <>
+                                  <span className="text-gray-300">|</span>
+                                  <span className="font-mono text-gray-500">{order.customerPhone}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <div className="text-[10px] text-gray-500 max-w-md truncate">{order.address}</div>
+                        </div>
+                        <div className="text-right shrink-0 space-y-1">
+                          <div className="font-black text-gray-900">৳{order.total.toLocaleString()}</div>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
+                              order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                              order.status === 'processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                              {order.status}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
+                              order.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              order.paymentStatus === 'partial' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}>
+                              {order.paymentStatus}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedCustomerDetails.orders.length > 5 && (
+                      <button
+                        onClick={() => setShowAllOrders(prev => !prev)}
+                        className="w-full text-center py-2 bg-slate-100 hover:bg-slate-200/80 transition-colors text-[9px] font-black uppercase tracking-widest rounded-xl text-slate-500 cursor-pointer"
+                      >
+                        {showAllOrders ? "Show Less" : `View Rest (${selectedCustomerDetails.orders.length - 5} More Orders)`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Payment History Section */}
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-1.5 flex justify-between items-center">
+                  <span>Payment History & Collections ({selectedCustomerDetails.payments.length})</span>
+                </h4>
+                {selectedCustomerDetails.payments.length === 0 ? (
+                  <div className="text-center py-4 text-xs font-bold italic text-gray-400">No payment transaction records.</div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(showAllPayments 
+                      ? selectedCustomerDetails.payments 
+                      : selectedCustomerDetails.payments.slice(0, 5)
+                    ).map((pm: any) => (
+                      <div key={pm.id} className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`/admin/collections?tab=ledgers&q=${pm.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-[10.5px] text-blue-600 hover:text-blue-800 hover:underline font-black shrink-0"
+                              title="Find in Ledgers Table"
+                            >
+                              #{pm.id.slice(-8).toUpperCase()}
+                            </a>
+                            <span className={`px-1.5 py-0.5 rounded-[4px] text-[8.5px] font-black uppercase tracking-wider border ${
+                              pm.type === "collection" 
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                                : pm.type === "wallet_deposit" 
+                                ? "bg-blue-50 text-blue-600 border-blue-200" 
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}>
+                              {pm.type.replace("_", " ")}
+                            </span>
+                            <span className="text-[10px] text-gray-400">{new Date(pm.createdAt).toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {pm.documentUrl && (
+                              <a 
+                                href={pm.documentUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-amber-600 hover:text-amber-800 font-bold hover:underline inline-flex items-center gap-0.5 text-[10px]"
+                              >
+                                <Eye className="w-3.5 h-3.5" /> View Proof
+                              </a>
+                            )}
+                            <div className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-100">
+                              ৳{pm.amount.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5 justify-between">
+                          <span>Method: <strong className="text-slate-600">{formatPaymentMethod(pm.paymentMethod)}</strong></span>
+                          <span>Operator: <strong className="text-slate-600">{pm.recordedBy}</strong></span>
+                        </div>
+                        {pm.notes && (
+                          <div className="text-[10px] text-gray-400 italic bg-white p-2 rounded border border-slate-100/50 mt-1">
+                            Remarks: "{pm.notes}"
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {selectedCustomerDetails.payments.length > 5 && (
+                      <button
+                        onClick={() => setShowAllPayments(prev => !prev)}
+                        className="w-full text-center py-2 bg-slate-100 hover:bg-slate-200/80 transition-colors text-[9px] font-black uppercase tracking-widest rounded-xl text-slate-500 cursor-pointer"
+                      >
+                        {showAllPayments ? "Show Less" : `View Rest (${selectedCustomerDetails.payments.length - 5} More Payments)`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
