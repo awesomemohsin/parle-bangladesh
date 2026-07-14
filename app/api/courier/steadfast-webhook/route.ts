@@ -7,13 +7,70 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   await connectDB();
+  
+  // 1. Capture request info for logging
+  const headersObj: Record<string, string> = {};
+  request.headers.forEach((value, key) => {
+    headersObj[key] = value;
+  });
+
+  const url = request.url;
+  const searchParams = Object.fromEntries(new URL(url).searchParams.entries());
+
+  let rawBody = "";
+  let payload: any = null;
+  let parseError = null;
+
+  try {
+    rawBody = await request.text();
+    payload = JSON.parse(rawBody);
+  } catch (e: any) {
+    parseError = e.message || String(e);
+  }
+
+  // Save the log document to the database
+  let logId: any = null;
+  try {
+    const db = mongoose.connection.db;
+    if (db) {
+      const logResult = await db.collection("steadfast_webhook_logs").insertOne({
+        receivedAt: new Date(),
+        url,
+        searchParams,
+        headers: headersObj,
+        rawBody,
+        payload,
+        parseError,
+        status: "pending",
+      });
+      logId = logResult.insertedId;
+    }
+  } catch (dbError) {
+    console.error("[Webhook Log Error]: Failed to write log to DB", dbError);
+  }
+
+  const updateLog = async (updateData: any) => {
+    if (!logId) return;
+    try {
+      const db = mongoose.connection.db;
+      if (db) {
+        await db.collection("steadfast_webhook_logs").updateOne(
+          { _id: logId },
+          { $set: { ...updateData, updatedAt: new Date() } }
+        );
+      }
+    } catch (dbError) {
+      console.error("[Webhook Log Error]: Failed to update log in DB", dbError);
+    }
+  };
+
   let session;
   try {
     session = await mongoose.startSession();
     session.startTransaction();
     
-    // 1. Verify Authorization Token
-    const authHeader = request.headers.get("authorization");
+    // 2. Verify Authorization Token
+    const authHeader = headersObj["authorization"] || request.headers.get("authorization");
     const configuredToken = process.env.STEADFAST_WEBHOOK_TOKEN;
     
     if (configuredToken) {
@@ -22,25 +79,33 @@ export async function POST(request: NextRequest) {
         if (session.inTransaction()) {
           await session.abortTransaction();
         }
+        await updateLog({ status: "unauthorized", error: "Token verification failed", receivedToken: authHeader, responseCode: 401 });
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     } else {
       console.warn("STEADFAST_WEBHOOK_TOKEN is not configured in environment variables. Webhook is open!");
     }
 
-    // 2. Parse Payload
-    const payload = await request.json();
-    console.log("[Steadfast Webhook Payload]:", payload);
+    // 3. Check Payload Parse
+    if (parseError || !payload) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      await updateLog({ status: "failed", error: `Payload parse error: ${parseError}`, responseCode: 400 });
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
+
     const { consignment_id, invoice, status } = payload;
 
     if (!invoice || !status) {
       if (session.inTransaction()) {
         await session.abortTransaction();
       }
+      await updateLog({ status: "failed", error: "Missing invoice or status in payload", responseCode: 400 });
       return NextResponse.json({ error: "Invalid payload parameters" }, { status: 400 });
     }
 
-    // 3. Find the order
+    // 4. Find the order
     let order;
     if (invoice.length === 24) {
       order = await Order.findById(invoice).session(session);
@@ -60,10 +125,11 @@ export async function POST(request: NextRequest) {
       if (session.inTransaction()) {
         await session.abortTransaction();
       }
+      await updateLog({ status: "failed", error: `Order not found for invoice: ${invoice}`, responseCode: 404 });
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // 4. Update the order status
+    // 5. Update the order status
     const oldCourierStatus = order.courierStatus;
     const newCourierStatus = String(status).trim().toLowerCase();
 
@@ -196,12 +262,14 @@ export async function POST(request: NextRequest) {
     await order.save({ session });
     await session.commitTransaction();
 
+    await updateLog({ status: "success", orderId: order._id, responseCode: 200 });
     return NextResponse.json({ success: true, message: "Webhook processed successfully" });
   } catch (error: any) {
     if (session && session.inTransaction()) {
       await session.abortTransaction();
     }
     console.error("Steadfast webhook error:", error);
+    await updateLog({ status: "error", error: error.message || String(error), responseCode: 500 });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   } finally {
     if (session) {
