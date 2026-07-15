@@ -701,8 +701,8 @@ export default function AdminOrdersPage() {
                 {isSyncingAll ? 'Syncing...' : 'Sync Steadfast'}
               </button>
               {lastSyncTime && (
-                <span className="text-[9px] text-gray-400 font-semibold lowercase tracking-normal">
-                  (last sync: {lastSyncTime})
+                <span className="text-[9px] text-gray-400 font-semibold tracking-normal">
+                  (Last Sync: {lastSyncTime})
                 </span>
               )}
             </div>
