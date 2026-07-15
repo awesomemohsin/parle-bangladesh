@@ -1,6 +1,6 @@
 # Parle Bangladesh Website
 
-deploy 14/07/2026
+deploy  15/07/26
 
 E-commerce application for Parle Bangladesh. Built with Next.js, React, TailwindCSS, and Mongoose.
 
