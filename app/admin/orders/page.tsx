@@ -120,6 +120,7 @@ export default function AdminOrdersPage() {
     return ''
   })
   const [isSyncingAll, setIsSyncingAll] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
   const [showPickingModal, setShowPickingModal] = useState(false)
   const [pickingOrders, setPickingOrders] = useState<Order[]>([])
   const [isFetchingPicking, setIsFetchingPicking] = useState(false)
@@ -200,6 +201,15 @@ export default function AdminOrdersPage() {
       setIsFetchingPicking(false)
     }
   }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('last_steadfast_sync')
+      if (stored) {
+        setLastSyncTime(stored)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (showPickingModal) {
@@ -495,6 +505,15 @@ export default function AdminOrdersPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        const formattedTime = new Date().toLocaleString([], { 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        localStorage.setItem('last_steadfast_sync', formattedTime);
+        setLastSyncTime(formattedTime);
         toast.success(data.message || 'All Steadfast orders synced successfully!', { id: toastId });
         fetchOrders(true, false);
       } else {
@@ -672,14 +691,21 @@ export default function AdminOrdersPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-sm sm:text-xl font-bold text-gray-900 italic uppercase tracking-tight">Orders List</h1>
           {process.env.NEXT_PUBLIC_STEADFAST_ENABLED === 'true' && (
-            <button
-              onClick={handleSyncAllSteadfast}
-              disabled={isSyncingAll}
-              className="text-[8px] bg-[#34A487] hover:bg-[#2b8870] text-white font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              <RefreshCw className={`w-2 h-2 ${isSyncingAll ? 'animate-spin' : ''}`} />
-              {isSyncingAll ? 'Syncing...' : 'Sync Steadfast'}
-            </button>
+            <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+              <button
+                onClick={handleSyncAllSteadfast}
+                disabled={isSyncingAll}
+                className="text-[8px] bg-[#34A487] hover:bg-[#2b8870] text-white font-black uppercase tracking-widest px-2 py-1 rounded shadow-sm transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                <RefreshCw className={`w-2 h-2 ${isSyncingAll ? 'animate-spin' : ''}`} />
+                {isSyncingAll ? 'Syncing...' : 'Sync Steadfast'}
+              </button>
+              {lastSyncTime && (
+                <span className="text-[9px] text-gray-400 font-semibold lowercase tracking-normal">
+                  (last sync: {lastSyncTime})
+                </span>
+              )}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2.5 text-right flex-wrap">
