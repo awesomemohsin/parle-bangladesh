@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
   };
 
-  let session;
+  let session: mongoose.ClientSession | null = null;
   try {
     session = await mongoose.startSession();
     
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
                     update.$inc[damagedField] = item.quantity;
                   }
 
-                  await Product.updateOne({ _id: product._id }, update, { session });
+                  await Product.updateOne({ _id: product._id }, update, { session: session || undefined });
 
                   // Log stock adjustment
                   await StockLog.create([{
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
                     amount: item.quantity,
                     reason: `Order ${localStatusUpdate.toUpperCase()} (Steadfast Webhook Sync) - Order #${order._id.toString().slice(-8).toUpperCase()}`,
                     adminEmail: "system-webhook",
-                  }], { session });
+                  }], { session: session || undefined });
                 }
               }
             }
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
 
           if (order.userId) {
             const { reconcileUserLedger } = await import("@/lib/ledger");
-            await reconcileUserLedger(order.userId.toString(), session);
+            await reconcileUserLedger(order.userId.toString(), session || undefined);
           }
         }
       } else if (oldCourierStatus !== newCourierStatus || trackingMsg) {
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
         console.log(`[Steadfast Webhook] Order ${order._id} courierStatus/tracking updated. CourierStatus: ${newCourierStatus}`);
       }
 
-      await order.save({ session });
+      await order.save({ session: session || undefined });
     });
 
     const parsedInvoice = payload?.invoice;
