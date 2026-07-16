@@ -61,8 +61,14 @@ export async function POST(request: NextRequest) {
             order.courierStatus = newCourierStatus;
             
             let localStatusUpdate = "";
+            const isTransitCourierStatus = ["in_transit", "picked_up"].includes(newCourierStatus);
+
             if (newCourierStatus === "delivered") {
               if (order.status !== "delivered") localStatusUpdate = "delivered";
+            } else if (isTransitCourierStatus) {
+              if (order.status === "pending" || order.status === "processing") {
+                localStatusUpdate = "shipped";
+              }
             }
 
             let wasUpdated = false;

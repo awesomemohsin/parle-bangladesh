@@ -58,8 +58,14 @@ export async function GET(
       order.courierStatus = newStatus;
       
       let localStatusUpdate = "";
+      const isTransitCourierStatus = ["in_transit", "picked_up"].includes(newStatus);
+
       if (newStatus === "delivered" && order.status !== "delivered") {
         localStatusUpdate = "delivered";
+      } else if (isTransitCourierStatus) {
+        if (order.status === "pending" || order.status === "processing") {
+          localStatusUpdate = "shipped";
+        }
       }
 
       if (localStatusUpdate) {
