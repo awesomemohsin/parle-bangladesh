@@ -75,6 +75,7 @@ export default function AdminOrdersPage() {
   // Notification state
   const lastTotalOrders = useRef<number | null>(null)
   const isFirstLoad = useRef(true)
+  const checkingRef = useRef<Set<string>>(new Set())
 
   // Search and Filter state
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '')
@@ -327,6 +328,20 @@ export default function AdminOrdersPage() {
     return () => clearInterval(interval)
   }, [debouncedSearch, statusFilter, customerTypeFilter, page, sortBy, startDate, endDate])
 
+  useEffect(() => {
+    if (orders.length === 0) return;
+    orders.forEach(order => {
+      if (
+        order.status === 'processing' && 
+        !order.courierConsignmentId && 
+        !fraudChecks[order.id] && 
+        !checkingRef.current.has(order.id)
+      ) {
+        runFraudCheck(order.id, order.customerPhone);
+      }
+    });
+  }, [orders, fraudChecks]);
+
   const handlePrint = (id: string) => {
     window.open(`/admin/orders/${id}/invoice`, '_blank');
   };
@@ -529,6 +544,8 @@ export default function AdminOrdersPage() {
   };
 
   const runFraudCheck = async (orderId: string, phone: string) => {
+    if (checkingRef.current.has(orderId)) return;
+    checkingRef.current.add(orderId);
     setFraudLoadingId(orderId);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/check-steadfast-fraud`, {
@@ -539,12 +556,11 @@ export default function AdminOrdersPage() {
       const data = await res.json();
       if (data.success) {
         setFraudChecks(prev => ({ ...prev, [orderId]: data }));
-        toast.success("Trust check completed successfully!");
       } else {
-        toast.error(data.error || "Failed to fetch Steadfast fraud stats");
+        console.warn(data.error || "Failed to fetch Steadfast fraud stats");
       }
     } catch (err) {
-      toast.error("An error occurred during trust checking");
+      console.error("An error occurred during trust checking:", err);
     } finally {
       setFraudLoadingId(null);
     }
@@ -1179,27 +1195,29 @@ export default function AdminOrdersPage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Link</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-gray-900 font-mono tracking-tighter">{order.customerPhone}</p>
-                      <a
-                        href={`tel:${order.customerPhone}`}
-                        className="bg-blue-900 hover:bg-blue-950 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
-                      >
-                        <PhoneCall className="w-2.5 h-2.5" />
-                        Call now
-                      </a>
-                      <a
-                        href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '').startsWith('0') ? '88' + order.customerPhone.replace(/[^0-9]/g, '') : order.customerPhone.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-green-600 hover:bg-green-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
-                      >
-                        <MessageCircle className="w-2.5 h-2.5" />
-                        Send Message
-                      </a>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-bold text-gray-900 font-mono tracking-tighter">{order.customerPhone}</p>
+                        <a
+                          href={`tel:${order.customerPhone}`}
+                          className="bg-blue-900 hover:bg-blue-950 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                        >
+                          <PhoneCall className="w-2.5 h-2.5" />
+                          Call now
+                        </a>
+                        <a
+                          href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '').startsWith('0') ? '88' + order.customerPhone.replace(/[^0-9]/g, '') : order.customerPhone.replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-green-600 hover:bg-green-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm"
+                        >
+                          <MessageCircle className="w-2.5 h-2.5" />
+                          Send Message
+                        </a>
+                      </div>
                       
                       {fraudChecks[order.id] ? (
-                        <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-tight shadow-sm">
+                        <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-tight shadow-sm w-fit">
                           <span className={`px-1.5 py-0.5 rounded text-[8px] font-black text-white ${
                             fraudChecks[order.id].success_rate >= 80 
                               ? 'bg-green-600' 
@@ -1214,19 +1232,26 @@ export default function AdminOrdersPage() {
                           </span>
                         </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => runFraudCheck(order.id, order.customerPhone)}
-                          disabled={fraudLoadingId === order.id}
-                          className="bg-purple-600 hover:bg-purple-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer"
-                        >
-                          {fraudLoadingId === order.id ? (
-                            <span className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Eye className="w-2.5 h-2.5" />
-                          )}
-                          Check Trust
-                        </button>
+                        (order.status === 'processing' && !order.courierConsignmentId) ? (
+                          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-purple-600">
+                            <span className="w-2.5 h-2.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                            Checking Trust...
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => runFraudCheck(order.id, order.customerPhone)}
+                            disabled={fraudLoadingId === order.id}
+                            className="bg-purple-600 hover:bg-purple-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer w-fit"
+                          >
+                            {fraudLoadingId === order.id ? (
+                              <span className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Eye className="w-2.5 h-2.5" />
+                            )}
+                            Check Trust
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
