@@ -190,13 +190,21 @@ export async function POST(
     } else {
       console.error("Steadfast API error response:", data);
       
+      let errorMessage = data.message || "";
+      if (!errorMessage && data.errors) {
+        errorMessage = Object.entries(data.errors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join('; ');
+      }
+      if (!errorMessage) errorMessage = "Unknown response error";
+
       // Save failure details in orderLogs
       if (!order.orderLogs) order.orderLogs = [];
       order.orderLogs.push({
         fromStatus: order.status,
         toStatus: order.status,
         changedBy: user?.name || user?.email || "Admin",
-        reason: `Steadfast booking failed: ${data.message || 'Unknown response error'}`,
+        reason: `Steadfast booking failed: ${errorMessage}`,
         changedAt: new Date()
       } as any);
       
@@ -204,7 +212,7 @@ export async function POST(
       await order.save();
 
       return NextResponse.json({
-        error: data.message || "Failed to book parcel with Steadfast",
+        error: errorMessage || "Failed to book parcel with Steadfast",
         details: data,
       }, { status: 400 });
     }
