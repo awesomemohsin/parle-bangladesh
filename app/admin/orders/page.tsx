@@ -107,6 +107,8 @@ export default function AdminOrdersPage() {
   // Unsaved status changes
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({})
   const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({})
+  const [fraudChecks, setFraudChecks] = useState<Record<string, any>>({})
+  const [fraudLoadingId, setFraudLoadingId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const userStr = localStorage.getItem('user')
@@ -523,6 +525,28 @@ export default function AdminOrdersPage() {
       toast.error('An error occurred while bulk syncing', { id: toastId });
     } finally {
       setIsSyncingAll(false);
+    }
+  };
+
+  const runFraudCheck = async (orderId: string, phone: string) => {
+    setFraudLoadingId(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/check-steadfast-fraud`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFraudChecks(prev => ({ ...prev, [orderId]: data }));
+        toast.success("Trust check completed successfully!");
+      } else {
+        toast.error(data.error || "Failed to fetch Steadfast fraud stats");
+      }
+    } catch (err) {
+      toast.error("An error occurred during trust checking");
+    } finally {
+      setFraudLoadingId(null);
     }
   };
 
@@ -1155,7 +1179,7 @@ export default function AdminOrdersPage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Link</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-bold text-gray-900 font-mono tracking-tighter">{order.customerPhone}</p>
                       <a
                         href={`tel:${order.customerPhone}`}
@@ -1173,6 +1197,37 @@ export default function AdminOrdersPage() {
                         <MessageCircle className="w-2.5 h-2.5" />
                         Send Message
                       </a>
+                      
+                      {fraudChecks[order.id] ? (
+                        <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-tight shadow-sm">
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black text-white ${
+                            fraudChecks[order.id].success_rate >= 80 
+                              ? 'bg-green-600' 
+                              : fraudChecks[order.id].success_rate >= 50 
+                              ? 'bg-amber-500' 
+                              : 'bg-red-600'
+                          }`}>
+                            {fraudChecks[order.id].success_rate}% trust
+                          </span>
+                          <span className="text-gray-600 font-bold font-mono">
+                            D: {fraudChecks[order.id].success_parcel} | R: {fraudChecks[order.id].avoid_parcel}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => runFraudCheck(order.id, order.customerPhone)}
+                          disabled={fraudLoadingId === order.id}
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer"
+                        >
+                          {fraudLoadingId === order.id ? (
+                            <span className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Eye className="w-2.5 h-2.5" />
+                          )}
+                          Check Trust
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-1">
