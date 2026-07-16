@@ -131,6 +131,21 @@ export async function POST(request: NextRequest) {
         trackingMsg.includes("returned to sender/merchant successfully");
 
       let localStatusUpdate = "";
+      const transitKeywords = [
+        "transit",
+        "shipped",
+        "picked",
+        "received",
+        "dispatched",
+        "collected",
+        "handed",
+        "rider",
+        "hub",
+        "way"
+      ];
+      const hasTransitActivity = transitKeywords.some(keyword => trackingMsg.includes(keyword));
+      const isTransitCourierStatus = ["in_transit", "picked_up"].includes(newCourierStatus);
+
       if (newCourierStatus === "delivered") {
         if (order.status !== "delivered") localStatusUpdate = "delivered";
       } else if (newCourierStatus === "cancelled" || newCourierStatus === "return" || newCourierStatus === "returned_to_merchant") {
@@ -147,6 +162,10 @@ export async function POST(request: NextRequest) {
         if (order.status !== "lost") localStatusUpdate = "lost";
       } else if (newCourierStatus === "damaged") {
         if (order.status !== "damaged") localStatusUpdate = "damaged";
+      } else if (isTransitCourierStatus || hasTransitActivity) {
+        if (order.status === "pending" || order.status === "processing") {
+          localStatusUpdate = "shipped";
+        }
       }
 
       if (localStatusUpdate) {
