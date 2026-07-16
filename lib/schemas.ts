@@ -6,7 +6,12 @@ export const LoginSchema = z.object({
 })
 
 export const RegisterSchema = z.object({
-  email: z.string().email('Invalid email'),
+  email: z.string().email('Invalid email').refine((val) => {
+    const lower = val.toLowerCase().trim();
+    return !lower.endsWith('.con') && !lower.endsWith('.cmo') && !lower.includes('@gamil.') && !lower.includes('@gmaill.');
+  }, {
+    message: "Invalid email typo (e.g. '.con' instead of '.com')"
+  }),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
 })

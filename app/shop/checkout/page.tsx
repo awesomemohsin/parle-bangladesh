@@ -606,6 +606,24 @@ function CheckoutContent() {
       shakeMap.thana = true;
     }
 
+    if (formData.email) {
+      const emailLower = formData.email.toLowerCase().trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailLower)) {
+        newErrors.email = "Please enter a valid email address";
+        shakeMap.email = true;
+      } else if (emailLower.endsWith('.con')) {
+        newErrors.email = "Did you mean '.com'? (ends in '.con')";
+        shakeMap.email = true;
+      } else if (emailLower.endsWith('.cmo')) {
+        newErrors.email = "Did you mean '.com'? (ends in '.cmo')";
+        shakeMap.email = true;
+      } else if (emailLower.includes('@gamil.') || emailLower.includes('@gmaill.')) {
+        newErrors.email = "Did you mean '@gmail.com'?";
+        shakeMap.email = true;
+      }
+    }
+
     if (!sameAsBilling && deliveryMethod !== 'pickup') {
       if (!formData.shippingAddress) {
         newErrors.shippingAddress = "Please enter your shipping address first";
@@ -837,7 +855,7 @@ function CheckoutContent() {
                       <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.name}</p>
                     )}
                   </div>
-                  <div>
+                  <div id="field-wrapper-email" className={shakingFields.email ? 'animate-shake' : ''}>
                     <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate">Email (Optional)</label>
                     <input
                       type="email"
@@ -845,9 +863,16 @@ function CheckoutContent() {
                       value={formData.email}
                       onChange={handleInputChange}
                       readOnly={prefilled.email || emailReadOnly}
-                      className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border border-gray-200 rounded focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all ${(prefilled.email || emailReadOnly) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`w-full px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs bg-gray-50 border rounded focus:outline-none focus:ring-1 transition-all ${
+                        formErrors.email
+                          ? 'error-border'
+                          : 'border-gray-200 focus:border-red-600 focus:ring-red-660'
+                      } ${(prefilled.email || emailReadOnly) ? 'opacity-70 cursor-not-allowed' : ''}`}
                       placeholder="john@example.com"
                     />
+                    {formErrors.email && (
+                      <p className="text-red-500 text-[10px] font-bold mt-1">⚠️ {formErrors.email}</p>
+                    )}
                   </div>
                 </div>
                 <div className={!isLoggedIn ? "grid grid-cols-2 gap-3" : ""}>
