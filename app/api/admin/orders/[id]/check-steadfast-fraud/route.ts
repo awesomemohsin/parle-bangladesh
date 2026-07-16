@@ -44,7 +44,7 @@ export async function GET(
     }
 
     const baseUrl = process.env.STEADFAST_API_URL || "https://portal.packzy.com/api/v1";
-    const res = await fetch(`${baseUrl}/delivery_check/${phone}`, {
+    const res = await fetch(`${baseUrl}/fraud_check/${phone}`, {
       method: "GET",
       headers: {
         "Api-Key": apiKey,
@@ -53,25 +53,39 @@ export async function GET(
       },
     });
 
-    const data = await res.json();
+    const responseText = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseErr) {
+      console.error(`Failed to parse Steadfast API response (Status ${res.status}):`, responseText);
+      return NextResponse.json({ 
+        error: `Steadfast API returned invalid response (Status ${res.status})` 
+      }, { status: 502 });
+    }
 
     if (res.status === 200) {
+      const total = data.total_parcels || 0;
+      const delivered = data.total_delivered || 0;
+      const cancelled = data.total_cancelled || 0;
+      const successRate = total > 0 ? Math.round((delivered / total) * 100) : 100;
+
       return NextResponse.json({
         success: true,
-        success_rate: data.success_rate || 0,
-        success_parcel: data.success_parcel || 0,
-        avoid_parcel: data.avoid_parcel || 0,
-        total_parcel: data.total_parcel || 0,
+        success_rate: successRate,
+        success_parcel: delivered,
+        avoid_parcel: cancelled,
+        total_parcel: total,
       });
     } else {
-      console.error("Steadfast delivery check error response:", data);
+      console.error("Steadfast fraud check error response:", data);
       return NextResponse.json({
-        error: data.message || "Failed to fetch delivery details from Steadfast",
+        error: data.message || "Failed to fetch fraud details from Steadfast",
         details: data,
       }, { status: 400 });
     }
   } catch (error: any) {
     console.error("Check Steadfast fraud error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error: " + error.message }, { status: 500 });
   }
 }
