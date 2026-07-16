@@ -334,6 +334,7 @@ export default function AdminOrdersPage() {
       if (
         order.status === 'processing' && 
         !order.courierConsignmentId && 
+        !order.courierTrust &&
         !fraudChecks[order.id] && 
         !checkingRef.current.has(order.id)
       ) {
@@ -1216,28 +1217,40 @@ export default function AdminOrdersPage() {
                         </a>
                       </div>
                       
-                      {fraudChecks[order.id] ? (
-                        <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-tight shadow-sm w-fit">
-                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black text-white ${
-                            fraudChecks[order.id].success_rate >= 80 
-                              ? 'bg-green-600' 
-                              : fraudChecks[order.id].success_rate >= 50 
-                              ? 'bg-amber-500' 
-                              : 'bg-red-600'
-                          }`}>
-                            {fraudChecks[order.id].success_rate}% trust
-                          </span>
-                          <span className="text-gray-600 font-bold font-mono">
-                            D: {fraudChecks[order.id].success_parcel} | R: {fraudChecks[order.id].avoid_parcel}
-                          </span>
-                        </div>
-                      ) : (
-                        (order.status === 'processing' && !order.courierConsignmentId) ? (
-                          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-purple-600">
-                            <span className="w-2.5 h-2.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                            Checking Trust...
-                          </div>
-                        ) : (
+                      {(() => {
+                        const trust = fraudChecks[order.id] || order.courierTrust;
+                        if (trust) {
+                          const rate = trust.successRate ?? trust.success_rate ?? 0;
+                          const success = trust.successParcel ?? trust.success_parcel ?? 0;
+                          const avoided = trust.avoidParcel ?? trust.avoid_parcel ?? 0;
+                          return (
+                            <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-tight shadow-sm w-fit">
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-black text-white ${
+                                rate >= 80 
+                                  ? 'bg-green-600' 
+                                  : rate >= 50 
+                                  ? 'bg-amber-500' 
+                                  : 'bg-red-600'
+                              }`}>
+                                {rate}% trust
+                              </span>
+                              <span className="text-gray-600 font-bold font-mono">
+                                D: {success} | R: {avoided}
+                              </span>
+                            </div>
+                          );
+                        }
+                        
+                        if (order.status === 'processing' && !order.courierConsignmentId) {
+                          return (
+                            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-purple-600">
+                              <span className="w-2.5 h-2.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                              Checking Trust...
+                            </div>
+                          );
+                        }
+
+                        return (
                           <button
                             type="button"
                             onClick={() => runFraudCheck(order.id, order.customerPhone)}
@@ -1251,8 +1264,8 @@ export default function AdminOrdersPage() {
                             )}
                             Check Trust
                           </button>
-                        )
-                      )}
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-1">

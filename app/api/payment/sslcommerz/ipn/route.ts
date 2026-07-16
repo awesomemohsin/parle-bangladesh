@@ -53,6 +53,12 @@ export async function POST(req: Request) {
               }
             }
           );
+
+          // Trigger background Steadfast trust check automatically
+          import("@/lib/steadfast-fraud").then(({ triggerSteadfastTrustCheck }) => {
+            triggerSteadfastTrustCheck(tran_id, order.customerPhone);
+          }).catch(err => console.error("Failed to load steadfast-fraud helper:", err));
+
           console.log(`IPN notification: Order #${tran_id} updated securely to PAID status after backend verification.`);
         } else {
           console.error(`IPN notification: Mismatch between order total (${orderTotal}) and verified paid amount (${paidAmount})!`);

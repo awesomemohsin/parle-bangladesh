@@ -387,6 +387,13 @@ export interface IOrder extends Document {
   courierTrackingCode?: string;
   courierStatus?: string;
   courierTrackingLink?: string;
+  courierTrust?: {
+    successRate: number;
+    successParcel: number;
+    avoidParcel: number;
+    totalParcel: number;
+    checkedAt: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -456,9 +463,25 @@ const OrderSchema = new Schema<IOrder>(
     courierTrackingCode: { type: String },
     courierStatus: { type: String },
     courierTrackingLink: { type: String },
+    courierTrust: {
+      successRate: { type: Number },
+      successParcel: { type: Number },
+      avoidParcel: { type: Number },
+      totalParcel: { type: Number },
+      checkedAt: { type: Date }
+    },
   },
   { timestamps: true }
 );
+
+// Auto-check Steadfast trust score on save if status is processing
+OrderSchema.post("save", function (doc) {
+  if (doc.status === "processing" && !doc.courierConsignmentId && (!doc.courierTrust || !doc.courierTrust.checkedAt)) {
+    import("./steadfast-fraud").then(({ triggerSteadfastTrustCheck }) => {
+      triggerSteadfastTrustCheck(doc._id.toString(), doc.customerPhone);
+    }).catch(err => console.error("Failed to load steadfast-fraud helper:", err));
+  }
+});
 
 // Indexes for administrative lookups and history
 OrderSchema.index({ customerEmail: 1 });

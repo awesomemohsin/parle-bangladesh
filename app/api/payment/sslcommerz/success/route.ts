@@ -67,6 +67,11 @@ export async function POST(req: Request) {
         }
       );
 
+      // Trigger background Steadfast trust check automatically
+      import("@/lib/steadfast-fraud").then(({ triggerSteadfastTrustCheck }) => {
+        triggerSteadfastTrustCheck(tran_id, order.customerPhone);
+      }).catch(err => console.error("Failed to load steadfast-fraud helper:", err));
+ 
       console.log(`Order #${tran_id} successfully paid via SSLCommerz!`);
       return NextResponse.redirect(new URL(`/shop/order-received/${tran_id}?payment=success`, appUrl), 303);
     } else {
