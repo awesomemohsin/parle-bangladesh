@@ -1223,17 +1223,24 @@ export default function AdminOrdersPage() {
                           const rate = trust.successRate ?? trust.success_rate ?? 0;
                           const success = trust.successParcel ?? trust.success_parcel ?? 0;
                           const avoided = trust.avoidParcel ?? trust.avoid_parcel ?? 0;
+                          const total = trust.totalParcel ?? trust.total_parcel ?? (success + avoided);
                           return (
                             <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-tight shadow-sm w-fit">
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-black text-white ${
-                                rate >= 80 
-                                  ? 'bg-green-600' 
-                                  : rate >= 50 
-                                  ? 'bg-amber-500' 
-                                  : 'bg-red-600'
-                              }`}>
-                                {rate}% trust
-                              </span>
+                              {total === 0 ? (
+                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black text-white bg-slate-500">
+                                  No History
+                                </span>
+                              ) : (
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black text-white ${
+                                  rate >= 80 
+                                    ? 'bg-green-600' 
+                                    : rate >= 50 
+                                    ? 'bg-amber-500' 
+                                    : 'bg-red-600'
+                                }`}>
+                                  {rate}% trust
+                                </span>
+                              )}
                               <span className="text-gray-600 font-bold font-mono">
                                 D: {success} | R: {avoided}
                               </span>
