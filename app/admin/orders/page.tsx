@@ -60,6 +60,13 @@ interface Order {
   courierTrackingCode?: string
   courierStatus?: string
   courierTrackingLink?: string
+  courierTrust?: {
+    successRate: number
+    successParcel: number
+    avoidParcel: number
+    totalParcel: number
+    checkedAt?: string | Date
+  }
 }
 
 const isInvoiceEnabled = (order: Order, currentStatus: string) => {

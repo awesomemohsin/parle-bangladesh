@@ -137,6 +137,10 @@ export async function POST(
       itemDescription = `${itemSummary} | Note: ${order.instruction}`;
     }
 
+    if (itemDescription.length > 255) {
+      itemDescription = itemDescription.substring(0, 252) + "...";
+    }
+
     const payload: Record<string, any> = {
       invoice: order._id.toString().slice(-8).toUpperCase(),
       recipient_name: order.customerName,
