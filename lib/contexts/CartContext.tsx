@@ -42,11 +42,13 @@ export interface Cart {
   promoDetails?: PromoDetails;
   promoDiscount?: number;
   ruleDiscount?: number;
+  circleDiscount?: number;
   isRestricted?: boolean;
   applicableSubtotal?: number;
   freeShippingGranted?: boolean;
   campaignNotices?: Array<{ offer: string; action: string }>;
   flatRules?: any[];
+  circleNetworkDiscount?: { id: string; number: string };
 }
 
 export type AddCartItemInput = Partial<CartItem> & { 
@@ -65,6 +67,7 @@ interface CartContextType {
   discountAmount?: number;
   promoDiscount?: number;
   ruleDiscount?: number;
+  circleDiscount?: number;
   promoDetails?: PromoDetails;
   isRestricted?: boolean;
   applicableSubtotal?: number;
@@ -79,6 +82,8 @@ interface CartContextType {
   removePromo: () => void;
   clearCart: () => void;
   getItemDiscount: (item: CartItem) => number;
+  applyCircleDiscount: (id: string, number: string) => void;
+  removeCircleDiscount: () => void;
 }
 
 const CART_STORAGE_KEY = "parle-cart";
@@ -129,7 +134,8 @@ function calculateClientSideTotals(
   promoCode?: string,
   promoDetails?: PromoDetails,
   flatRules: any[] = [],
-  user: any = null
+  user: any = null,
+  circleNetworkDiscountApplied?: boolean
 ) {
   const isDealer = user && (
     ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
@@ -382,7 +388,8 @@ function calculateClientSideTotals(
     }
   }
 
-  const totalDiscount = flatDiscountTotal + promoDiscount;
+  const circleDiscount = circleNetworkDiscountApplied ? Math.round(subtotal * 0.1) : 0;
+  const totalDiscount = flatDiscountTotal + promoDiscount + circleDiscount;
   const total = subtotal - totalDiscount;
 
   // Calculate dynamic campaign progress notices
@@ -481,6 +488,7 @@ function calculateClientSideTotals(
     discountAmount: Number(totalDiscount) || 0,
     promoDiscount: Number(promoDiscount) || 0,
     ruleDiscount: Number(flatDiscountTotal) || 0,
+    circleDiscount: Number(circleDiscount) || 0,
     total: Number(total) || 0,
     promoCode: promoDetails ? promoDetails.code : undefined,
     promoDetails,
@@ -534,18 +542,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             promoDetails: parsed.promoDetails,
             promoDiscount: parsed.promoDiscount,
             ruleDiscount: parsed.ruleDiscount,
+            circleDiscount: parsed.circleDiscount || 0,
             isRestricted: parsed.isRestricted,
             applicableSubtotal: parsed.applicableSubtotal,
             freeShippingGranted: parsed.freeShippingGranted,
             campaignNotices: parsed.campaignNotices || [],
-            flatRules: parsed.flatRules || []
+            flatRules: parsed.flatRules || [],
+            circleNetworkDiscount: parsed.circleNetworkDiscount
           };
         } catch (e) {
           console.error("Cart initial parse failed:", e);
         }
       }
     }
-    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0, freeShippingGranted: false, flatRules: [] };
+    return { items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, isRestricted: false, applicableSubtotal: 0, freeShippingGranted: false, flatRules: [], circleDiscount: 0 };
   });
 
   const syncFromStorage = useCallback(() => {
@@ -568,11 +578,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           promoDetails: parsed.promoDetails,
           promoDiscount: parsed.promoDiscount,
           ruleDiscount: parsed.ruleDiscount,
+          circleDiscount: parsed.circleDiscount || 0,
           isRestricted: parsed.isRestricted,
           applicableSubtotal: parsed.applicableSubtotal,
           freeShippingGranted: parsed.freeShippingGranted,
           campaignNotices: parsed.campaignNotices || [],
-          flatRules: parsed.flatRules || []
+          flatRules: parsed.flatRules || [],
+          circleNetworkDiscount: parsed.circleNetworkDiscount
         });
       } catch (e) {
         console.error("Cart sync parse failed:", e);
@@ -725,7 +737,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           signal: abortController.signal,
           body: JSON.stringify({ 
             items: cart.items,
-            promoCode: cart.promoCode
+            promoCode: cart.promoCode,
+            circleNetworkDiscountApplied: !!cart.circleNetworkDiscount
           })
         });
         if (cancelled) return;
@@ -781,6 +794,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               discountAmount: data.discountAmount,
               promoDiscount: data.promoDiscount,
               ruleDiscount: data.ruleDiscount,
+              circleDiscount: data.circleDiscount || 0,
               isRestricted: data.isRestricted,
               applicableSubtotal: data.applicableSubtotal,
               freeShippingGranted: data.freeShippingGranted,
@@ -842,7 +856,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -853,6 +867,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         discountAmount: calculated.discountAmount,
         promoDiscount: calculated.promoDiscount,
         ruleDiscount: calculated.ruleDiscount,
+        circleDiscount: calculated.circleDiscount || 0,
         freeShippingGranted: calculated.freeShippingGranted,
         campaignNotices: calculated.campaignNotices
       };
@@ -862,7 +877,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback((key: string) => {
     setCart(prev => {
       const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -873,6 +888,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         discountAmount: calculated.discountAmount,
         promoDiscount: calculated.promoDiscount,
         ruleDiscount: calculated.ruleDiscount,
+        circleDiscount: calculated.circleDiscount || 0,
         freeShippingGranted: calculated.freeShippingGranted,
         campaignNotices: calculated.campaignNotices
       };
@@ -904,7 +920,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             return i;
           });
 
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -915,6 +931,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         discountAmount: calculated.discountAmount,
         promoDiscount: calculated.promoDiscount,
         ruleDiscount: calculated.ruleDiscount,
+        circleDiscount: calculated.circleDiscount || 0,
         freeShippingGranted: calculated.freeShippingGranted,
         campaignNotices: calculated.campaignNotices
       };
@@ -923,7 +940,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const applyPromo = useCallback((details: PromoDetails) => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, effUser);
+      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
       return { 
         ...prev, 
         promoCode: details.code, 
@@ -933,6 +950,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         discountAmount: calculated.discountAmount,
         promoDiscount: calculated.promoDiscount,
         ruleDiscount: calculated.ruleDiscount,
+        circleDiscount: calculated.circleDiscount || 0,
         isRestricted: !details.allProducts,
         applicableSubtotal: calculated.applicableSubtotal,
         freeShippingGranted: calculated.freeShippingGranted,
@@ -943,7 +961,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removePromo = useCallback(() => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, effUser);
+      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
       return { 
         ...prev, 
         promoCode: undefined, 
@@ -953,6 +971,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         discountAmount: calculated.discountAmount,
         promoDiscount: 0,
         ruleDiscount: calculated.ruleDiscount,
+        circleDiscount: calculated.circleDiscount || 0,
         isRestricted: false,
         applicableSubtotal: 0,
         freeShippingGranted: calculated.freeShippingGranted,
@@ -961,8 +980,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, [effUser]);
 
+  const applyCircleDiscount = useCallback((id: string, number: string) => {
+    setCart(prev => {
+      const circleNetworkDiscount = { id, number };
+      const calculated = calculateClientSideTotals(prev.items, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, true);
+      return {
+        ...prev,
+        circleNetworkDiscount,
+        circleDiscount: calculated.circleDiscount || 0,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: calculated.promoDiscount,
+        ruleDiscount: calculated.ruleDiscount,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
+      };
+    });
+  }, [effUser]);
+
+  const removeCircleDiscount = useCallback(() => {
+    setCart(prev => {
+      const calculated = calculateClientSideTotals(prev.items, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, false);
+      return {
+        ...prev,
+        circleNetworkDiscount: undefined,
+        circleDiscount: 0,
+        subtotal: calculated.subtotal,
+        total: calculated.total,
+        discountAmount: calculated.discountAmount,
+        promoDiscount: calculated.promoDiscount,
+        ruleDiscount: calculated.ruleDiscount,
+        freeShippingGranted: calculated.freeShippingGranted,
+        campaignNotices: calculated.campaignNotices
+      };
+    });
+  }, [effUser]);
+
   const clearCart = useCallback(() => {
-    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false, flatRules: [] });
+    setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false, flatRules: [], circleDiscount: 0 });
   }, []);
 
   const contextValue: CartContextType = {
@@ -975,6 +1031,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     discountAmount: isMounted ? (cart.discountAmount || 0) : 0,
     promoDiscount: isMounted ? (cart.promoDiscount || 0) : 0,
     ruleDiscount: isMounted ? (cart.ruleDiscount || 0) : 0,
+    circleDiscount: isMounted ? (cart.circleDiscount || 0) : 0,
     promoDetails: cart.promoDetails,
     isRestricted: cart.isRestricted,
     applicableSubtotal: cart.applicableSubtotal,
@@ -988,7 +1045,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     applyPromo,
     removePromo,
     clearCart,
-    getItemDiscount: () => 0
+    getItemDiscount: (item: CartItem) => item.discountAmount || 0,
+    applyCircleDiscount,
+    removeCircleDiscount
   };
 
   return (
