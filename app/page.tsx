@@ -38,35 +38,37 @@ export default async function HomePage() {
 
       {/* Promotional Offer Section */}
       <section className="bg-slate-50 border-b overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="max-w-6xl mx-auto px-4 py-4 md:py-6">
           <div className="animate-fade-in-up">
-            <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden">
-              <div className="md:w-[20%] w-full aspect-[4/3] md:aspect-[1.2/1] bg-white rounded-xl flex items-center justify-center relative overflow-hidden group border border-slate-50 shadow-inner">
-                <Image
-                  src="/images/offers/free-delivery.png"
-                  alt="Free Delivery"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-contain p-4 relative z-10 scale-90"
-                />
-              </div>
-
-              <div className="flex-1 md:pl-2 py-6 md:py-0 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-                  <span className="w-6 h-0.5 bg-red-600 rounded-full"></span>
-                  <span className="text-[9px] font-bold text-red-600 uppercase tracking-widest">Special Offer</span>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-2.5 sm:p-3 rounded-2xl border border-gray-100 shadow-lg shadow-slate-200/50 overflow-hidden">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1 w-full">
+                <div className="relative w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-24 bg-white rounded-xl flex items-center justify-center shrink-0 border border-slate-50 shadow-inner">
+                  <Image
+                    src="/images/offers/free-delivery.png"
+                    alt="Free Delivery"
+                    fill
+                    sizes="(max-width: 768px) 64px, 112px"
+                    className="object-contain p-2 relative z-10 scale-95"
+                  />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight leading-none uppercase mb-1.5">
-                  Free Delivery Today
-                </h2>
-                <p className="text-xs text-gray-600 font-bold tracking-tight uppercase mb-0 max-w-lg">
-                  Shop for <span className="text-gray-900 font-black">৳ 1000+</span> and get <span className="text-red-600 font-black italic">Free delivery</span> everywhere in Bangladesh.
-                </p>
+
+                <div className="flex-1 text-left">
+                  <div className="flex items-center justify-start gap-1.5 mb-1">
+                    <span className="w-4 h-0.5 bg-red-600 rounded-full"></span>
+                    <span className="text-[8px] sm:text-[9px] font-bold text-red-600 uppercase tracking-widest">Special Offer</span>
+                  </div>
+                  <h2 className="text-base sm:text-2xl font-bold text-gray-900 tracking-tight leading-none uppercase mb-1">
+                    Free Delivery Today
+                  </h2>
+                  <p className="text-[9px] sm:text-xs text-gray-600 font-bold tracking-tight uppercase mb-0 max-w-lg">
+                    Shop for <span className="text-gray-900 font-black">৳ 1000+</span> and get <span className="text-red-600 font-black italic">Free delivery</span> everywhere in Bangladesh.
+                  </p>
+                </div>
               </div>
 
-              <div className="md:w-[20%] p-4 w-full">
+              <div className="w-full sm:w-[20%] sm:max-w-[160px] px-1 sm:px-0 shrink-0">
                 <Link href="/shop" className="w-full" aria-label="Shop our products now">
-                  <Button className="w-full h-14 rounded-lg bg-white text-black hover:bg-red-600 hover:text-white font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 text-[10px]">
+                  <Button className="w-full h-11 sm:h-12 rounded-lg bg-white border border-gray-200 text-black hover:bg-red-600 hover:text-white hover:border-red-600 font-bold uppercase tracking-widest transition-all shadow-sm active:scale-95 text-[9px] sm:text-[10px]">
                     Shop Now
                   </Button>
                 </Link>
