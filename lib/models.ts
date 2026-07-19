@@ -363,6 +363,7 @@ export interface IOrder extends Document {
   discountAmount?: number;
   ruleDiscount?: number;
   promoDiscount?: number;
+  circleDiscount?: number;
   isRestricted?: boolean;
   status: string; // 'pending', 'cancelled', 'processing', 'shipped', 'delivered'
   cancelReason?: string;
@@ -393,6 +394,10 @@ export interface IOrder extends Document {
     avoidParcel: number;
     totalParcel: number;
     checkedAt: Date;
+  };
+  circleNetworkDiscount?: {
+    id: string;
+    number: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -439,6 +444,7 @@ const OrderSchema = new Schema<IOrder>(
     discountAmount: { type: Number, default: 0 },
     ruleDiscount: { type: Number, default: 0 },
     promoDiscount: { type: Number, default: 0 },
+    circleDiscount: { type: Number, default: 0 },
     isRestricted: { type: Boolean, default: false },
     status: { type: String, required: true, default: "pending" },
     cancelReason: { type: String },
@@ -469,6 +475,10 @@ const OrderSchema = new Schema<IOrder>(
       avoidParcel: { type: Number },
       totalParcel: { type: Number },
       checkedAt: { type: Date }
+    },
+    circleNetworkDiscount: {
+      id: { type: String },
+      number: { type: String }
     },
   },
   { timestamps: true }
