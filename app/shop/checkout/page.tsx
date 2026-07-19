@@ -68,7 +68,7 @@ function CheckoutContent() {
 
 
 
-  const { items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices } = useCart();
+  const { cart, items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, circleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices, applyCircleDiscount, removeCircleDiscount } = useCart();
   const { user, logout, updateAuth } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [confirmingStep, setConfirmingStep] = useState(0);
@@ -91,6 +91,13 @@ function CheckoutContent() {
   const [shakingFields, setShakingFields] = useState<Record<string, boolean>>({});
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+
+  // Circle Network verification state hooks
+  const [circlePhone, setCirclePhone] = useState('');
+  const [circleBillingId, setCircleBillingId] = useState('');
+  const [isVerifyingCircle, setIsVerifyingCircle] = useState(false);
+  const [circleError, setCircleError] = useState('');
+  const [circleSuccess, setCircleSuccess] = useState('');
 
   // Selected Division/District names (defaults to Dhaka Division & Dhaka Metro District)
   const [billingDivision, setBillingDivision] = useState<string>('Dhaka');
@@ -127,6 +134,41 @@ function CheckoutContent() {
       setIsValidatingPromo(false);
     }
   };
+
+  const handleVerifyCircleNetwork = async () => {
+    if (!circlePhone.trim() || !circleBillingId.trim() || isVerifyingCircle) return;
+    setCircleError('');
+    setCircleSuccess('');
+    setIsVerifyingCircle(true);
+
+    try {
+      const res = await fetch('/api/discounts/verify-circle-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contactNumber: circlePhone,
+          billingId: circleBillingId
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        applyCircleDiscount(data.client.id, data.client.contact_number);
+        setCircleSuccess(`Success! Flat 10% Circle Network partner discount applied.`);
+        setCirclePhone('');
+        setCircleBillingId('');
+      } else {
+        setCircleError(data.error || 'Verification failed. Please check inputs.');
+      }
+    } catch (err) {
+      setCircleError('Unable to reach validation server. Please try again.');
+    } finally {
+      setIsVerifyingCircle(false);
+    }
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -731,6 +773,7 @@ function CheckoutContent() {
           srDiscountPercent,
           srDiscountAmount,
           password: formData.password,
+          circleNetworkDiscount: cart.circleNetworkDiscount || undefined,
         }),
       });
 
@@ -1379,6 +1422,32 @@ function CheckoutContent() {
                   </div>
                 )}
 
+                {/* Circle Network Discount Row */}
+                {cart.circleNetworkDiscount && (
+                  <div className="border-t border-gray-100 py-2 text-amber-600 font-medium">
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex flex-col">
+                        <span className="font-bold uppercase text-[9px] tracking-widest leading-none">
+                          Circle Network Discount:
+                        </span>
+                        <span className="text-[7px] font-black text-gray-400 mt-0.5 tracking-wider uppercase">
+                          ID: {cart.circleNetworkDiscount.id}, No: {cart.circleNetworkDiscount.number}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-amber-600">- ৳ {Math.round(circleDiscount || 0)}</span>
+                        <button
+                          type="button"
+                          onClick={removeCircleDiscount}
+                          className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                        >
+                          [Remove] <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* SR Negotiated Discount Row */}
                 {showNegotiatedDiscount && srDiscountPercent > 0 && (
                   <div className="flex justify-between text-teal-600 font-medium py-1">
@@ -1414,6 +1483,70 @@ function CheckoutContent() {
                     </div>
                     {promoError && (
                       <p className="mt-1.5 text-[8px] font-black text-red-600 uppercase tracking-widest">{promoError}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* CIRCLE NETWORK PARTNER CAMPAIGN SECTION */}
+                {!cart.circleNetworkDiscount && (
+                  <div className="py-4 border-b border-gray-100 my-2 bg-gradient-to-br from-amber-50/50 to-yellow-50/20 p-3 rounded border border-amber-200/50">
+                    <div className="flex items-center gap-3 mb-3">
+                      <img 
+                        src="/circle-logo-en.svg" 
+                        alt="Circle Network" 
+                        className="h-6 w-auto object-contain"
+                      />
+                      <span className="text-gray-400 font-light text-sm">×</span>
+                      <img 
+                        src="/logo.png" 
+                        alt="Parle" 
+                        className="h-6 w-auto object-contain"
+                      />
+                      <span className="text-[8px] font-black text-amber-700 uppercase tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded ml-1 shrink-0">
+                        Campaign
+                      </span>
+                    </div>
+                    <p className="text-[8px] text-amber-700 font-bold uppercase tracking-widest leading-normal mb-3">
+                      Circle Network Internet clients get a flat 10% discount on checkout. Verify subscription:
+                    </p>
+                    
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Registered Phone Number"
+                          value={circlePhone}
+                          onChange={(e) => setCirclePhone(e.target.value)}
+                          className="w-full bg-white border border-gray-200 focus:border-amber-500 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder="Customer ID"
+                          value={circleBillingId}
+                          onChange={(e) => setCircleBillingId(e.target.value)}
+                          className="flex-1 bg-white border border-gray-200 focus:border-amber-500 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyCircleNetwork}
+                          disabled={isVerifyingCircle}
+                          className="bg-amber-600 text-white px-3 rounded text-[9px] font-black uppercase hover:bg-amber-700 transition-colors active:scale-95 flex items-center justify-center min-w-[70px] disabled:opacity-50"
+                        >
+                          {isVerifyingCircle ? (
+                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            'Verify'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    {circleError && (
+                      <p className="mt-2 text-[8px] font-black text-red-600 uppercase tracking-widest">{circleError}</p>
+                    )}
+                    {circleSuccess && (
+                      <p className="mt-2 text-[8px] font-black text-green-600 uppercase tracking-widest">{circleSuccess}</p>
                     )}
                   </div>
                 )}

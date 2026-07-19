@@ -527,7 +527,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Missing billing information: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    const totals = await calculateServerSideCart(items, body.promoCode, userDiscount, customerTypeStr);
+    let verifiedCircleNetworkDiscount = undefined;
+    if (body.circleNetworkDiscount) {
+      const { id, number } = body.circleNetworkDiscount;
+      if (!id || !number) {
+        if (session.inTransaction()) await session.abortTransaction();
+        return NextResponse.json({ error: "Circle Network Customer ID and Contact Number are required." }, { status: 400 });
+      }
+
+      try {
+        const verifyRes = await fetch("https://billing.circlenetworkbd.net/api/client-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            CLIENT_SEARCH_SECRET: process.env.CLIENT_SEARCH_SECRET || "t2YMzy1oFnlX1jZkPEoRj74p6M8SszbIY",
+            search_by: number.trim()
+          })
+        });
+
+        if (!verifyRes.ok) {
+          throw new Error("Billing API responded with error " + verifyRes.statusText);
+        }
+
+        const verifyData = await verifyRes.json();
+        if (!verifyData || !verifyData.data) {
+          if (session.inTransaction()) await session.abortTransaction();
+          return NextResponse.json({ error: "No Circle Network client found with this contact number." }, { status: 400 });
+        }
+
+        const client = verifyData.data;
+
+        // Check if ID or Username matches
+        const inputIdClean = id.trim().toLowerCase();
+        const clientUsernameClean = (client.username || "").trim().toLowerCase();
+        const clientIdClean = (client.id || "").toString().trim().toLowerCase();
+
+        if (inputIdClean !== clientUsernameClean && inputIdClean !== clientIdClean) {
+          if (session.inTransaction()) await session.abortTransaction();
+          return NextResponse.json({ error: "Customer ID does not match the record for this number." }, { status: 400 });
+        }
+
+        // Check if user status is active
+        if (client.user_status !== 'active') {
+          if (session.inTransaction()) await session.abortTransaction();
+          return NextResponse.json({ error: "This user is not active on Circle Network." }, { status: 400 });
+        }
+
+        // Successfully verified
+        verifiedCircleNetworkDiscount = {
+          id: client.username,
+          number: client.contact_number
+        };
+
+      } catch (err: any) {
+        console.error("Circle Network API verification error during checkout:", err);
+        if (session.inTransaction()) await session.abortTransaction();
+        return NextResponse.json({ error: "Unable to verify Circle Network account. Please try again later." }, { status: 500 });
+      }
+    }
+
+    const totals = await calculateServerSideCart(items, body.promoCode, userDiscount, customerTypeStr, !!verifiedCircleNetworkDiscount);
     const subtotal = totals.subtotal;
     let discountAmount = totals.discountAmount;
     const ruleDiscount = totals.ruleDiscount || 0;
@@ -709,6 +768,7 @@ export async function POST(request: NextRequest) {
       discountAmount,
       ruleDiscount,
       promoDiscount,
+      circleDiscount: totals.circleDiscount || 0,
       isRestricted: totals.isRestricted,
       promoCode: body.promoCode,
       total,
@@ -719,6 +779,7 @@ export async function POST(request: NextRequest) {
       placedBySR: srUser ? srUser.id : undefined,
       srDiscountPercent,
       srDiscountAmount: srDiscountAmountVal,
+      circleNetworkDiscount: verifiedCircleNetworkDiscount || undefined,
     });
 
     await order.save({ session });
