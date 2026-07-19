@@ -481,11 +481,13 @@ export default function ShopClient({
 
                     {/* Bottom area with Button (separated from image) */}
                     <div className="p-3 sm:p-3.5 border-t bg-white relative z-20 mt-auto">
-                      <Button
-                        className="w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] bg-red-600 text-white hover:bg-black hover:shadow-lg shadow-md border-none"
-                      >
-                        {promo.buttonText || 'Shop Now'}
-                      </Button>
+                      <Link href={promo.link} className="w-full">
+                        <Button
+                          className="w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] bg-red-600 text-white hover:bg-black hover:shadow-lg shadow-md border-none"
+                        >
+                          {promo.buttonText || 'Shop Now'}
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 );
