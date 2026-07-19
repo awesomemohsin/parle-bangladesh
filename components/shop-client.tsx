@@ -225,9 +225,9 @@ export default function ShopClient({
   return (
     <>
       {/* Search & Filters Interface */}
-      <div className="bg-white border-2 border-gray-100 rounded-2xl p-4 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4 shadow-xl shadow-gray-200/40">
-        <div className="md:col-span-2 flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
+      <div className="bg-white border-2 border-gray-100 rounded-2xl p-2.5 sm:p-4 mb-8 grid grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 shadow-xl shadow-gray-200/40">
+        <div className="col-span-1 md:col-span-2 flex flex-col gap-1 sm:gap-1.5">
+          <label className="text-[8px] sm:text-[10px] font-bold uppercase text-gray-400 tracking-tight sm:tracking-widest ml-1 sm:ml-2 flex items-center gap-1 sm:gap-2">
             <Search className="w-3 h-3" /> Search
           </label>
           <div className="relative group" ref={suggestionRef}>
@@ -239,12 +239,12 @@ export default function ShopClient({
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
-              placeholder="Search products..."
-              className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all placeholder:text-gray-300 font-bold text-gray-900 group-hover:border-gray-100"
+              placeholder="Search..."
+              className="w-full px-2 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all placeholder:text-gray-300 font-bold text-[10px] sm:text-sm text-gray-900 group-hover:border-gray-100"
             />
             {showSuggestions && suggestions.length > 0 && (
               <div 
-                className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-gray-100 rounded-xl shadow-2xl p-2 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+                className="absolute top-full left-0 mt-2 z-50 w-[78vw] max-w-[320px] sm:w-full bg-white border border-gray-100 rounded-xl shadow-2xl p-2 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
               >
                 <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest px-3.5 py-1.5 border-b border-slate-50 mb-1">
                   Product Suggestions
@@ -300,14 +300,14 @@ export default function ShopClient({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
+        <div className="col-span-1 flex flex-col gap-1 sm:gap-2">
+          <label className="text-[8px] sm:text-[10px] font-bold uppercase text-gray-400 tracking-tight sm:tracking-widest ml-1 sm:ml-2 flex items-center gap-1 sm:gap-2">
             <Filter className="w-3 h-3" /> Category
           </label>
           <select
             value={selectedCategory}
             onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
+            className="w-full px-1.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-[10px] sm:text-sm text-gray-900 appearance-none cursor-pointer"
           >
             <option value="all">All Categories</option>
             {categories.map((category) => (
@@ -319,14 +319,14 @@ export default function ShopClient({
           </select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-2 flex items-center gap-2">
-            <ArrowUpDown className="w-3 h-3" /> Sort By
+        <div className="col-span-1 flex flex-col gap-1 sm:gap-2">
+          <label className="text-[8px] sm:text-[10px] font-bold uppercase text-gray-400 tracking-tight sm:tracking-widest ml-1 sm:ml-2 flex items-center gap-1 sm:gap-2">
+            <ArrowUpDown className="w-3 h-3" /> Sort
           </label>
           <select
             value={sortBy}
             onChange={(e) => handleSortChange(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-gray-900 appearance-none cursor-pointer"
+            className="w-full px-1.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border-2 border-gray-50 bg-gray-50 focus:bg-white focus:border-black focus:outline-none transition-all font-bold text-[10px] sm:text-sm text-gray-900 appearance-none cursor-pointer"
           >
             <option value="best-match">Best Match</option>
             <option value="name-asc">Name (A-Z)</option>
@@ -336,12 +336,12 @@ export default function ShopClient({
           </select>
         </div>
 
-        <div className="flex items-end">
+        <div className="col-span-3 md:col-span-1 flex items-end">
           <Link
             href="/shop/cart"
-            className="w-full flex items-center justify-center gap-2.5 h-[46px] rounded-xl bg-red-600 text-white font-bold uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 text-[11px] group"
+            className="w-full flex items-center justify-center gap-2 h-9 sm:h-[46px] rounded-lg sm:rounded-xl bg-red-600 text-white font-bold uppercase tracking-wider sm:tracking-widest hover:bg-black transition-all shadow-md active:scale-95 text-[10px] sm:text-[11px] group"
           >
-            <ShoppingCart className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-12 transition-transform" />
             View Cart
           </Link>
         </div>
