@@ -177,9 +177,9 @@ export default async function HomePage() {
       </section>
 
       {/* Newly Arrived Products Section */}
-      <section className="pt-4 pb-12 md:py-20 bg-slate-50/50 overflow-hidden">
+      <section className="pt-4 pb-6 sm:pb-12 md:pt-12 md:pb-10 bg-slate-50/50 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 md:mb-16">
+          <div className="text-center mb-5 sm:mb-8 md:mb-10">
             <div className="flex items-center justify-center gap-2 mb-2 md:mb-4">
               <span className="w-8 h-0.5 bg-red-600 rounded-full"></span>
               <span className="text-xs font-bold text-red-600 uppercase tracking-widest">New Arrival</span>
@@ -204,9 +204,9 @@ export default async function HomePage() {
       </section>
 
       {/* Best Sellers Section */}
-      <section className="pt-6 pb-6 md:pt-20 md:pb-10 bg-white overflow-hidden">
+      <section className="pt-3 sm:pt-6 pb-4 sm:pb-6 md:pt-10 md:pb-8 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 md:mb-16">
+          <div className="text-center mb-5 sm:mb-8 md:mb-10">
             <div className="flex items-center justify-center gap-2 mb-2 md:mb-4">
               <span className="w-8 h-0.5 bg-red-600 rounded-full"></span>
               <span className="text-xs font-bold text-red-600 uppercase tracking-widest">Popular Picks</span>
