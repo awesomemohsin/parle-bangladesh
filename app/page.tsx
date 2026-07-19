@@ -81,20 +81,20 @@ export default async function HomePage() {
       {/* Trust Badges */}
       <div className="bg-white border-b relative z-30 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-8 py-5 sm:py-10">
             {[
               { icon: Truck, label: 'Fast Delivery', sub: 'To your door' },
               { icon: ShieldCheck, label: 'Fresh Quality', sub: '100% Authentic' },
               { icon: Banknote, label: 'Best Prices', sub: 'Affordable snacks' },
               { icon: Star, label: 'Top Rated', sub: 'Customer favorite' },
             ].map((badge, i) => (
-              <div key={i} className="flex flex-col items-center justify-center group text-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
-                  <badge.icon className="w-5 h-5 text-red-600" />
+              <div key={i} className="flex flex-col items-center justify-start group text-center gap-1.5 sm:gap-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
+                  <badge.icon className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm md:text-base font-black text-gray-900 uppercase tracking-tight">{badge.label}</h3>
-                  <p className="text-[10px] md:text-xs text-gray-700 font-bold uppercase tracking-widest">{badge.sub}</p>
+                  <h3 className="text-[9px] sm:text-sm md:text-base font-black text-gray-900 uppercase tracking-tight leading-tight">{badge.label}</h3>
+                  <p className="text-[7.5px] sm:text-[10px] md:text-xs text-gray-700 font-bold uppercase tracking-widest mt-0.5">{badge.sub}</p>
                 </div>
               </div>
             ))}
@@ -120,34 +120,34 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full items-stretch animate-fade-in-up">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:gap-8 w-full items-stretch animate-fade-in-up">
             {categories.map((cat: any, i: number) => (
               <div key={cat._id || i} className="h-full">
                 <Link
                   href={`/shop?category=${cat.slug}`}
-                  className="group flex flex-col h-full bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl shadow-slate-200/50 transition-all hover:shadow-2xl hover:shadow-red-200/40 hover:border-red-100 hover:-translate-y-2 relative"
+                  className="group flex flex-col h-full bg-white rounded-2xl sm:rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl shadow-slate-200/50 transition-all hover:shadow-2xl hover:shadow-red-200/40 hover:border-red-100 hover:-translate-y-2 relative"
                 >
                   <div className="relative w-full aspect-[16/10] bg-slate-50 overflow-hidden">
                     <Image
                       src={cat.image || `/images/${cat.slug}/${cat.slug}.webp`}
                       alt={cat.name}
                       fill
-                      sizes="(max-width: 768px) 100vw, 50vw"
+                      sizes="(max-width: 768px) 50vw, 50vw"
                       className="object-cover transition-opacity duration-700 group-hover:opacity-95"
                       quality={70}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
                   </div>
-                  <div className="flex flex-col px-6 py-6 md:px-8 md:py-8 flex-grow justify-between bg-white relative">
-                    <div className="flex items-center justify-between mb-4">
-                       <h3 className="text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter italic leading-none group-hover:text-red-600 transition-colors duration-300">
+                  <div className="flex flex-col px-3 py-3.5 sm:px-6 sm:py-6 md:px-8 md:py-8 flex-grow justify-between bg-white relative">
+                    <div className="flex items-center justify-between mb-2 sm:mb-4 gap-1">
+                       <h3 className="text-lg sm:text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter italic leading-none group-hover:text-red-600 transition-colors duration-300">
                          {cat.name}
                        </h3>
-                       <div className="w-14 h-14 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-red-600 group-hover:shadow-lg group-hover:shadow-red-200 transition-all duration-300 transform group-hover:scale-110 shrink-0">
-                          <ArrowRight className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
+                       <div className="w-7 h-7 sm:w-14 sm:h-14 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-red-600 group-hover:shadow-lg group-hover:shadow-red-200 transition-all duration-300 transform group-hover:scale-110 shrink-0">
+                          <ArrowRight className="w-3.5 h-3.5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-white transition-colors" />
                        </div>
                     </div>
-                    <p className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-widest line-clamp-2 max-w-[85%] leading-relaxed mt-auto">
+                    <p className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-700 uppercase tracking-widest line-clamp-2 max-w-[90%] leading-relaxed mt-auto">
                       {cat.description || `Explore our complete selection of freshly baked ${cat.name}.`}
                     </p>
                   </div>
