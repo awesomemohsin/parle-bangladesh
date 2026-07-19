@@ -40,6 +40,7 @@ export default function Footer() {
               {['Biscuits', 'Wafers'].map((item) => (
                 <li key={item}><Link href={`/shop/categories/${item.toLowerCase()}`} className="hover:text-red-600 transition-colors uppercase">{item}</Link></li>
               ))}
+              <li><Link href="/offers" className="hover:text-red-600 transition-colors uppercase text-amber-800">Special Offers</Link></li>
             </ul>
           </div>
 
@@ -51,7 +52,6 @@ export default function Footer() {
               <li><Link href="/about" className="hover:text-red-600 transition-colors uppercase">About Us</Link></li>
               <li><Link href="/contact" className="hover:text-red-600 transition-colors uppercase">Help Center</Link></li>
               <li><Link href="/careers" className="hover:text-red-600 transition-colors uppercase">Careers</Link></li>
-              <li><Link href="/offers" className="hover:text-red-600 transition-colors uppercase text-amber-800">Special Offers</Link></li>
             </ul>
           </div>
 
