@@ -76,7 +76,7 @@ export default function HomeProductSection({ products, type }: ProductSectionPro
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-10 sm:gap-y-12"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-6 sm:gap-y-12"
           >
             {currentProducts.map((product, i) => (
               <div key={product._id} className="relative flex flex-col h-full">
@@ -90,12 +90,12 @@ export default function HomeProductSection({ products, type }: ProductSectionPro
 
       {/* Pagination Indicators */}
       {displayProducts.length > 4 && (
-        <div className="flex justify-center items-center gap-1 mt-12">
+        <div className="flex justify-center items-center gap-1 mt-6 sm:mt-8">
           {[0, 1].map((i) => (
             <button
               key={i}
               onClick={() => setPage(i)}
-              className="h-11 w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
+              className="h-6 w-6 sm:h-11 sm:w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
               aria-label={`Go to slide ${i + 1}`}
             >
               <span className={`h-1.5 transition-all duration-500 rounded-full ${
