@@ -337,21 +337,21 @@ export default function MyOrdersPage() {
             {orders.map((order) => (
               <Card
                 key={order.id}
-                className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group ${order.customerType?.toLowerCase() === 'dealer'
-                    ? "border-amber-200 hover:border-amber-500 bg-amber-50/5"
+                className={`overflow-hidden rounded-xl shadow-none transition-all duration-300 group border-2 ${order.customerType?.toLowerCase() === 'dealer'
+                    ? "border-amber-300 hover:border-amber-500 bg-amber-50/5"
                     : order.customerType?.toLowerCase() === 'retailer'
-                      ? "border-blue-200 hover:border-blue-500 bg-blue-50/5"
+                      ? "border-blue-300 hover:border-blue-500 bg-blue-50/5"
                       : order.customerType?.toLowerCase() === 'student'
-                        ? "border-rose-200 hover:border-rose-500 bg-rose-50/5"
+                        ? "border-rose-300 hover:border-rose-500 bg-rose-50/5"
                         : order.customerType?.toLowerCase() === 'influencer'
-                        ? "border-orange-200 hover:border-orange-500 bg-orange-50/5"
+                        ? "border-orange-300 hover:border-orange-500 bg-orange-50/5"
                         : order.customerType?.toLowerCase() === 'employee'
-                          ? "border-purple-200 hover:border-purple-500 bg-purple-50/5"
+                          ? "border-purple-300 hover:border-purple-500 bg-purple-50/5"
                           : order.customerType?.toLowerCase() === 'corporate'
-                            ? "border-indigo-200 hover:border-indigo-500 bg-indigo-50/5"
+                            ? "border-indigo-300 hover:border-indigo-500 bg-indigo-50/5"
                             : order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase())
-                              ? "border-teal-200 hover:border-teal-500 bg-teal-50/5"
-                              : "border-gray-100 hover:border-red-600"
+                              ? "border-teal-300 hover:border-teal-500 bg-teal-50/5"
+                              : "border-gray-300 hover:border-red-650"
                   }`}
               >
                 {/* Header Bar - More Compact */}
@@ -363,7 +363,7 @@ export default function MyOrdersPage() {
                             order.customerType?.toLowerCase() === 'corporate' ? "bg-indigo-50/50" :
                               order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) ? "bg-teal-50/50" :
                               "bg-slate-50/80"
-                  } border-b border-gray-100 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
+                  } border-b border-gray-200 px-4 py-1.5 flex flex-wrap justify-between items-center gap-4 transition-colors`}>
                   <div className="flex items-center gap-3">
                     {order.customerType && !['customer', 'guest'].includes(order.customerType.toLowerCase()) && (
                       <div className={`flex items-center gap-1.5 px-2 py-0.5 text-white rounded-md ${order.customerType.toLowerCase() === 'dealer' ? 'bg-amber-600' :
