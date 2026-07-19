@@ -77,32 +77,36 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-50">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="mt-6 sm:mt-12 pt-4 sm:pt-8 border-t border-slate-50">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6">
             {/* Corporate HUB */}
-            <div className="bg-slate-100/50 p-6 rounded-3xl flex flex-col xl:flex-row items-center justify-between gap-6 border border-slate-200 group overflow-hidden">
-              <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><Building2 className="w-6 h-6 text-blue-600" /></div>
+            <div className="bg-slate-100/50 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col xl:flex-row items-center justify-between gap-3.5 sm:gap-6 border border-slate-200 group overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 text-center sm:text-left">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200">
+                  <Building2 className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-blue-600" />
+                </div>
                 <div>
-                  <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Corporate <span className="text-blue-600">Inquiry Hub</span></h5>
-                  <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-0.5">Bulk orders & institutional queries</p>
+                  <h5 className="text-[10px] sm:text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Corporate <span className="text-blue-600">Inquiry Hub</span></h5>
+                  <p className="text-[8px] sm:text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-0.5">Bulk orders & institutional queries</p>
                 </div>
               </div>
-              <Link href="/contact?type=corporate#contact-form" className="w-full xl:w-auto bg-black hover:bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
+              <Link href="/contact?type=corporate#contact-form" className="w-full xl:w-auto bg-black hover:bg-blue-600 text-white px-2 py-2 sm:px-8 sm:py-3.5 rounded-xl sm:rounded-2xl font-black uppercase tracking-wider sm:tracking-[0.2em] text-[8.5px] sm:text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
                 Contact Corporate
               </Link>
             </div>
 
             {/* Dealer HUB */}
-            <div className="bg-slate-100/50 p-6 rounded-3xl flex flex-col xl:flex-row items-center justify-between gap-6 border border-slate-200 group overflow-hidden">
-              <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200"><MapPin className="w-6 h-6 text-red-600" /></div>
+            <div className="bg-slate-100/50 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col xl:flex-row items-center justify-between gap-3.5 sm:gap-6 border border-slate-200 group overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 text-center sm:text-left">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center shrink-0 border border-slate-100 shadow-slate-200">
+                  <MapPin className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-red-600" />
+                </div>
                 <div>
-                  <h5 className="text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Become <span className="text-red-600">An Official Dealer</span></h5>
-                  <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-0.5">Partner with us in your location</p>
+                  <h5 className="text-[10px] sm:text-[13px] font-black text-gray-900 uppercase tracking-tighter italic">Become <span className="text-red-600">An Official Dealer</span></h5>
+                  <p className="text-[8px] sm:text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-0.5">Partner with us in your location</p>
                 </div>
               </div>
-              <Link href="/contact?type=dealer#contact-form" className="w-full xl:w-auto bg-black hover:bg-red-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
+              <Link href="/contact?type=dealer#contact-form" className="w-full xl:w-auto bg-black hover:bg-red-600 text-white px-2 py-2 sm:px-8 sm:py-3.5 rounded-xl sm:rounded-2xl font-black uppercase tracking-wider sm:tracking-[0.2em] text-[8.5px] sm:text-[10px] transition-all text-center flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95">
                 Apply for Dealership
               </Link>
             </div>
