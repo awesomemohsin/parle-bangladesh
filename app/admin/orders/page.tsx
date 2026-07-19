@@ -50,6 +50,11 @@ interface Order {
   shippingCost?: number
   ruleDiscount?: number
   promoDiscount?: number
+  circleDiscount?: number
+  circleNetworkDiscount?: {
+    id: string
+    number: string
+  }
   customerType?: string
   amountPaid?: number
   amountDue?: number
@@ -1092,6 +1097,11 @@ export default function AdminOrdersPage() {
                         Promo Applied {order.promoCode ? `(${order.promoCode})` : ''} (-৳{(order.promoDiscount || 0).toFixed(0)})
                       </div>
                     )}
+                    {order.circleNetworkDiscount && (
+                      <div className="text-[10px] font-black text-amber-600 mt-1 uppercase tracking-tighter italic">
+                        Circle Discount (ID: {order.circleNetworkDiscount.id}, No: {order.circleNetworkDiscount.number}) (-৳{(order.circleDiscount || 0).toFixed(0)})
+                      </div>
+                    )}
                     {order.srDiscountAmount !== undefined && order.srDiscountAmount > 0 && (
                       <div className="text-[10px] font-black text-teal-600 mt-1 uppercase tracking-tighter italic">
                         Special Discount ({order.srDiscountPercent}%) (-৳{order.srDiscountAmount.toFixed(0)})
@@ -1409,6 +1419,12 @@ export default function AdminOrdersPage() {
                           <div className="flex justify-between items-center text-[11px] text-green-600">
                             <span className="font-bold uppercase tracking-wider">Promo Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
                             <span className="font-bold">- ৳{(order.promoDiscount || 0).toFixed(0)}</span>
+                          </div>
+                        )}
+                        {order.circleNetworkDiscount && (
+                          <div className="flex justify-between items-center text-[11px] text-amber-600">
+                            <span className="font-bold uppercase tracking-wider">Circle Network Discount (ID: {order.circleNetworkDiscount.id}, No: {order.circleNetworkDiscount.number})</span>
+                            <span className="font-bold">- ৳{(order.circleDiscount || 0).toFixed(0)}</span>
                           </div>
                         )}
                         {order.srDiscountAmount !== undefined && order.srDiscountAmount > 0 && (

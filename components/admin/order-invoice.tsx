@@ -259,7 +259,7 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                   </div>
                   {order.srDiscountAmount > 0 ? (
                     <>
-                      {((order.discountAmount || 0) - order.srDiscountAmount) > 0 && (
+                      {((order.discountAmount || 0) - order.srDiscountAmount - (order.circleDiscount || 0)) > 0 && (
                         <div className="flex justify-between py-1 px-1 border-t border-gray-100">
                           <div className="flex flex-col">
                             <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Coupon/Flat Discount :</span>
@@ -267,7 +267,18 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                               <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
                             )}
                           </div>
-                          <span className="font-bold text-green-600">-৳{((order.discountAmount || 0) - order.srDiscountAmount).toFixed(0)}</span>
+                          <span className="font-bold text-green-600">-৳{((order.discountAmount || 0) - order.srDiscountAmount - (order.circleDiscount || 0)).toFixed(0)}</span>
+                        </div>
+                      )}
+                      {order.circleNetworkDiscount && (
+                        <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-amber-600">
+                          <div className="flex flex-col">
+                            <span className="font-bold uppercase tracking-widest italic leading-none text-[8px]">Circle Network Discount :</span>
+                            <span className="text-[7px] font-black text-gray-400 mt-0.5 tracking-widest leading-none">
+                              ID: {order.circleNetworkDiscount.id} | NO: {order.circleNetworkDiscount.number}
+                            </span>
+                          </div>
+                          <span className="font-bold text-amber-600">-৳{(order.circleDiscount || 0).toFixed(0)}</span>
                         </div>
                       )}
                       <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-teal-600">
@@ -276,15 +287,30 @@ export const OrderInvoice = ({ order }: InvoiceProps) => {
                       </div>
                     </>
                   ) : (
-                    <div className="flex justify-between py-1 px-1 border-t border-gray-100">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Discount :</span>
-                        {order.promoCode && (
-                          <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
-                        )}
-                      </div>
-                      <span className="font-bold text-green-600">-৳{(order.discountAmount || 0).toFixed(0)}</span>
-                    </div>
+                    <>
+                      {((order.discountAmount || 0) - (order.circleDiscount || 0)) > 0 && (
+                        <div className="flex justify-between py-1 px-1 border-t border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-green-600 uppercase tracking-widest italic leading-none">Discount :</span>
+                            {order.promoCode && (
+                              <span className="text-[7px] font-black text-gray-400 uppercase mt-0.5 tracking-widest">CODE: {order.promoCode}</span>
+                            )}
+                          </div>
+                          <span className="font-bold text-green-600">-৳{((order.discountAmount || 0) - (order.circleDiscount || 0)).toFixed(0)}</span>
+                        </div>
+                      )}
+                      {order.circleNetworkDiscount && (
+                        <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-amber-600">
+                          <div className="flex flex-col">
+                            <span className="font-bold uppercase tracking-widest italic leading-none text-[8px]">Circle Network Discount :</span>
+                            <span className="text-[7px] font-black text-gray-400 mt-0.5 tracking-widest leading-none">
+                              ID: {order.circleNetworkDiscount.id} | NO: {order.circleNetworkDiscount.number}
+                            </span>
+                          </div>
+                          <span className="font-bold text-amber-600">-৳{(order.circleDiscount || 0).toFixed(0)}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="flex justify-between py-1 px-1 border-t border-gray-100 text-[11px] text-red-600">
                     <span className="font-black uppercase tracking-widest">Total Amount :</span>
