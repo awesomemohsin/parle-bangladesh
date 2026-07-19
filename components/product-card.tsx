@@ -254,7 +254,7 @@ export default function ProductCard({
       )}
       {/* Image Container */}
       <Link href={productUrl}>
-        <div className="relative w-full h-40 sm:h-48 bg-white overflow-hidden flex items-center justify-center p-2 sm:p-3.5">
+        <div className="relative w-full h-28 sm:h-48 bg-white overflow-hidden flex items-center justify-center p-2 sm:p-3.5">
           <div className={`absolute inset-0 p-2 sm:p-3.5 flex items-center justify-center transition-opacity duration-300 ${fadeState ? 'opacity-100' : 'opacity-0'}`}>
             <div className="relative w-full h-full">
               <Image
@@ -290,13 +290,13 @@ export default function ProductCard({
       </Link>
 
       {/* Content */}
-      <div className="p-3 sm:p-3.5 border-t flex flex-col flex-grow">
+      <div className="p-2 sm:p-3.5 border-t flex flex-col flex-grow">
         <Link href={productUrl}>
-          <h3 className="font-bold text-gray-900 leading-tight hover:text-red-600 line-clamp-2 min-h-[2rem] sm:min-h-[2.25rem] mb-0.5 sm:mb-1 transition-colors text-xs sm:text-sm">
+          <h3 className="font-bold text-gray-900 leading-tight hover:text-red-650 line-clamp-2 min-h-[1.75rem] sm:min-h-[2.25rem] mb-0.5 sm:mb-1 transition-colors text-xs sm:text-sm">
             {name}
           </h3>
         </Link>
-        <div className="flex items-center justify-between mb-1.5 sm:mb-2 min-h-[1rem] sm:min-h-[1.25rem] overflow-hidden">
+        <div className="flex items-center justify-between mb-0.5 sm:mb-2 min-h-[1rem] sm:min-h-[1.25rem] overflow-hidden">
           <span className="text-[10px] sm:text-xs font-bold text-gray-750 uppercase tracking-widest transition-opacity duration-200">
             {activeVariation.weight || (!activeVariation.flavor ? "Standard" : "")}
           </span>
@@ -319,7 +319,7 @@ export default function ProductCard({
                     }}
                     title={label}
                     aria-label={`Select variant: ${label}`}
-                    className="h-11 w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
+                    className="h-6 w-6 sm:h-11 sm:w-11 flex items-center justify-center border-0 bg-transparent cursor-pointer"
                   >
                     <span className={`h-1.5 rounded-full transition-all duration-300 ${
                       isActive 
@@ -336,7 +336,7 @@ export default function ProductCard({
         {/* Price and Action Section */}
         <div className="mt-auto flex flex-col">
           {/* Price Container */}
-          <div className="flex flex-col gap-0.5 mb-2.5 sm:mb-3.5 min-h-[2rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
+          <div className="flex flex-col gap-0.5 mb-1.5 sm:mb-3.5 min-h-[1.5rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
             <div className="flex flex-col gap-0.5 transition-opacity duration-200">
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
@@ -370,7 +370,7 @@ export default function ProductCard({
             <Button
               onClick={handleAddToCart}
               disabled={isOutOfStock || isAtMax}
-              className={`w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
+              className={`w-full py-2 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
             >
               {isOutOfStock ? "Out of Stock" : (isAtMax ? "Stock Reached" : "Add to Cart")}
             </Button>
