@@ -79,7 +79,7 @@ export default function HomeProductSection({ products, type }: ProductSectionPro
             className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-10 sm:gap-y-12"
           >
             {currentProducts.map((product, i) => (
-              <div key={product._id} className="relative">
+              <div key={product._id} className="relative flex flex-col h-full">
                 <Badge type={type} />
                 <ProductCard id={product._id} {...product} priority={false} />
               </div>

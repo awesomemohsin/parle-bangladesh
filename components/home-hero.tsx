@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react'
 
 export default function HomeHero() {
   return (
-    <section className="relative overflow-hidden bg-[#E41E26] min-h-[600px] flex items-center pt-24 pb-20 lg:pt-0 lg:pb-0">
+    <section className="relative overflow-hidden bg-[#E41E26] min-h-[auto] lg:min-h-[600px] flex items-center pt-24 pb-14 lg:pt-0 lg:pb-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-8">
           {/* Left Content */}
@@ -16,14 +16,14 @@ export default function HomeHero() {
               </span>
             </div>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight uppercase italic drop-shadow-md">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-4 lg:mb-6 tracking-tight uppercase italic drop-shadow-md">
               Bite into <br />
               <span className="text-white">
                 Pure Joy
               </span>
             </h1>
 
-            <p className="text-sm md:text-lg text-white font-medium mb-12 leading-relaxed max-w-lg uppercase tracking-tight mx-auto lg:mx-0">
+            <p className="text-xs sm:text-sm md:text-lg text-white font-medium mb-8 lg:mb-12 leading-relaxed max-w-lg uppercase tracking-tight mx-auto lg:mx-0">
               Get your favorite freshly baked biscuits and premium cookies delivered directly to your home across Bangladesh.
             </p>
 
@@ -42,7 +42,7 @@ export default function HomeHero() {
             </div>
 
             {/* Stats badges */}
-            <div className="mt-16 flex items-center justify-center lg:justify-start gap-10">
+            <div className="mt-10 lg:mt-16 flex items-center justify-center lg:justify-start gap-10">
               <div className="flex flex-col text-white">
                 <span className="text-3xl font-black italic">24/7</span>
                 <span className="text-[10px] font-bold uppercase tracking-[0.1em] opacity-80">Express Delivery</span>
@@ -55,8 +55,8 @@ export default function HomeHero() {
             </div>
           </div>
 
-          {/* Right Image */}
-          <div className="w-full lg:w-1/2 flex items-center justify-center lg:justify-end py-10 lg:py-0 animate-fade-in-right">
+          {/* Right Image - Hidden on Mobile */}
+          <div className="hidden lg:flex w-full lg:w-1/2 items-center justify-center lg:justify-end py-10 lg:py-0 animate-fade-in-right">
             <div className="relative w-full aspect-[4/3] max-w-[800px] lg:translate-x-10">
               <Image 
                 src="/images/parle-home-cover.webp" 

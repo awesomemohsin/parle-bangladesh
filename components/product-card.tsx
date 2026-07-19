@@ -333,51 +333,55 @@ export default function ProductCard({
           )}
         </div>
 
-        <div className="flex flex-col gap-0.5 mb-2.5 sm:mb-3.5 min-h-[2rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
-          <div className="flex flex-col gap-0.5 transition-opacity duration-200">
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
-              <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
-                {Math.round(currentPrice)}
-              </span>
-              {hasDealerPrice && (
-                <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-100 flex-shrink-0">
-                  <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-amber-600" />
-                  <span className="text-[7px] sm:text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer</span>
-                </div>
-              )}
-              {hasRetailerPrice && (
-                <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-teal-100 flex-shrink-0">
-                  <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-teal-600" />
-                  <span className="text-[7px] sm:text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer</span>
+        {/* Price and Action Section */}
+        <div className="mt-auto flex flex-col">
+          {/* Price Container */}
+          <div className="flex flex-col gap-0.5 mb-2.5 sm:mb-3.5 min-h-[2rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
+            <div className="flex flex-col gap-0.5 transition-opacity duration-200">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
+                <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
+                  {Math.round(currentPrice)}
+                </span>
+                {hasDealerPrice && (
+                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-100 flex-shrink-0">
+                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-amber-600" />
+                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-amber-600 tracking-tighter">Dealer</span>
+                  </div>
+                )}
+                {hasRetailerPrice && (
+                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-teal-100 flex-shrink-0">
+                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-teal-600" />
+                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer</span>
+                  </div>
+                )}
+              </div>
+              {hasAnyRetailDiscount && (
+                <div className="flex items-center gap-1 text-gray-700">
+                  <span className="text-[9px] sm:text-[10px] font-bold">৳</span>
+                  <span className="text-[9px] sm:text-[10px] line-through font-bold">{Math.round(activeVariation.price)}</span>
                 </div>
               )}
             </div>
-            {hasAnyRetailDiscount && (
-              <div className="flex items-center gap-1 text-gray-700">
-                <span className="text-[9px] sm:text-[10px] font-bold">৳</span>
-                <span className="text-[9px] sm:text-[10px] line-through font-bold">{Math.round(activeVariation.price)}</span>
+          </div>
+
+          {/* Button Container */}
+          <div className="relative">
+            <Button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock || isAtMax}
+              className={`w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
+            >
+              {isOutOfStock ? "Out of Stock" : (isAtMax ? "Stock Reached" : "Add to Cart")}
+            </Button>
+
+            {/* Flying Dot Animation */}
+            {isFlying && (
+              <div className="absolute left-1/2 top-1/2 -ml-4 -mt-4 w-10 h-10 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-black z-50 pointer-events-none shadow-2xl animate-fly-to-cart">
+                +1
               </div>
             )}
           </div>
-        </div>
-
-        {/* Button */}
-        <div className="relative mt-auto">
-          <Button
-            onClick={handleAddToCart}
-            disabled={isOutOfStock || isAtMax}
-            className={`w-full py-3 sm:py-4 font-black uppercase tracking-wider text-xs sm:text-sm transition-all active:scale-[0.98] ${isOutOfStock ? 'opacity-50 grayscale' : (isAtMax ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-inner' : 'bg-red-600 text-white hover:bg-black hover:shadow-lg')}`}
-          >
-            {isOutOfStock ? "Out of Stock" : (isAtMax ? "Stock Reached" : "Add to Cart")}
-          </Button>
-
-          {/* Flying Dot Animation */}
-          {isFlying && (
-            <div className="absolute left-1/2 top-1/2 -ml-4 -mt-4 w-10 h-10 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-black z-50 pointer-events-none shadow-2xl animate-fly-to-cart">
-              +1
-            </div>
-          )}
         </div>
       </div>
     </div>
