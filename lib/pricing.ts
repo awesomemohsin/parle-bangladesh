@@ -10,7 +10,7 @@ import { PromoCode } from './models';
  * 2. Pick the ONE discount that saves the user the most money.
  * 3. Promo codes stack on top of the best flat discount.
  */
-export async function calculateServerSideCart(items: any[], promoCode?: string, userDiscount?: { percent: number; expiresAt: Date }, customerType?: string) {
+export async function calculateServerSideCart(items: any[], promoCode?: string, userDiscount?: { percent: number; expiresAt: Date }, customerType?: string, circleNetworkDiscountApplied?: boolean) {
   await connectDB();
   
   const isDealer = customerType === 'dealer' || customerType === 'employee' || ['admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(customerType || '');
@@ -40,6 +40,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     const itemPrice = Number(item.price) || 0;
     return sum + itemPrice * (Number(item.quantity || item.q) || 0);
   }, 0);
+
+  const circleDiscount = circleNetworkDiscountApplied ? Math.round(subtotal * 0.1) : 0;
 
   let freeShippingGranted = false;
   let flatDiscountTotal = 0;
@@ -262,7 +264,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     }
   }
 
-  const totalDiscount = flatDiscountTotal + promoDiscount;
+  const totalDiscount = flatDiscountTotal + promoDiscount + circleDiscount;
   const total = subtotal - totalDiscount;
 
   // Calculate dynamic campaign progress notices on the server side
@@ -363,6 +365,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     discountAmount: Number(totalDiscount) || 0,
     promoDiscount: Number(promoDiscount) || 0,
     ruleDiscount: Number(flatDiscountTotal) || 0,
+    circleDiscount: Number(circleDiscount) || 0,
     total: Number(total) || 0,
     promoCode: promoDetails ? promoDetails.code : null,
     promoDetails: promoDetails ? JSON.parse(JSON.stringify(promoDetails)) : null,

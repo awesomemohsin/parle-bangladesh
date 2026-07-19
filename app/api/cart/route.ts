@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     const context = await getEffectiveUserContext(request);
     const user = context?.user;
 
-    const { items, promoCode } = await request.json();
+    const { items, promoCode, circleNetworkDiscountApplied } = await request.json();
 
     if (!items || items.length === 0) {
       if (user) {
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       refreshedItems.push(item);
     }
 
-    const totals = await calculateServerSideCart(refreshedItems, promoCode, userDiscount, customerType);
+    const totals = await calculateServerSideCart(refreshedItems, promoCode, userDiscount, customerType, !!circleNetworkDiscountApplied);
 
     if (user) {
       await Cart.findOneAndUpdate(
