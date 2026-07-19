@@ -88,6 +88,7 @@ function CollapsibleOffers({ notices }: { notices: any[] }) {
 export default function CartPage() {
   const router = useRouter();
   const {
+    cart,
     items,
     removeItem,
     updateQuantity,
@@ -96,11 +97,14 @@ export default function CartPage() {
     discountAmount,
     ruleDiscount,
     promoDiscount,
+    circleDiscount,
     clearCart,
     isLoading,
     campaignNotices,
     freeShippingGranted,
-    isSyncing
+    isSyncing,
+    applyCircleDiscount,
+    removeCircleDiscount
   } = useCart();
   const { user } = useAuth();
   const isDealer = !!(user && (
@@ -113,6 +117,22 @@ export default function CartPage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [updatingKeys, setUpdatingKeys] = useState<Set<string>>(new Set());
+
+  // Circle Network campaign rate selectors & inputs
+  const [selectedRateOption, setSelectedRateOption] = useState<'original' | 'circle'>('original');
+  const [isCircleModalOpen, setIsCircleModalOpen] = useState(false);
+  const [circlePhone, setCirclePhone] = useState('');
+  const [circleBillingId, setCircleBillingId] = useState('');
+  const [isVerifyingCircle, setIsVerifyingCircle] = useState(false);
+  const [circleError, setCircleError] = useState('');
+  const [circleSuccess, setCircleSuccess] = useState('');
+  const [shakingFields, setShakingFields] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (cart?.circleNetworkDiscount) {
+      setSelectedRateOption('circle');
+    }
+  }, [cart?.circleNetworkDiscount]);
 
   useEffect(() => {
     setMounted(true);
@@ -171,14 +191,31 @@ export default function CartPage() {
   }
 
   const handleCheckout = () => {
+    if (selectedRateOption === 'circle') {
+      if (!cart?.circleNetworkDiscount) {
+        setIsCircleModalOpen(true);
+        return;
+      }
+    } else {
+      if (cart?.circleNetworkDiscount) {
+        removeCircleDiscount();
+      }
+    }
     setIsCheckingOut(true);
     router.push('/shop/checkout');
   };
 
   // Calculate cart-only totals (ignoring coupon)
   // Use the server-side calculated totals directly
-  const cartDisplayTotal = total;
-  const cartDisplaySaved = ruleDiscount || 0;
+  const circleDiscountVal = cart?.circleNetworkDiscount 
+    ? (circleDiscount || 0) 
+    : (selectedRateOption === 'circle' ? (subtotal * 0.1) : 0);
+
+  const cartDisplayTotal = selectedRateOption === 'circle'
+    ? (total - (cart?.circleNetworkDiscount ? 0 : circleDiscountVal))
+    : (total + (cart?.circleNetworkDiscount ? (circleDiscount || 0) : 0));
+
+  const cartDisplaySaved = (ruleDiscount || 0) + circleDiscountVal;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20 relative">
@@ -480,31 +517,117 @@ export default function CartPage() {
                   <h2 className="text-2xl sm:text-3xl font-black text-gray-900 uppercase tracking-tighter italic">Cart Total</h2>
                 </div>
 
-
                 <div className="pt-4 border-t border-slate-100">
-                  <div className="flex justify-between items-center sm:items-end mb-6 gap-2">
-                    <div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mb-1">
+                  {/* Option A: Original Rate */}
+                  <div 
+                    onClick={() => {
+                      setSelectedRateOption('original');
+                      if (cart?.circleNetworkDiscount) {
+                        removeCircleDiscount();
+                      }
+                    }}
+                    className={`flex justify-between items-center p-4 mb-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                      selectedRateOption === 'original'
+                        ? 'border-gray-900 bg-white shadow-sm'
+                        : 'border-transparent bg-transparent hover:bg-slate-100/50'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="flex items-center gap-1.5 mb-1">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TOTAL</p>
                         {(ruleDiscount || 0) > 0 && (
-                          <motion.span
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="text-[9px] sm:text-[10px] font-black text-white bg-green-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md uppercase tracking-tighter shadow-lg shadow-green-100 flex items-center gap-1 w-fit whitespace-nowrap"
-                          >
-                            <ShieldCheck className="w-2.5 h-2.5 animate-pulse" />
+                          <span className="text-[8px] sm:text-[9px] font-black text-white bg-green-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">
                             Saved ৳{Math.round(cartDisplaySaved)}
-                          </motion.span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                        Standard Pricing Rate
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic leading-none">
+                        <span className="text-base sm:text-xl text-red-600 not-italic">৳</span>
+                        <span>
+                          {Math.round(total + (cart?.circleNetworkDiscount ? (circleDiscount || 0) : 0))}
+                        </span>
+                      </div>
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0">
+                        {selectedRateOption === 'original' && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-gray-900" />
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter tabular-nums italic text-right flex-shrink-0">
-                      <span className="text-base sm:text-xl text-red-600 not-italic">৳</span>
-                      <span className="transition-opacity duration-200 opacity-100">
-                        {Math.round(cartDisplayTotal)}
-                      </span>
-                    </div>
                   </div>
+
+                  {/* Option B: Circle Network Rate */}
+                  {!cart?.circleNetworkDiscount ? (
+                    <div
+                      onClick={() => {
+                        setSelectedRateOption('circle');
+                        setIsCircleModalOpen(true);
+                      }}
+                      className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
+                        selectedRateOption === 'circle'
+                          ? 'border-amber-500 bg-amber-50/20 shadow-sm'
+                          : 'border-transparent bg-transparent hover:bg-slate-100/50'
+                      }`}
+                    >
+                      <div className="text-left max-w-[150px] sm:max-w-none">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                          <p className="text-[10px] sm:text-xs font-black text-amber-900 uppercase tracking-wider leading-tight">
+                            Flat 10% off for Circle Network Users
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-amber-600 tracking-tighter tabular-nums italic leading-none">
+                            <span className="text-base sm:text-xl text-amber-500 not-italic">৳</span>
+                            <span>{Math.round(total * 0.9)}</span>
+                          </div>
+                          <p className="text-[8px] font-bold text-gray-400 line-through leading-none mt-0.5">
+                            ৳{Math.round(total)}
+                          </p>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0">
+                          {selectedRateOption === 'circle' && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => setSelectedRateOption('circle')}
+                      className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
+                        selectedRateOption === 'circle'
+                          ? 'border-amber-500 bg-amber-50/20 shadow-sm'
+                          : 'border-transparent bg-transparent hover:bg-slate-100/50'
+                      }`}
+                    >
+                      <div className="text-left max-w-[150px] sm:max-w-none">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <p className="text-[10px] sm:text-xs font-black text-amber-900 uppercase tracking-wider leading-tight">
+                            Circle Network Applied (ID: {cart.circleNetworkDiscount.id})
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-amber-600 tracking-tighter tabular-nums italic leading-none">
+                          <span className="text-base sm:text-xl text-amber-500 not-italic">৳</span>
+                          <span>{Math.round(total)}</span>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border-2 border-amber-500 flex items-center justify-center shrink-0">
+                          {selectedRateOption === 'circle' && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <Button
                     onClick={handleCheckout}
@@ -639,6 +762,172 @@ export default function CartPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Circle Network Campaign Verification Modal */}
+      <AnimatePresence>
+        {isCircleModalOpen && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCircleModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-2xl overflow-hidden text-left"
+            >
+              {/* Decorative background element */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl -mr-16 -mt-16 pointer-events-none" />
+
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <img 
+                      src="/circle-logo-en.svg" 
+                      alt="Circle Network" 
+                      className="h-7 w-auto object-contain"
+                    />
+                    <span className="text-gray-400 font-light text-base">×</span>
+                    <img 
+                      src="/logo.png" 
+                      alt="Parle" 
+                      className="h-7 w-auto object-contain"
+                    />
+                  </div>
+                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter italic">
+                    Verify Campaign Rate
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsCircleModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100/50 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-[10px] text-amber-700 font-bold uppercase tracking-widest leading-relaxed mb-6">
+                Provide your registered contact number and Customer ID to apply your flat 10% Circle Network partner discount.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className={`flex-1 ${shakingFields.circlePhone ? 'animate-shake' : ''}`}>
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Registered Phone Number</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., 01XXXXXXXXX"
+                      value={circlePhone}
+                      onChange={(e) => setCirclePhone(e.target.value)}
+                      className={`w-full bg-white border ${shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs font-bold transition-all outline-none`}
+                    />
+                  </div>
+                  <div className={`flex-1 ${shakingFields.circleBillingId ? 'animate-shake' : ''}`}>
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Customer ID</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., 12345"
+                      value={circleBillingId}
+                      onChange={(e) => setCircleBillingId(e.target.value)}
+                      className={`w-full bg-white border ${shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs font-bold transition-all outline-none`}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (isVerifyingCircle) return;
+                    
+                    const mobileRegex = /^01[3-9]\d{8}$/;
+                    const phoneClean = circlePhone.trim();
+                    const shakeMap: Record<string, boolean> = {};
+
+                    if (!phoneClean || phoneClean.length !== 11 || !mobileRegex.test(phoneClean)) {
+                      shakeMap.circlePhone = true;
+                      setCircleError("Please enter a valid 11-digit BD mobile number (e.g. 01XXXXXXXXX).");
+                    }
+                    if (!circleBillingId.trim()) {
+                      shakeMap.circleBillingId = true;
+                    }
+
+                    if (Object.keys(shakeMap).length > 0) {
+                      setShakingFields(shakeMap);
+                      setTimeout(() => setShakingFields({}), 500);
+                      return;
+                    }
+
+                    setCircleError('');
+                    setCircleSuccess('');
+                    setIsVerifyingCircle(true);
+
+                    try {
+                      const res = await fetch('/api/discounts/verify-circle-user', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          contactNumber: circlePhone,
+                          billingId: circleBillingId
+                        })
+                      });
+
+                      const data = await res.json();
+                      if (res.ok) {
+                        applyCircleDiscount(data.client.id, data.client.contact_number);
+                        setCircleSuccess(`Success! 10% Circle Network partner rate applied.`);
+                        setTimeout(() => {
+                          setIsCircleModalOpen(false);
+                          setIsCheckingOut(true);
+                          router.push('/shop/checkout');
+                        }, 1000);
+                      } else {
+                        setCircleError(data.error || 'Verification failed. Please check inputs.');
+                      }
+                    } catch (err) {
+                      setCircleError('Unable to reach validation server. Please try again.');
+                    } finally {
+                      setIsVerifyingCircle(false);
+                    }
+                  }}
+                  disabled={isVerifyingCircle}
+                  className="w-full bg-amber-600 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-700 transition-colors active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 mt-4 shadow-lg shadow-amber-600/10"
+                >
+                  {isVerifyingCircle ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Apply & Checkout'
+                  )}
+                </button>
+              </div>
+
+              {circleError && (
+                <p className="mt-3 text-[9px] font-black text-red-600 uppercase tracking-widest text-center">{circleError}</p>
+              )}
+              {circleSuccess && (
+                <p className="mt-3 text-[9px] font-black text-green-600 uppercase tracking-widest text-center">{circleSuccess}</p>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }
