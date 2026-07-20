@@ -136,7 +136,18 @@ function CheckoutContent() {
   };
 
   const handleVerifyCircleNetwork = async () => {
-    if (!circlePhone.trim() || !circleBillingId.trim() || isVerifyingCircle) return;
+    const shakeMap: Record<string, boolean> = {};
+    if (!circlePhone.trim()) shakeMap.circlePhone = true;
+    if (!circleBillingId.trim()) shakeMap.circleBillingId = true;
+
+    if (Object.keys(shakeMap).length > 0) {
+      setShakingFields(prev => ({ ...prev, ...shakeMap }));
+      setCircleError('Please enter Phone Number & Customer ID');
+      setTimeout(() => setShakingFields({}), 500);
+      return;
+    }
+
+    if (isVerifyingCircle) return;
     setCircleError('');
     setCircleSuccess('');
     setIsVerifyingCircle(true);
@@ -148,8 +159,8 @@ function CheckoutContent() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contactNumber: circlePhone,
-          billingId: circleBillingId
+          contactNumber: circlePhone.trim(),
+          billingId: circleBillingId.trim()
         })
       });
 
@@ -161,13 +172,29 @@ function CheckoutContent() {
         setCircleBillingId('');
       } else {
         setCircleError(data.error || 'Verification failed. Please check inputs.');
+        setShakingFields(prev => ({ ...prev, circlePhone: true, circleBillingId: true }));
+        setTimeout(() => setShakingFields({}), 500);
       }
     } catch (err) {
       setCircleError('Unable to reach validation server. Please try again.');
+      setShakingFields(prev => ({ ...prev, circlePhone: true, circleBillingId: true }));
+      setTimeout(() => setShakingFields({}), 500);
     } finally {
       setIsVerifyingCircle(false);
     }
   };
+
+  const handleRemoveCircleDiscount = () => {
+    removeCircleDiscount();
+    setCircleSuccess('');
+    setCircleError('');
+  };
+
+  useEffect(() => {
+    if (!cart?.circleNetworkDiscount) {
+      setCircleSuccess('');
+    }
+  }, [cart?.circleNetworkDiscount]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -1430,15 +1457,15 @@ function CheckoutContent() {
                         <span className="font-bold uppercase text-[9px] tracking-widest leading-none">
                           Circle Network Discount:
                         </span>
-                        <span className="text-[7px] font-black text-gray-400 mt-0.5 tracking-wider uppercase">
-                          ID: {cart.circleNetworkDiscount.id}, No: {cart.circleNetworkDiscount.number}
+                        <span className="text-[8px] font-mono font-bold text-amber-700 mt-0.5 tracking-wider">
+                          ID: {cart.circleNetworkDiscount.id} | Phone: {cart.circleNetworkDiscount.number}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-amber-600">- ৳ {Math.round(circleDiscount || 0)}</span>
                         <button
                           type="button"
-                          onClick={removeCircleDiscount}
+                          onClick={handleRemoveCircleDiscount}
                           className="text-[9px] font-bold text-red-600 hover:underline flex items-center gap-1"
                         >
                           [Remove] <X className="w-2.5 h-2.5" />
@@ -1490,19 +1517,29 @@ function CheckoutContent() {
                 {/* CIRCLE NETWORK PARTNER CAMPAIGN SECTION */}
                 {!cart.circleNetworkDiscount && (
                   <div className="py-4 border-b border-gray-100 my-2 bg-gradient-to-br from-amber-50/50 to-yellow-50/20 p-3 rounded border border-amber-200/50">
-                    <div className="flex items-center gap-3 mb-3">
-                      <img 
-                        src="/circle-logo-en.svg" 
-                        alt="Circle Network" 
-                        className="h-6 w-auto object-contain"
-                      />
-                      <span className="text-gray-400 font-light text-sm">×</span>
-                      <img 
-                        src="/logo.png" 
-                        alt="Parle" 
-                        className="h-6 w-auto object-contain"
-                      />
-                      <span className="text-[8px] font-black text-amber-700 uppercase tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded ml-1 shrink-0">
+                    <div className="flex items-center justify-between mb-3.5">
+                      <div className="flex items-center gap-3">
+                        <a
+                          href="https://circlenetworkbd.net/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:opacity-85 transition-opacity"
+                          title="Visit Circle Network"
+                        >
+                          <img 
+                            src="/circle-logo-en.svg" 
+                            alt="Circle Network" 
+                            className="h-9 sm:h-10 w-auto object-contain"
+                          />
+                        </a>
+                        <span className="text-gray-300 font-light text-lg">×</span>
+                        <img 
+                          src="/logo.png" 
+                          alt="Parle" 
+                          className="h-8 sm:h-9 w-auto object-contain"
+                        />
+                      </div>
+                      <span className="text-[8px] font-black text-amber-700 uppercase tracking-wider bg-amber-100/80 border border-amber-200/60 px-2 py-0.5 rounded-full shrink-0">
                         Campaign
                       </span>
                     </div>
@@ -1511,36 +1548,42 @@ function CheckoutContent() {
                     </p>
                     
                     <div className="flex flex-col gap-2">
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Registered Phone Number"
-                          value={circlePhone}
-                          onChange={(e) => setCirclePhone(e.target.value)}
-                          className="w-full bg-white border border-gray-200 focus:border-amber-500 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className={shakingFields.circlePhone ? 'animate-shake' : ''}>
+                          <input
+                            type="text"
+                            placeholder="Phone Number"
+                            value={circlePhone}
+                            onChange={(e) => setCirclePhone(e.target.value)}
+                            className={`w-full bg-white border ${
+                              shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-amber-500'
+                            } rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none`}
+                          />
+                        </div>
+                        <div className={shakingFields.circleBillingId ? 'animate-shake' : ''}>
+                          <input
+                            type="text"
+                            placeholder="Customer ID"
+                            value={circleBillingId}
+                            onChange={(e) => setCircleBillingId(e.target.value)}
+                            className={`w-full bg-white border ${
+                              shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-amber-500'
+                            } rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none`}
+                          />
+                        </div>
                       </div>
-                      <div className="flex gap-1.5">
-                        <input
-                          type="text"
-                          placeholder="Customer ID"
-                          value={circleBillingId}
-                          onChange={(e) => setCircleBillingId(e.target.value)}
-                          className="flex-1 bg-white border border-gray-200 focus:border-amber-500 rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleVerifyCircleNetwork}
-                          disabled={isVerifyingCircle}
-                          className="bg-amber-600 text-white px-3 rounded text-[9px] font-black uppercase hover:bg-amber-700 transition-colors active:scale-95 flex items-center justify-center min-w-[70px] disabled:opacity-50"
-                        >
-                          {isVerifyingCircle ? (
-                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            'Verify'
-                          )}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleVerifyCircleNetwork}
+                        disabled={isVerifyingCircle}
+                        className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded text-[9px] font-black uppercase transition-colors active:scale-95 flex items-center justify-center disabled:opacity-50"
+                      >
+                        {isVerifyingCircle ? (
+                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          'Verify'
+                        )}
+                      </button>
                     </div>
                     {circleError && (
                       <p className="mt-2 text-[8px] font-black text-red-600 uppercase tracking-widest">{circleError}</p>
