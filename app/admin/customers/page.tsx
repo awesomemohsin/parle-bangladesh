@@ -76,7 +76,7 @@ export default function AdminCustomersPage() {
     customer: null,
   });
 
-  const [promoType, setPromoType] = useState<"dealer" | "retailer" | "employee" | "student" | "influencer" | "corporate" | "other">("dealer");
+  const [promoType, setPromoType] = useState<"customer" | "dealer" | "retailer" | "corporate" | "employee" | "student" | "influencer" | "other">("dealer");
   const [customTypeName, setCustomTypeName] = useState("");
   const [discountPercent, setDiscountPercent] = useState("10");
   const [expirationDate, setExpirationDate] = useState("");
@@ -229,7 +229,7 @@ export default function AdminCustomersPage() {
       customerType: finalType
     };
 
-    if (promoType !== "dealer" && promoType !== "retailer" && promoType !== "corporate" && promoType !== "employee") {
+    if (promoType !== "dealer" && promoType !== "retailer" && promoType !== "corporate" && promoType !== "employee" && promoType !== "customer") {
       const percent = Number(discountPercent);
       if (isNaN(percent) || percent <= 0 || percent > 50) {
         toast.error("Custom customer discounts cannot exceed 50%. Please enter a percent between 1 and 50.");
@@ -554,15 +554,11 @@ export default function AdminCustomersPage() {
                           <Button
                             size="sm"
                             onClick={() => {
-                              if (customer.customerType !== "customer") {
-                                setConfirmModal({ open: true, customer });
-                              } else {
-                                setPromoType("dealer");
-                                setCustomTypeName("");
-                                setDiscountPercent("10");
-                                setExpirationDate("");
-                                setPromoteModal({ open: true, customer });
-                              }
+                              setPromoType(customer.customerType as any || "dealer");
+                              setCustomTypeName("");
+                              setDiscountPercent(customer.flatDiscountPercent?.toString() || "10");
+                              setExpirationDate(customer.flatDiscountExpiresAt ? new Date(customer.flatDiscountExpiresAt).toISOString().split('T')[0] : "");
+                              setPromoteModal({ open: true, customer });
                             }}
                             disabled={updatingId === customer.id || customer.pendingApproval}
                             variant={customer.customerType !== "customer" ? "outline" : "default"}
@@ -582,7 +578,7 @@ export default function AdminCustomersPage() {
                             ) : customer.customerType !== "customer" ? (
                               <>
                                 <UserCheck className="w-2.5 h-2.5 mr-1" />
-                                Demote
+                                Change Role
                               </>
                             ) : (
                               <>
@@ -693,22 +689,22 @@ export default function AdminCustomersPage() {
                    Select Type
                  </label>
                  <div className="grid grid-cols-2 gap-2">
-                   {["dealer", "retailer", "corporate", "employee", "student", "influencer", "other"].map((t) => (
-                     <button
-                       key={t}
-                       type="button"
-                       onClick={() => setPromoType(t as any)}
-                       className={`py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest text-center transition-all ${
-                          t === "other" ? "col-span-2" : ""
-                        } ${
-                         promoType === t
-                           ? "border-red-600 bg-red-50/50 text-red-600"
-                           : "border-gray-200 hover:border-gray-300 text-gray-500 hover:text-gray-900"
-                       }`}
-                     >
-                       {t === "other" ? "Others / Custom" : t === "corporate" ? "Corporate" : `${t}s`}
-                     </button>
-                   ))}
+                    {["customer", "dealer", "retailer", "corporate", "employee", "student", "influencer", "other"].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setPromoType(t as any)}
+                        className={`py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest text-center transition-all ${
+                           t === "other" || t === "customer" ? "col-span-2" : ""
+                         } ${
+                          promoType === t
+                            ? "border-red-650 bg-red-50 text-red-650 font-extrabold"
+                            : "border-gray-200 hover:border-gray-300 text-gray-500 hover:text-gray-900"
+                        }`}
+                      >
+                        {t === "other" ? "Others / Custom" : t === "corporate" ? "Corporate" : t === "customer" ? "Regular Customer (Demote)" : `${t}s`}
+                      </button>
+                    ))}
                  </div>
                </div>
 
