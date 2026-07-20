@@ -14,6 +14,7 @@ interface Variation {
   price: number
   dealerPrice?: number
   retailerPrice?: number
+  corporatePrice?: number
   discountPrice?: number
   stock: number
   holdStock?: number
@@ -413,6 +414,22 @@ export default function AdminProductFormPage() {
                         {pendingApprovals.some(p => p.field === 'retailerPrice' && p.variationIndex === index) && (
                           <p className="text-[8px] text-amber-600 font-black uppercase mt-1 animate-pulse">Pending Review</p>
                         )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] ml-1">Corporate Price</label>
+                        <Input
+                          type="number"
+                          value={variation.corporatePrice || ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            const vars = [...product.variations];
+                            vars[index].corporatePrice = isNaN(val) ? 0 : val;
+                            setProduct({ ...product, variations: vars });
+                          }}
+                          className="h-10 px-3 text-xs font-bold text-indigo-600 border-2 border-gray-50 rounded-lg focus:border-red-600"
+                          placeholder="Corporate Rate"
+                        />
                       </div>
 
                       <div className="space-y-1">

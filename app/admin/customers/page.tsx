@@ -229,7 +229,7 @@ export default function AdminCustomersPage() {
       customerType: finalType
     };
 
-    if (promoType !== "dealer" && promoType !== "retailer" && promoType !== "employee") {
+    if (promoType !== "dealer" && promoType !== "retailer" && promoType !== "corporate" && promoType !== "employee") {
       const percent = Number(discountPercent);
       if (isNaN(percent) || percent <= 0 || percent > 50) {
         toast.error("Custom customer discounts cannot exceed 50%. Please enter a percent between 1 and 50.");
@@ -693,7 +693,7 @@ export default function AdminCustomersPage() {
                    Select Type
                  </label>
                  <div className="grid grid-cols-2 gap-2">
-                   {["dealer", "retailer", "employee", "student", "influencer", "corporate", "other"].map((t) => (
+                   {["dealer", "retailer", "corporate", "employee", "student", "influencer", "other"].map((t) => (
                      <button
                        key={t}
                        type="button"
@@ -726,7 +726,7 @@ export default function AdminCustomersPage() {
                  </div>
                )}
 
-               {promoType !== "dealer" && promoType !== "retailer" && promoType !== "employee" && (
+                {promoType !== "dealer" && promoType !== "retailer" && promoType !== "corporate" && promoType !== "employee" && (
                  <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                    <div>
                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">

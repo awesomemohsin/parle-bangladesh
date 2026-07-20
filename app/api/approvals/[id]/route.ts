@@ -584,7 +584,7 @@ async function applyApprovedChanges(approvalRequest: any, userName: string, comm
         customer.flatDiscountPercent = details.flatDiscountPercent;
         customer.flatDiscountExpiresAt = details.flatDiscountExpiresAt ? new Date(details.flatDiscountExpiresAt) : undefined;
         // Automatically approve and set unlimited credit limit for B2B roles
-        if (details.customerType === "retailer" || details.customerType === "dealer" || details.customerType === "employee") {
+        if (details.customerType === "retailer" || details.customerType === "dealer" || details.customerType === "corporate" || details.customerType === "employee") {
           customer.isRetailerApproved = true;
           customer.creditLimit = 999999999;
         }

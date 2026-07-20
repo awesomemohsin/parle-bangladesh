@@ -247,7 +247,7 @@ export async function PATCH(request: NextRequest) {
       } else {
         // PROMOTION: Requires Level 2 consensus approval (Anindo + Saiful)
         const discountVal = Number(body.flatDiscountPercent) || 0;
-        if (!["customer", "retailer", "dealer", "employee"].includes(customerType) && discountVal > 50) {
+        if (!["customer", "retailer", "dealer", "corporate", "employee"].includes(customerType) && discountVal > 50) {
           return NextResponse.json({ error: "High-level discount limit exceeded: Custom customer flat discounts cannot exceed 50%." }, { status: 400 });
         }
 
@@ -267,8 +267,8 @@ export async function PATCH(request: NextRequest) {
         // Store the targetDetails snapshot for consensus application
         const targetDetails = {
           customerType,
-          flatDiscountPercent: !["customer", "retailer", "dealer", "employee"].includes(customerType) ? discountVal : undefined,
-          flatDiscountExpiresAt: !["customer", "retailer", "dealer", "employee"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
+          flatDiscountPercent: !["customer", "retailer", "dealer", "corporate", "employee"].includes(customerType) ? discountVal : undefined,
+          flatDiscountExpiresAt: !["customer", "retailer", "dealer", "corporate", "employee"].includes(customerType) && body.flatDiscountExpiresAt ? new Date(body.flatDiscountExpiresAt) : undefined
         };
 
         const approval = await ApprovalRequest.create({
