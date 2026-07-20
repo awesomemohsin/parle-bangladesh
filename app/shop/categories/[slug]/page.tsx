@@ -19,13 +19,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export async function generateStaticParams() {
-  const categories = await getCategories();
-  return categories.map((cat: any) => ({
-    slug: cat.slug,
-  }));
-}
-
 export const revalidate = 60;
 
 export default async function CategoryProductsPage({ params }: { params: Promise<{ slug: string }> }) {
