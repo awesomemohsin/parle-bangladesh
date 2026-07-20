@@ -110,12 +110,14 @@ export default function CartPage() {
     partnerUrl
   } = useCart();
   const { user } = useAuth();
+  const activeShopStr = typeof window !== 'undefined' ? localStorage.getItem("sr_active_shop_user") : null;
   const isDealer = !!(user && (
-    ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
-    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType || '')
+    (!activeShopStr && ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role)) ||
+    ['dealer', 'employee'].includes(user.customerType || '')
   ));
-  const isRetailer = user?.role === "customer" && user?.customerType === "retailer";
-  const isCorporate = user?.role === "customer" && user?.customerType === "corporate";
+  const isRetailer = user?.customerType === "retailer";
+  const isCorporate = user?.customerType === "corporate";
+  const isB2BUser = isDealer || isRetailer || isCorporate;
   const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer || isCorporate);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -467,7 +469,6 @@ export default function CartPage() {
                 className="bg-white rounded-[32px] p-6 shadow-xl shadow-slate-200/50 border border-gray-50 overflow-hidden relative"
               >
                 {(() => {
-                  const isB2BUser = isDealer || isRetailer || isCorporate;
                   const isFreeDelivery = cartDisplayTotal >= 1000 || !!freeShippingGranted || isB2BUser;
                   const progressPercent = isFreeDelivery ? 100 : Math.min((cartDisplayTotal / 1000) * 100, 100);
                   return (
@@ -567,7 +568,7 @@ export default function CartPage() {
                   </div>
 
                   {/* Option B: Circle Network Rate */}
-                  {circleCampaignActive !== false && (
+                  {circleCampaignActive !== false && !isB2BUser && (
                     !cart?.circleNetworkDiscount ? (
                       <div
                         onClick={() => {
