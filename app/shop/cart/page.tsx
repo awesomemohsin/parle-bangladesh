@@ -131,6 +131,8 @@ export default function CartPage() {
   useEffect(() => {
     if (cart?.circleNetworkDiscount) {
       setSelectedRateOption('circle');
+    } else {
+      setCircleSuccess('');
     }
   }, [cart?.circleNetworkDiscount]);
 
@@ -781,39 +783,58 @@ export default function CartPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-2xl overflow-hidden text-left"
+              className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 border border-amber-100 shadow-2xl overflow-hidden text-center"
             >
               {/* Decorative background element */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-2.5">
+              {/* Close Button */}
+              <button
+                onClick={() => setIsCircleModalOpen(false)}
+                className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-gray-100/70 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all"
+                aria-label="Close modal"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+
+              {/* Centered & Larger Logos */}
+              <div className="flex flex-col items-center justify-center mb-5 pt-2">
+                <div className="flex items-center justify-center gap-4 mb-3">
+                  <a
+                    href="https://circlenetworkbd.net/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:opacity-85 transition-opacity"
+                    title="Visit Circle Network"
+                  >
                     <img 
                       src="/circle-logo-en.svg" 
                       alt="Circle Network" 
-                      className="h-7 w-auto object-contain"
+                      className="h-12 sm:h-14 w-auto object-contain"
                     />
-                    <span className="text-gray-400 font-light text-base">×</span>
-                    <img 
-                      src="/logo.png" 
-                      alt="Parle" 
-                      className="h-7 w-auto object-contain"
-                    />
-                  </div>
-                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter italic">
-                    Verify Campaign Rate
-                  </h3>
+                  </a>
+                  <span className="text-gray-300 font-light text-2xl">×</span>
+                  <img 
+                    src="/logo.png" 
+                    alt="Parle" 
+                    className="h-10 sm:h-12 w-auto object-contain"
+                  />
                 </div>
-                <button
-                  onClick={() => setIsCircleModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100/50 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight leading-snug">
+                  Flat 10% OFF for{" "}
+                  <a
+                    href="https://circlenetworkbd.net/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-500 hover:text-amber-600 underline decoration-amber-400/50 hover:decoration-amber-500 transition-colors"
+                  >
+                    Circle Network
+                  </a>{" "}
+                  User 😀
+                </h3>
               </div>
 
-              <p className="text-[10px] text-amber-700 font-bold uppercase tracking-widest leading-relaxed mb-6">
+              <p className="text-[10px] text-amber-700 font-bold uppercase tracking-widest leading-relaxed mb-6 text-center">
                 Provide your registered contact number and Customer ID to apply your flat 10% Circle Network partner discount.
               </p>
 
