@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowLeft, Key, Lock, Eye, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Lock, Eye, Key, Shield } from 'lucide-react';
 
 export default function PrivacyPage() {
   return (
@@ -38,90 +38,83 @@ export default function PrivacyPage() {
       <section className="py-16 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="bg-white rounded-3xl p-8 lg:p-12 shadow-xl shadow-slate-100/60 border border-gray-100 space-y-10">
           
-          {/* Main Statement */}
-          <div className="space-y-4">
-            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
-              At Parle Bangladesh (M/S Circle Enterprise), we value your trust and are committed to protecting your privacy. This Privacy Policy details how we collect, store, and utilize your personal information when you register or order biscuits and confectionery products via our website.
-            </p>
-          </div>
+          <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
+            Parle Bangladesh (M/S Circle Enterprise) is committed to protecting your privacy. This Privacy Policy details how we handle the collection, use, and protection of personal data when you interact with our platform.
+          </p>
 
-          {/* Section 1: Data Collection */}
-          <div className="space-y-4">
+          {/* Section 1: Information Collection */}
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
                 <Eye className="w-4 h-4" />
               </div>
-              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">1. What Information We Collect</h3>
+              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">1. Information We Collect</h3>
             </div>
-            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed mb-2">
-              We collect information necessary to facilitate product orders, B2B registrations, and account security:
+            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
+              We collect information required to complete orders and verify business memberships:
             </p>
-            <ul className="space-y-3 pl-2">
-              <li className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed flex items-start gap-2">
+            <ul className="space-y-2 pl-2 text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
+              <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0 mt-2" />
-                <span><strong>Profile Data:</strong> Name, Email Address, Contact Numbers, Delivery Address, and Location.</span>
+                <span><strong>Personal Contact Details:</strong> Name, phone numbers, delivery addresses, and email.</span>
               </li>
-              <li className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed flex items-start gap-2">
+              <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0 mt-2" />
-                <span><strong>Business Validation (B2B):</strong> Trade license details, proprietor info, and physical shop verification documents.</span>
-              </li>
-              <li className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0 mt-2" />
-                <span><strong>ISP Campaigns:</strong> Mobile verification data queried securely from our campaign partners (e.g. Circle Network ISP verify endpoint) to grant subscription campaigns discounts.</span>
+                <span><strong>Business Verification Info:</strong> Business identifiers, proprietor details, and commercial licenses for wholesale accounts.</span>
               </li>
             </ul>
           </div>
 
-          {/* Section 2: How We Use Data */}
-          <div className="space-y-4">
+          {/* Section 2: Use of Information */}
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
                 <Key className="w-4 h-4" />
               </div>
-              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">2. How We Use Your Data</h3>
+              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">2. How We Use Collected Data</h3>
             </div>
-            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed mb-2">
-              The information we gather is used to improve the service quality and secure transactions:
+            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
+              We use your information exclusively for transactional and account management purposes:
             </p>
-            <ul className="space-y-3 pl-2">
-              <li className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed flex items-start gap-2">
+            <ul className="space-y-2 pl-2 text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
+              <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0 mt-2" />
-                <span>To process, dispatch, and track orders with logistics partners.</span>
+                <span>Processing, dispatching, and invoicing orders.</span>
               </li>
-              <li className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed flex items-start gap-2">
+              <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0 mt-2" />
-                <span>To manage credit limit statements, B2B invoices, and payment histories.</span>
+                <span>Authenticating accounts and validating eligibility for partner promotion campaigns.</span>
               </li>
-              <li className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed flex items-start gap-2">
+              <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0 mt-2" />
-                <span>To authenticate user logins via JWT tokens and send order status notifications.</span>
+                <span>Providing client support and transaction communications.</span>
               </li>
             </ul>
           </div>
 
           {/* Section 3: Data Security */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
                 <Lock className="w-4 h-4" />
               </div>
-              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">3. Data Security & Storage</h3>
+              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">3. Security & Sharing Policies</h3>
             </div>
             <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
-              All personal and financial details are transmitted securely using HTTPS protocol and stored on protected cloud database instances. We do not sell, rent, or lease your personal identification information to any third-party marketing companies. 
+              We implement industry-standard encryption protocols (HTTPS/SSL) to protect your data. Your personal and commercial information is never shared with, sold to, or rented to third-party marketing companies. We only provide details to trusted logistics partners to facilitate shipment delivery.
             </p>
           </div>
 
-          {/* Section 4: Contact */}
-          <div className="space-y-4">
+          {/* Section 4: Data Rights */}
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                <CheckCircle2 className="w-4 h-4" />
+                <Shield className="w-4 h-4" />
               </div>
-              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">4. Access and Support</h3>
+              <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">4. Your Data Rights</h3>
             </div>
             <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
-              If you wish to update your business profile, request data removal, or obtain credit history statements, please contact the Authorized Management support at <span className="text-red-600 font-bold">info.parlebangladesh@gmail.com</span>.
+              You have the right to request access to, correction of, or deletion of your personal data on our systems. If you have any inquiries or wish to request data updates, please contact our support team at <span className="text-red-600 font-bold">info.parlebangladesh@gmail.com</span>.
             </p>
           </div>
 
