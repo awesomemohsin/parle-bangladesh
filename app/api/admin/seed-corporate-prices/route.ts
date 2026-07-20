@@ -13,65 +13,68 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    const corporatePriceMap: Array<{ keywords: string[]; weight?: string; price: number }> = [
-      { keywords: ['choco chips', 'hide'], weight: '22', price: 23 },
-      { keywords: ['fab', 'chocolate'], weight: '25', price: 26 },
-      { keywords: ['fab', 'vanilla'], weight: '25', price: 26 },
-      { keywords: ['fab', 'orange'], weight: '25', price: 26 },
-      { keywords: ['fab', 'strawberry'], weight: '25', price: 26 },
-      { keywords: ['fab', 'chocolate'], weight: '50', price: 54 },
-      { keywords: ['fab', 'vanilla'], weight: '50', price: 54 },
-      { keywords: ['parle g gold'], weight: '125', price: 107 },
-      { keywords: ['jam-in'], price: 107 },
-      { keywords: ['oats', 'berries'], price: 108 },
-      { keywords: ['choco chips', 'hide'], weight: '82.5', price: 125 },
-      { keywords: ['bourbon'], weight: '63', price: 125 },
-      { keywords: ['kreams bourbon'], price: 125 },
-      { keywords: ['cashew', 'butter'], price: 128 },
-      { keywords: ['caffemocha'], price: 128 },
-      { keywords: ['choco rolls'], weight: '75', price: 132 },
-      { keywords: ['fab', 'orange'], weight: '112', price: 138 },
-      { keywords: ['fab', 'strawberry'], weight: '112', price: 138 },
-      { keywords: ['fab', 'vanilla'], weight: '112', price: 138 },
-      { keywords: ['fab', 'chocolate'], weight: '112', price: 138 },
-      { keywords: ['nutricrunch', 'lite'], price: 148 },
-      { keywords: ['banana', 'cinnamon'], price: 147 },
-      { keywords: ['cranberry', 'cashew'], price: 147 },
-      { keywords: ['krack jack'], price: 139 },
-      { keywords: ['chox'], price: 161 },
-      { keywords: ['centre filled', 'choco'], price: 163 },
-      { keywords: ['centre filled', 'berries'], price: 163 },
-      { keywords: ['centre filled', 'hazelnut'], price: 163 },
-      { keywords: ['black bourbon', 'chocolate'], price: 188 },
-      { keywords: ['black bourbon', 'vanilla'], price: 188 },
-      { keywords: ['412.5'], price: 658 },
-      { keywords: ['choco rolls'], weight: '300', price: 818 },
-      { keywords: ['triple delight'], price: 861 },
-      { keywords: ['wafer', 'onion'], price: 124 },
-      { keywords: ['wafer', 'tomato'], price: 124 },
-      { keywords: ['wafer', 'piri'], price: 124 },
-      { keywords: ['wafer', 'salted'], price: 124 },
+    const rules = [
+      { slug: 'hide-seek-choco-chip-cookies', weight: '22g', corporatePrice: 23 },
+      { slug: 'fab-chocolate', weight: '25g', corporatePrice: 26 },
+      { slug: 'fab-vanilla', weight: '25g', corporatePrice: 26 },
+      { slug: 'fab-orange', weight: '25g', corporatePrice: 26 },
+      { slug: 'fab-strawberry', weight: '25g', corporatePrice: 26 },
+      { slug: 'fab-chocolate', weight: '50g', corporatePrice: 54 },
+      { slug: 'fab-vanilla', weight: '50g', corporatePrice: 54 },
+      { slug: 'parle-g-gold', weight: '125g', corporatePrice: 107 },
+      { slug: 'jam-in-cream', weight: '70g', corporatePrice: 107 },
+      { slug: 'parle-g-oats-berries', weight: '93.8g', corporatePrice: 108 },
+      { slug: 'hide-seek-choco-chip-cookies', weight: '82.5g', corporatePrice: 125 },
+      { slug: 'hide-seek-bourbon', weight: '63g', corporatePrice: 125 },
+      { slug: 'kreams-bourbon', weight: '75g', corporatePrice: 125 },
+      { slug: 'hide-seek-cashew-butter', weight: '91.74g', corporatePrice: 128 },
+      { slug: 'hide-seek-caff-mocha-cookies', weight: '75g', corporatePrice: 128 },
+      { slug: 'hide-seek-choco-rolls', weight: '75g', corporatePrice: 132 },
+      { slug: 'fab-orange', weight: '112g', corporatePrice: 138 },
+      { slug: 'fab-strawberry', weight: '112g', corporatePrice: 138 },
+      { slug: 'fab-vanilla', weight: '112g', corporatePrice: 138 },
+      { slug: 'fab-chocolate', weight: '112g', corporatePrice: 138 },
+      { slug: 'nutricrunch-lite-crackers', weight: '100g', corporatePrice: 148 },
+      { slug: 'nutricrunch-premium-digestives-cookies', flavorKw: 'banana', corporatePrice: 147 },
+      { slug: 'nutricrunch-premium-digestives-cookies', flavorKw: 'cranberry', corporatePrice: 147 },
+      { slug: 'krackjack', weight: '60g', corporatePrice: 139 },
+      { slug: 'hide-seek-chox-choco-chip-cookies', weight: '75g', corporatePrice: 161 },
+      { slug: 'hide-seek-centre-filled', flavorKw: 'chocolate', corporatePrice: 163 },
+      { slug: 'hide-seek-centre-filled', flavorKw: 'mixed berries', corporatePrice: 163 },
+      { slug: 'hide-seek-centre-filled', flavorKw: 'hazelnut', corporatePrice: 163 },
+      { slug: 'hide-seek-black-bourbon', flavorKw: 'choco', corporatePrice: 188 },
+      { slug: 'hide-seek-black-bourbon', flavorKw: 'vanilla', corporatePrice: 188 },
+      { slug: 'hide-seek-choco-chip-cookies-bulk', weight: '412.5g', corporatePrice: 658 },
+      { slug: 'hide-seek-choco-rolls', weight: '300g', corporatePrice: 818 },
+      { slug: 'hide-seek-triple-delight', corporatePrice: 861 },
+      { slug: 'parles-wafers', flavorKw: 'onion', corporatePrice: 124 },
+      { slug: 'parles-wafers', flavorKw: 'tomato', corporatePrice: 124 },
+      { slug: 'parles-wafers', flavorKw: 'piri', corporatePrice: 124 },
+      { slug: 'parles-wafers', flavorKw: 'salted', corporatePrice: 124 },
     ];
 
     const products = await Product.find({});
     let updatedCount = 0;
+    let matchedVariationsCount = 0;
 
     for (const product of products) {
       let modified = false;
-      const pNameLower = product.name.toLowerCase();
 
       product.variations.forEach((varItem: any) => {
         const vWeight = (varItem.weight || '').toLowerCase();
         const vFlavor = (varItem.flavor || '').toLowerCase();
 
-        for (const rule of corporatePriceMap) {
-          const nameMatches = rule.keywords.every(kw => pNameLower.includes(kw) || vFlavor.includes(kw));
-          const weightMatches = !rule.weight || vWeight.includes(rule.weight.toLowerCase());
+        for (const rule of rules) {
+          if (product.slug === rule.slug) {
+            const weightMatches = !rule.weight || vWeight.includes(rule.weight.toLowerCase());
+            const flavorMatches = !rule.flavorKw || vFlavor.includes(rule.flavorKw.toLowerCase());
 
-          if (nameMatches && weightMatches) {
-            varItem.corporatePrice = rule.price;
-            modified = true;
-            break;
+            if (weightMatches && flavorMatches) {
+              varItem.corporatePrice = rule.corporatePrice;
+              modified = true;
+              matchedVariationsCount++;
+              break;
+            }
           }
         }
       });
@@ -85,7 +88,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Corporate prices updated successfully for ${updatedCount} products.`
+      message: `Corporate prices updated successfully for ${matchedVariationsCount} variations across ${updatedCount} products.`
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
