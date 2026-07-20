@@ -241,6 +241,7 @@ export interface IVariation {
   price: number;
   dealerPrice?: number;
   retailerPrice?: number;
+  corporatePrice?: number;
   discountPrice?: number;
   stock: number;
   holdStock: number;
@@ -281,6 +282,7 @@ const VariationSchema = new Schema<IVariation>({
   price: { type: Number, required: true },
   dealerPrice: { type: Number },
   retailerPrice: { type: Number },
+  corporatePrice: { type: Number },
   discountPrice: { type: Number },
   stock: { type: Number, required: true, default: 0 },
   holdStock: { type: Number, default: 0 },
