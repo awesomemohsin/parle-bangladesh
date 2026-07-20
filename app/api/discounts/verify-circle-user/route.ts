@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       client: {
-        id: client.username,
+        id: (client.id !== undefined && client.id !== null) ? String(client.id) : (client.username || billingId),
         username: client.username,
-        contact_number: client.contact_number,
+        contact_number: client.contact_number || cleanPhone,
         package_name: client.package_name
       }
     });
