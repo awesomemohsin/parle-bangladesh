@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import connectDB from "@/lib/db";
+import { CircleCampaignSetting } from "@/lib/models";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+    const campaignSetting = await CircleCampaignSetting.findOne({ key: 'circle_campaign' }).lean();
+    if (campaignSetting && campaignSetting.isActive === false) {
+      return NextResponse.json({ error: "Circle Network campaign is currently inactive." }, { status: 400 });
+    }
+
     const body = await request.json();
     const { billingId, contactNumber } = body;
 
