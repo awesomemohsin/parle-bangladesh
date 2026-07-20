@@ -15,6 +15,7 @@ interface Variation {
   price: number;
   dealerPrice?: number;
   retailerPrice?: number;
+  corporatePrice?: number;
   discountPrice?: number;
   flatDiscountPrice?: number;
   hasFlatDiscount?: boolean;
@@ -150,15 +151,17 @@ export default function ProductCard({
 
   const productImg = sanitizeProductImagePath(activeVariation.image);
 
+  const isCorporate = user?.customerType === 'corporate';
   const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
-  const isUserDiscountActive = !isDealer && !isRetailer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+  const isUserDiscountActive = !isDealer && !isRetailer && !isCorporate && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
   const hasDealerPrice = isDealer && !!activeVariation.dealerPrice && activeVariation.dealerPrice > 0;
   const hasRetailerPrice = isRetailer && !!activeVariation.retailerPrice && activeVariation.retailerPrice > 0;
+  const hasCorporatePrice = isCorporate && !!activeVariation.corporatePrice && activeVariation.corporatePrice > 0;
 
   // A product has a retail discount if it has a manual discountPrice OR a global flatDiscountPrice
-  const hasManualDiscount = !isDealer && !isRetailer && !!activeVariation.discountPrice && activeVariation.discountPrice < activeVariation.price;
-  const hasFlatDiscount = !isDealer && !isRetailer && !!activeVariation.hasFlatDiscount && !!activeVariation.flatDiscountPrice;
+  const hasManualDiscount = !isDealer && !isRetailer && !isCorporate && !!activeVariation.discountPrice && activeVariation.discountPrice < activeVariation.price;
+  const hasFlatDiscount = !isDealer && !isRetailer && !isCorporate && !!activeVariation.hasFlatDiscount && !!activeVariation.flatDiscountPrice;
 
   let currentPrice = activeVariation.price;
   let discountPercentage = 0;
@@ -169,6 +172,8 @@ export default function ProductCard({
     currentPrice = activeVariation.dealerPrice!;
   } else if (hasRetailerPrice) {
     currentPrice = activeVariation.retailerPrice!;
+  } else if (hasCorporatePrice) {
+    currentPrice = activeVariation.corporatePrice!;
   } else {
     // Collect all candidates
     let candidates = [{ price: activeVariation.price, percent: 0, label: "" }];
@@ -339,8 +344,8 @@ export default function ProductCard({
           <div className="flex flex-col gap-0.5 mb-1.5 sm:mb-3.5 min-h-[1.5rem] sm:min-h-[2.5rem] justify-center overflow-hidden">
             <div className="flex flex-col gap-0.5 transition-opacity duration-200">
               <div className="flex items-center gap-1 sm:gap-1.5">
-                <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>৳</span>
-                <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : 'text-red-600')}`}>
+                <span className={`text-sm sm:text-lg font-bold ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : (hasCorporatePrice ? 'text-indigo-600' : 'text-red-600'))}`}>৳</span>
+                <span className={`text-lg sm:text-2xl font-black tracking-tighter ${hasDealerPrice ? 'text-amber-600' : (hasRetailerPrice ? 'text-teal-600' : (hasCorporatePrice ? 'text-indigo-600' : 'text-red-600'))}`}>
                   {Math.round(currentPrice)}
                 </span>
                 {hasDealerPrice && (
@@ -353,6 +358,12 @@ export default function ProductCard({
                   <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-teal-100 flex-shrink-0">
                     <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-teal-600" />
                     <span className="text-[7px] sm:text-[8px] font-black uppercase text-teal-600 tracking-tighter">Retailer</span>
+                  </div>
+                )}
+                {hasCorporatePrice && (
+                  <div className="ml-1 sm:ml-2 flex items-center gap-0.5 sm:gap-1 bg-indigo-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-indigo-100 flex-shrink-0">
+                    <ShieldCheck className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-indigo-600" />
+                    <span className="text-[7px] sm:text-[8px] font-black uppercase text-indigo-600 tracking-tighter">Corporate</span>
                   </div>
                 )}
               </div>

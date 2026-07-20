@@ -141,10 +141,14 @@ export default function ProductDetailsClient({ product, images }: { product: any
   let hasAnyRetailDiscount = false;
   let activeDiscountLabel = "Sale";
 
+  const isCorporate = user?.customerType === 'corporate';
+
   if (isDealer && selectedVariation?.dealerPrice) {
     displayPrice = selectedVariation.dealerPrice;
   } else if (isRetailer && selectedVariation?.retailerPrice) {
     displayPrice = selectedVariation.retailerPrice;
+  } else if (isCorporate && selectedVariation?.corporatePrice) {
+    displayPrice = selectedVariation.corporatePrice;
   } else if (selectedVariation) {
     let candidates = [{ price: originalPrice, percent: 0, label: "" }];
 
@@ -294,15 +298,15 @@ export default function ProductDetailsClient({ product, images }: { product: any
         <div className="flex flex-col gap-2">
           <div className="flex items-end gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-3xl font-bold text-red-600">৳</span>
-              <span className="text-5xl font-bold text-red-600 tracking-tight tabular-nums">
+              <span className={`text-3xl font-bold ${isDealer ? 'text-amber-600' : (isRetailer ? 'text-teal-600' : (isCorporate ? 'text-indigo-600' : 'text-red-600'))}`}>৳</span>
+              <span className={`text-5xl font-bold tracking-tight tabular-nums ${isDealer ? 'text-amber-600' : (isRetailer ? 'text-teal-600' : (isCorporate ? 'text-indigo-600' : 'text-red-600'))}`}>
                 {Math.round(displayPrice)}
               </span>
             </div>
 
             <div className="flex flex-col mb-1.5">
-              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">
-                {isDealer ? "Dealer Rate (Inc. Vat)" : (isRetailer ? "Retailer Rate (Inc. Vat)" : "(Including Vat)")}
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
+                {isDealer ? "Dealer Rate (Inc. Vat)" : (isRetailer ? "Retailer Rate (Inc. Vat)" : (isCorporate ? "Corporate Rate (Inc. Vat)" : "(Including Vat)"))}
               </span>
               {hasAnyRetailDiscount && (
                 <div className="flex items-center gap-2">
@@ -322,7 +326,7 @@ export default function ProductDetailsClient({ product, images }: { product: any
         </div>
 
         {/* Minimum Order Discount Notice & Dynamic Campaign Progress */}
-        {!isDealer && !isRetailer && activeMinOrderDiscount && (() => {
+        {!isDealer && !isRetailer && !isCorporate && activeMinOrderDiscount && (() => {
           const minOrder = Number(activeMinOrderDiscount.minOrderAmount || 0);
           const unitPrice = originalPrice || 150;
           const targetQty = Math.round(minOrder / unitPrice);

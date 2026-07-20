@@ -17,6 +17,7 @@ interface Variation {
   price: number;
   dealerPrice?: number;
   retailerPrice?: number;
+  corporatePrice?: number;
   discountPrice?: number;
   flatDiscountPrice?: number;
   hasFlatDiscount?: boolean;
@@ -501,13 +502,16 @@ export default function ShopClient({
                   priority={index < 12}
                   onAddToCart={(variation: Variation) => {
                     const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
-                    const isUserDiscountActive = !isDealer && !isRetailer && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
+                    const isCorporate = (activeShop ? activeShop.customerType : user?.customerType) === "corporate";
+                    const isUserDiscountActive = !isDealer && !isRetailer && !isCorporate && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
                     let bestPrice = variation.price;
                     if (isDealer && variation.dealerPrice) {
                       bestPrice = variation.dealerPrice;
                     } else if (isRetailer && variation.retailerPrice) {
                       bestPrice = variation.retailerPrice;
+                    } else if (isCorporate && variation.corporatePrice) {
+                      bestPrice = variation.corporatePrice;
                     } else {
                       let candidates = [variation.price];
                       if (variation.discountPrice && variation.discountPrice < variation.price) {
