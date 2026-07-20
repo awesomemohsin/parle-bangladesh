@@ -569,7 +569,7 @@ function CheckoutContent() {
   const effUser = getEffectiveUser();
 
   const isB2BUser = !!(effUser && (
-    ['retailer', 'dealer', 'employee', 'admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(effUser.customerType || '') ||
+    ['retailer', 'dealer', 'corporate', 'employee', 'admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(effUser.customerType || '') ||
     ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role)
   ));
   const isFreeDelivery = total >= 1000 || !!freeShippingGranted || isB2BUser;

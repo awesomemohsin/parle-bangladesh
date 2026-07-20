@@ -114,16 +114,16 @@ export default function SRShopSelector() {
         const data = await res.json();
         const allShops = data.shops || [];
 
-        // B2B Shops (Retailers/Dealers)
+        // B2B Shops (Retailers/Dealers/Corporate)
         const b2bShops = allShops.filter((s: any) =>
-          (s.customerType === "retailer" || s.customerType === "dealer") && !s.isSR
+          (s.customerType === "retailer" || s.customerType === "dealer" || s.customerType === "corporate") && !s.isSR
         );
         setShops(b2bShops);
         setFilteredShops(b2bShops);
 
-        // Customers / Employees / Staff (any role except Retailers, Dealers, SRs, Guests)
+        // Customers / Employees / Staff (any role except Retailers, Dealers, Corporate, SRs, Guests)
         const regCustomers = allShops.filter((s: any) =>
-          !["retailer", "dealer", "Guest", "guest"].includes(s.customerType || "") &&
+          !["retailer", "dealer", "corporate", "Guest", "guest"].includes(s.customerType || "") &&
           !s.isSR &&
           !s.id?.toString().startsWith("guest-")
         );
@@ -266,6 +266,13 @@ export default function SRShopSelector() {
                       return (
                         <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                           Dealer
+                        </span>
+                      );
+                    }
+                    if (activeShop.customerType === 'corporate') {
+                      return (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          Corporate
                         </span>
                       );
                     }

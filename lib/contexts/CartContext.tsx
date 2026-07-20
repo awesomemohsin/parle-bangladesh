@@ -146,7 +146,8 @@ function calculateClientSideTotals(
     ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
   );
   const isRetailer = user && user.customerType === 'retailer';
-  const isPrivilegedCustomer = isDealer || isRetailer;
+  const isCorporate = user && user.customerType === 'corporate';
+  const isPrivilegedCustomer = isDealer || isRetailer || isCorporate;
 
   // 1. Fetch user discount if applicable
   let userDiscount: { percent: number; expiresAt: Date } | undefined = undefined;
@@ -407,7 +408,7 @@ function calculateClientSideTotals(
 
   const isCircleActive = circleSettings ? circleSettings.isActive : true;
   const circlePercent = circleSettings && circleSettings.discountPercent !== undefined ? circleSettings.discountPercent : 10;
-  const circleDiscount = (circleNetworkDiscountApplied && isCircleActive) ? Math.round(subtotal * (circlePercent / 100)) : 0;
+  const circleDiscount = (!isPrivilegedCustomer && circleNetworkDiscountApplied && isCircleActive) ? Math.round(subtotal * (circlePercent / 100)) : 0;
   const totalDiscount = flatDiscountTotal + promoDiscount + circleDiscount;
   const total = subtotal - totalDiscount;
 
@@ -1040,10 +1041,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [effUser, circleSettings]);
 
   useEffect(() => {
-    if (circleSettings && !circleSettings.isActive && cart?.circleNetworkDiscount) {
+    const isPrivileged = !!(effUser && (
+      ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role) ||
+      ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'retailer', 'corporate', 'employee'].includes(effUser.customerType || '')
+    ));
+    if (((circleSettings && !circleSettings.isActive) || isPrivileged) && cart?.circleNetworkDiscount) {
       removeCircleDiscount();
     }
-  }, [circleSettings, cart?.circleNetworkDiscount, removeCircleDiscount]);
+  }, [circleSettings, effUser, cart?.circleNetworkDiscount, removeCircleDiscount]);
 
   const clearCart = useCallback(() => {
     setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false, flatRules: [], circleDiscount: 0 });

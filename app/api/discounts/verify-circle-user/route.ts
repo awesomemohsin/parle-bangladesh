@@ -7,6 +7,15 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
+    const { getAuthUserFromRequest } = await import("@/lib/api-auth");
+    const authUser = getAuthUserFromRequest(request);
+    if (authUser && (
+      ['super_admin', 'admin', 'moderator', 'owner'].includes(authUser.role || '') ||
+      ['dealer', 'retailer', 'corporate', 'employee', 'super_admin', 'admin', 'moderator', 'owner'].includes(authUser.customerType || '')
+    )) {
+      return NextResponse.json({ error: "Circle Network partner discount is not available for wholesale or corporate accounts." }, { status: 400 });
+    }
+
     const campaignSetting = await CircleCampaignSetting.findOne({ key: 'circle_campaign' }).lean();
     if (campaignSetting && campaignSetting.isActive === false) {
       return NextResponse.json({ error: "Circle Network campaign is currently inactive." }, { status: 400 });

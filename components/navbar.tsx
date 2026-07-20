@@ -803,7 +803,7 @@ export default function Navbar() {
             {items.length > 0 && (
               <div className="p-5 border-t border-gray-100 bg-slate-50/50 space-y-4">
                 {/* Circle Network Campaign Feature */}
-                {circleCampaignActive !== false && (
+                {circleCampaignActive !== false && !(user && (['dealer', 'retailer', 'corporate', 'employee'].includes(user.customerType || '') || ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role || ''))) && (
                   cart?.circleNetworkDiscount ? (
                     <div className="bg-[#FDBC1F]/10 border border-[#FDBC1F]/30 p-3 rounded-xl flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 overflow-hidden">

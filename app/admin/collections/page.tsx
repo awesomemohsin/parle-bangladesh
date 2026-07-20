@@ -803,13 +803,13 @@ export default function CollectionsPage() {
 
     // Filter by customer/shop type
     if (invoiceFilter === "b2b") {
-      if (o.customerType !== "retailer" && o.customerType !== "dealer" && o.customerType !== "employee") return false;
+      if (o.customerType !== "retailer" && o.customerType !== "dealer" && o.customerType !== "corporate" && o.customerType !== "employee") return false;
     } else if (invoiceFilter === "customer") {
       if (o.customerType !== "customer" && o.customerType !== "guest") return false;
     } else if (invoiceFilter === "staff") {
       if (o.customerType !== "admin" && o.customerType !== "super_admin" && o.customerType !== "moderator" && o.customerType !== "owner") return false;
     } else if (invoiceFilter === "other") {
-      if (["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
+      if (["customer", "guest", "retailer", "dealer", "corporate", "employee", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
     }
 
     // Filter by order status
@@ -845,13 +845,13 @@ export default function CollectionsPage() {
 
     // Filter by customer/shop type
     if (invoiceFilter === "b2b") {
-      if (o.customerType !== "retailer" && o.customerType !== "dealer" && o.customerType !== "employee") return false;
+      if (o.customerType !== "retailer" && o.customerType !== "dealer" && o.customerType !== "corporate" && o.customerType !== "employee") return false;
     } else if (invoiceFilter === "customer") {
       if (o.customerType !== "customer" && o.customerType !== "guest") return false;
     } else if (invoiceFilter === "staff") {
       if (o.customerType !== "admin" && o.customerType !== "super_admin" && o.customerType !== "moderator" && o.customerType !== "owner") return false;
     } else if (invoiceFilter === "other") {
-      if (["customer", "guest", "retailer", "dealer", "employee", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
+      if (["customer", "guest", "retailer", "dealer", "corporate", "employee", "admin", "super_admin", "moderator", "owner"].includes(o.customerType || "")) return false;
     }
 
     // Filter by order status
