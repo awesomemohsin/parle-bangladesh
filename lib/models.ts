@@ -987,6 +987,30 @@ const TransactionLedgerSchema = new Schema<ITransactionLedger>(
 
 export const TransactionLedger = mongoose.models?.TransactionLedger || mongoose.model<ITransactionLedger>("TransactionLedger", TransactionLedgerSchema, "transaction_ledgers");
 
+// --- CIRCLE CAMPAIGN SETTING MODEL ---
+export interface ICircleCampaignSetting extends Document {
+  key: string;
+  isActive: boolean;
+  discountPercent: number;
+  partnerUrl?: string;
+  updatedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const CircleCampaignSettingSchema = new Schema<ICircleCampaignSetting>(
+  {
+    key: { type: String, default: "circle_campaign", unique: true, index: true },
+    isActive: { type: Boolean, default: true },
+    discountPercent: { type: Number, default: 10 },
+    partnerUrl: { type: String, default: "https://circlenetworkbd.net/" },
+    updatedBy: { type: String },
+  },
+  { timestamps: true }
+);
+
+export const CircleCampaignSetting = mongoose.models?.CircleCampaignSetting || mongoose.model<ICircleCampaignSetting>("CircleCampaignSetting", CircleCampaignSettingSchema, "circle_campaign_settings");
+
 
 
 

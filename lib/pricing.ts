@@ -1,5 +1,5 @@
 import connectDB from './db';
-import { PromoCode } from './models';
+import { PromoCode, CircleCampaignSetting } from './models';
 
 /**
  * Calculates discounts and totals on the server side to ensure data integrity.
@@ -16,6 +16,11 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   const isDealer = customerType === 'dealer' || customerType === 'employee' || ['admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(customerType || '');
   const isRetailer = customerType === 'retailer';
   const isPrivilegedCustomer = isDealer || isRetailer;
+
+  // Fetch Circle Network Campaign setting
+  let circleSetting = await CircleCampaignSetting.findOne({ key: 'circle_campaign' }).lean();
+  const isCircleActive = circleSetting ? circleSetting.isActive : true;
+  const circlePercent = circleSetting && circleSetting.discountPercent !== undefined ? circleSetting.discountPercent : 10;
 
   // 1. Fetch current active flat discounts
   const flatDiscounts = isPrivilegedCustomer ? [] : (await PromoCode.find({ 
@@ -41,7 +46,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     return sum + itemPrice * (Number(item.quantity || item.q) || 0);
   }, 0);
 
-  const circleDiscount = circleNetworkDiscountApplied ? Math.round(subtotal * 0.1) : 0;
+  const circleDiscount = (circleNetworkDiscountApplied && isCircleActive) ? Math.round(subtotal * (circlePercent / 100)) : 0;
 
   let freeShippingGranted = false;
   let flatDiscountTotal = 0;
