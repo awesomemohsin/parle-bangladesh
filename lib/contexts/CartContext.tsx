@@ -84,6 +84,9 @@ interface CartContextType {
   getItemDiscount: (item: CartItem) => number;
   applyCircleDiscount: (id: string, number: string) => void;
   removeCircleDiscount: () => void;
+  circleCampaignActive: boolean;
+  circleDiscountPercent: number;
+  partnerUrl: string;
 }
 
 const CART_STORAGE_KEY = "parle-cart";
@@ -135,7 +138,8 @@ function calculateClientSideTotals(
   promoDetails?: PromoDetails,
   flatRules: any[] = [],
   user: any = null,
-  circleNetworkDiscountApplied?: boolean
+  circleNetworkDiscountApplied?: boolean,
+  circleSettings?: { isActive: boolean; discountPercent: number; partnerUrl?: string }
 ) {
   const isDealer = user && (
     ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role) ||
@@ -228,19 +232,31 @@ function calculateClientSideTotals(
 
     // Compare with Campaign-based Flat Discounts
     activeFlatRules.forEach(rule => {
-      const itemVarKey = `${productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
-      const appliesToProduct = rule.allProducts || (
-        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === productId) && (
+      const ruleKey = rule._id ? rule._id.toString() : String(rule.id || '');
+      const minOrder = Number(rule.minOrderAmount || 0);
+
+      // Check target eligibility
+      const pId = item.productId;
+      const itemVarKey = `${pId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+      
+      const isTargeted = rule.allProducts || (
+        rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId) && (
           !rule.applicableVariations ||
           rule.applicableVariations.length === 0 ||
           rule.applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase())
         )
       );
-      const ruleKey = rule._id ? rule._id.toString() : String(rule.id || '');
-      const applicableSubtotal = ruleSubtotals.get(ruleKey) || 0;
-      const minOrderMet = applicableSubtotal >= (Number(rule.minOrderAmount) || 0);
 
-      if (appliesToProduct && minOrderMet) {
+      // Need to calculate rule-specific subtotals to check minOrderAmount
+      // (This part is a simplified representation of the logic flow)
+      const ruleSubtotal = items.reduce((sum, it) => {
+        const pId = it.productId;
+        const itVarKey = `${pId}:${(it.weight || '').toString().trim().toLowerCase()}:${(it.flavor || '').toString().trim().toLowerCase()}`;
+        const applies = rule.allProducts || (rule.applicableProducts && rule.applicableProducts.some((id: any) => id.toString() === pId));
+        return applies ? sum + (it.price * it.quantity) : sum;
+      }, 0);
+
+      if (isTargeted && ruleSubtotal >= minOrder) {
         let currentDiscount = 0;
         const amount = Number(rule.discountAmount || 0);
 
@@ -256,16 +272,16 @@ function calculateClientSideTotals(
           bestDiscountForItem = currentDiscount;
           bestRuleId = ruleKey;
         }
-
-        // Track free shipping granted by active, qualified flat rules
-        if (rule.freeShipping) {
-          freeShippingGranted = true;
-        }
       }
     });
 
-    const updatedItem = { ...item };
-    
+    const updatedItem = { 
+      ...item, 
+      discountAmount: bestDiscountForItem,
+      discountedPrice: itemQuantity > 0 ? Math.round((originalItemSubtotal - bestDiscountForItem) / itemQuantity) : itemPrice,
+      discountedTotal: Math.round(originalItemSubtotal - bestDiscountForItem)
+    };
+
     if (bestRuleId && bestDiscountForItem > 0) {
       if (bestRuleId === 'variation-discount' || bestRuleId.startsWith('user-flat-')) {
         flatDiscountTotal += bestDiscountForItem;
@@ -275,18 +291,10 @@ function calculateClientSideTotals(
         (updatedItem as any)._appliedRuleId = bestRuleId;
       }
     }
-
-    // Attach calculated discount info
-    updatedItem.discountAmount = bestDiscountForItem;
-    updatedItem.discountedPrice = itemQuantity > 0 ? Math.round((originalItemSubtotal - bestDiscountForItem) / itemQuantity) : itemPrice;
-    updatedItem.discountedTotal = Math.round(originalItemSubtotal - bestDiscountForItem);
-
     return updatedItem;
   });
 
-  // Apply max caps to each rule's total discount and prepare scaling factors
   const capScalingFactors = new Map<string, number>();
-
   activeFlatRules.forEach(rule => {
     const ruleId = rule._id ? rule._id.toString() : String(rule.id || '');
     const usedAmount = ruleUsage.get(ruleId) || 0;
@@ -297,28 +305,33 @@ function calculateClientSideTotals(
       capScalingFactors.set(ruleId, maxCap / usedAmount);
     } else {
       flatDiscountTotal += usedAmount;
+      capScalingFactors.set(ruleId, 1.0);
     }
   });
 
-  // Scale down item-level discounts if the rule cap was exceeded
+  // Re-adjust item discountAmounts based on rule scaling factors
   const finalItems = updatedItems.map(item => {
     const ruleId = (item as any)._appliedRuleId;
     if (ruleId && capScalingFactors.has(ruleId)) {
       const scale = capScalingFactors.get(ruleId)!;
-      item.discountAmount = (item.discountAmount || 0) * scale;
-
+      const scaledDiscount = (item.discountAmount || 0) * scale;
       const itemPrice = Number(item.price) || 0;
       const itemQuantity = Number(item.quantity) || 0;
-      const originalItemSubtotal = itemPrice * itemQuantity;
+      const originalSubtotal = itemPrice * itemQuantity;
 
-      item.discountedPrice = itemQuantity > 0 ? Math.round((originalItemSubtotal - item.discountAmount) / itemQuantity) : itemPrice;
-      item.discountedTotal = Math.round(originalItemSubtotal - item.discountAmount);
+      const finalItem = {
+        ...item,
+        discountAmount: scaledDiscount,
+        discountedPrice: itemQuantity > 0 ? Math.round((originalSubtotal - scaledDiscount) / itemQuantity) : itemPrice,
+        discountedTotal: Math.round(originalSubtotal - scaledDiscount)
+      };
+      delete (finalItem as any)._appliedRuleId;
+      return finalItem;
     }
     delete (item as any)._appliedRuleId;
     return item;
   });
 
-  // Calculate Promo Discount (stacks on top of remaining total)
   let promoDiscount = 0;
   let applicableSubtotal = 0;
 
@@ -330,7 +343,7 @@ function calculateClientSideTotals(
     if (currentMinOrder > 0 && remainingTotal < currentMinOrder) {
       applicableSubtotal = 0;
     } else if (promoDetails.allProducts === true) {
-      applicableSubtotal = subtotal;
+      applicableSubtotal = subtotal - flatDiscountTotal;
     } else {
       const restrictedIds = (promoDetails.applicableProducts || [])
         .map((id: any) => id?.toString()?.trim()?.toLowerCase())
@@ -339,48 +352,52 @@ function calculateClientSideTotals(
       const applicableVariations = promoDetails.applicableVariations || [];
       
       if (restrictedIds.length > 0) {
-        finalItems.forEach(item => {
+        finalItems.forEach((item: CartItem) => {
           const possibleIds = [
             item.productId,
             item.productSlug
           ].map(id => id?.toString()?.trim()?.toLowerCase()).filter(Boolean);
           
           const isMatch = possibleIds.some(id => restrictedIds.includes(id));
+          
           if (isMatch) {
-             const itemVarKey = `${item.productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
-             const isVarMatch = applicableVariations.length === 0 || 
-               applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase());
-               
-             if (isVarMatch) {
-               const itemPrice = Number(item.price) || 0;
-               const itemDiscountedPrice = item.discountedPrice !== undefined ? item.discountedPrice : itemPrice;
-               applicableSubtotal += itemDiscountedPrice * (Number(item.quantity) || 0);
-             }
+            if (applicableVariations.length === 0) {
+              const itemPrice = Number(item.price) || 0;
+              const itemQty = Number(item.quantity) || 0;
+              const itemDisc = Number(item.discountAmount) || 0;
+              applicableSubtotal += Math.max(0, (itemPrice * itemQty) - itemDisc);
+            } else {
+              const itemVarKey = `${item.productId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
+              const isVarMatch = applicableVariations.map((v: string) => v.trim().toLowerCase()).includes(itemVarKey.trim().toLowerCase());
+              
+              if (isVarMatch) {
+                const itemPrice = Number(item.price) || 0;
+                const itemQty = Number(item.quantity) || 0;
+                const itemDisc = Number(item.discountAmount) || 0;
+                applicableSubtotal += Math.max(0, (itemPrice * itemQty) - itemDisc);
+              }
+            }
           }
         });
       } else {
-        applicableSubtotal = 0;
+        applicableSubtotal = subtotal - flatDiscountTotal;
       }
     }
 
     if (applicableSubtotal > 0) {
-      const amount = Number(promoDetails.discountAmount || 0);
-      if (amount > 0) {
-        if (promoDetails.discountType === 'percentage') {
-          promoDiscount = (applicableSubtotal * amount) / 100;
-          
-          // Apply max discount cap if set
-          const maxCap = Number(promoDetails.maxDiscountAmount || 0);
-          if (maxCap > 0 && promoDiscount > maxCap) {
-            promoDiscount = maxCap;
-          }
+      if (promoDetails.discountType === 'percentage') {
+        const pctDiscount = (applicableSubtotal * promoDetails.discountAmount) / 100;
+        if (promoDetails.maxDiscountAmount && promoDetails.maxDiscountAmount > 0) {
+          promoDiscount = Math.min(pctDiscount, promoDetails.maxDiscountAmount);
         } else {
-          promoDiscount = Math.min(applicableSubtotal, amount);
+          promoDiscount = pctDiscount;
         }
-        
-        // Final cap: Cannot exceed remaining balance
-        promoDiscount = Math.min(remainingTotal, promoDiscount);
+      } else if (promoDetails.discountType === 'fixed') {
+        promoDiscount = promoDetails.discountAmount;
       }
+      
+      // Final cap: Cannot exceed remaining balance
+      promoDiscount = Math.min(remainingTotal, promoDiscount);
     }
 
     if (promoDetails.freeShipping) {
@@ -388,7 +405,9 @@ function calculateClientSideTotals(
     }
   }
 
-  const circleDiscount = circleNetworkDiscountApplied ? Math.round(subtotal * 0.1) : 0;
+  const isCircleActive = circleSettings ? circleSettings.isActive : true;
+  const circlePercent = circleSettings && circleSettings.discountPercent !== undefined ? circleSettings.discountPercent : 10;
+  const circleDiscount = (circleNetworkDiscountApplied && isCircleActive) ? Math.round(subtotal * (circlePercent / 100)) : 0;
   const totalDiscount = flatDiscountTotal + promoDiscount + circleDiscount;
   const total = subtotal - totalDiscount;
 
@@ -399,7 +418,7 @@ function calculateClientSideTotals(
     const minOrder = Number(rule.minOrderAmount || 0);
     if (minOrder <= 0) return;
 
-    const targetedItems = finalItems.filter(item => {
+    const targetedItems = finalItems.filter((item: CartItem) => {
       const pId = item.productId;
       const itemVarKey = `${pId}:${(item.weight || '').toString().trim().toLowerCase()}:${(item.flavor || '').toString().trim().toLowerCase()}`;
       return rule.allProducts || (
@@ -418,28 +437,10 @@ function calculateClientSideTotals(
     const unitPrice = Number(sampleItem.price) || 150;
     
     let variationSuffix = "";
-    const pId = sampleItem.productId;
-    if (rule.applicableVariations && rule.applicableVariations.length > 0 && pId) {
-      const targetedVars = rule.applicableVariations.filter((v: string) => 
-        v.trim().toLowerCase().startsWith(pId.toLowerCase() + ":")
-      );
-      if (targetedVars.length > 0) {
-        const varNames = targetedVars.map((v: string) => {
-          const parts = v.split(":");
-          const weight = parts[1] ? parts[1].trim() : "";
-          const flavor = parts[2] ? parts[2].trim() : "";
-          return [weight, flavor].filter(Boolean).join(" - ");
-        }).filter(Boolean);
-        if (varNames.length > 0) {
-          variationSuffix = ` (${varNames.join(", ")})`;
-        }
-      }
-    } else {
-      const varNames = Array.from(new Set(targetedItems.map(item => {
-        return [item.weight, item.flavor].filter(Boolean).join(" - ");
-      }).filter(Boolean)));
-      if (varNames.length > 0) {
-        variationSuffix = ` (${varNames.join(", ")})`;
+    if (sampleItem.weight || sampleItem.flavor) {
+      const parts = [sampleItem.weight, sampleItem.flavor].filter(Boolean);
+      if (parts.length > 0) {
+        variationSuffix = ` (${parts.join(" - ")})`;
       }
     }
     
@@ -502,6 +503,27 @@ function calculateClientSideTotals(
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [effUser, setEffUser] = useState<any>(null);
+
+  const [circleSettings, setCircleSettings] = useState<{ isActive: boolean; discountPercent: number; partnerUrl: string }>({
+    isActive: true,
+    discountPercent: 10,
+    partnerUrl: 'https://circlenetworkbd.net/'
+  });
+
+  useEffect(() => {
+    fetch('/api/discounts/circle-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && typeof data.isActive === 'boolean') {
+          setCircleSettings({
+            isActive: Boolean(data.isActive),
+            discountPercent: Number(data.discountPercent) || 10,
+            partnerUrl: data.partnerUrl || 'https://circlenetworkbd.net/'
+          });
+        }
+      })
+      .catch(err => console.error('Failed to load circle settings', err));
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -856,7 +878,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount, circleSettings);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -877,7 +899,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback((key: string) => {
     setCart(prev => {
       const newItems = prev.items.filter(i => !itemMatchesKey(i, key));
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount, circleSettings);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -920,7 +942,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             return i;
           });
 
-      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
+      const calculated = calculateClientSideTotals(newItems, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, !!prev.circleNetworkDiscount, circleSettings);
       const newItemCount = calculated.items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
       return { 
         ...prev, 
@@ -940,7 +962,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const applyPromo = useCallback((details: PromoDetails) => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
+      const calculated = calculateClientSideTotals(prev.items, details.code, details, prev.flatRules, effUser, !!prev.circleNetworkDiscount, circleSettings);
       return { 
         ...prev, 
         promoCode: details.code, 
@@ -961,7 +983,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removePromo = useCallback(() => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, effUser, !!prev.circleNetworkDiscount);
+      const calculated = calculateClientSideTotals(prev.items, undefined, undefined, prev.flatRules, effUser, !!prev.circleNetworkDiscount, circleSettings);
       return { 
         ...prev, 
         promoCode: undefined, 
@@ -983,7 +1005,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const applyCircleDiscount = useCallback((id: string, number: string) => {
     setCart(prev => {
       const circleNetworkDiscount = { id, number };
-      const calculated = calculateClientSideTotals(prev.items, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, true);
+      const calculated = calculateClientSideTotals(prev.items, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, true, circleSettings);
       return {
         ...prev,
         circleNetworkDiscount,
@@ -1001,7 +1023,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeCircleDiscount = useCallback(() => {
     setCart(prev => {
-      const calculated = calculateClientSideTotals(prev.items, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, false);
+      const calculated = calculateClientSideTotals(prev.items, prev.promoCode, prev.promoDetails, prev.flatRules, effUser, false, circleSettings);
       return {
         ...prev,
         circleNetworkDiscount: undefined,
@@ -1015,7 +1037,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         campaignNotices: calculated.campaignNotices
       };
     });
-  }, [effUser]);
+  }, [effUser, circleSettings]);
+
+  useEffect(() => {
+    if (circleSettings && !circleSettings.isActive && cart?.circleNetworkDiscount) {
+      removeCircleDiscount();
+    }
+  }, [circleSettings, cart?.circleNetworkDiscount, removeCircleDiscount]);
 
   const clearCart = useCallback(() => {
     setCart({ items: [], total: 0, subtotal: 0, discountAmount: 0, itemCount: 0, freeShippingGranted: false, flatRules: [], circleDiscount: 0 });
@@ -1047,7 +1075,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearCart,
     getItemDiscount: (item: CartItem) => item.discountAmount || 0,
     applyCircleDiscount,
-    removeCircleDiscount
+    removeCircleDiscount,
+    circleCampaignActive: circleSettings.isActive,
+    circleDiscountPercent: circleSettings.discountPercent,
+    partnerUrl: circleSettings.partnerUrl
   };
 
   return (
