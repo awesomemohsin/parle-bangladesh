@@ -63,7 +63,8 @@ export default function ProductDetailsClient({ product, images }: { product: any
     ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(effUser.customerType || '')
   ));
   const isRetailer = effUser?.customerType === "retailer";
-  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer);
+  const isCorporate = effUser?.customerType === "corporate";
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer || isCorporate);
 
   const searchParams = useSearchParams();
   const targetWeight = searchParams.get('weight');
@@ -141,7 +142,6 @@ export default function ProductDetailsClient({ product, images }: { product: any
   let hasAnyRetailDiscount = false;
   let activeDiscountLabel = "Sale";
 
-  const isCorporate = user?.customerType === 'corporate';
 
   if (isDealer && selectedVariation?.dealerPrice) {
     displayPrice = selectedVariation.dealerPrice;

@@ -177,7 +177,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           approvalRequest.field === 'isRetailerApproved' ||
           (approvalRequest.field === 'customerType' && 
            approvalRequest.newValue && 
-           ['retailer', 'dealer', 'employee'].includes(approvalRequest.newValue.toLowerCase()))
+           ['retailer', 'dealer', 'corporate', 'employee'].includes(approvalRequest.newValue.toLowerCase()))
         );
 
         // Standard promo codes only require a single Superadmin approval. Flat discounts require both.

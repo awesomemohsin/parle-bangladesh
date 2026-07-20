@@ -151,7 +151,7 @@ export default function ProductCard({
 
   const productImg = sanitizeProductImagePath(activeVariation.image);
 
-  const isCorporate = user?.customerType === 'corporate';
+  const isCorporate = effUser?.customerType === 'corporate';
   const userDiscountPercent = Number(user?.flatDiscountPercent) || 0;
   const isUserDiscountActive = !isDealer && !isRetailer && !isCorporate && userDiscountPercent > 0 && user?.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date();
 
