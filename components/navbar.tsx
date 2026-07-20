@@ -31,7 +31,19 @@ const NotificationCenter = dynamic(() => import('@/components/admin/notification
 import Image from 'next/image'
 
 export default function Navbar() {
-  const { items, subtotal, total, discountAmount, itemCount, updateQuantity, removeItem } = useCart()
+  const { 
+    items, 
+    subtotal, 
+    total, 
+    discountAmount, 
+    circleDiscount, 
+    itemCount, 
+    updateQuantity, 
+    removeItem, 
+    cart, 
+    applyCircleDiscount, 
+    removeCircleDiscount 
+  } = useCart()
   const { user, isAuthenticated: isLoggedIn, logout: handleLogout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
@@ -41,6 +53,77 @@ export default function Navbar() {
   const [isCartClosing, setIsCartClosing] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [tickerOffers, setTickerOffers] = useState<any[]>([])
+
+  const [showCircleSection, setShowCircleSection] = useState(false)
+  const [circlePhone, setCirclePhone] = useState('')
+  const [circleBillingId, setCircleBillingId] = useState('')
+  const [isVerifyingCircle, setIsVerifyingCircle] = useState(false)
+  const [circleError, setCircleError] = useState('')
+  const [circleSuccess, setCircleSuccess] = useState('')
+  const [shakingFields, setShakingFields] = useState<Record<string, boolean>>({})
+
+  const handleVerifyCircleNetwork = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    
+    const shakeMap: Record<string, boolean> = {}
+    if (!circlePhone.trim()) shakeMap.circlePhone = true
+    if (!circleBillingId.trim()) shakeMap.circleBillingId = true
+
+    if (Object.keys(shakeMap).length > 0) {
+      setShakingFields(shakeMap)
+      setCircleError('Please enter Phone Number & Customer ID')
+      setTimeout(() => setShakingFields({}), 500)
+      return
+    }
+
+    setCircleError('')
+    setCircleSuccess('')
+    setIsVerifyingCircle(true)
+
+    try {
+      const res = await fetch('/api/discounts/verify-circle-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contactNumber: circlePhone.trim(),
+          billingId: circleBillingId.trim()
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        applyCircleDiscount(data.client.id, data.client.contact_number)
+        setCircleSuccess('Circle 10% Discount Applied!')
+        setCirclePhone('')
+        setCircleBillingId('')
+        setShowCircleSection(false)
+      } else {
+        setCircleError(data.error || 'Verification failed. Please check inputs.')
+        setShakingFields({ circlePhone: true, circleBillingId: true })
+        setTimeout(() => setShakingFields({}), 500)
+      }
+    } catch (err) {
+      setCircleError('Unable to reach validation server.')
+      setShakingFields({ circlePhone: true, circleBillingId: true })
+      setTimeout(() => setShakingFields({}), 500)
+    } finally {
+      setIsVerifyingCircle(false)
+    }
+  }
+
+  const handleRemoveCircleDiscount = () => {
+    removeCircleDiscount()
+    setCircleSuccess('')
+    setCircleError('')
+  }
+
+  useEffect(() => {
+    if (!cart?.circleNetworkDiscount) {
+      setCircleSuccess('')
+    }
+  }, [cart?.circleNetworkDiscount])
 
   const closeCartDrawer = () => {
     setIsCartClosing(true)
@@ -716,11 +799,123 @@ export default function Navbar() {
             {/* Summary & Checkout Footer */}
             {items.length > 0 && (
               <div className="p-5 border-t border-gray-100 bg-slate-50/50 space-y-4">
+                {/* Circle Network Campaign Feature */}
+                {cart?.circleNetworkDiscount ? (
+                  <div className="bg-amber-50/80 border border-amber-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <Image src="/circle-logo-en.svg" alt="Circle" width={28} height={28} className="h-6 w-auto object-contain" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-wider truncate">
+                            Circle Network 10% Off Applied
+                          </p>
+                        </div>
+                        <p className="text-[9px] font-mono font-bold text-amber-700 truncate">
+                          ID: {cart.circleNetworkDiscount.id} | Phone: {cart.circleNetworkDiscount.number}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCircleDiscount}
+                      className="text-[9px] font-black text-red-600 hover:text-red-800 bg-white hover:bg-red-50 border border-red-200 px-2 py-1 rounded-lg transition-colors shrink-0 uppercase tracking-wider"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-br from-amber-50/70 to-orange-50/40 border border-amber-200/70 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Image src="/circle-logo-en.svg" alt="Circle Network" width={38} height={38} className="h-8 w-auto object-contain shrink-0" />
+                        <div>
+                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-wider leading-tight">
+                            Circle Network Client?
+                          </p>
+                          <p className="text-[9px] font-bold text-amber-700/90 leading-tight">
+                            Get Flat 10% Off on your order
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCircleSection(!showCircleSection)}
+                        className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/80 hover:bg-amber-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                      >
+                        {showCircleSection ? 'Close' : 'Apply Discount'}
+                      </button>
+                    </div>
+
+                    {showCircleSection && (
+                      <form onSubmit={handleVerifyCircleNetwork} className="pt-2 border-t border-amber-200/50 space-y-2">
+                        <p className="text-[8px] font-bold text-amber-800 uppercase tracking-widest">
+                          Enter registered Circle details:
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className={shakingFields.circlePhone ? 'animate-shake' : ''}>
+                            <input
+                              type="text"
+                              placeholder="Phone Number"
+                              value={circlePhone}
+                              onChange={(e) => setCirclePhone(e.target.value)}
+                              className={`w-full bg-white border ${
+                                shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-amber-300 focus:border-amber-500'
+                              } rounded-lg px-2.5 py-1.5 text-[10px] font-bold outline-none transition-all`}
+                            />
+                          </div>
+                          <div className={shakingFields.circleBillingId ? 'animate-shake' : ''}>
+                            <input
+                              type="text"
+                              placeholder="Customer ID"
+                              value={circleBillingId}
+                              onChange={(e) => setCircleBillingId(e.target.value)}
+                              className={`w-full bg-white border ${
+                                shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-amber-300 focus:border-amber-500'
+                              } rounded-lg px-2.5 py-1.5 text-[10px] font-bold outline-none transition-all`}
+                            />
+                          </div>
+                        </div>
+
+                        {circleError && (
+                          <p className="text-[8px] font-black text-red-600 uppercase tracking-wider">{circleError}</p>
+                        )}
+                        {circleSuccess && (
+                          <p className="text-[8px] font-black text-emerald-600 uppercase tracking-wider">{circleSuccess}</p>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={isVerifyingCircle}
+                          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[9px] uppercase tracking-widest py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          {isVerifyingCircle ? (
+                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            'Verify & Apply 10% Off'
+                          )}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-1.5 text-xs text-gray-600 font-bold uppercase tracking-wide">
                   <div className="flex justify-between items-center">
                     <span>Subtotal</span>
                     <span className="font-mono font-black text-gray-900">৳{subtotal.toFixed(0)}</span>
                   </div>
+                  {circleDiscount !== undefined && circleDiscount > 0 && cart?.circleNetworkDiscount && (
+                    <div className="flex justify-between items-center text-amber-600">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Circle Discount (10%)
+                      </span>
+                      <span className="font-mono font-black">- ৳{circleDiscount.toFixed(0)}</span>
+                    </div>
+                  )}
                   {discountAmount !== undefined && discountAmount > 0 && (
                     <div className="flex justify-between items-center text-red-600">
                       <span>Discount</span>
@@ -753,6 +948,16 @@ export default function Navbar() {
           </div>
         </div>
       )}
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </>
   )
 }
