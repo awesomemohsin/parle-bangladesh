@@ -71,6 +71,13 @@ interface Order {
   subtotal?: number;
   shippingCost?: number;
   discountAmount?: number;
+  ruleDiscount?: number;
+  promoDiscount?: number;
+  circleDiscount?: number;
+  circleNetworkDiscount?: {
+    id?: string;
+    number?: string;
+  };
   promoCode?: string;
   status: string;
   deliveryMethod?: string;
@@ -769,7 +776,7 @@ export default function MyOrdersPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0" />
                           <div>
                             <p className="uppercase tracking-widest text-[8px] font-black text-amber-800 leading-tight">Circle Network Partner Discount</p>
-                            <p className="font-mono text-[9px] mt-0.5 leading-none">ID: {previewOrder.circleNetworkDiscount.id} | Phone: {previewOrder.circleNetworkDiscount.number}</p>
+                            <p className="font-mono text-[9px] mt-0.5 leading-none">ID: {previewOrder.circleNetworkDiscount.id}</p>
                           </div>
                         </div>
                       )}
