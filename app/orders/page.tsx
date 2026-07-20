@@ -772,11 +772,11 @@ export default function MyOrdersPage() {
                       <div><span className="font-bold text-gray-400">Delivery Method:</span> <span className="font-black text-gray-900 uppercase">{previewOrder?.deliveryMethod || 'Standard Delivery'}</span></div>
                       <div><span className="font-bold text-gray-400">Shipping Address:</span> <span className="font-black text-gray-950 uppercase">{previewOrder?.shippingAddress || previewOrder?.address}{previewOrder?.shippingThana || previewOrder?.thana ? `, Thana: ${previewOrder?.shippingThana || previewOrder?.thana}` : ''}, District: {previewOrder?.shippingCity || previewOrder?.city} {previewOrder?.shippingPostalCode || previewOrder?.postalCode}</span></div>
                       {previewOrder?.circleNetworkDiscount && (
-                        <div className="text-[10px] text-amber-700 font-bold bg-amber-50/50 p-2 rounded-lg border border-amber-200/50 mt-1 flex items-start gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 shrink-0" />
+                        <div className="text-[10px] font-bold bg-[#FDBC1F]/10 p-2 rounded-lg border border-[#FDBC1F]/30 mt-1 flex items-start gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] mt-1 shrink-0" />
                           <div>
-                            <p className="uppercase tracking-widest text-[8px] font-black text-amber-800 leading-tight">Circle Network Partner Discount</p>
-                            <p className="font-mono text-[9px] mt-0.5 leading-none">ID: {previewOrder.circleNetworkDiscount.id}</p>
+                            <p className="uppercase tracking-widest text-[8px] font-black text-[#FDBC1F] leading-tight">Circle Network Partner Discount</p>
+                            <p className="font-mono text-[9px] mt-0.5 leading-none text-gray-900">ID: {previewOrder.circleNetworkDiscount.id}</p>
                           </div>
                         </div>
                       )}

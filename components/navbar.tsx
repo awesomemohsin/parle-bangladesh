@@ -801,19 +801,19 @@ export default function Navbar() {
               <div className="p-5 border-t border-gray-100 bg-slate-50/50 space-y-4">
                 {/* Circle Network Campaign Feature */}
                 {cart?.circleNetworkDiscount ? (
-                  <div className="bg-amber-50/80 border border-amber-200/80 p-3 rounded-xl flex items-center justify-between gap-2">
+                  <div className="bg-[#FDBC1F]/10 border border-[#FDBC1F]/30 p-3 rounded-xl flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#FDBC1F]/20 flex items-center justify-center shrink-0">
                         <Image src="/circle-logo-en.svg" alt="Circle" width={28} height={28} className="h-6 w-auto object-contain" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-wider truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] animate-pulse shrink-0" />
+                          <p className="text-[10px] font-black text-gray-900 uppercase tracking-wider truncate">
                             Circle Network 10% Off Applied
                           </p>
                         </div>
-                        <p className="text-[9px] font-mono font-bold text-amber-700 truncate">
+                        <p className="text-[9px] font-mono font-bold text-[#FDBC1F] truncate">
                           ID: {cart.circleNetworkDiscount.id} | Phone: {cart.circleNetworkDiscount.number}
                         </p>
                       </div>
@@ -827,15 +827,15 @@ export default function Navbar() {
                     </button>
                   </div>
                 ) : (
-                  <div className="bg-gradient-to-br from-amber-50/70 to-orange-50/40 border border-amber-200/70 rounded-xl p-3 space-y-2.5">
+                  <div className="bg-gradient-to-br from-[#FDBC1F]/15 to-yellow-50/30 border border-[#FDBC1F]/30 rounded-xl p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Image src="/circle-logo-en.svg" alt="Circle Network" width={38} height={38} className="h-8 w-auto object-contain shrink-0" />
                         <div>
-                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-wider leading-tight">
+                          <p className="text-[10px] font-black text-gray-900 uppercase tracking-wider leading-tight">
                             Circle Network Client?
                           </p>
-                          <p className="text-[9px] font-bold text-amber-700/90 leading-tight">
+                          <p className="text-[9px] font-bold text-[#FDBC1F] leading-tight">
                             Get Flat 10% Off on your order
                           </p>
                         </div>
@@ -843,15 +843,15 @@ export default function Navbar() {
                       <button
                         type="button"
                         onClick={() => setShowCircleSection(!showCircleSection)}
-                        className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100/80 hover:bg-amber-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                        className="text-[9px] font-black uppercase tracking-wider text-gray-950 bg-[#FDBC1F] hover:bg-[#e5a91a] px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 shrink-0 shadow-xs"
                       >
                         {showCircleSection ? 'Close' : 'Apply Discount'}
                       </button>
                     </div>
 
                     {showCircleSection && (
-                      <form onSubmit={handleVerifyCircleNetwork} className="pt-2 border-t border-amber-200/50 space-y-2">
-                        <p className="text-[8px] font-bold text-amber-800 uppercase tracking-widest">
+                      <form onSubmit={handleVerifyCircleNetwork} className="pt-2 border-t border-[#FDBC1F]/30 space-y-2">
+                        <p className="text-[8px] font-bold text-gray-700 uppercase tracking-widest">
                           Enter registered Circle details:
                         </p>
                         <div className="grid grid-cols-2 gap-2">
@@ -862,7 +862,7 @@ export default function Navbar() {
                               value={circlePhone}
                               onChange={(e) => setCirclePhone(e.target.value)}
                               className={`w-full bg-white border ${
-                                shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-amber-300 focus:border-amber-500'
+                                shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-[#FDBC1F]'
                               } rounded-lg px-2.5 py-1.5 text-[10px] font-bold outline-none transition-all`}
                             />
                           </div>
@@ -873,7 +873,7 @@ export default function Navbar() {
                               value={circleBillingId}
                               onChange={(e) => setCircleBillingId(e.target.value)}
                               className={`w-full bg-white border ${
-                                shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-amber-300 focus:border-amber-500'
+                                shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-[#FDBC1F]'
                               } rounded-lg px-2.5 py-1.5 text-[10px] font-bold outline-none transition-all`}
                             />
                           </div>
@@ -889,10 +889,10 @@ export default function Navbar() {
                         <button
                           type="submit"
                           disabled={isVerifyingCircle}
-                          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black text-[9px] uppercase tracking-widest py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                          className="w-full bg-[#FDBC1F] hover:bg-[#e5a91a] text-gray-950 font-black text-[9px] uppercase tracking-widest py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-xs"
                         >
                           {isVerifyingCircle ? (
-                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span className="w-3 h-3 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
                           ) : (
                             'Verify & Apply 10% Off'
                           )}
@@ -908,9 +908,9 @@ export default function Navbar() {
                     <span className="font-mono font-black text-gray-900">৳{subtotal.toFixed(0)}</span>
                   </div>
                   {circleDiscount !== undefined && circleDiscount > 0 && cart?.circleNetworkDiscount && (
-                    <div className="flex justify-between items-center text-amber-600">
+                    <div className="flex justify-between items-center text-[#FDBC1F]">
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F]" />
                         Circle Discount (10%)
                       </span>
                       <span className="font-mono font-black">- ৳{circleDiscount.toFixed(0)}</span>

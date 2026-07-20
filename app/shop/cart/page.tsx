@@ -571,22 +571,22 @@ export default function CartPage() {
                       }}
                       className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
                         selectedRateOption === 'circle'
-                          ? 'border-amber-500 bg-amber-50/20 shadow-sm'
+                          ? 'border-[#FDBC1F] bg-[#FDBC1F]/10 shadow-sm'
                           : 'border-transparent bg-transparent hover:bg-slate-100/50'
                       }`}
                     >
                       <div className="text-left max-w-[150px] sm:max-w-none">
                         <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                          <p className="text-[10px] sm:text-xs font-black text-amber-900 uppercase tracking-wider leading-tight">
-                            Flat 10% off for Circle Network Users
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] animate-pulse shrink-0" />
+                          <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-wider leading-tight">
+                            Flat 10% off for <span className="text-[#FDBC1F]">Circle Network</span> Users
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-amber-600 tracking-tighter tabular-nums italic leading-none">
-                            <span className="text-base sm:text-xl text-amber-500 not-italic">৳</span>
+                          <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-[#FDBC1F] tracking-tighter tabular-nums italic leading-none">
+                            <span className="text-base sm:text-xl text-[#FDBC1F] not-italic">৳</span>
                             <span>{Math.round(total * 0.9)}</span>
                           </div>
                           <p className="text-[8px] font-bold text-gray-400 line-through leading-none mt-0.5">
@@ -595,7 +595,7 @@ export default function CartPage() {
                         </div>
                         <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0">
                           {selectedRateOption === 'circle' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#FDBC1F]" />
                           )}
                         </div>
                       </div>
@@ -605,26 +605,26 @@ export default function CartPage() {
                       onClick={() => setSelectedRateOption('circle')}
                       className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
                         selectedRateOption === 'circle'
-                          ? 'border-amber-500 bg-amber-50/20 shadow-sm'
+                          ? 'border-[#FDBC1F] bg-[#FDBC1F]/10 shadow-sm'
                           : 'border-transparent bg-transparent hover:bg-slate-100/50'
                       }`}
                     >
                       <div className="text-left max-w-[150px] sm:max-w-none">
                         <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                          <p className="text-[10px] sm:text-xs font-black text-amber-900 uppercase tracking-wider leading-tight">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] shrink-0" />
+                          <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-wider leading-tight">
                             Circle Network Applied (ID: {cart.circleNetworkDiscount.id})
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-amber-600 tracking-tighter tabular-nums italic leading-none">
-                          <span className="text-base sm:text-xl text-amber-500 not-italic">৳</span>
+                        <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-[#FDBC1F] tracking-tighter tabular-nums italic leading-none">
+                          <span className="text-base sm:text-xl text-[#FDBC1F] not-italic">৳</span>
                           <span>{Math.round(total)}</span>
                         </div>
-                        <div className="w-5 h-5 rounded-full border-2 border-amber-500 flex items-center justify-center shrink-0">
+                        <div className="w-5 h-5 rounded-full border-2 border-[#FDBC1F] flex items-center justify-center shrink-0">
                           {selectedRateOption === 'circle' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#FDBC1F]" />
                           )}
                         </div>
                       </div>
@@ -826,7 +826,7 @@ export default function CartPage() {
                     href="https://circlenetworkbd.net/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-amber-500 hover:text-amber-600 underline decoration-amber-400/50 hover:decoration-amber-500 transition-colors"
+                    className="text-[#FDBC1F] hover:text-[#e0a519] underline decoration-[#FDBC1F]/50 hover:decoration-[#FDBC1F] transition-colors"
                   >
                     Circle Network
                   </a>{" "}
@@ -834,7 +834,7 @@ export default function CartPage() {
                 </h3>
               </div>
 
-              <p className="text-[10px] text-amber-700 font-bold uppercase tracking-widest leading-relaxed mb-6 text-center">
+              <p className="text-[10px] text-amber-800 font-bold uppercase tracking-widest leading-relaxed mb-6 text-center">
                 Provide your registered contact number and Customer ID to apply your flat 10% Circle Network partner discount.
               </p>
 
@@ -847,7 +847,7 @@ export default function CartPage() {
                       placeholder="e.g., 01XXXXXXXXX"
                       value={circlePhone}
                       onChange={(e) => setCirclePhone(e.target.value)}
-                      className={`w-full bg-white border ${shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs font-bold transition-all outline-none`}
+                      className={`w-full bg-white border ${shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-[#FDBC1F] rounded-xl px-4 py-2.5 text-xs font-bold transition-all outline-none`}
                     />
                   </div>
                   <div className={`flex-1 ${shakingFields.circleBillingId ? 'animate-shake' : ''}`}>
@@ -857,7 +857,7 @@ export default function CartPage() {
                       placeholder="e.g., 12345"
                       value={circleBillingId}
                       onChange={(e) => setCircleBillingId(e.target.value)}
-                      className={`w-full bg-white border ${shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs font-bold transition-all outline-none`}
+                      className={`w-full bg-white border ${shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-[#FDBC1F] rounded-xl px-4 py-2.5 text-xs font-bold transition-all outline-none`}
                     />
                   </div>
                 </div>
@@ -919,7 +919,7 @@ export default function CartPage() {
                     }
                   }}
                   disabled={isVerifyingCircle}
-                  className="w-full bg-amber-600 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-700 transition-colors active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 mt-4 shadow-lg shadow-amber-600/10"
+                  className="w-full bg-[#FDBC1F] hover:bg-[#e5a91a] text-gray-950 font-black py-3.5 rounded-xl text-[10px] uppercase tracking-wider transition-colors active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 mt-4 shadow-lg shadow-[#FDBC1F]/20"
                 >
                   {isVerifyingCircle ? (
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -1451,18 +1451,18 @@ function CheckoutContent() {
 
                 {/* Circle Network Discount Row */}
                 {cart.circleNetworkDiscount && (
-                  <div className="border-t border-gray-100 py-2 text-amber-600 font-medium">
+                  <div className="border-t border-gray-100 py-2 text-[#FDBC1F] font-medium">
                     <div className="flex justify-between items-center mb-1">
                       <div className="flex flex-col">
                         <span className="font-bold uppercase text-[9px] tracking-widest leading-none">
                           Circle Network Discount:
                         </span>
-                        <span className="text-[8px] font-mono font-bold text-amber-700 mt-0.5 tracking-wider">
+                        <span className="text-[8px] font-mono font-bold text-[#FDBC1F] mt-0.5 tracking-wider">
                           ID: {cart.circleNetworkDiscount.id} | Phone: {cart.circleNetworkDiscount.number}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-amber-600">- ৳ {Math.round(circleDiscount || 0)}</span>
+                        <span className="font-semibold text-[#FDBC1F]">- ৳ {Math.round(circleDiscount || 0)}</span>
                         <button
                           type="button"
                           onClick={handleRemoveCircleDiscount}
@@ -1516,7 +1516,7 @@ function CheckoutContent() {
 
                 {/* CIRCLE NETWORK PARTNER CAMPAIGN SECTION */}
                 {!cart.circleNetworkDiscount && (
-                  <div className="py-4 border-b border-gray-100 my-2 bg-gradient-to-br from-amber-50/50 to-yellow-50/20 p-3 rounded border border-amber-200/50">
+                  <div className="py-4 border-b border-gray-100 my-2 bg-gradient-to-br from-[#FDBC1F]/15 to-yellow-50/30 p-3 rounded border border-[#FDBC1F]/30">
                     <div className="flex items-center justify-between mb-3.5">
                       <div className="flex items-center gap-3">
                         <a
@@ -1539,11 +1539,11 @@ function CheckoutContent() {
                           className="h-8 sm:h-9 w-auto object-contain"
                         />
                       </div>
-                      <span className="text-[8px] font-black text-amber-700 uppercase tracking-wider bg-amber-100/80 border border-amber-200/60 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-[8px] font-black text-gray-950 uppercase tracking-wider bg-[#FDBC1F] border border-[#FDBC1F] px-2 py-0.5 rounded-full shrink-0 shadow-xs">
                         Campaign
                       </span>
                     </div>
-                    <p className="text-[8px] text-amber-700 font-bold uppercase tracking-widest leading-normal mb-3">
+                    <p className="text-[8px] text-gray-800 font-bold uppercase tracking-widest leading-normal mb-3">
                       Circle Network Internet clients get a flat 10% discount on checkout. Verify subscription:
                     </p>
                     
@@ -1556,7 +1556,7 @@ function CheckoutContent() {
                             value={circlePhone}
                             onChange={(e) => setCirclePhone(e.target.value)}
                             className={`w-full bg-white border ${
-                              shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-amber-500'
+                              shakingFields.circlePhone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-[#FDBC1F]'
                             } rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none`}
                           />
                         </div>
@@ -1567,7 +1567,7 @@ function CheckoutContent() {
                             value={circleBillingId}
                             onChange={(e) => setCircleBillingId(e.target.value)}
                             className={`w-full bg-white border ${
-                              shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-amber-500'
+                              shakingFields.circleBillingId ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200 focus:border-[#FDBC1F]'
                             } rounded px-3 py-1.5 text-[10px] font-bold transition-all outline-none`}
                           />
                         </div>
@@ -1576,10 +1576,10 @@ function CheckoutContent() {
                         type="button"
                         onClick={handleVerifyCircleNetwork}
                         disabled={isVerifyingCircle}
-                        className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded text-[9px] font-black uppercase transition-colors active:scale-95 flex items-center justify-center disabled:opacity-50"
+                        className="w-full bg-[#FDBC1F] hover:bg-[#e5a91a] text-gray-950 font-black py-2 rounded text-[9px] uppercase transition-colors active:scale-95 flex items-center justify-center disabled:opacity-50 shadow-xs"
                       >
                         {isVerifyingCircle ? (
-                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span className="w-3.5 h-3.5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           'Verify'
                         )}
