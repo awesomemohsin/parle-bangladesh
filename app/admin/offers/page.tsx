@@ -56,6 +56,83 @@ export default function OffersAdmin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
 
+  // Circle Network Settings State
+  const [circleIsActive, setCircleIsActive] = useState(true);
+  const [circlePercent, setCirclePercent] = useState(10);
+  const [circleUrl, setCircleUrl] = useState('https://circlenetworkbd.net/');
+  const [isSavingCircle, setIsSavingCircle] = useState(false);
+  const [circleMessage, setCircleMessage] = useState('');
+
+  useEffect(() => {
+    fetch('/api/admin/circle-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && typeof data.isActive === 'boolean') {
+          setCircleIsActive(Boolean(data.isActive));
+          setCirclePercent(Number(data.discountPercent) || 10);
+          setCircleUrl(data.partnerUrl || 'https://circlenetworkbd.net/');
+        }
+      })
+      .catch(err => console.error('Failed to fetch circle settings', err));
+  }, []);
+
+  const handleToggleCircleIsActive = async (newActiveState: boolean) => {
+    setCircleIsActive(newActiveState);
+    setIsSavingCircle(true);
+    setCircleMessage('');
+    try {
+      const res = await fetch('/api/admin/circle-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isActive: newActiveState,
+          discountPercent: Number(circlePercent),
+          partnerUrl: circleUrl
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCircleMessage(`Campaign ${newActiveState ? 'activated' : 'disabled'} & saved!`);
+        setTimeout(() => setCircleMessage(''), 4000);
+      } else {
+        alert(data.error || 'Failed to update setting');
+        setCircleIsActive(!newActiveState);
+      }
+    } catch (err) {
+      alert('Error updating setting');
+      setCircleIsActive(!newActiveState);
+    } finally {
+      setIsSavingCircle(false);
+    }
+  };
+
+  const handleSaveCircleSettings = async () => {
+    setIsSavingCircle(true);
+    setCircleMessage('');
+    try {
+      const res = await fetch('/api/admin/circle-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isActive: circleIsActive,
+          discountPercent: Number(circlePercent),
+          partnerUrl: circleUrl
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCircleMessage('Circle Network campaign settings saved successfully!');
+        setTimeout(() => setCircleMessage(''), 4000);
+      } else {
+        alert(data.error || 'Failed to save settings');
+      }
+    } catch (err) {
+      alert('Error saving settings');
+    } finally {
+      setIsSavingCircle(false);
+    }
+  };
+
   useEffect(() => {
     fetchOffers();
   }, []);
@@ -228,6 +305,82 @@ export default function OffersAdmin() {
           <Plus className="w-5 h-5" />
           <span className="font-bold text-sm tracking-wider uppercase">Create New Offer</span>
         </Button>
+      </div>
+
+      {/* Circle Network Campaign Admin Control Card */}
+      <div className="bg-gradient-to-br from-[#FDBC1F]/15 via-white to-amber-50/50 border border-[#FDBC1F]/40 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#FDBC1F]/20 pb-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#FDBC1F]/20 border border-[#FDBC1F]/40 flex items-center justify-center shrink-0">
+              <img src="/circle-logo-en.svg" alt="Circle Network" className="h-8 w-auto object-contain" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">Circle Network Partner Campaign</h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${circleIsActive ? 'bg-emerald-500 text-white' : 'bg-gray-400 text-white'}`}>
+                  {circleIsActive ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 font-medium">Control live campaign visibility, discount rates, and partner link for Circle ISP clients.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-black uppercase tracking-wider text-gray-700">Campaign Status:</label>
+            <button
+              type="button"
+              onClick={() => handleToggleCircleIsActive(!circleIsActive)}
+              disabled={isSavingCircle}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${circleIsActive ? 'bg-[#FDBC1F]' : 'bg-gray-300'} disabled:opacity-50`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${circleIsActive ? 'translate-x-8' : 'translate-x-1'}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Discount Percentage (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={circlePercent}
+              onChange={(e) => setCirclePercent(Number(e.target.value))}
+              className="w-full bg-white border border-gray-200 focus:border-[#FDBC1F] rounded-2xl px-4 py-3 text-sm font-bold transition-all outline-none"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Partner Website URL</label>
+            <input
+              type="url"
+              value={circleUrl}
+              onChange={(e) => setCircleUrl(e.target.value)}
+              className="w-full bg-white border border-gray-200 focus:border-[#FDBC1F] rounded-2xl px-4 py-3 text-sm font-bold transition-all outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2">
+          {circleMessage ? (
+            <span className="text-xs font-black text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" /> {circleMessage}
+            </span>
+          ) : <span />}
+
+          <Button
+            onClick={handleSaveCircleSettings}
+            disabled={isSavingCircle}
+            className="bg-[#FDBC1F] hover:bg-[#e5a91a] text-gray-950 font-black rounded-2xl px-6 py-3.5 text-xs uppercase tracking-wider transition-all active:scale-95 shadow-md"
+          >
+            {isSavingCircle ? (
+              <span className="w-4 h-4 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              'Save Campaign Settings'
+            )}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

@@ -104,7 +104,10 @@ export default function CartPage() {
     freeShippingGranted,
     isSyncing,
     applyCircleDiscount,
-    removeCircleDiscount
+    removeCircleDiscount,
+    circleCampaignActive,
+    circleDiscountPercent,
+    partnerUrl
   } = useCart();
   const { user } = useAuth();
   const isDealer = !!(user && (
@@ -563,72 +566,74 @@ export default function CartPage() {
                   </div>
 
                   {/* Option B: Circle Network Rate */}
-                  {!cart?.circleNetworkDiscount ? (
-                    <div
-                      onClick={() => {
-                        setSelectedRateOption('circle');
-                        setIsCircleModalOpen(true);
-                      }}
-                      className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
-                        selectedRateOption === 'circle'
-                          ? 'border-[#FDBC1F] bg-[#FDBC1F]/10 shadow-sm'
-                          : 'border-transparent bg-transparent hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <div className="text-left max-w-[150px] sm:max-w-none">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] animate-pulse shrink-0" />
-                          <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-wider leading-tight">
-                            Flat 10% off for <span className="text-[#FDBC1F]">Circle Network</span> Users
-                          </p>
+                  {circleCampaignActive !== false && (
+                    !cart?.circleNetworkDiscount ? (
+                      <div
+                        onClick={() => {
+                          setSelectedRateOption('circle');
+                          setIsCircleModalOpen(true);
+                        }}
+                        className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
+                          selectedRateOption === 'circle'
+                            ? 'border-[#FDBC1F] bg-[#FDBC1F]/10 shadow-sm'
+                            : 'border-transparent bg-transparent hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <div className="text-left max-w-[150px] sm:max-w-none">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] animate-pulse shrink-0" />
+                            <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-wider leading-tight">
+                              Flat {circleDiscountPercent || 10}% off for <span className="text-[#FDBC1F]">Circle Network</span> Users
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-[#FDBC1F] tracking-tighter tabular-nums italic leading-none">
+                              <span className="text-base sm:text-xl text-[#FDBC1F] not-italic">৳</span>
+                              <span>{Math.round(total * (1 - (circleDiscountPercent || 10) / 100))}</span>
+                            </div>
+                            <p className="text-[8px] font-bold text-gray-400 line-through leading-none mt-0.5">
+                              ৳{Math.round(total)}
+                            </p>
+                          </div>
+                          <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0">
+                            {selectedRateOption === 'circle' && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#FDBC1F]" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
+                    ) : (
+                      <div
+                        onClick={() => setSelectedRateOption('circle')}
+                        className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
+                          selectedRateOption === 'circle'
+                            ? 'border-[#FDBC1F] bg-[#FDBC1F]/10 shadow-sm'
+                            : 'border-transparent bg-transparent hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <div className="text-left max-w-[150px] sm:max-w-none">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] shrink-0" />
+                            <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-wider leading-tight">
+                              Circle Network Applied (ID: {cart.circleNetworkDiscount.id})
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-[#FDBC1F] tracking-tighter tabular-nums italic leading-none">
                             <span className="text-base sm:text-xl text-[#FDBC1F] not-italic">৳</span>
-                            <span>{Math.round(total * 0.9)}</span>
+                            <span>{Math.round(total)}</span>
                           </div>
-                          <p className="text-[8px] font-bold text-gray-400 line-through leading-none mt-0.5">
-                            ৳{Math.round(total)}
-                          </p>
-                        </div>
-                        <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center shrink-0">
-                          {selectedRateOption === 'circle' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#FDBC1F]" />
-                          )}
+                          <div className="w-5 h-5 rounded-full border-2 border-[#FDBC1F] flex items-center justify-center shrink-0">
+                            {selectedRateOption === 'circle' && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#FDBC1F]" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => setSelectedRateOption('circle')}
-                      className={`flex justify-between items-center p-4 mb-6 rounded-2xl border-2 transition-all cursor-pointer ${
-                        selectedRateOption === 'circle'
-                          ? 'border-[#FDBC1F] bg-[#FDBC1F]/10 shadow-sm'
-                          : 'border-transparent bg-transparent hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <div className="text-left max-w-[150px] sm:max-w-none">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#FDBC1F] shrink-0" />
-                          <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-wider leading-tight">
-                            Circle Network Applied (ID: {cart.circleNetworkDiscount.id})
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-2xl sm:text-4xl font-black text-[#FDBC1F] tracking-tighter tabular-nums italic leading-none">
-                          <span className="text-base sm:text-xl text-[#FDBC1F] not-italic">৳</span>
-                          <span>{Math.round(total)}</span>
-                        </div>
-                        <div className="w-5 h-5 rounded-full border-2 border-[#FDBC1F] flex items-center justify-center shrink-0">
-                          {selectedRateOption === 'circle' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#FDBC1F]" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    )
                   )}
 
                   <Button
@@ -801,7 +806,7 @@ export default function CartPage() {
               <div className="flex flex-col items-center justify-center mb-5 pt-2">
                 <div className="flex items-center justify-center gap-4 mb-3">
                   <a
-                    href="https://circlenetworkbd.net/"
+                    href={partnerUrl || "https://circlenetworkbd.net/"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:opacity-85 transition-opacity"
@@ -821,9 +826,9 @@ export default function CartPage() {
                   />
                 </div>
                 <h3 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight leading-snug">
-                  Flat 10% OFF for{" "}
+                  Flat {circleDiscountPercent || 10}% OFF for{" "}
                   <a
-                    href="https://circlenetworkbd.net/"
+                    href={partnerUrl || "https://circlenetworkbd.net/"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#FDBC1F] hover:text-[#e0a519] underline decoration-[#FDBC1F]/50 hover:decoration-[#FDBC1F] transition-colors"
@@ -835,7 +840,7 @@ export default function CartPage() {
               </div>
 
               <p className="text-[10px] text-amber-800 font-bold uppercase tracking-widest leading-relaxed mb-6 text-center">
-                Provide your registered contact number and Customer ID to apply your flat 10% Circle Network partner discount.
+                Provide your registered contact number and Customer ID to apply your flat {circleDiscountPercent || 10}% Circle Network partner discount.
               </p>
 
               <div className="space-y-4">

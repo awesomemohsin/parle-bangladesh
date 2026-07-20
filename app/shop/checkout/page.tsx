@@ -68,7 +68,7 @@ function CheckoutContent() {
 
 
 
-  const { cart, items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, circleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices, applyCircleDiscount, removeCircleDiscount } = useCart();
+  const { cart, items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, circleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices, applyCircleDiscount, removeCircleDiscount, circleCampaignActive, circleDiscountPercent, partnerUrl } = useCart();
   const { user, logout, updateAuth } = useAuth();
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [confirmingStep, setConfirmingStep] = useState(0);
@@ -1515,12 +1515,12 @@ function CheckoutContent() {
                 )}
 
                 {/* CIRCLE NETWORK PARTNER CAMPAIGN SECTION */}
-                {!cart.circleNetworkDiscount && (
+                {!cart.circleNetworkDiscount && circleCampaignActive !== false && (
                   <div className="py-4 border-b border-gray-100 my-2 bg-gradient-to-br from-[#FDBC1F]/15 to-yellow-50/30 p-3 rounded border border-[#FDBC1F]/30">
                     <div className="flex items-center justify-between mb-3.5">
                       <div className="flex items-center gap-3">
                         <a
-                          href="https://circlenetworkbd.net/"
+                          href={partnerUrl || "https://circlenetworkbd.net/"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:opacity-85 transition-opacity"
@@ -1544,7 +1544,7 @@ function CheckoutContent() {
                       </span>
                     </div>
                     <p className="text-[8px] text-gray-800 font-bold uppercase tracking-widest leading-normal mb-3">
-                      Circle Network Internet clients get a flat 10% discount on checkout. Verify subscription:
+                      Circle Network Internet clients get a flat {circleDiscountPercent || 10}% discount on checkout. Verify subscription:
                     </p>
                     
                     <div className="flex flex-col gap-2">
