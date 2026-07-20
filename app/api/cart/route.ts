@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
       ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
     );
     const isRetailer = user.role === "customer" && user.customerType === "retailer";
+    const isCorporate = user.customerType === "corporate";
 
     const cart = await Cart.findOne({ userId: user.id }).lean();
     if (!cart) {
@@ -52,7 +53,9 @@ export async function GET(request: NextRequest) {
           if (variation) {
             item.price = isDealer && variation.dealerPrice 
               ? variation.dealerPrice 
-              : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
+              : (isRetailer && variation.retailerPrice 
+              ? variation.retailerPrice 
+              : (isCorporate && variation.corporatePrice ? variation.corporatePrice : variation.price));
             item.variationDiscountPrice = variation.discountPrice;
             item.stock = variation.stock;
           }
@@ -102,6 +105,7 @@ export async function POST(request: NextRequest) {
       ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(user.customerType)
     ));
     let isRetailer = user && user.role === "customer" && user.customerType === "retailer";
+    let isCorporate = user && user.customerType === "corporate";
     let userDiscount = undefined;
     let customerType = user ? (user.customerType || user.role) : "customer";
       
@@ -136,7 +140,9 @@ export async function POST(request: NextRequest) {
         if (variation) {
           item.price = isDealer && variation.dealerPrice 
             ? variation.dealerPrice 
-            : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
+            : (isRetailer && variation.retailerPrice 
+            ? variation.retailerPrice 
+            : (isCorporate && variation.corporatePrice ? variation.corporatePrice : variation.price));
           item.variationDiscountPrice = variation.discountPrice;
           item.stock = variation.stock;
         }

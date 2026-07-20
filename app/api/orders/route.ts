@@ -360,6 +360,7 @@ export async function POST(request: NextRequest) {
 
     let isDealer = false;
     let isRetailer = false;
+    let isCorporate = false;
     let userDiscount = undefined;
     let customerTypeStr = "guest";
 
@@ -374,6 +375,7 @@ export async function POST(request: NextRequest) {
       } else if (user.role === "customer") {
         isDealer = user.customerType === "dealer" || user.customerType === "employee";
         isRetailer = user.customerType === "retailer";
+        isCorporate = user.customerType === "corporate";
         customerTypeStr = user.customerType || "customer";
         const now = new Date();
         if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > now) {
@@ -460,7 +462,9 @@ export async function POST(request: NextRequest) {
 
           const basePrice = isDealer && variation.dealerPrice
             ? variation.dealerPrice
-            : (isRetailer && variation.retailerPrice ? variation.retailerPrice : variation.price);
+            : (isRetailer && variation.retailerPrice 
+            ? variation.retailerPrice 
+            : (isCorporate && variation.corporatePrice ? variation.corporatePrice : variation.price));
           let effectiveVarDiscountPrice = variation.discountPrice;
 
           items.push({

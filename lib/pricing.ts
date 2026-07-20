@@ -15,7 +15,8 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
   
   const isDealer = customerType === 'dealer' || customerType === 'employee' || ['admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(customerType || '');
   const isRetailer = customerType === 'retailer';
-  const isPrivilegedCustomer = isDealer || isRetailer;
+  const isCorporate = customerType === 'corporate';
+  const isPrivilegedCustomer = isDealer || isRetailer || isCorporate;
 
   // Fetch Circle Network Campaign setting
   let circleSetting = await CircleCampaignSetting.findOne({ key: 'circle_campaign' }).lean();
@@ -30,7 +31,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
 
   // 2. Fetch promo code if provided
   let promoDetails: any = null;
-  if (promoCode && !isDealer) {
+  if (promoCode && !isPrivilegedCustomer) {
     const promo = await PromoCode.findOne({ 
       code: promoCode.toUpperCase(), 
       isActive: true,
@@ -46,7 +47,7 @@ export async function calculateServerSideCart(items: any[], promoCode?: string, 
     return sum + itemPrice * (Number(item.quantity || item.q) || 0);
   }, 0);
 
-  const circleDiscount = (circleNetworkDiscountApplied && isCircleActive) ? Math.round(subtotal * (circlePercent / 100)) : 0;
+  const circleDiscount = (!isPrivilegedCustomer && circleNetworkDiscountApplied && isCircleActive) ? Math.round(subtotal * (circlePercent / 100)) : 0;
 
   let freeShippingGranted = false;
   let flatDiscountTotal = 0;

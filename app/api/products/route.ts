@@ -70,17 +70,21 @@ export async function GET(request: NextRequest) {
     const user = context?.user;
     let showDealerPrice = false;
     let showRetailerPrice = false;
+    let showCorporatePrice = false;
     
     let userFlatDiscountPercent = 0;
     if (user) {
       if ([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.MODERATOR].includes(user.role as any)) {
         showDealerPrice = true;
         showRetailerPrice = true;
+        showCorporatePrice = true;
       }
       if (user.customerType === "dealer" || user.customerType === "employee") {
         showDealerPrice = true;
       } else if (user.customerType === "retailer") {
         showRetailerPrice = true;
+      } else if (user.customerType === "corporate") {
+        showCorporatePrice = true;
       }
       
       if (user.flatDiscountPercent && user.flatDiscountExpiresAt && new Date(user.flatDiscountExpiresAt) > new Date()) {
@@ -119,6 +123,8 @@ export async function GET(request: NextRequest) {
                   ? variation.dealerPrice
                   : (showRetailerPrice && variation.retailerPrice)
                   ? variation.retailerPrice
+                  : (showCorporatePrice && variation.corporatePrice)
+                  ? variation.corporatePrice
                   : variation.price
               );
               let bestSavings = 0;
@@ -172,6 +178,9 @@ export async function GET(request: NextRequest) {
             }
             if (!showRetailerPrice) {
               delete variation.retailerPrice;
+            }
+            if (!showCorporatePrice) {
+              delete variation.corporatePrice;
             }
             return variation;
           });
