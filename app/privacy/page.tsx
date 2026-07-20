@@ -114,7 +114,7 @@ export default function PrivacyPage() {
               <h3 className="text-lg font-black uppercase text-gray-900 tracking-tight italic">4. Your Data Rights</h3>
             </div>
             <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed">
-              You have the right to request access to, correction of, or deletion of your personal data on our systems. If you have any inquiries or wish to request data updates, please contact our support team at <span className="text-red-600 font-bold">info.parlebangladesh@gmail.com</span>.
+              You have the right to request access to, correction of, or deletion of your personal data on our systems. If you have any inquiries or wish to request data updates, please contact our support team at <span className="text-red-600 font-bold">cfb@circlenetworkbd.net</span>.
             </p>
           </div>
 
