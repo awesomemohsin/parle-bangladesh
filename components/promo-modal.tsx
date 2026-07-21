@@ -204,7 +204,7 @@ export default function PromoModal() {
                   )}
 
                   {/* Image Section */}
-                  <div className="relative w-full md:w-auto aspect-[1080/1350] h-auto md:h-[75vh] md:max-h-[640px] md:min-h-[360px] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden">
+                  <div className="relative w-full md:w-auto aspect-square h-auto md:h-[75vh] md:max-h-[640px] md:min-h-[360px] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden">
                       {/* Carousel */}
                       <div className="relative w-full h-full overflow-hidden">
                           <AnimatePresence initial={false}>

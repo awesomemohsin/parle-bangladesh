@@ -20,9 +20,9 @@ const PLACEMENT_INFO = {
   slider: {
     label: 'Main Home Hero Slider',
     width: 1080,
-    height: 1350,
-    aspectRatio: 1080 / 1350,
-    ratioString: '4:5 (Portrait)',
+    height: 1080,
+    aspectRatio: 1,
+    ratioString: '1:1 (Square)',
     description: 'Welcome popup modal shown to visitors on the homepage.'
   },
   category_bottom: {
@@ -51,18 +51,18 @@ const PLACEMENT_INFO = {
   },
   shop_grid_1: {
     label: 'Shop Page Grid Card 1 (Position 4)',
-    width: 400,
+    width: 500,
     height: 500,
-    aspectRatio: 400 / 500,
-    ratioString: '4:5 (Portrait Card)',
+    aspectRatio: 1,
+    ratioString: '1:1 (Square Card)',
     description: 'Inline promotional card displayed as the 4th item in the Shop product grid.'
   },
   shop_grid_2: {
     label: 'Shop Page Grid Card 2 (Position 15)',
-    width: 400,
+    width: 500,
     height: 500,
-    aspectRatio: 400 / 500,
-    ratioString: '4:5 (Portrait Card)',
+    aspectRatio: 1,
+    ratioString: '1:1 (Square Card)',
     description: 'Inline promotional card displayed as the 15th item in the Shop product grid.'
   }
 };
@@ -274,7 +274,7 @@ export default function PromoPostersAdmin() {
                   !poster.isActive ? 'opacity-75' : ''
                 } ${isBanner ? 'col-span-1 md:col-span-2' : 'col-span-1'}`}
               >
-                <div className={`relative overflow-hidden bg-slate-50 ${isBanner ? 'aspect-[7/2]' : 'aspect-[1080/1350]'}`}>
+                <div className={`relative overflow-hidden bg-slate-50 ${isBanner ? 'aspect-[7/2]' : 'aspect-square'}`}>
                   <Image
                     src={poster.imageUrl}
                     alt={poster.altText}
@@ -339,10 +339,10 @@ export default function PromoPostersAdmin() {
                       {poster.placement === 'shop_top_banner' 
                         ? '1400x300 (14:3)' 
                         : poster.placement === 'shop_grid_1' || poster.placement === 'shop_grid_2'
-                        ? '400x500 (4:5)'
+                        ? '500x500 (1:1)'
                         : isBanner 
                         ? '1400x200 (7:1)' 
-                        : '1080x1350 (4:5)'}
+                        : '1080x1080 (1:1)'}
                     </span>
                   </div>
                   <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
@@ -444,7 +444,7 @@ export default function PromoPostersAdmin() {
                         <div className="relative w-full max-w-[260px] bg-slate-100 rounded-2xl overflow-hidden border border-amber-200/50 shadow-inner flex items-center justify-center">
                           <div className={`relative w-full ${
                             (placement === 'slider' || placement === 'shop_grid_1' || placement === 'shop_grid_2')
-                              ? 'aspect-[1080/1350]' 
+                              ? 'aspect-square' 
                               : 'aspect-[7/2]'
                           }`}>
                             <Image

@@ -113,7 +113,7 @@ export default function OffersListing() {
               >
                 <Link href={`/offers/${offer.slug}`} className="flex flex-col h-full">
                   {/* Image Area */}
-                  <div className="relative aspect-[4/5] w-full bg-slate-100 overflow-hidden">
+                  <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
                     <Image
                       src={offer.image}
                       alt={offer.title}

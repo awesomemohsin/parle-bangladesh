@@ -162,7 +162,7 @@ export default function OfferDetailPage({ params }: PageProps) {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            className="lg:col-span-5 relative aspect-[4/5] w-full bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-xl"
+            className="lg:col-span-5 relative aspect-square w-full bg-white rounded-[32px] overflow-hidden border border-gray-100 shadow-xl"
           >
             <Image
               src={offer.image}

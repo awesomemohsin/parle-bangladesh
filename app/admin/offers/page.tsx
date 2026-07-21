@@ -409,7 +409,7 @@ export default function OffersAdmin() {
                   !offer.isActive || isExpired ? 'opacity-70' : ''
                 }`}
               >
-                <div className="relative aspect-[4/5] w-full bg-gray-50 overflow-hidden">
+                <div className="relative aspect-square w-full bg-gray-50 overflow-hidden">
                   <Image
                     src={offer.image}
                     alt={offer.title}
@@ -588,7 +588,7 @@ export default function OffersAdmin() {
                   />
                    {filePreviewUrl ? (
                     <div className="p-6 flex flex-col items-center space-y-4">
-                      <div className="relative w-full aspect-[4/5] max-w-[240px] rounded-2xl overflow-hidden border border-gray-100 shadow-md">
+                      <div className="relative w-full aspect-square max-w-[240px] rounded-2xl overflow-hidden border border-gray-100 shadow-md">
                         <Image
                           src={filePreviewUrl}
                           alt="Banner preview"
