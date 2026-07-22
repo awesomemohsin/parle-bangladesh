@@ -58,9 +58,14 @@ export default function ProductCard({
   const [isFlying, setIsFlying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [fadeState, setFadeState] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const getEffectiveUser = () => {
-    if (typeof window !== "undefined") {
+    if (isMounted && typeof window !== "undefined") {
       const activeShopStr = localStorage.getItem("sr_active_shop_user");
       if (activeShopStr) {
         try {
