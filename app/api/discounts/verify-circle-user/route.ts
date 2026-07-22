@@ -7,11 +7,12 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    const { getAuthUserFromRequest } = await import("@/lib/api-auth");
-    const authUser = getAuthUserFromRequest(request);
-    if (authUser && (
-      ['super_admin', 'admin', 'moderator', 'owner'].includes(authUser.role || '') ||
-      ['dealer', 'retailer', 'corporate', 'employee', 'super_admin', 'admin', 'moderator', 'owner'].includes(authUser.customerType || '')
+    const { getEffectiveUserContext } = await import("@/lib/api-auth");
+    const context = await getEffectiveUserContext(request);
+    const effUser = context ? context.user : null;
+    if (effUser && (
+      ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role || '') ||
+      ['dealer', 'retailer', 'corporate', 'employee', 'super_admin', 'admin', 'moderator', 'owner'].includes(effUser.customerType || '')
     )) {
       return NextResponse.json({ error: "Circle Network partner discount is not available for wholesale or corporate accounts." }, { status: 400 });
     }
