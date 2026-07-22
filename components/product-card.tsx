@@ -64,8 +64,14 @@ export default function ProductCard({
     setIsMounted(true);
   }, []);
 
+  if (!isMounted) {
+    return (
+      <div className="h-full w-full min-h-[350px] bg-slate-50 border border-gray-100 rounded-2xl animate-pulse" />
+    );
+  }
+
   const getEffectiveUser = () => {
-    if (isMounted && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       const activeShopStr = localStorage.getItem("sr_active_shop_user");
       if (activeShopStr) {
         try {
