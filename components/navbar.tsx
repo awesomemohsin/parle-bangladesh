@@ -84,11 +84,21 @@ export default function Navbar() {
     setIsVerifyingCircle(true)
 
     try {
+      const token = localStorage.getItem("token");
+      const activeShopId = localStorage.getItem("sr_active_shop_id");
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      if (activeShopId) {
+        headers['x-on-behalf-of'] = activeShopId;
+      }
+
       const res = await fetch('/api/discounts/verify-circle-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           contactNumber: circlePhone.trim(),
           billingId: circleBillingId.trim()
