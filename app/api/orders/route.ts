@@ -579,8 +579,8 @@ export async function POST(request: NextRequest) {
 
         // Successfully verified
         verifiedCircleNetworkDiscount = {
-          id: client.username,
-          number: client.contact_number
+          id: (client.id !== undefined && client.id !== null) ? String(client.id) : (client.username || id),
+          number: client.contact_number || number
         };
 
       } catch (err: any) {
