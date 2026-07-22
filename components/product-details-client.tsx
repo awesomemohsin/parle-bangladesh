@@ -44,9 +44,14 @@ export default function ProductDetailsClient({ product, images }: { product: any
   const router = useRouter();
   const { addItem } = useCart();
   const { user } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const getEffectiveUser = () => {
-    if (typeof window !== "undefined") {
+    if (isMounted && typeof window !== "undefined") {
       const activeShopStr = localStorage.getItem("sr_active_shop_user");
       if (activeShopStr) {
         try {
