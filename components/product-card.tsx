@@ -64,12 +64,6 @@ export default function ProductCard({
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return (
-      <div className="h-full w-full min-h-[350px] bg-slate-50 border border-gray-100 rounded-2xl animate-pulse" />
-    );
-  }
-
   const getEffectiveUser = () => {
     if (typeof window !== "undefined") {
       const activeShopStr = localStorage.getItem("sr_active_shop_user");
@@ -254,6 +248,12 @@ export default function ProductCard({
   if (activeVariation.weight) variationParams.set('weight', activeVariation.weight);
   if (activeVariation.flavor) variationParams.set('flavor', activeVariation.flavor);
   const productUrl = `/shop/products/${slug}${variationParams.toString() ? `?${variationParams.toString()}` : ''}`;
+
+  if (!isMounted) {
+    return (
+      <div className="h-full w-full min-h-[350px] bg-slate-50 border border-gray-100 rounded-2xl animate-pulse" />
+    );
+  }
 
   return (
     <div
