@@ -110,15 +110,6 @@ export default function CartPage() {
     partnerUrl
   } = useCart();
   const { user } = useAuth();
-  const activeShopStr = typeof window !== 'undefined' ? localStorage.getItem("sr_active_shop_user") : null;
-  const isDealer = !!(user && (
-    (!activeShopStr && ['super_admin', 'admin', 'moderator', 'owner'].includes(user.role)) ||
-    ['dealer', 'employee'].includes(user.customerType || '')
-  ));
-  const isRetailer = user?.customerType === "retailer";
-  const isCorporate = user?.customerType === "corporate";
-  const isB2BUser = isDealer || isRetailer || isCorporate;
-  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer || isCorporate);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -132,7 +123,35 @@ export default function CartPage() {
   const [isVerifyingCircle, setIsVerifyingCircle] = useState(false);
   const [circleError, setCircleError] = useState('');
   const [circleSuccess, setCircleSuccess] = useState('');
+
+  const getEffectiveUser = () => {
+    if (mounted && typeof window !== 'undefined') {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          return JSON.parse(activeShopStr);
+        } catch (e) {}
+      }
+    }
+    return user;
+  };
+  const effUser = getEffectiveUser();
+  const isDealer = !!(effUser && (
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role) ||
+    ['super_admin', 'admin', 'moderator', 'owner', 'dealer', 'employee'].includes(effUser.customerType || '')
+  ));
+  const isRetailer = effUser?.customerType === "retailer";
+  const isCorporate = effUser?.customerType === "corporate";
+  const isB2BUser = isDealer || isRetailer || isCorporate;
+  const canInputManualQty = user && (["owner", "super_admin", "admin", "moderator"].includes(user.role) || isDealer || isRetailer || isCorporate);
   const [shakingFields, setShakingFields] = useState<Record<string, boolean>>({});
+
+  const handleCloseCircleModal = () => {
+    setIsCircleModalOpen(false);
+    if (!cart?.circleNetworkDiscount) {
+      setSelectedRateOption('original');
+    }
+  };
 
   useEffect(() => {
     if (cart?.circleNetworkDiscount) {
@@ -781,7 +800,7 @@ export default function CartPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsCircleModalOpen(false)}
+              onClick={handleCloseCircleModal}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
 
@@ -797,7 +816,7 @@ export default function CartPage() {
 
               {/* Close Button */}
               <button
-                onClick={() => setIsCircleModalOpen(false)}
+                onClick={handleCloseCircleModal}
                 className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-gray-100/70 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all"
                 aria-label="Close modal"
               >
@@ -896,11 +915,21 @@ export default function CartPage() {
                     setIsVerifyingCircle(true);
 
                     try {
+                      const token = localStorage.getItem("token");
+                      const activeShopId = localStorage.getItem("sr_active_shop_id");
+                      const headers: Record<string, string> = {
+                        'Content-Type': 'application/json'
+                      };
+                      if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                      }
+                      if (activeShopId) {
+                        headers['x-on-behalf-of'] = activeShopId;
+                      }
+
                       const res = await fetch('/api/discounts/verify-circle-user', {
                         method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json'
-                        },
+                        headers,
                         body: JSON.stringify({
                           contactNumber: circlePhone,
                           billingId: circleBillingId
