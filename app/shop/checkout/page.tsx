@@ -153,11 +153,21 @@ function CheckoutContent() {
     setIsVerifyingCircle(true);
 
     try {
+      const token = localStorage.getItem("token");
+      const activeShopId = localStorage.getItem("sr_active_shop_id");
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      if (activeShopId) {
+        headers['x-on-behalf-of'] = activeShopId;
+      }
+
       const res = await fetch('/api/discounts/verify-circle-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           contactNumber: circlePhone.trim(),
           billingId: circleBillingId.trim()
@@ -1515,7 +1525,7 @@ function CheckoutContent() {
                 )}
 
                 {/* CIRCLE NETWORK PARTNER CAMPAIGN SECTION */}
-                {!cart.circleNetworkDiscount && circleCampaignActive !== false && (
+                {!cart.circleNetworkDiscount && circleCampaignActive !== false && !isB2BUser && (
                   <div className="py-4 border-b border-gray-100 my-2 bg-gradient-to-br from-[#FDBC1F]/15 to-yellow-50/30 p-3 rounded border border-[#FDBC1F]/30">
                     <div className="flex items-center justify-between mb-3.5">
                       <div className="flex items-center gap-3">
