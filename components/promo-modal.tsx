@@ -22,6 +22,7 @@ export default function PromoModal() {
   const [direction, setDirection] = useState(1);
   const [posters, setPosters] = useState<PromoPoster[]>([]);
   const [hasSeenPromo, setHasSeenPromo] = useState(false);
+  const [aspectRatios, setAspectRatios] = useState<Record<number, number>>({});
   const pathname = usePathname();
 
   const isExcludedPage = ['/admin', '/offers', '/shop/checkout', '/shop/cart'].some(
@@ -170,10 +171,10 @@ export default function PromoModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="relative w-full max-w-[90vw] xs:max-w-[380px] sm:max-w-md md:max-w-lg flex flex-col items-center gap-4 sm:gap-6 my-8 sm:my-auto"
+              className="relative w-full max-w-[90vw] xs:max-w-[380px] sm:max-w-md md:max-w-4xl flex flex-col items-center gap-4 sm:gap-6 my-8 sm:my-auto"
             >
               {/* Image & Controls Wrapper */}
-              <div className="relative w-full max-w-full md:w-auto group">
+              <div className="relative w-full max-w-full md:w-fit group mx-auto">
                   {/* Close Button */}
                   <button
                   onClick={handleClose}
@@ -204,15 +205,18 @@ export default function PromoModal() {
                   )}
 
                   {/* Image Section */}
-                  <div className="relative w-full md:w-auto aspect-square h-auto md:h-[75vh] md:max-h-[640px] md:min-h-[360px] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden">
+                  <div 
+                    style={{ aspectRatio: aspectRatios[currentIndex] ? `${aspectRatios[currentIndex]}` : '1 / 1' }}
+                    className="relative w-full h-auto md:w-auto md:h-[75vh] max-w-[90vw] md:max-w-[min(85vw,640px)] max-h-[70vh] md:max-h-[75vh] bg-white rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden"
+                  >
                       {/* Carousel */}
                       <div className="relative w-full h-full overflow-hidden">
                           <AnimatePresence initial={false}>
                               <motion.div
                               key={currentIndex}
-                              initial={{ opacity: 0, x: direction * 300 }}
+                              initial={{ opacity: 0, x: `${direction * 100}%` }}
                               animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: -direction * 300 }}
+                              exit={{ opacity: 0, x: `${-direction * 100}%` }}
                               transition={{ type: 'spring', damping: 30, stiffness: 320 }}
                               className="absolute inset-0 w-full h-full"
                               >
@@ -222,8 +226,17 @@ export default function PromoModal() {
                                   alt={posters[currentIndex].alt}
                                   fill
                                   sizes="(max-width: 768px) 100vw, 512px"
-                                  className="object-cover"
+                                  className="object-contain"
                                   quality={70}
+                                  onLoad={(e) => {
+                                    const { naturalWidth, naturalHeight } = e.currentTarget;
+                                    if (naturalWidth && naturalHeight) {
+                                      setAspectRatios(prev => ({
+                                        ...prev,
+                                        [currentIndex]: naturalWidth / naturalHeight
+                                      }));
+                                    }
+                                  }}
                                   />
                               </Link>
                               </motion.div>
