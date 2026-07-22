@@ -70,6 +70,25 @@ function CheckoutContent() {
 
   const { cart, items, total, subtotal, clearCart, promoCode, promoDetails, discountAmount, promoDiscount, ruleDiscount, circleDiscount, isRestricted, isLoading, isSyncing, applyPromo, removePromo, freeShippingGranted, campaignNotices, applyCircleDiscount, removeCircleDiscount, circleCampaignActive, circleDiscountPercent, partnerUrl } = useCart();
   const { user, logout, updateAuth } = useAuth();
+
+  const getEffectiveUser = () => {
+    if (typeof window !== "undefined") {
+      const activeShopStr = localStorage.getItem("sr_active_shop_user");
+      if (activeShopStr) {
+        try {
+          return JSON.parse(activeShopStr);
+        } catch (e) { }
+      }
+    }
+    return user;
+  };
+  const effUser = getEffectiveUser();
+
+  const isB2BUser = !!(effUser && (
+    ['retailer', 'dealer', 'corporate', 'employee', 'admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(effUser.customerType || '') ||
+    ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role)
+  ));
+
   const [orderState, setOrderState] = useState<OrderState>({ status: 'form' });
   const [confirmingStep, setConfirmingStep] = useState(0);
 
@@ -110,6 +129,10 @@ function CheckoutContent() {
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim() || isValidatingPromo) return;
+    if (isB2BUser) {
+      setPromoError('Promo codes are not available for wholesale, dealer, or corporate accounts.');
+      return;
+    }
     setPromoError('');
     setIsValidatingPromo(true);
 
@@ -565,23 +588,6 @@ function CheckoutContent() {
 
   // Use the synchronized values from the CartContext (server-side calculation)
   // Note: we might need to handle shipping cost locally as it depends on the form
-  const getEffectiveUser = () => {
-    if (typeof window !== "undefined") {
-      const activeShopStr = localStorage.getItem("sr_active_shop_user");
-      if (activeShopStr) {
-        try {
-          return JSON.parse(activeShopStr);
-        } catch (e) { }
-      }
-    }
-    return user;
-  };
-  const effUser = getEffectiveUser();
-
-  const isB2BUser = !!(effUser && (
-    ['retailer', 'dealer', 'corporate', 'employee', 'admin', 'super_admin', 'superadmin', 'moderator', 'owner'].includes(effUser.customerType || '') ||
-    ['super_admin', 'admin', 'moderator', 'owner'].includes(effUser.role)
-  ));
   const isFreeDelivery = total >= 1000 || !!freeShippingGranted || isB2BUser;
   const destinationCity = sameAsBilling ? formData.city : formData.shippingCity;
   const baseShippingCharge = (destinationCity === 'Dhaka' || destinationCity === 'Dhaka Metro') ? 80 : 130;
@@ -1494,7 +1500,7 @@ function CheckoutContent() {
                 )}
 
                 {/* PROMO CODE INPUT SECTION */}
-                {!promoCode && (
+                {!promoCode && !isB2BUser && (
                   <div className="py-3 border-y border-gray-100 my-2">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Have a Discount Code?</label>
                     <div className="flex gap-1.5">
